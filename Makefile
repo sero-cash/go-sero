@@ -11,6 +11,8 @@
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
 
+PKG = ./...
+
 geth:
 	build/env.sh go run build/ci.go install ./cmd/geth
 	@echo "Done building."
@@ -38,7 +40,7 @@ test: all
 	build/env.sh go run build/ci.go test
 
 lint: ## Run linters.
-	build/env.sh go run build/ci.go lint
+	build/env.sh go run build/ci.go lint &(PKG)
 
 clean:
 	./build/clean_go_build_cache.sh
