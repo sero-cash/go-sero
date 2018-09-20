@@ -100,11 +100,13 @@ func GetGlobalObj(tri Tri, key []byte, obj unserial) {
 	if v, err := tri.TryGlobalGet(key); err != nil {
 		if err := obj.Unserial(nil); err != nil {
 			panic(err)
+			return
 		} else {
 		}
 	} else {
 		if err := obj.Unserial(v); err != nil {
 			panic(err)
+			return
 		} else {
 		}
 	}
@@ -137,8 +139,7 @@ func UpdateGlobalObj(tri Tri, key []byte, obj serial) {
 		if err := tri.TryGlobalPut(key, s); err != nil {
 			panic(err)
 			return
-		} else {
-		}
+		} else {}
 	}
 	return
 }
