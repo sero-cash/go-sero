@@ -25,21 +25,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/misc"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/rpc"
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-sero/consensus"
+	"github.com/sero-cash/go-sero/consensus/misc"
+	"github.com/sero-cash/go-sero/core/state"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/crypto/sha3"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/params"
+	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/rpc"
+	"github.com/hashicorp/golang-lru"
 )
 
 const (
@@ -47,18 +47,18 @@ const (
 	inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
-	wiggleTime = 500 * time.Millisecond // Random delay (per signer) to allow concurrent signers
+	wiggleTime = 500 * time.Millisecond // Random delay (per abi) to allow concurrent signers
 )
 
 // Clique proof-of-authority protocol constants.
 var (
 	epochLength = uint64(30000) // Default number of blocks after which to checkpoint and reset the pending votes
 
-	extraVanity = 32 // Fixed number of extra-data prefix bytes reserved for signer vanity
-	extraSeal   = 65 // Fixed number of extra-data suffix bytes reserved for signer seal
+	extraVanity = 32 // Fixed number of extra-data prefix bytes reserved for abi vanity
+	extraSeal   = 65 // Fixed number of extra-data suffix bytes reserved for abi seal
 
-	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new signer
-	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a signer.
+	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new abi
+	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a abi.
 
 	uncleHash = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
 
@@ -88,21 +88,21 @@ var (
 	errInvalidCheckpointVote = errors.New("vote nonce in checkpoint block non-zero")
 
 	// errMissingVanity is returned if a block's extra-data section is shorter than
-	// 32 bytes, which is required to store the signer vanity.
+	// 32 bytes, which is required to store the abi vanity.
 	errMissingVanity = errors.New("extra-data 32 byte vanity prefix missing")
 
 	// errMissingSignature is returned if a block's extra-data section doesn't seem
 	// to contain a 65 byte secp256k1 signature.
 	errMissingSignature = errors.New("extra-data 65 byte suffix signature missing")
 
-	// errExtraSigners is returned if non-checkpoint block contain signer data in
+	// errExtraSigners is returned if non-checkpoint block contain abi data in
 	// their extra-data fields.
-	errExtraSigners = errors.New("non-checkpoint block contains extra signer list")
+	errExtraSigners = errors.New("non-checkpoint block contains extra abi list")
 
 	// errInvalidCheckpointSigners is returned if a checkpoint block contains an
 	// invalid list of signers (i.e. non divisible by 20 bytes, or not the correct
 	// ones).
-	errInvalidCheckpointSigners = errors.New("invalid signer list on checkpoint block")
+	errInvalidCheckpointSigners = errors.New("invalid abi list on checkpoint block")
 
 	// errInvalidMixDigest is returned if a block's mix digest is non-zero.
 	errInvalidMixDigest = errors.New("non-zero mix digest")
@@ -111,7 +111,7 @@ var (
 	errInvalidUncleHash = errors.New("non empty uncle hash")
 
 	// errInvalidDifficulty is returned if the difficulty of a block is not either
-	// of 1 or 2, or if the value does not match the turn of the signer.
+	// of 1 or 2, or if the value does not match the turn of the abi.
 	errInvalidDifficulty = errors.New("invalid difficulty")
 
 	// ErrInvalidTimestamp is returned if the timestamp of a block is lower than
@@ -131,7 +131,7 @@ var (
 	errWaitTransactions = errors.New("waiting for transactions")
 )
 
-// SignerFn is a signer callback function to request a hash to be signed by a
+// SignerFn is a abi callback function to request a hash to be signed by a
 // backing account.
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
@@ -147,7 +147,6 @@ func sigHash(header *types.Header) (hash common.Hash) {
 
 	rlp.Encode(hasher, []interface{}{
 		header.ParentHash,
-		header.UncleHash,
 		header.Coinbase,
 		header.Root,
 		header.TxHash,
@@ -195,21 +194,21 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 // Ethereum testnet following the Ropsten attacks.
 type Clique struct {
 	config *params.CliqueConfig // Consensus engine configuration parameters
-	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
+	db     serodb.Database      // Database to store and retrieve snapshot checkpoints
 
 	recents    *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	signatures *lru.ARCCache // Signatures of recent blocks to speed up mining
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 
-	signer common.Address // Ethereum address of the signing key
+	signer common.Address // Sero address of the signing key
 	signFn SignerFn       // Signer function to authorize hashes with
-	lock   sync.RWMutex   // Protects the signer fields
+	lock   sync.RWMutex   // Protects the abi fields
 }
 
 // New creates a Clique proof-of-authority consensus engine with the initial
 // signers set to the ones provided by the user.
-func New(config *params.CliqueConfig, db ethdb.Database) *Clique {
+func New(config *params.CliqueConfig, db serodb.Database) *Clique {
 	// Set any missing consensus parameters to their defaults
 	conf := *config
 	if conf.Epoch == 0 {
@@ -293,7 +292,7 @@ func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if len(header.Extra) < extraVanity+extraSeal {
 		return errMissingSignature
 	}
-	// Ensure that the extra-data contains a signer list on checkpoint, but none otherwise
+	// Ensure that the extra-data contains a abi list on checkpoint, but none otherwise
 	signersBytes := len(header.Extra) - extraVanity - extraSeal
 	if !checkpoint && signersBytes != 0 {
 		return errExtraSigners
@@ -305,10 +304,7 @@ func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if header.MixDigest != (common.Hash{}) {
 		return errInvalidMixDigest
 	}
-	// Ensure that the block doesn't contain any uncles which are meaningless in PoA
-	if header.UncleHash != uncleHash {
-		return errInvalidUncleHash
-	}
+
 	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
 	if number > 0 {
 		if header.Difficulty == nil || (header.Difficulty.Cmp(diffInTurn) != 0 && header.Difficulty.Cmp(diffNoTurn) != 0) {
@@ -351,7 +347,7 @@ func (c *Clique) verifyCascadingFields(chain consensus.ChainReader, header *type
 	if err != nil {
 		return err
 	}
-	// If the block is a checkpoint block, verify the signer list
+	// If the block is a checkpoint block, verify the abi list
 	if number%c.config.Epoch == 0 {
 		signers := make([]byte, len(snap.Signers)*common.AddressLength)
 		for i, signer := range snap.signers() {
@@ -490,7 +486,7 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 			}
 		}
 	}
-	// Ensure that the difficulty corresponds to the turn-ness of the signer
+	// Ensure that the difficulty corresponds to the turn-ness of the abi
 	inturn := snap.inturn(header.Number.Uint64(), signer)
 	if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
 		return errInvalidDifficulty
@@ -568,13 +564,12 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
-func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
-	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-	header.UncleHash = types.CalcUncleHash(nil)
+	header.Root = state.IntermediateRoot(true)
 
 	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, nil, receipts), nil
+	return types.NewBlock(header, txs, receipts), nil
 }
 
 // Authorize injects a private key into the consensus engine to mint new blocks
@@ -601,7 +596,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	if c.config.Period == 0 && len(block.Transactions()) == 0 {
 		return nil, errWaitTransactions
 	}
-	// Don't hold the signer fields for the entire sealing procedure
+	// Don't hold the abi fields for the entire sealing procedure
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 	c.lock.RUnlock()
@@ -653,7 +648,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
 // that a new block should have based on the previous blocks in the chain and the
-// current signer.
+// current abi.
 func (c *Clique) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
 	snap, err := c.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
 	if err != nil {
@@ -664,7 +659,7 @@ func (c *Clique) CalcDifficulty(chain consensus.ChainReader, time uint64, parent
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
 // that a new block should have based on the previous blocks in the chain and the
-// current signer.
+// current abi.
 func CalcDifficulty(snap *Snapshot, signer common.Address) *big.Int {
 	if snap.inturn(snap.Number+1, signer) {
 		return new(big.Int).Set(diffInTurn)
@@ -673,7 +668,7 @@ func CalcDifficulty(snap *Snapshot, signer common.Address) *big.Int {
 }
 
 // APIs implements consensus.Engine, returning the user facing RPC API to allow
-// controlling the signer voting.
+// controlling the abi voting.
 func (c *Clique) APIs(chain consensus.ChainReader) []rpc.API {
 	return []rpc.API{{
 		Namespace: "clique",

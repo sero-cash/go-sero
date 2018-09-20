@@ -20,36 +20,43 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/mclock"
+	"github.com/sero-cash/go-sero/consensus"
+	"github.com/sero-cash/go-sero/core/rawdb"
+	"github.com/sero-cash/go-sero/core/state"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/core/vm"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/event"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/metrics"
+	"github.com/sero-cash/go-sero/params"
+	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/trie"
+	stx "github.com/sero-cash/go-sero/zero/txs"
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/hashicorp/golang-lru"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"io"
 	"math/big"
 	mrand "math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
-	"github.com/hashicorp/golang-lru"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 var (
 	blockInsertTimer = metrics.NewRegisteredTimer("chain/inserts", nil)
 
 	ErrNoGenesis = errors.New("Genesis not found in chain")
+
+	DelFn = func(db rawdb.DatabaseDeleter, hash common.Hash, num uint64) {
+		rawdb.DeleteBody(db, hash, num)
+		rawdb.DeleteHeader(db, hash, num)
+	}
 )
 
 const (
@@ -58,7 +65,8 @@ const (
 	maxFutureBlocks     = 256
 	maxTimeFutureBlocks = 30
 	badBlockLimit       = 10
-	triesInMemory       = 128
+	//triesInMemory       = 128
+	triesInMemory = 2
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion = 3
@@ -70,6 +78,11 @@ type CacheConfig struct {
 	Disabled      bool          // Whether to disable trie write caching (archive node)
 	TrieNodeLimit int           // Memory limit (MB) at which to flush the current in-memory trie to disk
 	TrieTimeLimit time.Duration // Time limit after which to flush the current in-memory trie to disk
+}
+
+type Downloader interface {
+	Wait()
+	Notify()
 }
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -90,9 +103,9 @@ type BlockChain struct {
 	chainConfig *params.ChainConfig // Chain & network configuration
 	cacheConfig *CacheConfig        // Cache configuration for pruning
 
-	db     ethdb.Database // Low level persistent database to store final content in
-	triegc *prque.Prque   // Priority queue mapping block numbers to tries to gc
-	gcproc time.Duration  // Accumulates canonical block processing for trie dumping
+	db     serodb.Database // Low level persistent database to store final content in
+	triegc *prque.Prque    // Priority queue mapping block numbers to tries to gc
+	gcproc time.Duration   // Accumulates canonical block processing for trie dumping
 
 	hc            *HeaderChain
 	rmLogsFeed    event.Feed
@@ -129,12 +142,18 @@ type BlockChain struct {
 	vmConfig  vm.Config
 
 	badBlocks *lru.Cache // Bad block cache
+
+	accountManager *accounts.Manager
+
+	walletCh chan accounts.WalletEvent
+	walletChSub event.Subscription
+	downloader Downloader
 }
 
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator and
 // Processor.
-func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
+func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, accountManager *accounts.Manager) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
 			TrieNodeLimit: 256 * 1024 * 1024,
@@ -161,9 +180,11 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 		engine:       engine,
 		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
+		walletCh:     make(chan accounts.WalletEvent, 1),
 	}
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
 	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
+	bc.accountManager = accountManager
 
 	var err error
 	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
@@ -177,19 +198,7 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	if err := bc.loadLastState(); err != nil {
 		return nil, err
 	}
-	// Check the current state of the block hashes and make sure that we do not have any of the bad blocks in our chain
-	for hash := range BadHashes {
-		if header := bc.GetHeaderByHash(hash); header != nil {
-			// get the canonical block corresponding to the offending header's number
-			headerByNumber := bc.GetHeaderByNumber(header.Number.Uint64())
-			// make sure the headerByNumber (if present) is in our current canonical chain
-			if headerByNumber != nil && headerByNumber.Hash() == header.Hash() {
-				log.Error("Found bad hash, rewinding chain", "number", header.Number, "hash", header.ParentHash)
-				bc.SetHead(header.Number.Uint64() - 1)
-				log.Error("Chain rewind was successful, resuming normal operation")
-			}
-		}
-	}
+	bc.walletChSub = bc.accountManager.Subscribe(bc.walletCh)
 	// Take ownership of this particular state
 	go bc.update()
 	return bc, nil
@@ -197,6 +206,10 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 
 func (bc *BlockChain) getProcInterrupt() bool {
 	return atomic.LoadInt32(&bc.procInterrupt) == 1
+}
+
+func (bc *BlockChain) SetDownloader(downloader Downloader) {
+	bc.downloader = downloader
 }
 
 // loadLastState loads the last known chain state from the database. This method
@@ -217,7 +230,7 @@ func (bc *BlockChain) loadLastState() error {
 		return bc.Reset()
 	}
 	// Make sure the state associated with the block is available
-	if _, err := state.New(currentBlock.Root(), bc.stateCache); err != nil {
+	if _, err := state.New(currentBlock.Root(), bc.stateCache, currentBlock.NumberU64()); err != nil {
 		// Dangling block without a state associated, init from scratch
 		log.Warn("Head state missing, repairing chain", "number", currentBlock.Number(), "hash", currentBlock.Hash())
 		if err := bc.repair(&currentBlock); err != nil {
@@ -262,16 +275,14 @@ func (bc *BlockChain) loadLastState() error {
 // above the new head will be deleted and the new one set. In the case of blocks
 // though, the head may be further rewound if block bodies are missing (non-archive
 // nodes after a fast sync).
-func (bc *BlockChain) SetHead(head uint64) error {
+func (bc *BlockChain) SetHead(head uint64, delFn DeleteCallback) error {
 	log.Warn("Rewinding blockchain", "target", head)
 
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
 	// Rewind the header chain, deleting all block bodies until then
-	delFn := func(db rawdb.DatabaseDeleter, hash common.Hash, num uint64) {
-		rawdb.DeleteBody(db, hash, num)
-	}
+
 	bc.hc.SetHead(head, delFn)
 	currentHeader := bc.hc.CurrentHeader()
 
@@ -286,7 +297,7 @@ func (bc *BlockChain) SetHead(head uint64) error {
 		bc.currentBlock.Store(bc.GetBlock(currentHeader.Hash(), currentHeader.Number.Uint64()))
 	}
 	if currentBlock := bc.CurrentBlock(); currentBlock != nil {
-		if _, err := state.New(currentBlock.Root(), bc.stateCache); err != nil {
+		if _, err := state.New(currentBlock.Root(), bc.stateCache, currentBlock.NumberU64()); err != nil {
 			// Rewound state missing, rolled back to before pivot, reset to genesis
 			bc.currentBlock.Store(bc.genesisBlock)
 		}
@@ -378,12 +389,13 @@ func (bc *BlockChain) Processor() Processor {
 
 // State returns a new mutable state based on the current HEAD block.
 func (bc *BlockChain) State() (*state.StateDB, error) {
-	return bc.StateAt(bc.CurrentBlock().Root())
+	block := bc.CurrentBlock()
+	return bc.StateAt(block.Root(), block.NumberU64())
 }
 
 // StateAt returns a new mutable state based on a particular point in time.
-func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
-	return state.New(root, bc.stateCache)
+func (bc *BlockChain) StateAt(root common.Hash, number uint64) (*state.StateDB, error) {
+	return state.New(root, bc.stateCache, number)
 }
 
 // Reset purges the entire blockchain, restoring it to its genesis state.
@@ -391,11 +403,105 @@ func (bc *BlockChain) Reset() error {
 	return bc.ResetWithGenesisBlock(bc.genesisBlock)
 }
 
+func (bc *BlockChain) ResetWithImportAccount(genesis *types.Block) error {
+	bc.downloader.Wait()
+	defer bc.downloader.Notify()
+	bc.mu.Lock()
+	mainHash := bc.CurrentBlock().Hash()
+	last := bc.CurrentBlock().Number().Uint64()
+	bc.mu.Unlock()
+
+	if last == 0 {
+		return nil
+	}
+
+	if last > 36 {
+		batch := bc.db.NewBatch()
+		for number := last; number > 0; number -= 1 {
+			hashs := rawdb.ReadHash(bc.db, number)
+			if len(hashs) == 0 {
+				panic(fmt.Sprint("import account error at block number ", number))
+			}
+			var flag bool
+			for _, hash := range hashs {
+				if hash == mainHash {
+					flag = true
+					header := rawdb.ReadHeader(bc.db, hash, number)
+					if header == nil {
+						panic(fmt.Sprint("import account error at block number ", number, " hash ", hash))
+					}
+					mainHash = header.ParentHash
+					if len(hashs) > 1 && number <= last-35 {
+						rawdb.WriteHashs(batch, number, []common.Hash{hash})
+					}
+					break
+				}
+			}
+			if !flag {
+				panic("import account main chain error")
+			}
+			if batch.ValueSize() > 1000 {
+				batch.Write()
+			}
+		}
+		batch.Write()
+	}
+
+	tks := []keys.Uint512{}
+	for _, w := range bc.accountManager.Wallets() {
+		tk := w.Accounts()[0].Tk
+		tks = append(tks, *tk.ToUint512())
+	}
+
+	var state1 *zstate.State1
+	for number := uint64(0); number <= last; number += 1 {
+		var hashs []common.Hash
+		if number == 0 {
+			hashs = append(hashs, bc.genesisBlock.Hash())
+		} else {
+			hashs = rawdb.ReadHash(bc.db, number)
+		}
+		if len(hashs) == 0 {
+			panic(fmt.Errorf("no hash block number ", number))
+		}
+
+		for _, hash := range hashs {
+			header := rawdb.ReadHeader(bc.db, hash, number)
+			if header == nil {
+				panic(fmt.Errorf("block header not found hash : ", hash))
+			}
+			trie, err := bc.stateCache.OpenTrie(header.Root)
+			if err != nil {
+				panic(err)
+			}
+
+			st := state.StateTri{trie, bc.db, bc.db}
+			state := zstate.NewState(&st, number)
+
+			if last-number <= 35 || number == 0 {
+				s1 := zstate.LoadState1(&state.State0)
+				state1 = &s1
+			} else {
+				state1.State0 = &state.State0
+			}
+
+			state1.UpdateWitness(tks)
+
+			if last-number <= 36 {
+				state1.Finalize()
+			}
+		}
+	}
+
+	return nil
+}
+
 // ResetWithGenesisBlock purges the entire blockchain, restoring it to the
 // specified genesis state.
 func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
 	// Dump the entire block chain and purge the caches
-	if err := bc.SetHead(0); err != nil {
+
+	if err := bc.SetHead(0, DelFn); err != nil {
 		return err
 	}
 	bc.mu.Lock()
@@ -426,7 +532,7 @@ func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
 func (bc *BlockChain) repair(head **types.Block) error {
 	for {
 		// Abort if we've rewound to a head block that does have associated state
-		if _, err := state.New((*head).Root(), bc.stateCache); err == nil {
+		if _, err := state.New((*head).Root(), bc.stateCache, (*head).NumberU64()); err == nil {
 			log.Info("Rewound blockchain to past state", "number", (*head).Number(), "hash", (*head).Hash())
 			return nil
 		}
@@ -609,7 +715,7 @@ func (bc *BlockChain) GetReceiptsByHash(hash common.Hash) types.Receipts {
 }
 
 // GetBlocksFromHash returns the block corresponding to hash and up to n-1 ancestors.
-// [deprecated by eth/62]
+// [deprecated by sero/62]
 func (bc *BlockChain) GetBlocksFromHash(hash common.Hash, n int) (blocks []*types.Block) {
 	number := bc.hc.GetBlockNumber(hash)
 	if number == nil {
@@ -739,7 +845,7 @@ func (bc *BlockChain) Rollback(chain []common.Hash) {
 
 // SetReceiptsData computes all the non-consensus fields of the receipts
 func SetReceiptsData(config *params.ChainConfig, block *types.Block, receipts types.Receipts) error {
-	signer := types.MakeSigner(config, block.Number())
+	//abi := types.MakeSigner(config, block.Number())
 
 	transactions, logIndex := block.Transactions(), uint(0)
 	if len(transactions) != len(receipts) {
@@ -752,9 +858,11 @@ func SetReceiptsData(config *params.ChainConfig, block *types.Block, receipts ty
 
 		// The contract address can be derived from the transaction itself
 		if transactions[j].To() == nil {
-			// Deriving the signer is expensive, only do if it's actually needed
-			from, _ := types.Sender(signer, transactions[j])
-			receipts[j].ContractAddress = crypto.CreateAddress(from, transactions[j].Nonce())
+			// Deriving the abi is expensive, only do if it's actually needed
+			//from, _ := types.Sender(abi, transactions[j])
+			//from := transactions[j].From()
+			//TODO zero modify
+			//receipts[j].ContractAddress = crypto.CreateAddress(from, 0)
 		}
 		// The used gas can be calculated based on previous receipts
 		if j == 0 {
@@ -823,7 +931,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 
 		stats.processed++
 
-		if batch.ValueSize() >= ethdb.IdealBatchSize {
+		if batch.ValueSize() >= serodb.IdealBatchSize {
 			if err := batch.Write(); err != nil {
 				return 0, err
 			}
@@ -902,8 +1010,12 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Write other block data using a batch.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
+	rawdb.WriteHash(bc.db, block.Number().Uint64(), block.Hash())
 
-	root, err := state.Commit(bc.chainConfig.IsEIP158(block.Number()))
+	root, err := state.Commit(true)
+	if root != block.Root() {
+		panic("root not eq")
+	}
 	if err != nil {
 		return NonStatTy, err
 	}
@@ -918,7 +1030,6 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		// Full but not archive node, do proper garbage collection
 		triedb.Reference(root, common.Hash{}) // metadata reference to keep trie alive
 		bc.triegc.Push(root, -float32(block.NumberU64()))
-
 		if current := block.NumberU64(); current > triesInMemory {
 			// If we exceeded our memory allowance, flush matured singleton nodes to disk
 			var (
@@ -926,7 +1037,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 				limit       = common.StorageSize(bc.cacheConfig.TrieNodeLimit) * 1024 * 1024
 			)
 			if nodes > limit || imgs > 4*1024*1024 {
-				triedb.Cap(limit - ethdb.IdealBatchSize)
+				triedb.Cap(limit - serodb.IdealBatchSize)
 			}
 			// Find the next state trie we need to commit
 			header := bc.GetHeaderByNumber(current - triesInMemory)
@@ -944,6 +1055,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 				lastWrite = chosen
 				bc.gcproc = 0
 			}
+
 			// Garbage collect anything below our required write retention
 			for !bc.triegc.Empty() {
 				root, number := bc.triegc.Pop()
@@ -955,6 +1067,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			}
 		}
 	}
+
 	rawdb.WriteReceipts(batch, block.Hash(), block.NumberU64(), receipts)
 
 	// If the total difficulty is higher than our known, add it to the canonical chain
@@ -981,6 +1094,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	} else {
 		status = SideStatTy
 	}
+
 	if err := batch.Write(); err != nil {
 		return NonStatTy, err
 	}
@@ -1000,7 +1114,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 //
 // After insertion is done, all accumulated events will be fired.
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
-	n, events, logs, err := bc.insertChain(chain)
+	n, events, logs, err := bc.insertChain(chain, false)
 	bc.PostChainEvents(events, logs)
 	return n, err
 }
@@ -1008,7 +1122,7 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 // insertChain will execute the actual chain insertion and event aggregation. The
 // only reason this method exists as a separate one is to make locking cleaner
 // with deferred statements.
-func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*types.Log, error) {
+func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interface{}, []*types.Log, error) {
 	// Sanity check that we have something meaningful to import
 	if len(chain) == 0 {
 		return 0, nil, nil, nil
@@ -1051,8 +1165,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
 	defer close(abort)
 
-	// Start a parallel signature recovery (signer will fluke on fork transition, minimal perf loss)
-	senderCacher.recoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number()), chain)
+	// Start a parallel signature recovery (abi will fluke on fork transition, minimal perf loss)
+	//senderCacher.recoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number()), chain)
 
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
@@ -1060,11 +1174,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if atomic.LoadInt32(&bc.procInterrupt) == 1 {
 			log.Debug("Premature abort during blocks processing")
 			break
-		}
-		// If the header is a banned one, straight out abort
-		if BadHashes[block.Hash()] {
-			bc.reportBlock(block, nil, ErrBlacklistedHash)
-			return i, events, coalescedLogs, ErrBlacklistedHash
 		}
 		// Wait for the block's verification to complete
 		bstart := time.Now()
@@ -1077,7 +1186,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		case err == ErrKnownBlock:
 			// Block and state both already known. However if the current block is below
 			// this number we did a rollback and we should reimport it nonetheless.
-			if bc.CurrentBlock().NumberU64() >= block.NumberU64() {
+			if !local && bc.CurrentBlock().NumberU64() >= block.NumberU64() {
 				stats.ignored++
 				continue
 			}
@@ -1123,7 +1232,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			}
 			// Import all the pruned blocks to make the state available
 			bc.chainmu.Unlock()
-			_, evs, logs, err := bc.insertChain(winner)
+			_, evs, logs, err := bc.insertChain(winner, local)
 			bc.chainmu.Lock()
 			events, coalescedLogs = evs, logs
 
@@ -1143,10 +1252,29 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		} else {
 			parent = chain[i-1]
 		}
-		state, err := state.New(parent.Root(), bc.stateCache)
+		state, err := state.New(parent.Root(), bc.stateCache, parent.NumberU64())
+
+		seeds := []keys.Uint512{}
+		for _, w := range bc.accountManager.Wallets() {
+			seed := w.Accounts()[0].Tk
+			seeds = append(seeds, *seed.ToUint512())
+		}
+		//if len(seeds) == 0 {
+		//	return i, events, coalescedLogs, fmt.Errorf("no seeds error")
+		//}
+		state.SetSeeds(seeds)
+
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
+
+		for _, tx := range block.Transactions() {
+			err := stx.Verify(tx.GetZZSTX(), state.GetZState())
+			if err != nil {
+				return i, events, coalescedLogs, err
+			}
+		}
+
 		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)
 		if err != nil {
@@ -1393,6 +1521,10 @@ func (bc *BlockChain) update() {
 		select {
 		case <-futureTimer.C:
 			bc.procFutureBlocks()
+		case walletEvent := <-bc.walletCh:
+			if walletEvent.Kind == accounts.WalletArrived {
+				bc.ResetWithImportAccount(bc.genesisBlock)
+			}
 		case <-bc.quit:
 			return
 		}

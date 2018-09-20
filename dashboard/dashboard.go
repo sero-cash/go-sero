@@ -35,11 +35,11 @@ import (
 	"io"
 
 	"github.com/elastic/gosigar"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/metrics"
+	"github.com/sero-cash/go-sero/p2p"
+	"github.com/sero-cash/go-sero/params"
+	"github.com/sero-cash/go-sero/rpc"
 	"github.com/mohae/deepcopy"
 	"golang.org/x/net/websocket"
 )
@@ -283,8 +283,8 @@ func (db *Dashboard) collectData() {
 
 		collectNetworkIngress = meterCollector("p2p/InboundTraffic")
 		collectNetworkEgress  = meterCollector("p2p/OutboundTraffic")
-		collectDiskRead       = meterCollector("eth/db/chaindata/disk/read")
-		collectDiskWrite      = meterCollector("eth/db/chaindata/disk/write")
+		collectDiskRead       = meterCollector("sero/db/chaindata/disk/read")
+		collectDiskWrite      = meterCollector("sero/db/chaindata/disk/write")
 
 		prevNetworkIngress = collectNetworkIngress()
 		prevNetworkEgress  = collectNetworkEgress()

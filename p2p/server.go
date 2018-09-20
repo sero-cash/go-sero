@@ -23,16 +23,17 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/p2p/discv5"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/p2p/netutil"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/mclock"
+	"github.com/sero-cash/go-sero/event"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/p2p/discover"
+	"github.com/sero-cash/go-sero/p2p/discv5"
+	"github.com/sero-cash/go-sero/p2p/nat"
+	"github.com/sero-cash/go-sero/p2p/netutil"
 )
 
 const (
@@ -76,7 +77,7 @@ type Config struct {
 	// Disabling is useful for protocol debugging (manual topology).
 	NoDiscovery bool
 
-	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
+	// DiscoveryV5 specifies whether the new topic-discovery based V5 discovery
 	// protocol should be started or not.
 	DiscoveryV5 bool `toml:",omitempty"`
 
@@ -169,6 +170,8 @@ type Server struct {
 	quit          chan struct{}
 	addstatic     chan *discover.Node
 	removestatic  chan *discover.Node
+	addtrusted    chan *discover.Node
+	removetrusted chan *discover.Node
 	posthandshake chan *conn
 	addpeer       chan *conn
 	delpeer       chan peerDrop
@@ -185,7 +188,7 @@ type peerDrop struct {
 	requested bool // true if signaled by the peer
 }
 
-type connFlag int
+type connFlag int32
 
 const (
 	dynDialedConn connFlag = 1 << iota
@@ -250,7 +253,23 @@ func (f connFlag) String() string {
 }
 
 func (c *conn) is(f connFlag) bool {
-	return c.flags&f != 0
+	flags := connFlag(atomic.LoadInt32((*int32)(&c.flags)))
+	return flags&f != 0
+}
+
+func (c *conn) set(f connFlag, val bool) {
+	for {
+		oldFlags := connFlag(atomic.LoadInt32((*int32)(&c.flags)))
+		flags := oldFlags
+		if val {
+			flags |= f
+		} else {
+			flags &= ^f
+		}
+		if atomic.CompareAndSwapInt32((*int32)(&c.flags), int32(oldFlags), int32(flags)) {
+			return
+		}
+	}
 }
 
 // Peers returns all connected peers.
@@ -296,6 +315,23 @@ func (srv *Server) AddPeer(node *discover.Node) {
 func (srv *Server) RemovePeer(node *discover.Node) {
 	select {
 	case srv.removestatic <- node:
+	case <-srv.quit:
+	}
+}
+
+// AddTrustedPeer adds the given node to a reserved whitelist which allows the
+// node to always connect, even if the slot are full.
+func (srv *Server) AddTrustedPeer(node *discover.Node) {
+	select {
+	case srv.addtrusted <- node:
+	case <-srv.quit:
+	}
+}
+
+// RemoveTrustedPeer removes the given node from the trusted peer set.
+func (srv *Server) RemoveTrustedPeer(node *discover.Node) {
+	select {
+	case srv.removetrusted <- node:
 	case <-srv.quit:
 	}
 }
@@ -411,6 +447,8 @@ func (srv *Server) Start() (err error) {
 	srv.posthandshake = make(chan *conn)
 	srv.addstatic = make(chan *discover.Node)
 	srv.removestatic = make(chan *discover.Node)
+	srv.addtrusted = make(chan *discover.Node)
+	srv.removetrusted = make(chan *discover.Node)
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
 
@@ -600,11 +638,31 @@ running:
 		case n := <-srv.removestatic:
 			// This channel is used by RemovePeer to send a
 			// disconnect request to a peer and begin the
-			// stop keeping the node connected
+			// stop keeping the node connected.
 			srv.log.Trace("Removing static node", "node", n)
 			dialstate.removeStatic(n)
 			if p, ok := peers[n.ID]; ok {
 				p.Disconnect(DiscRequested)
+			}
+		case n := <-srv.addtrusted:
+			// This channel is used by AddTrustedPeer to add an enode
+			// to the trusted node set.
+			srv.log.Trace("Adding trusted node", "node", n)
+			trusted[n.ID] = true
+			// Mark any already-connected peer as trusted
+			if p, ok := peers[n.ID]; ok {
+				p.rw.set(trustedConn, true)
+			}
+		case n := <-srv.removetrusted:
+			// This channel is used by RemoveTrustedPeer to remove an enode
+			// from the trusted node set.
+			srv.log.Trace("Removing trusted node", "node", n)
+			if _, ok := trusted[n.ID]; ok {
+				delete(trusted, n.ID)
+			}
+			// Unmark any already-connected peer as trusted
+			if p, ok := peers[n.ID]; ok {
+				p.rw.set(trustedConn, false)
 			}
 		case op := <-srv.peerOp:
 			// This channel is used by Peers and PeerCount.
@@ -910,7 +968,7 @@ func (srv *Server) runPeer(p *Peer) {
 type NodeInfo struct {
 	ID    string `json:"id"`    // Unique node identifier (also the encryption key)
 	Name  string `json:"name"`  // Name of the node, including client type, version, OS, custom data
-	Enode string `json:"enode"` // Enode URL for adding this peer from remote peers
+	Enode string `json:"snode"` // Enode URL for adding this peer from remote peers
 	IP    string `json:"ip"`    // IP address of the node
 	Ports struct {
 		Discovery int `json:"discovery"` // UDP listening port for discovery protocol

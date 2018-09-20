@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
-// Package utils contains internal helper functions for go-ethereum commands.
+// Package utils contains internal helper functions for go-sero commands.
 package utils
 
 import (
@@ -27,16 +27,16 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/internal/debug"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/core"
+	"github.com/sero-cash/go-sero/core/rawdb"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/internal/debug"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/node"
+	"github.com/sero-cash/go-sero/rlp"
 )
 
 const (
@@ -238,7 +238,7 @@ func ExportAppendChain(blockchain *core.BlockChain, fn string, first uint64, las
 }
 
 // ImportPreimages imports a batch of exported hash preimages into the database.
-func ImportPreimages(db *ethdb.LDBDatabase, fn string) error {
+func ImportPreimages(db *serodb.LDBDatabase, fn string) error {
 	log.Info("Importing preimages", "file", fn)
 
 	// Open the file handle and potentially unwrap the gzip stream
@@ -285,7 +285,7 @@ func ImportPreimages(db *ethdb.LDBDatabase, fn string) error {
 
 // ExportPreimages exports all known hash preimages into the specified file,
 // truncating any data already present in the file.
-func ExportPreimages(db *ethdb.LDBDatabase, fn string) error {
+func ExportPreimages(db *serodb.LDBDatabase, fn string) error {
 	log.Info("Exporting preimages", "file", fn)
 
 	// Open the file handle and potentially wrap with a gzip stream

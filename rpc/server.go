@@ -26,7 +26,7 @@ import (
 	"sync/atomic"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/sero-cash/go-sero/log"
 )
 
 const MetadataApi = "rpc"
@@ -405,7 +405,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			continue
 		}
 
-		if r.isPubSub { // eth_subscribe, r.method contains the subscription method name
+		if r.isPubSub { // sero_subscribe, r.method contains the subscription method name
 			if callb, ok := svc.subscriptions[r.method]; ok {
 				requests[i] = &serverRequest{id: r.id, svcname: svc.name, callb: callb}
 				if r.params != nil && len(callb.argTypes) > 0 {

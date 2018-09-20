@@ -22,12 +22,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/metrics"
+	"github.com/sero-cash/go-sero/p2p"
+	"github.com/sero-cash/go-sero/p2p/discover"
+	"github.com/sero-cash/go-sero/rpc"
 )
 
 // PrivateAdminAPI is the collection of administrative API methods exposed only
@@ -53,7 +53,7 @@ func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
 	// Try to add the url as a static peer and return
 	node, err := discover.ParseNode(url)
 	if err != nil {
-		return false, fmt.Errorf("invalid enode: %v", err)
+		return false, fmt.Errorf("invalid snode: %v", err)
 	}
 	server.AddPeer(node)
 	return true, nil
@@ -69,9 +69,40 @@ func (api *PrivateAdminAPI) RemovePeer(url string) (bool, error) {
 	// Try to remove the url as a static peer and return
 	node, err := discover.ParseNode(url)
 	if err != nil {
-		return false, fmt.Errorf("invalid enode: %v", err)
+		return false, fmt.Errorf("invalid snode: %v", err)
 	}
 	server.RemovePeer(node)
+	return true, nil
+}
+
+// AddTrustedPeer allows a remote node to always connect, even if slots are full
+func (api *PrivateAdminAPI) AddTrustedPeer(url string) (bool, error) {
+	// Make sure the server is running, fail otherwise
+	server := api.node.Server()
+	if server == nil {
+		return false, ErrNodeStopped
+	}
+	node, err := discover.ParseNode(url)
+	if err != nil {
+		return false, fmt.Errorf("invalid snode: %v", err)
+	}
+	server.AddTrustedPeer(node)
+	return true, nil
+}
+
+// RemoveTrustedPeer removes a remote node from the trusted peer set, but it
+// does not disconnect it automatically.
+func (api *PrivateAdminAPI) RemoveTrustedPeer(url string) (bool, error) {
+	// Make sure the server is running, fail otherwise
+	server := api.node.Server()
+	if server == nil {
+		return false, ErrNodeStopped
+	}
+	node, err := discover.ParseNode(url)
+	if err != nil {
+		return false, fmt.Errorf("invalid snode: %v", err)
+	}
+	server.RemoveTrustedPeer(node)
 	return true, nil
 }
 

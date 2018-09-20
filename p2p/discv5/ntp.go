@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/sero-cash/go-sero/log"
 )
 
 const (

@@ -17,13 +17,13 @@
 package clique
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/consensus"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/rpc"
 )
 
-// API is a user facing RPC API to allow controlling the signer and voting
+// API is a user facing RPC API to allow controlling the abi and voting
 // mechanisms of the proof-of-authority scheme.
 type API struct {
 	chain  consensus.ChainReader
@@ -100,7 +100,7 @@ func (api *API) Proposals() map[common.Address]bool {
 	return proposals
 }
 
-// Propose injects a new authorization proposal that the signer will attempt to
+// Propose injects a new authorization proposal that the abi will attempt to
 // push through.
 func (api *API) Propose(address common.Address, auth bool) {
 	api.clique.lock.Lock()
@@ -109,7 +109,7 @@ func (api *API) Propose(address common.Address, auth bool) {
 	api.clique.proposals[address] = auth
 }
 
-// Discard drops a currently running proposal, stopping the signer from casting
+// Discard drops a currently running proposal, stopping the abi from casting
 // further votes (either for or against).
 func (api *API) Discard(address common.Address) {
 	api.clique.lock.Lock()

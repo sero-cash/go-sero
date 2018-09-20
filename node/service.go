@@ -19,11 +19,11 @@ package node
 import (
 	"reflect"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/event"
+	"github.com/sero-cash/go-sero/p2p"
+	"github.com/sero-cash/go-sero/rpc"
 )
 
 // ServiceContext is a collection of service independent options inherited from
@@ -39,11 +39,11 @@ type ServiceContext struct {
 // OpenDatabase opens an existing database with the given name (or creates one
 // if no previous can be found) from within the node's data directory. If the
 // node is an ephemeral one, a memory database is returned.
-func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (ethdb.Database, error) {
+func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (serodb.Database, error) {
 	if ctx.config.DataDir == "" {
-		return ethdb.NewMemDatabase(), nil
+		return serodb.NewMemDatabase(), nil
 	}
-	db, err := ethdb.NewLDBDatabase(ctx.config.ResolvePath(name), cache, handles)
+	db, err := serodb.NewLDBDatabase(ctx.config.ResolvePath(name), cache, handles)
 	if err != nil {
 		return nil, err
 	}

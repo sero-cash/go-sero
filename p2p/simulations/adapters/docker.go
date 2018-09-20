@@ -28,8 +28,8 @@ import (
 	"strings"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p/discover"
+	"github.com/sero-cash/go-sero/node"
+	"github.com/sero-cash/go-sero/p2p/discover"
 )
 
 var (
@@ -97,7 +97,6 @@ func (d *DockerAdapter) NewNode(config *NodeConfig) (Node, error) {
 	conf.Stack.P2P.EnableMsgEvents = false
 	conf.Stack.P2P.NoDiscovery = true
 	conf.Stack.P2P.NAT = nil
-	conf.Stack.NoUSB = true
 
 	// listen on all interfaces on a given port, which we set when we
 	// initialise NodeConfig (usually a random port)

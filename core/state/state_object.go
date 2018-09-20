@@ -19,12 +19,11 @@ package state
 import (
 	"bytes"
 	"fmt"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/rlp"
 	"io"
 	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -90,23 +89,25 @@ type stateObject struct {
 
 // empty returns whether the account is considered empty.
 func (s *stateObject) empty() bool {
-	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
+	//return s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
+	return false
 }
 
 // Account is the Ethereum consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account struct {
-	Nonce    uint64
-	Balance  *big.Int
-	Root     common.Hash // merkle root of the storage trie
-	CodeHash []byte
+	Nonce uint64
+	//Balance   *big.Int
+	Root      common.Hash // merkle root of the storage trie
+	CodeHash  []byte
+	LoadAddrs []common.Address
+
+	Currencys []string
 }
 
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data Account) *stateObject {
-	if data.Balance == nil {
-		data.Balance = new(big.Int)
-	}
+
 	if data.CodeHash == nil {
 		data.CodeHash = emptyCodeHash
 	}
@@ -140,11 +141,13 @@ func (c *stateObject) touch() {
 	c.db.journal.append(touchChange{
 		account: &c.address,
 	})
-	if c.address == ripemd {
+
+	//TODO zero delete
+	/*if c.address == ripemd {
 		// Explicitly put it in the dirty-cache, which is otherwise generated from
 		// flattened journals.
 		c.db.journal.dirty(c.address)
-	}
+	}*/
 }
 
 func (c *stateObject) getTrie(db Database) Trie {
@@ -235,38 +238,60 @@ func (self *stateObject) CommitTrie(db Database) error {
 
 // AddBalance removes amount from c's balance.
 // It is used to add funds to the destination account of a transfer.
-func (c *stateObject) AddBalance(amount *big.Int) {
-	// EIP158: We must check emptiness for the objects such that the account
-	// clearing (0,0,0 objects) can take effect.
+func (self *stateObject) AddBalance(db Database, coinName string, amount *big.Int) {
 	if amount.Sign() == 0 {
-		if c.empty() {
-			c.touch()
-		}
-
 		return
 	}
-	c.SetBalance(new(big.Int).Add(c.Balance(), amount))
+
+	value := self.Balance(db, coinName)
+	value = value.Add(value, amount)
+	self.SetBalance(db, coinName, value)
 }
 
 // SubBalance removes amount from c's balance.
 // It is used to remove funds from the origin account of a transfer.
-func (c *stateObject) SubBalance(amount *big.Int) {
+func (self *stateObject) SubBalance(db Database, coinName string, amount *big.Int) {
 	if amount.Sign() == 0 {
 		return
 	}
-	c.SetBalance(new(big.Int).Sub(c.Balance(), amount))
+
+	value := self.Balance(db, coinName)
+	value = value.Sub(value, amount)
+	self.SetBalance(db, coinName, value)
 }
 
-func (self *stateObject) SetBalance(amount *big.Int) {
-	self.db.journal.append(balanceChange{
-		account: &self.address,
-		prev:    new(big.Int).Set(self.data.Balance),
+func (self *stateObject) SetBalance(db Database, coinName string, amount *big.Int) {
+	currency := common.BytesToHash(common.LeftPadBytes([]byte(coinName), 32))
+	prevalue := self.GetState(db, currency)
+	self.db.journal.append(storageChange{
+		account:  &self.address,
+		key:      currency,
+		prevalue: prevalue,
 	})
-	self.setBalance(amount)
+	self.setState(currency, common.BigToHash(amount))
+	for _, v := range self.data.Currencys {
+		if v == coinName {
+			return
+		}
+	}
+	self.data.Currencys = append(self.data.Currencys, coinName)
 }
 
-func (self *stateObject) setBalance(amount *big.Int) {
-	self.data.Balance = amount
+//func (self *stateObject) setBalance(currency common.Hash, amount *big.Int) {
+//	self.data.Balances[currency] = amount.Bytes()
+//}
+
+func (self *stateObject) addLoadAddress(addr common.Address) {
+	for _, each := range self.data.LoadAddrs {
+		if each == addr {
+			return
+		}
+	}
+	self.data.LoadAddrs = append(self.data.LoadAddrs, addr)
+}
+
+func (self *stateObject) getLoadAddress() []common.Address{
+	return self.data.LoadAddrs
 }
 
 // Return the gas back to the origin. Used by the Virtual machine or Closures
@@ -327,28 +352,21 @@ func (self *stateObject) setCode(codeHash common.Hash, code []byte) {
 	self.dirtyCode = true
 }
 
-func (self *stateObject) SetNonce(nonce uint64) {
-	self.db.journal.append(nonceChange{
-		account: &self.address,
-		prev:    self.data.Nonce,
-	})
-	self.setNonce(nonce)
-}
-
-func (self *stateObject) setNonce(nonce uint64) {
-	self.data.Nonce = nonce
-}
-
 func (self *stateObject) CodeHash() []byte {
 	return self.data.CodeHash
 }
 
-func (self *stateObject) Balance() *big.Int {
-	return self.data.Balance
+func (self *stateObject) Balance(db Database, coinName string) *big.Int {
+	currency := common.BytesToHash(common.LeftPadBytes([]byte(coinName), 32))
+	return new(big.Int).SetBytes(self.GetState(db, currency).Bytes())
 }
 
-func (self *stateObject) Nonce() uint64 {
-	return self.data.Nonce
+func (self *stateObject) Balances(db Database) map[string]*big.Int {
+	result := map[string]*big.Int{}
+	for _, currency := range self.data.Currencys {
+		result[currency] = self.Balance(db, currency)
+	}
+	return result
 }
 
 // Never called, but must be present to allow stateObject to be used

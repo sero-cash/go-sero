@@ -23,9 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/usbwallet"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/rpc"
 	"github.com/robertkrimen/otto"
 )
 
@@ -84,9 +83,11 @@ func (b *bridge) NewAccount(call otto.FunctionCall) (response otto.Value) {
 	return ret
 }
 
+//TODO zero delete OpenWallet
+
 // OpenWallet is a wrapper around personal.openWallet which can interpret and
 // react to certain error messages, such as the Trezor PIN matrix request.
-func (b *bridge) OpenWallet(call otto.FunctionCall) (response otto.Value) {
+/*func (b *bridge) OpenWallet(call otto.FunctionCall) (response otto.Value) {
 	// Make sure we have a wallet specified to open
 	if !call.Argument(0).IsString() {
 		throwJSException("first argument must be the wallet URL to open")
@@ -125,7 +126,7 @@ func (b *bridge) OpenWallet(call otto.FunctionCall) (response otto.Value) {
 		throwJSException(err.Error())
 	}
 	return val
-}
+}*/
 
 // UnlockAccount is a wrapper around the personal.unlockAccount RPC method that
 // uses a non-echoing password prompt to acquire the passphrase and executes the
@@ -247,7 +248,7 @@ func (b *bridge) SleepBlocks(call otto.FunctionCall) (response otto.Value) {
 	// go through the console, this will allow web3 to call the appropriate
 	// callbacks if a delayed response or notification is received.
 	blockNumber := func() int64 {
-		result, err := call.Otto.Run("eth.blockNumber")
+		result, err := call.Otto.Run("sero.blockNumber")
 		if err != nil {
 			throwJSException(err.Error())
 		}

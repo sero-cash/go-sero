@@ -17,11 +17,17 @@
 package keystore
 
 import (
-	"math/big"
-
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/sero-cash/go-sero"
+	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/zero/txs/tx"
+	"github.com/sero-cash/go-sero/core/state"
+	"github.com/sero-cash/go-sero/zero/txs"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/crypto/sha3"
+	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original
@@ -78,7 +84,9 @@ func (w *keystoreWallet) Derive(path accounts.DerivationPath, pin bool) (account
 // there is no notion of hierarchical account derivation for plain keystore accounts.
 func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain ethereum.ChainStateReader) {}
 
-// SignHash implements accounts.Wallet, attempting to sign the given hash with
+
+//TODO zero delte Sign
+/*// SignHash implements accounts.Wallet, attempting to sign the given hash with
 // the given account. If the wallet does not wrap this particular account, an
 // error is returned to avoid account leakage (even though in theory we may be
 // able to sign via our shared keystore backend).
@@ -137,3 +145,113 @@ func (w *keystoreWallet) SignTxWithPassphrase(account accounts.Account, passphra
 	// Account seems valid, request the keystore to sign
 	return w.keystore.SignTxWithPassphrase(account, passphrase, tx, chainID)
 }
+*/
+
+func rlpHash(x interface{}) (h common.Hash) {
+	hw := sha3.NewKeccak256()
+	rlp.Encode(hw, x)
+	hw.Sum(h[:0])
+	return h
+}
+
+func (w *keystoreWallet) EncryptTx(account accounts.Account, tx *types.Transaction, txt *tx.T,state *state.StateDB) (*types.Transaction, error) {
+	// Make sure the requested account is contained within
+	if account.Address != w.account.Address {
+		return nil, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return nil, accounts.ErrUnknownAccount
+	}
+	seed ,err:=w.keystore.GetSeed(account)
+	if err != nil{
+		return nil, err
+	}
+	return w.EncryptTxWithSeed(*seed,tx,txt,state)
+
+}
+
+func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transaction, txt *tx.T,state *state.StateDB) (*types.Transaction, error) {
+
+	for i,ctx := range txt.CTxs{
+	   tk:=keys.Seed2Tk(seed.SeedToUint256())
+		outs,ammount,err := txs.GetRoots(&tk,state.GetZState(),ctx.Cost().ToRef(),&ctx.Currency)
+		if err != nil{
+			return nil, err
+		}
+		ins :=[]tx.In{}
+		for _,out := range outs{
+			ins = append(ins,tx.In{out})
+		}
+		txt.CTxs[i].Ins =ins
+
+		balance:=ammount
+		balance.SubU(ctx.Cost().ToRef())
+
+		if balance.Cmp(&utils.U256_0) >0 {
+			selfOut :=tx.Out{
+				Addr:keys.Seed2Addr(seed.SeedToUint256()),
+				Value:balance,
+				Z:tx.TYPE_Z,
+			}
+			txt.CTxs[i].Outs = append(txt.CTxs[i].Outs,selfOut)
+		}
+	}
+
+	Ehash :=rlpHash([] interface{}{
+		btx.GasPrice(),
+		btx.Data(),
+		btx.Currency(),
+	})
+	copy(txt.Ehash[:],Ehash[:])
+
+	stx,err := txs.Gen(seed.SeedToUint256(),txt,state.GetZState())
+	if err !=nil {
+		return nil,err
+	}
+
+	return btx.WithEncrypt(&stx)
+
+}
+
+
+
+func (w *keystoreWallet) EncryptTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction,txt *tx.T,state *state.StateDB) (*types.Transaction, error) {
+	// Make sure the requested account is contained within
+	if account.Address != w.account.Address {
+		return nil, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return nil, accounts.ErrUnknownAccount
+	}
+
+	seed ,err:=w.keystore.GetSeedWithPassphrase(account, passphrase)
+	if err != nil{
+		return nil, err
+	}
+	return w.EncryptTxWithSeed(*seed,tx,txt,state)
+
+}
+
+
+/*func (w *keystoreWallet) GetSeed() (*common.Seed, error) {
+	// Make sure the requested account is contained within
+	seed ,err:=w.keystore.GetSeed(w.account)
+	if err != nil{
+		return nil, err
+	}
+	return seed,nil
+
+}*/
+
+func (w *keystoreWallet) IsMine(onceAddress common.Address) (bool) {
+	tk:=w.account.Tk.ToUint512()
+	return keys.IsMyPKr(tk,onceAddress.ToUint512())
+
+}
+
+
+
+
+
+
+

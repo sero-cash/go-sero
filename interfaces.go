@@ -22,8 +22,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/core/types"
 )
 
 // NotFound is returned by API methods if the requested item does not exist.

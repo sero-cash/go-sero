@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/sero-cash/go-sero/accounts/keystore"
+	"github.com/sero-cash/go-sero/cmd/utils"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/crypto"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -104,10 +104,10 @@ It is possible to refer to a file containing the message.`,
 		signatureHex := ctx.Args().Get(1)
 		message := getMessage(ctx, 2)
 
-		if !common.IsHexAddress(addressStr) {
-			utils.Fatalf("Invalid address: %s", addressStr)
-		}
-		address := common.HexToAddress(addressStr)
+		//if !common.IsBase58Address(addressStr) {
+		//	utils.Fatalf("Invalid address: %s", addressStr)
+		//}
+		address := common.Base58ToAddress(addressStr)
 		signature, err := hex.DecodeString(signatureHex)
 		if err != nil {
 			utils.Fatalf("Signature encoding is not hexadecimal: %v", err)
@@ -117,14 +117,17 @@ It is possible to refer to a file containing the message.`,
 		if err != nil || recoveredPubkey == nil {
 			utils.Fatalf("Signature verification failed: %v", err)
 		}
+		//TODO zero modify ethkey/message.go
 		recoveredPubkeyBytes := crypto.FromECDSAPub(recoveredPubkey)
-		recoveredAddress := crypto.PubkeyToAddress(*recoveredPubkey)
+		//recoveredAddress := crypto.PrivkeyToAddress(*recoveredPubkey)
+		recoveredAddress := common.Address{}
+
 		success := address == recoveredAddress
 
 		out := outputVerify{
 			Success:            success,
 			RecoveredPublicKey: hex.EncodeToString(recoveredPubkeyBytes),
-			RecoveredAddress:   recoveredAddress.Hex(),
+			RecoveredAddress:   recoveredAddress.Base58(),
 		}
 		if ctx.Bool(jsonFlag.Name) {
 			mustPrintJSON(out)

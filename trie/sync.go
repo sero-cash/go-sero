@@ -20,8 +20,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/serodb"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
@@ -213,7 +213,7 @@ func (s *Sync) Process(results []SyncResult) (bool, int, error) {
 
 // Commit flushes the data stored in the internal membatch out to persistent
 // storage, returning the number of items written and any occurred error.
-func (s *Sync) Commit(dbw ethdb.Putter) (int, error) {
+func (s *Sync) Commit(dbw serodb.Putter) (int, error) {
 	// Dump the membatch into a database dbw
 	for i, key := range s.membatch.order {
 		if err := dbw.Put(key[:], s.membatch.batch[key]); err != nil {

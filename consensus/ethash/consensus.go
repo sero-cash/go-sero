@@ -24,22 +24,24 @@ import (
 	"runtime"
 	"time"
 
-	mapset "github.com/deckarep/golang-set"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/misc"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/deckarep/golang-set"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/math"
+	"github.com/sero-cash/go-sero/consensus"
+	"github.com/sero-cash/go-sero/consensus/misc"
+	"github.com/sero-cash/go-sero/core/state"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/params"
 )
 
 // Ethash proof-of-work protocol constants.
 var (
-	FrontierBlockReward    *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
-	ByzantiumBlockReward   *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
-	maxUncles                       = 2                 // Maximum number of uncles allowed in a single block
-	allowedFutureBlockTime          = 15 * time.Second  // Max time from current time allowed for blocks, before they're considered future blocks
+	blockNumber            *big.Int = big.NewInt(2102400)
+	maxUncles                       = 2                // Maximum number of uncles allowed in a single block
+	allowedFutureBlockTime          = 15 * time.Second // Max time from current time allowed for blocks, before they're considered future blocks
+	bigOne                 *big.Int = big.NewInt(1)
+	big4W                  *big.Int = big.NewInt(40000)
+	big39999               *big.Int = big.NewInt(39999)
 )
 
 // Various error messages to mark blocks invalid. These should be private to
@@ -275,9 +277,6 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 		}
 	}
 	// If all checks passed, validate any special fields for hard forks
-	if err := misc.VerifyDAOHeaderExtraData(chain.Config(), header); err != nil {
-		return err
-	}
 	if err := misc.VerifyForkHashes(chain.Config(), header, uncle); err != nil {
 		return err
 	}
@@ -299,8 +298,6 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 	switch {
 	case config.IsByzantium(next):
 		return calcDifficultyByzantium(time, parent)
-	case config.IsHomestead(next):
-		return calcDifficultyHomestead(time, parent)
 	default:
 		return calcDifficultyFrontier(time, parent)
 	}
@@ -337,11 +334,12 @@ func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
 	// (2 if len(parent_uncles) else 1) - (block_timestamp - parent_timestamp) // 9
 	x.Sub(bigTime, bigParentTime)
 	x.Div(x, big9)
-	if parent.UncleHash == types.EmptyUncleHash {
-		x.Sub(big1, x)
-	} else {
-		x.Sub(big2, x)
-	}
+	x.Sub(big1, x)
+	//if parent.UncleHash == types.EmptyUncleHash {
+	//	x.Sub(big1, x)
+	//} else {
+	//	x.Sub(big2, x)
+	//}
 	// max((2 if len(parent_uncles) else 1) - (block_timestamp - parent_timestamp) // 9, -99)
 	if x.Cmp(bigMinus99) < 0 {
 		x.Set(bigMinus99)
@@ -358,21 +356,21 @@ func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
 	// calculate a fake block number for the ice-age delay:
 	// https://github.com/ethereum/EIPs/pull/669
 	// fake_block_number = max(0, block.number - 3_000_000)
-	fakeBlockNumber := new(big.Int)
-	if parent.Number.Cmp(big2999999) >= 0 {
-		fakeBlockNumber = fakeBlockNumber.Sub(parent.Number, big2999999) // Note, parent is 1 less than the actual block number
-	}
+	//fakeBlockNumber := new(big.Int)
+	//if parent.Number.Cmp(big2999999) >= 0 {
+	//	fakeBlockNumber = fakeBlockNumber.Sub(parent.Number, big2999999) // Note, parent is 1 less than the actual block number
+	//}
 	// for the exponential factor
-	periodCount := fakeBlockNumber
-	periodCount.Div(periodCount, expDiffPeriod)
-
-	// the exponential factor, commonly referred to as "the bomb"
-	// diff = diff + 2^(periodCount - 2)
-	if periodCount.Cmp(big1) > 0 {
-		y.Sub(periodCount, big2)
-		y.Exp(big2, y, nil)
-		x.Add(x, y)
-	}
+	//periodCount := fakeBlockNumber
+	//periodCount.Div(periodCount, expDiffPeriod)
+	//
+	//// the exponential factor, commonly referred to as "the bomb"
+	//// diff = diff + 2^(periodCount - 2)
+	//if periodCount.Cmp(big1) > 0 {
+	//	y.Sub(periodCount, big2)
+	//	y.Exp(big2, y, nil)
+	//	x.Add(x, y)
+	//}
 	return x
 }
 
@@ -513,13 +511,14 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state and assembling the block.
-func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate any block and uncle rewards and commit the final state root
-	accumulateRewards(chain.Config(), state, header, uncles)
-	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	accumulateRewards(chain.Config(), state, header)
 
+	header.Root = state.IntermediateRoot(true)
+	
 	// Header seems complete, assemble into a block and return
-	return types.NewBlock(header, txs, uncles, receipts), nil
+	return types.NewBlock(header, txs, receipts), nil
 }
 
 // Some weird constants to avoid constant memory allocs for them.
@@ -531,24 +530,44 @@ var (
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward and rewards for
 // included uncles. The coinbase of each uncle block is also rewarded.
-func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, header *types.Header) {
 	// Select the correct block reward based on chain progression
-	blockReward := FrontierBlockReward
-	if config.IsByzantium(header.Number) {
-		blockReward = ByzantiumBlockReward
+	if header.Number.Cmp(blockNumber.Mul(blockNumber, big.NewInt(10))) > 0 {
+		return
 	}
-	// Accumulate the rewards for the miner and any included uncles
-	reward := new(big.Int).Set(blockReward)
-	r := new(big.Int)
-	for _, uncle := range uncles {
-		r.Add(uncle.Number, big8)
-		r.Sub(r, header.Number)
-		r.Mul(r, blockReward)
-		r.Div(r, big8)
-		state.AddBalance(uncle.Coinbase, r)
 
-		r.Div(blockReward, big32)
-		reward.Add(reward, r)
+	blockRewards := params.DefaultBlockRewards
+	if config.ChainID.Uint64() == 1 {
+		blockRewards = params.BetaBlockRewards
+	} else if config.ChainID.Uint64() == 2 {
+		blockRewards = params.AiphaBlockRewards
+	} else if config.ChainID.Uint64() == 3 {
+		blockRewards = params.DevBlockRewards
 	}
-	state.AddBalance(header.Coinbase, reward)
+
+	r := new(big.Int).Div(header.Number, blockNumber).Uint64()
+	reward := new(big.Int).Set(blockRewards[r])
+
+	avgGas := statedb.GetAvgUsedGas(header.Number.Uint64() - 1)
+
+	if header.GasUsed >= avgGas.Uint64() {
+		otherRawrd := new(big.Int).Div(reward, big.NewInt(5))
+		if statedb.GetBalance(state.EmptyAddress, "sero").Cmp(otherRawrd) >= 0 {
+			reward = reward.Add(reward, otherRawrd)
+			statedb.SubBalance(state.EmptyAddress, "sero", otherRawrd)
+		}
+	} else {
+		reward = reward.Mul(reward, big.NewInt(4)).Div(reward, big.NewInt(5))
+	}
+
+	if header.Number.Uint64() < 40000 {
+		avgGas = avgGas.Mul(avgGas, header.Number).Add(avgGas, new(big.Int).SetUint64(header.GasUsed)).Div(avgGas, new(big.Int).Add(header.Number, bigOne))
+	} else {
+		usedGas := new(big.Int).SetUint64(header.GasUsed)
+		avgGas = avgGas.Mul(avgGas, big39999).Div(avgGas, big4W).Add(avgGas, usedGas.Div(usedGas, big4W))
+	}
+	statedb.SetAvgUsedGas(header.Number.Uint64(), avgGas)
+
+	sero := common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32))
+	statedb.GetZState().AddTxOut(header.Coinbase, reward, sero.HashToUint256())
 }

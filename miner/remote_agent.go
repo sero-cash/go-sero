@@ -23,11 +23,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/consensus"
+	"github.com/sero-cash/go-sero/consensus/ethash"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/log"
 )
 
 type hashrate struct {

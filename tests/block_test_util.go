@@ -24,17 +24,17 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-sero/common/math"
+	"github.com/sero-cash/go-sero/consensus/ethash"
+	"github.com/sero-cash/go-sero/core"
+	"github.com/sero-cash/go-sero/core/state"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/core/vm"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/params"
+	"github.com/sero-cash/go-sero/rlp"
 )
 
 // A BlockTest checks handling of entire blocks.
@@ -99,7 +99,7 @@ func (t *BlockTest) Run() error {
 	}
 
 	// import pre accounts & construct test genesis block & state root
-	db := ethdb.NewMemDatabase()
+	db := serodb.NewMemDatabase()
 	gblock, err := t.genesis(config).Commit(db)
 	if err != nil {
 		return err
@@ -111,7 +111,7 @@ func (t *BlockTest) Run() error {
 		return fmt.Errorf("genesis block state root does not match test: computed=%x, test=%x", gblock.Root().Bytes()[:6], t.json.Genesis.StateRoot[:6])
 	}
 
-	chain, err := core.NewBlockChain(db, nil, config, ethash.NewShared(), vm.Config{})
+	chain, err := core.NewBlockChain(db, nil, config, ethash.NewShared(), vm.Config{}, nil)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (t *BlockTest) Run() error {
 func (t *BlockTest) genesis(config *params.ChainConfig) *core.Genesis {
 	return &core.Genesis{
 		Config:     config,
-		Nonce:      t.json.Genesis.Nonce.Uint64(),
+		//Nonce:      t.json.Genesis.Nonce.Uint64(),
 		Timestamp:  t.json.Genesis.Timestamp.Uint64(),
 		ParentHash: t.json.Genesis.ParentHash,
 		ExtraData:  t.json.Genesis.ExtraData,
@@ -226,9 +226,6 @@ func validateHeader(h *btHeader, h2 *types.Header) error {
 	if h.StateRoot != h2.Root {
 		return fmt.Errorf("State hash: want: %x have: %x", h.StateRoot, h2.Root)
 	}
-	if h.UncleHash != h2.UncleHash {
-		return fmt.Errorf("Uncle hash: want: %x have: %x", h.UncleHash, h2.UncleHash)
-	}
 	if !bytes.Equal(h.ExtraData, h2.Extra) {
 		return fmt.Errorf("Extra data: want: %x have: %x", h.ExtraData, h2.Extra)
 	}
@@ -252,17 +249,17 @@ func (t *BlockTest) validatePostState(statedb *state.StateDB) error {
 	for addr, acct := range t.json.Post {
 		// address is indirectly verified by the other fields, as it's the db key
 		code2 := statedb.GetCode(addr)
-		balance2 := statedb.GetBalance(addr)
-		nonce2 := statedb.GetNonce(addr)
+		balance2 := statedb.GetBalance(addr, "sero")
+		//nonce2 := statedb.GetNonce(addr)
 		if !bytes.Equal(code2, acct.Code) {
 			return fmt.Errorf("account code mismatch for addr: %s want: %v have: %s", addr, acct.Code, hex.EncodeToString(code2))
 		}
 		if balance2.Cmp(acct.Balance) != 0 {
 			return fmt.Errorf("account balance mismatch for addr: %s, want: %d, have: %d", addr, acct.Balance, balance2)
 		}
-		if nonce2 != acct.Nonce {
-			return fmt.Errorf("account nonce mismatch for addr: %s want: %d have: %d", addr, acct.Nonce, nonce2)
-		}
+		//if nonce2 != acct.Nonce {
+		//	return fmt.Errorf("account nonce mismatch for addr: %s want: %d have: %d", addr, acct.Nonce, nonce2)
+		//}
 	}
 	return nil
 }

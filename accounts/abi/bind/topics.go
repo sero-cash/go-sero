@@ -22,9 +22,9 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/sero-cash/go-sero/accounts/abi"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/crypto"
 )
 
 // makeTopics converts a filter query argument list into a filter topic set.
@@ -39,7 +39,9 @@ func makeTopics(query ...[]interface{}) ([][]common.Hash, error) {
 			case common.Hash:
 				copy(topic[:], rule[:])
 			case common.Address:
-				copy(topic[common.HashLength-common.AddressLength:], rule[:])
+				//copy(topic[common.AddressLength:], rule[:])
+				//TODO zero modify
+				copy(topic[:], rule[:])
 			case *big.Int:
 				blob := rule.Bytes()
 				copy(topic[common.HashLength-len(blob):], blob)
@@ -165,7 +167,9 @@ func parseTopics(out interface{}, fields abi.Arguments, topics []common.Hash) er
 
 			case reflectAddress:
 				var addr common.Address
-				copy(addr[:], topics[0][common.HashLength-common.AddressLength:])
+				//TODO zero modify
+				copy(addr[:], topics[0][0:])
+				//copy(addr[:], topics[0][common.HashLength-common.AddressLength:])
 				field.Set(reflect.ValueOf(addr))
 
 			case reflectBigInt:

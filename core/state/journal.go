@@ -19,7 +19,7 @@ package state
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/sero-cash/go-sero/common"
 )
 
 // journalEntry is a modification entry in the state change journal that can be
@@ -95,18 +95,17 @@ type (
 	suicideChange struct {
 		account     *common.Address
 		prev        bool // whether account had already suicided
+		currency    string
 		prevbalance *big.Int
 	}
 
 	// Changes to individual accounts.
 	balanceChange struct {
 		account *common.Address
+		currency    string
 		prev    *big.Int
 	}
-	nonceChange struct {
-		account *common.Address
-		prev    uint64
-	}
+
 	storageChange struct {
 		account       *common.Address
 		key, prevalue common.Hash
@@ -154,7 +153,7 @@ func (ch suicideChange) revert(s *StateDB) {
 	obj := s.getStateObject(*ch.account)
 	if obj != nil {
 		obj.suicided = ch.prev
-		obj.setBalance(ch.prevbalance)
+		obj.SetBalance(s.db, ch.currency, ch.prevbalance)
 	}
 }
 
@@ -162,7 +161,8 @@ func (ch suicideChange) dirtied() *common.Address {
 	return ch.account
 }
 
-var ripemd = common.HexToAddress("0000000000000000000000000000000000000003")
+//TODO zero delete
+//var ripemd = common.HexToAddress("0000000000000000000000000000000000000003")
 
 func (ch touchChange) revert(s *StateDB) {
 }
@@ -172,18 +172,10 @@ func (ch touchChange) dirtied() *common.Address {
 }
 
 func (ch balanceChange) revert(s *StateDB) {
-	s.getStateObject(*ch.account).setBalance(ch.prev)
+	s.getStateObject(*ch.account).SetBalance(s.db, ch.currency, ch.prev)
 }
 
 func (ch balanceChange) dirtied() *common.Address {
-	return ch.account
-}
-
-func (ch nonceChange) revert(s *StateDB) {
-	s.getStateObject(*ch.account).setNonce(ch.prev)
-}
-
-func (ch nonceChange) dirtied() *common.Address {
 	return ch.account
 }
 

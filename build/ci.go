@@ -26,9 +26,9 @@ Available commands are:
    install    [ -arch architecture ] [ -cc compiler ] [ packages... ]                          -- builds packages and executables
    test       [ -coverage ] [ packages... ]                                                    -- runs the tests
    lint                                                                                        -- runs certain pre-selected linters
-   archive    [ -arch architecture ] [ -type zip|tar ] [ -signer key-envvar ] [ -upload dest ] -- archives build artifacts
+   archive    [ -arch architecture ] [ -type zip|tar ] [ -abi key-envvar ] [ -upload dest ] -- archives build artifacts
    importkeys                                                                                  -- imports signing keys from env
-   debsrc     [ -signer key-id ] [ -upload dest ]                                              -- creates a debian source package
+   debsrc     [ -abi key-id ] [ -upload dest ]                                              -- creates a debian source package
    nsis                                                                                        -- creates a Windows NSIS installer
    aar        [ -local ] [ -sign key-id ] [-deploy repo] [ -upload dest ]                      -- creates an Android archive
    xcode      [ -local ] [ -sign key-id ] [-deploy repo] [ -upload dest ]                      -- creates an iOS XCode framework
@@ -58,25 +58,24 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/internal/build"
-	"github.com/ethereum/go-ethereum/params"
-	sv "github.com/ethereum/go-ethereum/swarm/version"
+	"github.com/sero-cash/go-sero/internal/build"
+	"github.com/sero-cash/go-sero/params"
 )
 
 var (
-	// Files that end up in the geth*.zip archive.
+	// Files that end up in the gero*.zip archive.
 	gethArchiveFiles = []string{
 		"COPYING",
-		executablePath("geth"),
+		executablePath("gero"),
 	}
 
-	// Files that end up in the geth-alltools*.zip archive.
+	// Files that end up in the gero-alltools*.zip archive.
 	allToolsArchiveFiles = []string{
 		"COPYING",
 		executablePath("abigen"),
 		executablePath("bootnode"),
 		executablePath("evm"),
-		executablePath("geth"),
+		executablePath("gero"),
 		executablePath("puppeth"),
 		executablePath("rlpdump"),
 		executablePath("wnode"),
@@ -103,7 +102,7 @@ var (
 			Description: "Developer utility version of the EVM (Ethereum Virtual Machine) that is capable of running bytecode snippets within a configurable environment and execution mode.",
 		},
 		{
-			BinaryName:  "geth",
+			BinaryName:  "gero",
 			Description: "Ethereum CLI client.",
 		},
 		{
@@ -133,18 +132,6 @@ var (
 		Name:        "ethereum",
 		Version:     params.Version,
 		Executables: debExecutables,
-	}
-
-	debSwarm = debPackage{
-		Name:        "ethereum-swarm",
-		Version:     sv.Version,
-		Executables: debSwarmExecutables,
-	}
-
-	// Debian meta packages to build and push to Ubuntu PPA
-	debPackages = []debPackage{
-		debSwarm,
-		debEthereum,
 	}
 
 	// Distros for which packages are created.
@@ -183,8 +170,6 @@ func main() {
 		doLint(os.Args[2:])
 	case "archive":
 		doArchive(os.Args[2:])
-	case "debsrc":
-		doDebianSource(os.Args[2:])
 	case "nsis":
 		doWindowsInstaller(os.Args[2:])
 	case "aar":
@@ -219,7 +204,7 @@ func doInstall(cmdline []string) {
 
 		if minor < 9 {
 			log.Println("You have Go version", runtime.Version())
-			log.Println("go-ethereum requires at least Go version 1.9 and cannot")
+			log.Println("go-sero requires at least Go version 1.9 and cannot")
 			log.Println("be compiled with an earlier version. Please upgrade your Go installation.")
 			os.Exit(1)
 		}
@@ -385,8 +370,6 @@ func doArchive(cmdline []string) {
 	var (
 		arch   = flag.String("arch", runtime.GOARCH, "Architecture cross packaging")
 		atype  = flag.String("type", "zip", "Type of archive to write (zip|tar)")
-		signer = flag.String("signer", "", `Environment variable holding the signing key (e.g. LINUX_SIGNING_KEY)`)
-		upload = flag.String("upload", "", `Destination to upload the archives (usually "gethstore/builds")`)
 		ext    string
 	)
 	flag.CommandLine.Parse(cmdline)
@@ -403,11 +386,8 @@ func doArchive(cmdline []string) {
 		env = build.Env()
 
 		basegeth = archiveBasename(*arch, params.ArchiveVersion(env.Commit))
-		geth     = "geth-" + basegeth + ext
-		alltools = "geth-alltools-" + basegeth + ext
-
-		baseswarm = archiveBasename(*arch, sv.ArchiveVersion(env.Commit))
-		swarm     = "swarm-" + baseswarm + ext
+		geth     = "gero-" + basegeth + ext
+		alltools = "gero-alltools-" + basegeth + ext
 	)
 	maybeSkipArchive(env)
 	if err := build.WriteArchive(geth, gethArchiveFiles); err != nil {
@@ -415,14 +395,6 @@ func doArchive(cmdline []string) {
 	}
 	if err := build.WriteArchive(alltools, allToolsArchiveFiles); err != nil {
 		log.Fatal(err)
-	}
-	if err := build.WriteArchive(swarm, swarmArchiveFiles); err != nil {
-		log.Fatal(err)
-	}
-	for _, archive := range []string{geth, alltools, swarm} {
-		if err := archiveUpload(archive, *upload, *signer); err != nil {
-			log.Fatal(err)
-		}
 	}
 }
 
@@ -486,57 +458,13 @@ func maybeSkipArchive(env build.Environment) {
 	}
 }
 
-// Debian Packaging
-func doDebianSource(cmdline []string) {
-	var (
-		signer  = flag.String("signer", "", `Signing key name, also used as package author`)
-		upload  = flag.String("upload", "", `Where to upload the source package (usually "ppa:ethereum/ethereum")`)
-		workdir = flag.String("workdir", "", `Output directory for packages (uses temp dir if unset)`)
-		now     = time.Now()
-	)
-	flag.CommandLine.Parse(cmdline)
-	*workdir = makeWorkdir(*workdir)
-	env := build.Env()
-	maybeSkipArchive(env)
-
-	// Import the signing key.
-	if b64key := os.Getenv("PPA_SIGNING_KEY"); b64key != "" {
-		key, err := base64.StdEncoding.DecodeString(b64key)
-		if err != nil {
-			log.Fatal("invalid base64 PPA_SIGNING_KEY")
-		}
-		gpg := exec.Command("gpg", "--import")
-		gpg.Stdin = bytes.NewReader(key)
-		build.MustRun(gpg)
-	}
-
-	// Create Debian packages and upload them
-	for _, pkg := range debPackages {
-		for _, distro := range debDistros {
-			meta := newDebMetadata(distro, *signer, env, now, pkg.Name, pkg.Version, pkg.Executables)
-			pkgdir := stageDebianSource(*workdir, meta)
-			debuild := exec.Command("debuild", "-S", "-sa", "-us", "-uc")
-			debuild.Dir = pkgdir
-			build.MustRun(debuild)
-
-			changes := fmt.Sprintf("%s_%s_source.changes", meta.Name(), meta.VersionString())
-			changes = filepath.Join(*workdir, changes)
-			if *signer != "" {
-				build.MustRunCommand("debsign", changes)
-			}
-			if *upload != "" {
-				build.MustRunCommand("dput", *upload, changes)
-			}
-		}
-	}
-}
 
 func makeWorkdir(wdflag string) string {
 	var err error
 	if wdflag != "" {
 		err = os.MkdirAll(wdflag, 0744)
 	} else {
-		wdflag, err = ioutil.TempDir("", "geth-build-")
+		wdflag, err = ioutil.TempDir("", "gero-build-")
 	}
 	if err != nil {
 		log.Fatal(err)
@@ -562,7 +490,7 @@ type debMetadata struct {
 
 	PackageName string
 
-	// go-ethereum version being built. Note that this
+	// go-sero version being built. Note that this
 	// is not the debian package version. The package version
 	// is constructed by VersionString.
 	Version string
@@ -641,16 +569,6 @@ func (meta debMetadata) ExeName(exe debExecutable) string {
 	return exe.Package()
 }
 
-// EthereumSwarmPackageName returns the name of the swarm package based on
-// environment, e.g. "ethereum-swarm-unstable", or "ethereum-swarm".
-// This is needed so that we make sure that "ethereum" package,
-// depends on and installs "ethereum-swarm"
-func (meta debMetadata) EthereumSwarmPackageName() string {
-	if isUnstableBuild(meta.Env) {
-		return debSwarm.Name + "-unstable"
-	}
-	return debSwarm.Name
-}
 
 // ExeConflicts returns the content of the Conflicts field
 // for executable packages.
@@ -702,7 +620,7 @@ func doWindowsInstaller(cmdline []string) {
 	// Parse the flags and make skip installer generation on PRs
 	var (
 		arch    = flag.String("arch", runtime.GOARCH, "Architecture for cross build packaging")
-		signer  = flag.String("signer", "", `Environment variable holding the signing key (e.g. WINDOWS_SIGNING_KEY)`)
+		signer  = flag.String("abi", "", `Environment variable holding the signing key (e.g. WINDOWS_SIGNING_KEY)`)
 		upload  = flag.String("upload", "", `Destination to upload the archives (usually "gethstore/builds")`)
 		workdir = flag.String("workdir", "", `Output directory for packages (uses temp dir if unset)`)
 	)
@@ -722,7 +640,7 @@ func doWindowsInstaller(cmdline []string) {
 			continue
 		}
 		allTools = append(allTools, filepath.Base(file))
-		if filepath.Base(file) == "geth.exe" {
+		if filepath.Base(file) == "gero.exe" {
 			gethTool = file
 		} else {
 			devTools = append(devTools, file)
@@ -730,13 +648,13 @@ func doWindowsInstaller(cmdline []string) {
 	}
 
 	// Render NSIS scripts: Installer NSIS contains two installer sections,
-	// first section contains the geth binary, second section holds the dev tools.
+	// first section contains the gero binary, second section holds the dev tools.
 	templateData := map[string]interface{}{
 		"License":  "COPYING",
 		"Geth":     gethTool,
 		"DevTools": devTools,
 	}
-	build.Render("build/nsis.geth.nsi", filepath.Join(*workdir, "geth.nsi"), 0644, nil)
+	build.Render("build/nsis.gero.nsi", filepath.Join(*workdir, "gero.nsi"), 0644, nil)
 	build.Render("build/nsis.install.nsh", filepath.Join(*workdir, "install.nsh"), 0644, templateData)
 	build.Render("build/nsis.uninstall.nsh", filepath.Join(*workdir, "uninstall.nsh"), 0644, allTools)
 	build.Render("build/nsis.pathupdate.nsh", filepath.Join(*workdir, "PathUpdate.nsh"), 0644, nil)
@@ -751,14 +669,14 @@ func doWindowsInstaller(cmdline []string) {
 	if env.Commit != "" {
 		version[2] += "-" + env.Commit[:8]
 	}
-	installer, _ := filepath.Abs("geth-" + archiveBasename(*arch, params.ArchiveVersion(env.Commit)) + ".exe")
+	installer, _ := filepath.Abs("gero-" + archiveBasename(*arch, params.ArchiveVersion(env.Commit)) + ".exe")
 	build.MustRunCommand("makensis.exe",
 		"/DOUTPUTFILE="+installer,
 		"/DMAJORVERSION="+version[0],
 		"/DMINORVERSION="+version[1],
 		"/DBUILDVERSION="+version[2],
 		"/DARCH="+*arch,
-		filepath.Join(*workdir, "geth.nsi"),
+		filepath.Join(*workdir, "gero.nsi"),
 	)
 
 	// Sign and publish installer.
@@ -772,7 +690,7 @@ func doWindowsInstaller(cmdline []string) {
 func doAndroidArchive(cmdline []string) {
 	var (
 		local  = flag.Bool("local", false, `Flag whether we're only doing a local build (skip Maven artifacts)`)
-		signer = flag.String("signer", "", `Environment variable holding the signing key (e.g. ANDROID_SIGNING_KEY)`)
+		signer = flag.String("abi", "", `Environment variable holding the signing key (e.g. ANDROID_SIGNING_KEY)`)
 		deploy = flag.String("deploy", "", `Destination to deploy the archive (usually "https://oss.sonatype.org")`)
 		upload = flag.String("upload", "", `Destination to upload the archive (usually "gethstore/builds")`)
 	)
@@ -789,11 +707,11 @@ func doAndroidArchive(cmdline []string) {
 	// Build the Android archive and Maven resources
 	build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile", "golang.org/x/mobile/cmd/gobind"))
 	build.MustRun(gomobileTool("init", "--ndk", os.Getenv("ANDROID_NDK")))
-	build.MustRun(gomobileTool("bind", "-ldflags", "-s -w", "--target", "android", "--javapkg", "org.ethereum", "-v", "github.com/ethereum/go-ethereum/mobile"))
+	build.MustRun(gomobileTool("bind", "-ldflags", "-s -w", "--target", "android", "--javapkg", "org.ethereum", "-v", "github.com/sero-cash/go-sero/mobile"))
 
 	if *local {
 		// If we're building locally, copy bundle to build dir and skip Maven
-		os.Rename("geth.aar", filepath.Join(GOBIN, "geth.aar"))
+		os.Rename("gero.aar", filepath.Join(GOBIN, "gero.aar"))
 		return
 	}
 	meta := newMavenMetadata(env)
@@ -803,8 +721,8 @@ func doAndroidArchive(cmdline []string) {
 	maybeSkipArchive(env)
 
 	// Sign and upload the archive to Azure
-	archive := "geth-" + archiveBasename("android", params.ArchiveVersion(env.Commit)) + ".aar"
-	os.Rename("geth.aar", archive)
+	archive := "gero-" + archiveBasename("android", params.ArchiveVersion(env.Commit)) + ".aar"
+	os.Rename("gero.aar", archive)
 
 	if err := archiveUpload(archive, *upload, *signer); err != nil {
 		log.Fatal(err)
@@ -894,7 +812,7 @@ func newMavenMetadata(env build.Environment) mavenMetadata {
 	}
 	return mavenMetadata{
 		Version:      version,
-		Package:      "geth-" + version,
+		Package:      "gero-" + version,
 		Develop:      isUnstableBuild(env),
 		Contributors: contribs,
 	}
@@ -905,7 +823,7 @@ func newMavenMetadata(env build.Environment) mavenMetadata {
 func doXCodeFramework(cmdline []string) {
 	var (
 		local  = flag.Bool("local", false, `Flag whether we're only doing a local build (skip Maven artifacts)`)
-		signer = flag.String("signer", "", `Environment variable holding the signing key (e.g. IOS_SIGNING_KEY)`)
+		signer = flag.String("abi", "", `Environment variable holding the signing key (e.g. IOS_SIGNING_KEY)`)
 		deploy = flag.String("deploy", "", `Destination to deploy the archive (usually "trunk")`)
 		upload = flag.String("upload", "", `Destination to upload the archives (usually "gethstore/builds")`)
 	)
@@ -915,7 +833,7 @@ func doXCodeFramework(cmdline []string) {
 	// Build the iOS XCode framework
 	build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile", "golang.org/x/mobile/cmd/gobind"))
 	build.MustRun(gomobileTool("init"))
-	bind := gomobileTool("bind", "-ldflags", "-s -w", "--target", "ios", "--tags", "ios", "-v", "github.com/ethereum/go-ethereum/mobile")
+	bind := gomobileTool("bind", "-ldflags", "-s -w", "--target", "ios", "--tags", "ios", "-v", "github.com/sero-cash/go-sero/mobile")
 
 	if *local {
 		// If we're building locally, use the build folder and stop afterwards
@@ -923,7 +841,7 @@ func doXCodeFramework(cmdline []string) {
 		build.MustRun(bind)
 		return
 	}
-	archive := "geth-" + archiveBasename("ios", params.ArchiveVersion(env.Commit))
+	archive := "gero-" + archiveBasename("ios", params.ArchiveVersion(env.Commit))
 	if err := os.Mkdir(archive, os.ModePerm); err != nil {
 		log.Fatal(err)
 	}

@@ -21,10 +21,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/rlp"
 )
 
 // errNoActiveJournal is returned if a transaction is attempted to be inserted
@@ -129,7 +128,7 @@ func (journal *txJournal) insert(tx *types.Transaction) error {
 
 // rotate regenerates the transaction journal based on the current contents of
 // the transaction pool.
-func (journal *txJournal) rotate(all map[common.Address]types.Transactions) error {
+func (journal *txJournal) rotate() error {
 	// Close the current journal (if any is open)
 	if journal.writer != nil {
 		if err := journal.writer.Close(); err != nil {
@@ -142,16 +141,7 @@ func (journal *txJournal) rotate(all map[common.Address]types.Transactions) erro
 	if err != nil {
 		return err
 	}
-	journaled := 0
-	for _, txs := range all {
-		for _, tx := range txs {
-			if err = rlp.Encode(replacement, tx); err != nil {
-				replacement.Close()
-				return err
-			}
-		}
-		journaled += len(txs)
-	}
+
 	replacement.Close()
 
 	// Replace the live journal with the newly generated one
@@ -163,7 +153,7 @@ func (journal *txJournal) rotate(all map[common.Address]types.Transactions) erro
 		return err
 	}
 	journal.writer = sink
-	log.Info("Regenerated local transaction journal", "transactions", journaled, "accounts", len(all))
+	log.Info("Regenerated local transaction journal", "transactions", "accounts")
 
 	return nil
 }

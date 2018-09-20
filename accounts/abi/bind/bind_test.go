@@ -26,7 +26,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/sero-cash/go-sero/common"
 	"golang.org/x/tools/imports"
 )
 
@@ -825,7 +825,7 @@ func TestBindings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed check for goimports symlink bug: %v", err)
 	}
-	if !strings.Contains(string(linkTestDeps), "go-ethereum") {
+	if !strings.Contains(string(linkTestDeps), "go-sero") {
 		t.Skip("symlinked environment doesn't support bind (https://github.com/golang/go/issues/14845)")
 	}
 	// Create a temporary workspace for the test suite

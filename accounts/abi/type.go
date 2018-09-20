@@ -136,7 +136,7 @@ func NewType(t string) (typ Type, err error) {
 	case "address":
 		typ.Kind = reflect.Array
 		typ.Type = addressT
-		typ.Size = 20
+		typ.Size = 64
 		typ.T = AddressTy
 	case "string":
 		typ.Kind = reflect.String
@@ -202,3 +202,5 @@ func (t Type) pack(v reflect.Value) ([]byte, error) {
 func (t Type) requiresLengthPrefix() bool {
 	return t.T == StringTy || t.T == BytesTy || t.T == SliceTy
 }
+
+

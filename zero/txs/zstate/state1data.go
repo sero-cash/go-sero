@@ -17,39 +17,39 @@
 package zstate
 
 import (
-	"github.com/sero-cash/go-sero/rlp"
+    "github.com/sero-cash/go-sero/rlp"
 )
 
 type State1Data struct {
-	Outs []*OutState1
+    Outs []*OutState1
 }
 
 func (self *State1Data) Serial() (ret []byte) {
-	if self != nil {
-		if bytes, err := rlp.EncodeToBytes(self); err != nil {
-			panic(err)
-		} else {
-			ret = bytes
-			return
-		}
-	} else {
-		return
-	}
+    if self!=nil {
+        if bytes,err:=rlp.EncodeToBytes(self);err!=nil {
+            panic(err)
+        } else {
+            ret=bytes
+            return
+        }
+    } else {
+        return
+    }
 }
-
 type State1DataGet struct {
-	out State1Data
+    out State1Data
 }
 
 func (self *State1DataGet) Unserial(v []byte) {
-	if v == nil || len(v) == 0 {
-		return
-	} else {
-		if err := rlp.DecodeBytes(v, &self.out); err != nil {
-			panic(err)
-			return
-		} else {
-			return
-		}
-	}
+    if v==nil||len(v)==0 {
+        return
+    } else {
+        if err := rlp.DecodeBytes(v, &self.out); err != nil {
+            panic(err)
+            return
+        } else {
+            return
+        }
+    }
 }
+

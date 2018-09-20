@@ -20,8 +20,8 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/math"
 )
 
 var (
@@ -35,7 +35,7 @@ var (
 	int16T    = reflect.TypeOf(int16(0))
 	int32T    = reflect.TypeOf(int32(0))
 	int64T    = reflect.TypeOf(int64(0))
-	addressT  = reflect.TypeOf(common.Address{})
+	addressT  = reflect.TypeOf(common.ContractAddress{})
 )
 
 // U256 converts a big Int into a 256bit EVM number.

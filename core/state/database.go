@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/trie"
 	lru "github.com/hashicorp/golang-lru"
 )
 
@@ -68,14 +68,14 @@ type Trie interface {
 	Hash() common.Hash
 	NodeIterator(startKey []byte) trie.NodeIterator
 	GetKey([]byte) []byte // TODO(fjl): remove this when SecureTrie is removed
-	Prove(key []byte, fromLevel uint, proofDb ethdb.Putter) error
+	Prove(key []byte, fromLevel uint, proofDb serodb.Putter) error
 }
 
 // NewDatabase creates a backing store for state. The returned database is safe for
 // concurrent use and retains cached trie nodes in memory. The pool is an optional
 // intermediate trie-node memory pool between the low level storage layer and the
 // high level trie abstraction.
-func NewDatabase(db ethdb.Database) Database {
+func NewDatabase(db serodb.Database) Database {
 	csc, _ := lru.New(codeSizeCacheSize)
 	return &cachingDB{
 		db:            trie.NewDatabase(db),
@@ -173,6 +173,6 @@ func (m cachedTrie) Commit(onleaf trie.LeafCallback) (common.Hash, error) {
 	return root, err
 }
 
-func (m cachedTrie) Prove(key []byte, fromLevel uint, proofDb ethdb.Putter) error {
+func (m cachedTrie) Prove(key []byte, fromLevel uint, proofDb serodb.Putter) error {
 	return m.SecureTrie.Prove(key, fromLevel, proofDb)
 }

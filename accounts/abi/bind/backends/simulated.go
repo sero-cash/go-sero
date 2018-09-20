@@ -19,27 +19,26 @@ package backends
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/bloombits"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/eth/filters"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/sero-cash/go-sero"
+	"github.com/sero-cash/go-sero/accounts/abi/bind"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/math"
+	"github.com/sero-cash/go-sero/consensus/ethash"
+	"github.com/sero-cash/go-sero/core"
+	"github.com/sero-cash/go-sero/core/bloombits"
+	"github.com/sero-cash/go-sero/core/rawdb"
+	"github.com/sero-cash/go-sero/core/state"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/core/vm"
+	"github.com/sero-cash/go-sero/sero/filters"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/event"
+	"github.com/sero-cash/go-sero/params"
+	"github.com/sero-cash/go-sero/rpc"
 )
 
 // This nil assignment ensures compile time that SimulatedBackend implements bind.ContractBackend.
@@ -51,7 +50,7 @@ var errGasEstimationFailed = errors.New("gas required exceeds allowance or alway
 // SimulatedBackend implements bind.ContractBackend, simulating a blockchain in
 // the background. Its main purpose is to allow easily testing contract bindings.
 type SimulatedBackend struct {
-	database   ethdb.Database   // In memory database to store our testing data
+	database   serodb.Database  // In memory database to store our testing data
 	blockchain *core.BlockChain // Ethereum blockchain to handle the consensus
 
 	mu           sync.Mutex
@@ -66,10 +65,10 @@ type SimulatedBackend struct {
 // NewSimulatedBackend creates a new binding backend using a simulated blockchain
 // for testing purposes.
 func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
-	database := ethdb.NewMemDatabase()
+	database := serodb.NewMemDatabase()
 	genesis := core.Genesis{Config: params.AllEthashProtocolChanges, Alloc: alloc}
 	genesis.MustCommit(database)
-	blockchain, _ := core.NewBlockChain(database, nil, genesis.Config, ethash.NewFaker(), vm.Config{})
+	blockchain, _ := core.NewBlockChain(database, nil, genesis.Config, ethash.NewFaker(), vm.Config{}, nil)
 
 	backend := &SimulatedBackend{
 		database:   database,
@@ -106,7 +105,7 @@ func (b *SimulatedBackend) rollback() {
 	statedb, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database(), b.pendingBlock.NumberU64())
 }
 
 // CodeAt returns the code associated with a certain account in the blockchain.
@@ -130,20 +129,20 @@ func (b *SimulatedBackend) BalanceAt(ctx context.Context, contract common.Addres
 		return nil, errBlockNumberUnsupported
 	}
 	statedb, _ := b.blockchain.State()
-	return statedb.GetBalance(contract), nil
+	return statedb.GetBalance(contract, "sero"), nil
 }
 
 // NonceAt returns the nonce of a certain account in the blockchain.
-func (b *SimulatedBackend) NonceAt(ctx context.Context, contract common.Address, blockNumber *big.Int) (uint64, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
-		return 0, errBlockNumberUnsupported
-	}
-	statedb, _ := b.blockchain.State()
-	return statedb.GetNonce(contract), nil
-}
+//func (b *SimulatedBackend) NonceAt(ctx context.Context, contract common.Address, blockNumber *big.Int) (uint64, error) {
+//	b.mu.Lock()
+//	defer b.mu.Unlock()
+//
+//	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
+//		return 0, errBlockNumberUnsupported
+//	}
+//	statedb, _ := b.blockchain.State()
+//	return statedb.GetNonce(contract), nil
+//}
 
 // StorageAt returns the value of key in the storage of an account in the blockchain.
 func (b *SimulatedBackend) StorageAt(ctx context.Context, contract common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {
@@ -200,12 +199,12 @@ func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call ethereu
 
 // PendingNonceAt implements PendingStateReader.PendingNonceAt, retrieving
 // the nonce currently pending for the account.
-func (b *SimulatedBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	return b.pendingState.GetOrNewStateObject(account).Nonce(), nil
-}
+//func (b *SimulatedBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
+//	b.mu.Lock()
+//	defer b.mu.Unlock()
+//
+//	return b.pendingState.GetOrNewStateObject(account).Nonce(), nil
+//}
 
 // SuggestGasPrice implements ContractTransactor.SuggestGasPrice. Since the simulated
 // chain doens't have miners, we just return a gas price of 1 for any call.
@@ -278,7 +277,7 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 	}
 	// Set infinite balance to the fake caller account.
 	from := statedb.GetOrNewStateObject(call.From)
-	from.SetBalance(math.MaxBig256)
+	from.SetBalance(statedb.Database(), "sero", math.MaxBig256)
 	// Execute the call.
 	msg := callmsg{call}
 
@@ -291,13 +290,14 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 	return core.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
 }
 
+//TODO zero modify SendTransaction
 // SendTransaction updates the pending block to include the given transaction.
 // It panics if the transaction is invalid.
 func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	sender, err := types.Sender(types.HomesteadSigner{}, tx)
+	/*sender, err := types.Sender(types.HomesteadSigner{}, tx)
 	if err != nil {
 		panic(fmt.Errorf("invalid transaction: %v", err))
 	}
@@ -315,7 +315,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 	statedb, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())*/
 	return nil
 }
 
@@ -400,7 +400,7 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	statedb, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database(), b.pendingBlock.NumberU64())
 
 	return nil
 }
@@ -411,6 +411,7 @@ type callmsg struct {
 }
 
 func (m callmsg) From() common.Address { return m.CallMsg.From }
+func (m callmsg) FromNonceAddr() *common.Address {return nil}
 func (m callmsg) Nonce() uint64        { return 0 }
 func (m callmsg) CheckNonce() bool     { return false }
 func (m callmsg) To() *common.Address  { return m.CallMsg.To }
@@ -418,15 +419,17 @@ func (m callmsg) GasPrice() *big.Int   { return m.CallMsg.GasPrice }
 func (m callmsg) Gas() uint64          { return m.CallMsg.Gas }
 func (m callmsg) Value() *big.Int      { return m.CallMsg.Value }
 func (m callmsg) Data() []byte         { return m.CallMsg.Data }
-
+func (m callmsg) Currency() string {
+	return "sero"
+}
 // filterBackend implements filters.Backend to support filtering for logs without
 // taking bloom-bits acceleration structures into account.
 type filterBackend struct {
-	db ethdb.Database
+	db serodb.Database
 	bc *core.BlockChain
 }
 
-func (fb *filterBackend) ChainDb() ethdb.Database  { return fb.db }
+func (fb *filterBackend) ChainDb() serodb.Database { return fb.db }
 func (fb *filterBackend) EventMux() *event.TypeMux { panic("not supported") }
 
 func (fb *filterBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumber) (*types.Header, error) {

@@ -23,13 +23,13 @@ import (
 	"net"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/p2p/simulations/pipes"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/sero-cash/go-sero/event"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/node"
+	"github.com/sero-cash/go-sero/p2p"
+	"github.com/sero-cash/go-sero/p2p/discover"
+	"github.com/sero-cash/go-sero/p2p/simulations/pipes"
+	"github.com/sero-cash/go-sero/rpc"
 )
 
 // SimAdapter is a NodeAdapter which creates in-memory simulation nodes and
@@ -95,7 +95,6 @@ func (s *SimAdapter) NewNode(config *NodeConfig) (Node, error) {
 			Dialer:          s,
 			EnableMsgEvents: config.EnableMsgEvents,
 		},
-		NoUSB:  true,
 		Logger: log.New("node.id", id.String()),
 	})
 	if err != nil {
@@ -179,7 +178,7 @@ func (sn *SimNode) Addr() []byte {
 
 // Node returns a discover.Node representing the SimNode
 func (sn *SimNode) Node() *discover.Node {
-	return discover.NewNode(sn.ID, net.IP{127, 0, 0, 1}, 30303, 30303)
+	return discover.NewNode(sn.ID, net.IP{127, 0, 0, 1}, 60603, 60603)
 }
 
 // Client returns an rpc.Client which can be used to communicate with the

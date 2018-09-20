@@ -28,10 +28,10 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/math"
+	"github.com/sero-cash/go-sero/crypto/sha3"
+	"github.com/sero-cash/go-czero-import/keys"
 )
 
 var (
@@ -71,15 +71,17 @@ func Keccak512(data ...[]byte) []byte {
 }
 
 // CreateAddress creates an ethereum address given the bytes and the nonce
-func CreateAddress(b common.Address, nonce uint64) common.Address {
-	data, _ := rlp.EncodeToBytes([]interface{}{b, nonce})
-	return common.BytesToAddress(Keccak256(data)[12:])
-}
+//func CreateAddress(b common.Address, nonce uint64) common.Address {
+//	data, _ := rlp.EncodeToBytes([]interface{}{b, nonce})
+//	bytes := Keccak512(data)
+//
+//	return common.BytesToAddress(append(bytes[:56], contract...))
+//}
 
 // CreateAddress2 creates an ethereum address given the address bytes, initial
 // contract code and a salt.
 func CreateAddress2(b common.Address, salt common.Hash, code []byte) common.Address {
-	return common.BytesToAddress(Keccak256([]byte{0xff}, b.Bytes(), salt.Bytes(), code)[12:])
+	return common.BytesToAddress(Keccak512([]byte{0xff}, b.Bytes(), salt.Bytes(), code))
 }
 
 // ToECDSA creates a private key with the given D value.
@@ -200,9 +202,20 @@ func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
 	return r.Cmp(secp256k1N) < 0 && s.Cmp(secp256k1N) < 0 && (v == 0 || v == 1)
 }
 
-func PubkeyToAddress(p ecdsa.PublicKey) common.Address {
-	pubBytes := FromECDSAPub(&p)
-	return common.BytesToAddress(Keccak256(pubBytes[1:])[12:])
+func PrivkeyToAddress(priv *ecdsa.PrivateKey) common.Address {
+	privKey := FromECDSA(priv)
+	var seed keys.Uint256
+	copy(seed[:],privKey)
+	pubBytes := keys.Seed2Addr(&seed)
+	return common.BytesToAddress(pubBytes[:])
+}
+
+func PrivkeyToTk(priv *ecdsa.PrivateKey) common.Address {
+	privKey := FromECDSA(priv)
+	var seed keys.Uint256
+	copy(seed[:],privKey)
+	pubBytes := keys.Seed2Tk(&seed)
+	return common.BytesToAddress(pubBytes[:])
 }
 
 func zeroBytes(bytes []byte) {

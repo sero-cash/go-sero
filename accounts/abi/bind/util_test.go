@@ -22,12 +22,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/sero-cash/go-sero/accounts/abi/bind"
+	"github.com/sero-cash/go-sero/accounts/abi/bind/backends"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/core"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/crypto"
 )
 
 var testKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
@@ -54,7 +54,7 @@ var waitDeployedTests = map[string]struct {
 func TestWaitDeployed(t *testing.T) {
 	for name, test := range waitDeployedTests {
 		backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-			crypto.PubkeyToAddress(testKey.PublicKey): {Balance: big.NewInt(10000000000)},
+			crypto.PrivkeyToAddress(testKey.PublicKey): {Balance: big.NewInt(10000000000)},
 		})
 
 		// Create the transaction.

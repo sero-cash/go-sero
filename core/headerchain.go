@@ -26,13 +26,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/consensus"
+	"github.com/sero-cash/go-sero/core/rawdb"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/params"
 	"github.com/hashicorp/golang-lru"
 )
 
@@ -50,7 +50,7 @@ const (
 type HeaderChain struct {
 	config *params.ChainConfig
 
-	chainDb       ethdb.Database
+	chainDb       serodb.Database
 	genesisHeader *types.Header
 
 	currentHeader     atomic.Value // Current head of the header chain (may be above the block chain!)
@@ -70,7 +70,7 @@ type HeaderChain struct {
 //  getValidator should return the parent's validator
 //  procInterrupt points to the parent's interrupt semaphore
 //  wg points to the parent's shutdown wait group
-func NewHeaderChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
+func NewHeaderChain(chainDb serodb.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
 	headerCache, _ := lru.New(headerCacheLimit)
 	tdCache, _ := lru.New(tdCacheLimit)
 	numberCache, _ := lru.New(numberCacheLimit)
@@ -107,6 +107,7 @@ func NewHeaderChain(chainDb ethdb.Database, config *params.ChainConfig, engine c
 
 	return hc, nil
 }
+
 
 // GetBlockNumber retrieves the block number belonging to the given hash
 // from the cache or database
@@ -232,15 +233,11 @@ func (hc *HeaderChain) ValidateHeaderChain(chain []*types.Header, checkFreq int)
 	defer close(abort)
 
 	// Iterate over the headers and ensure they all check out
-	for i, header := range chain {
+	for i, _ := range chain {
 		// If the chain is terminating, stop processing blocks
 		if hc.procInterrupt() {
 			log.Debug("Premature abort during headers verification")
 			return 0, errors.New("aborted")
-		}
-		// If the header is a banned one, straight out abort
-		if BadHashes[header.Hash()] {
-			return i, ErrBlacklistedHash
 		}
 		// Otherwise wait for headers checks and ensure they pass
 		if err := <-results; err != nil {
@@ -458,7 +455,6 @@ func (hc *HeaderChain) SetHead(head uint64, delFn DeleteCallback) {
 		if delFn != nil {
 			delFn(batch, hash, num)
 		}
-		rawdb.DeleteHeader(batch, hash, num)
 		rawdb.DeleteTd(batch, hash, num)
 
 		hc.currentHeader.Store(hc.GetHeader(hdr.ParentHash, hdr.Number.Uint64()-1))

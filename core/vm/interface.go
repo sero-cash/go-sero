@@ -19,35 +19,41 @@ package vm
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
+	"github.com/sero-cash/go-sero/core/types"
 )
 
 // StateDB is an EVM database for full state querying.
 type StateDB interface {
 	CreateAccount(common.Address)
+	GetZState() (*zstate.State)
+	SubBalance(common.Address, string, *big.Int)
+	AddBalance(common.Address, string, *big.Int)
+	GetBalance(common.Address, string) *big.Int
+	Balances(addr common.Address) map[string]*big.Int
 
-	SubBalance(common.Address, *big.Int)
-	AddBalance(common.Address, *big.Int)
-	GetBalance(common.Address) *big.Int
+	RegisterCurrency(string) bool
+	ExistsCurrency(string) bool
 
-	GetNonce(common.Address) uint64
-	SetNonce(common.Address, uint64)
-
+	AddNonceAddress([]byte, common.Address)
+	GetNonceAddress([]byte) common.Address
+	//
 	GetCodeHash(common.Address) common.Hash
 	GetCode(common.Address) []byte
 	SetCode(common.Address, []byte)
 	GetCodeSize(common.Address) int
 
+	IsContract(common.Address) bool
 	AddRefund(uint64)
 	GetRefund() uint64
 
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
 
-	Suicide(common.Address) bool
+	Suicide(common.Address, string) bool
 	HasSuicided(common.Address) bool
-
+	//
 	// Exist reports whether the given account exists in state.
 	// Notably this should also return true for suicided accounts.
 	Exist(common.Address) bool

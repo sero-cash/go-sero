@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/sero-cash/go-sero/accounts/keystore"
+	"github.com/sero-cash/go-sero/cmd/utils"
+	"github.com/sero-cash/go-sero/crypto"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -69,7 +69,7 @@ make sure to use this feature with great caution!`,
 		// Output all relevant information we can retrieve.
 		showPrivate := ctx.Bool("private")
 		out := outputInspect{
-			Address: key.Address.Hex(),
+			Address: key.Address.Base58(),
 			PublicKey: hex.EncodeToString(
 				crypto.FromECDSAPub(&key.PrivateKey.PublicKey)),
 		}

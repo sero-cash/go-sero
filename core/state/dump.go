@@ -20,14 +20,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/trie"
 )
 
 type DumpAccount struct {
 	Balance  string            `json:"balance"`
-	Nonce    uint64            `json:"nonce"`
+	//Nonce    uint64            `json:"nonce"`
 	Root     string            `json:"root"`
 	CodeHash string            `json:"codeHash"`
 	Code     string            `json:"code"`
@@ -55,8 +55,8 @@ func (self *StateDB) RawDump() Dump {
 
 		obj := newObject(nil, common.BytesToAddress(addr), data)
 		account := DumpAccount{
-			Balance:  data.Balance.String(),
-			Nonce:    data.Nonce,
+			Balance:  obj.Balance(self.db, "sero").String(),
+			//Nonce:    data.Nonce,
 			Root:     common.Bytes2Hex(data.Root[:]),
 			CodeHash: common.Bytes2Hex(data.CodeHash),
 			Code:     common.Bytes2Hex(obj.Code(self.db)),

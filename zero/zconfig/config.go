@@ -17,62 +17,63 @@
 package zconfig
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"time"
+    "path/filepath"
+    "os"
+    "io/ioutil"
+    "fmt"
+    "time"
 )
 
-var is_dev = false
+var is_dev=false
 
 func Init_Dev(dev bool) {
-	is_dev = dev
+    is_dev=dev
 }
-func Is_Dev() bool {
-	return is_dev
+func Is_Dev()bool {
+    return is_dev
 }
 
-var dir = ""
+
+
+var dir=""
 
 func State1_dir() string {
-	return filepath.Join(dir, "state1")
+    return filepath.Join(dir,"state1")
 }
 
-var last_remove_time = int64(0)
-
+var last_remove_time=int64(0)
 func Remove_State1_dir_files(height int) {
-	current_remove_time := time.Now().Unix()
-	if current_remove_time-last_remove_time > 30 {
-		state1_dir := State1_dir()
-		if files, err := ioutil.ReadDir(state1_dir); err != nil {
-			panic(err)
-		} else {
-			for _, file := range files {
-				name := file.Name()
-				var index int
-				fmt.Sscanf(name, "%d.", &index)
-				if height-index > 35 {
-					path := filepath.Join(state1_dir, name)
-					os.Remove(path)
-					fmt.Printf("remove state1 file: %s\n", name)
-				}
-			}
-		}
-		last_remove_time = current_remove_time
-	} else {
-	}
+    current_remove_time:=time.Now().Unix()
+    if current_remove_time-last_remove_time > 30 {
+        state1_dir := State1_dir()
+        if files, err := ioutil.ReadDir(state1_dir); err != nil {
+            panic(err)
+        } else {
+            for _, file := range files {
+                name := file.Name()
+                var index int
+                fmt.Sscanf(name, "%d.", &index)
+                if height-index > 35 {
+                    path := filepath.Join(state1_dir, name)
+                    os.Remove(path)
+                    fmt.Printf("remove state1 file: %s\n", name)
+                }
+            }
+        }
+        last_remove_time=current_remove_time
+    } else {}
 }
 
 func Init_State1_dir(d string) {
-	dir = d
-	state1_dir := State1_dir()
-	os.Mkdir(state1_dir, os.ModePerm)
+    dir=d
+    state1_dir:=State1_dir()
+    os.Mkdir(state1_dir, os.ModePerm)
 }
 
 func State1_file(last_fork string) string {
-	state1_dir := State1_dir()
-	os.Mkdir(state1_dir, os.ModePerm)
-	file := filepath.Join(state1_dir, last_fork)
-	return file
+    state1_dir:=State1_dir()
+    os.Mkdir(state1_dir, os.ModePerm)
+    file:=filepath.Join(state1_dir,last_fork)
+    return file
 }
+

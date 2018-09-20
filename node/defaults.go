@@ -22,9 +22,9 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/sero-cash/go-sero/p2p"
+	"github.com/sero-cash/go-sero/p2p/nat"
+	"github.com/sero-cash/go-sero/rpc"
 )
 
 const (
@@ -44,7 +44,7 @@ var DefaultConfig = Config{
 	WSPort:           DefaultWSPort,
 	WSModules:        []string{"net", "web3"},
 	P2P: p2p.Config{
-		ListenAddr: ":30303",
+		ListenAddr: ":60603",
 		MaxPeers:   25,
 		NAT:        nat.Any(),
 	},

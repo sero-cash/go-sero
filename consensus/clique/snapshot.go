@@ -21,17 +21,17 @@ import (
 	"encoding/json"
 	"sort"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/params"
 	lru "github.com/hashicorp/golang-lru"
 )
 
-// Vote represents a single vote that an authorized signer made to modify the
+// Vote represents a single vote that an authorized abi made to modify the
 // list of authorizations.
 type Vote struct {
-	Signer    common.Address `json:"signer"`    // Authorized signer that cast this vote
+	Signer    common.Address `json:"abi"`    // Authorized abi that cast this vote
 	Block     uint64         `json:"block"`     // Block number the vote was cast in (expire old votes)
 	Address   common.Address `json:"address"`   // Account being voted on to change its authorization
 	Authorize bool           `json:"authorize"` // Whether to authorize or deauthorize the voted account
@@ -84,7 +84,7 @@ func newSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, number uin
 }
 
 // loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
+func loadSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, db serodb.Database, hash common.Hash) (*Snapshot, error) {
 	blob, err := db.Get(append([]byte("clique-"), hash[:]...))
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func loadSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, db ethdb.
 }
 
 // store inserts the snapshot into the database.
-func (s *Snapshot) store(db ethdb.Database) error {
+func (s *Snapshot) store(db serodb.Database) error {
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err
@@ -135,7 +135,7 @@ func (s *Snapshot) copy() *Snapshot {
 }
 
 // validVote returns whether it makes sense to cast the specified vote in the
-// given snapshot context (e.g. don't try to add an already authorized signer).
+// given snapshot context (e.g. don't try to add an already authorized abi).
 func (s *Snapshot) validVote(address common.Address, authorize bool) bool {
 	_, signer := s.Signers[address]
 	return (signer && !authorize) || (!signer && authorize)
@@ -204,7 +204,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			snap.Votes = nil
 			snap.Tally = make(map[common.Address]Tally)
 		}
-		// Delete the oldest signer from the recent list to allow it signing again
+		// Delete the oldest abi from the recent list to allow it signing again
 		if limit := uint64(len(snap.Signers)/2 + 1); number >= limit {
 			delete(snap.Recents, number-limit)
 		}
@@ -223,7 +223,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		}
 		snap.Recents[number] = signer
 
-		// Header authorized, discard any previous votes from the signer
+		// Header authorized, discard any previous votes from the abi
 		for i, vote := range snap.Votes {
 			if vote.Signer == signer && vote.Address == header.Coinbase {
 				// Uncast the vote from the cached tally
@@ -234,7 +234,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 				break // only one vote allowed
 			}
 		}
-		// Tally up the new vote from the signer
+		// Tally up the new vote from the abi
 		var authorize bool
 		switch {
 		case bytes.Equal(header.Nonce[:], nonceAuthVote):
@@ -263,7 +263,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 				if limit := uint64(len(snap.Signers)/2 + 1); number >= limit {
 					delete(snap.Recents, number-limit)
 				}
-				// Discard any previous votes the deauthorized signer cast
+				// Discard any previous votes the deauthorized abi cast
 				for i := 0; i < len(snap.Votes); i++ {
 					if snap.Votes[i].Signer == header.Coinbase {
 						// Uncast the vote from the cached tally
@@ -302,7 +302,7 @@ func (s *Snapshot) signers() []common.Address {
 	return sigs
 }
 
-// inturn returns if a signer at a given block height is in-turn or not.
+// inturn returns if a abi at a given block height is in-turn or not.
 func (s *Snapshot) inturn(number uint64, signer common.Address) bool {
 	signers, offset := s.signers(), 0
 	for offset < len(signers) && signers[offset] != signer {

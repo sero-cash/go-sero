@@ -18,18 +18,19 @@
 package accounts
 
 import (
-	"math/big"
-
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/sero-cash/go-sero"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/core/state"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/event"
+	"github.com/sero-cash/go-sero/zero/txs/tx"
 )
 
 // Account represents an Ethereum account located at a specific location defined
 // by the optional URL field.
 type Account struct {
 	Address common.Address `json:"address"` // Ethereum account address derived from the key
+	Tk     	common.Address `json:"tk"`      // Ethereum account tk derived from the key
 	URL     URL            `json:"url"`     // Optional resource locator within a backend
 }
 
@@ -98,7 +99,9 @@ type Wallet interface {
 	// about which fields or actions are needed. The user may retry by providing
 	// the needed details via SignHashWithPassphrase, or by other means (e.g. unlock
 	// the account in a keystore).
-	SignHash(account Account, hash []byte) ([]byte, error)
+
+	//TODO zero delete Sign
+	/*SignHash(account Account, hash []byte) ([]byte, error)
 
 	// SignTx requests the wallet to sign the given transaction.
 	//
@@ -126,6 +129,14 @@ type Wallet interface {
 	// It looks up the account specified either solely via its address contained within,
 	// or optionally with the aid of any location metadata from the embedded URL field.
 	SignTxWithPassphrase(account Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
+
+	*/
+    EncryptTx(account Account, tx *types.Transaction, txt *tx.T,state *state.StateDB) (*types.Transaction, error)
+
+	EncryptTxWithPassphrase(account Account, passphrase string, tx *types.Transaction,txt *tx.T,state *state.StateDB) (*types.Transaction, error)
+
+	IsMine(onceAddress common.Address) bool
+
 }
 
 // Backend is a "wallet provider" that may contain a batch of accounts they can
@@ -163,6 +174,8 @@ const (
 
 	// WalletDropped
 	WalletDropped
+
+	WalletImport
 )
 
 // WalletEvent is an event fired by an account backend when a wallet arrival or

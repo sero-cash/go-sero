@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-sero/common/math"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/params"
+	"github.com/sero-cash/go-sero/rlp"
 )
 
 // TransactionTest checks RLP decoding and sender derivation of transactions.
@@ -76,16 +76,16 @@ func (tt *TransactionTest) Run(config *params.ChainConfig) error {
 		return fmt.Errorf("RLP decoding failed: %v", err)
 	}
 	// Check sender derivation.
-	signer := types.MakeSigner(config, new(big.Int).SetUint64(uint64(tt.json.BlockNumber)))
-	sender, err := types.Sender(signer, tx)
-	if err != nil {
-		return err
-	}
-	if sender != common.BytesToAddress(tt.json.Sender) {
-		return fmt.Errorf("Sender mismatch: got %x, want %x", sender, tt.json.Sender)
-	}
+	//abi := types.MakeSigner(config, new(big.Int).SetUint64(uint64(tt.json.BlockNumber)))
+	//sender, err := types.Sender(abi, tx)
+	//if err != nil {
+	//	return err
+	//}
+	//if sender != common.BytesToAddress(tt.json.Sender) {
+	//	return fmt.Errorf("Sender mismatch: got %x, want %x", sender, tt.json.Sender)
+	//}
 	// Check decoded fields.
-	err = tt.json.Transaction.verify(signer, tx)
+	err := tt.json.Transaction.verify(tx)
 	if tt.json.Sender == nil && err == nil {
 		return errors.New("field validations succeeded but should fail")
 	}
@@ -95,7 +95,7 @@ func (tt *TransactionTest) Run(config *params.ChainConfig) error {
 	return nil
 }
 
-func (tt *ttTransaction) verify(signer types.Signer, tx *types.Transaction) error {
+func (tt *ttTransaction) verify(tx *types.Transaction) error {
 	if !bytes.Equal(tx.Data(), tt.Data) {
 		return fmt.Errorf("Tx input data mismatch: got %x want %x", tx.Data(), tt.Data)
 	}
@@ -105,19 +105,7 @@ func (tt *ttTransaction) verify(signer types.Signer, tx *types.Transaction) erro
 	if tx.GasPrice().Cmp(tt.GasPrice) != 0 {
 		return fmt.Errorf("GasPrice mismatch: got %v, want %v", tx.GasPrice(), tt.GasPrice)
 	}
-	if tx.Nonce() != tt.Nonce {
-		return fmt.Errorf("Nonce mismatch: got %v, want %v", tx.Nonce(), tt.Nonce)
-	}
-	v, r, s := tx.RawSignatureValues()
-	if r.Cmp(tt.R) != 0 {
-		return fmt.Errorf("R mismatch: got %v, want %v", r, tt.R)
-	}
-	if s.Cmp(tt.S) != 0 {
-		return fmt.Errorf("S mismatch: got %v, want %v", s, tt.S)
-	}
-	if v.Cmp(tt.V) != 0 {
-		return fmt.Errorf("V mismatch: got %v, want %v", v, tt.V)
-	}
+
 	if tx.To() == nil {
 		if tt.To != (common.Address{}) {
 			return fmt.Errorf("To mismatch when recipient is nil (contract creation): %x", tt.To)
@@ -125,8 +113,6 @@ func (tt *ttTransaction) verify(signer types.Signer, tx *types.Transaction) erro
 	} else if *tx.To() != tt.To {
 		return fmt.Errorf("To mismatch: got %x, want %x", *tx.To(), tt.To)
 	}
-	if tx.Value().Cmp(tt.Value) != 0 {
-		return fmt.Errorf("Value mismatch: got %x, want %x", tx.Value(), tt.Value)
-	}
+
 	return nil
 }

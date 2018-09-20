@@ -17,44 +17,44 @@
 package zstate
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/rlp"
-	"github.com/sero-cash/go-sero/zero/witness/merkle"
+    "github.com/sero-cash/go-sero/zero/witness/merkle"
+    "github.com/sero-cash/go-czero-import/keys"
+    "github.com/sero-cash/go-sero/rlp"
 )
 
 type State0Block struct {
-	Tree        *merkle.Tree `rlp:"nil"`
-	Commitments []keys.Uint256
-	Dels        []keys.Uint256
+    Tree *merkle.Tree     `rlp:"nil"`
+    Commitments []keys.Uint256
+    Dels []keys.Uint256
 }
 
-func (self *State0Block) Serial() (ret []byte, e error) {
-	if self != nil {
-		if bytes, err := rlp.EncodeToBytes(self); err != nil {
-			e = err
-			return
-		} else {
-			ret = bytes
-			return
-		}
-	} else {
-		return
-	}
+func (self *State0Block) Serial() (ret []byte,e error) {
+    if self!=nil {
+        if bytes,err:=rlp.EncodeToBytes(self);err!=nil {
+            e=err
+            return
+        } else {
+            ret=bytes
+            return
+        }
+    } else {
+        return
+    }
 }
 
 type State0BlockGet struct {
-	out State0Block
+    out State0Block
 }
 
 func (self *State0BlockGet) Unserial(v []byte) (e error) {
-	if v == nil || len(v) == 0 {
-		return
-	} else {
-		if err := rlp.DecodeBytes(v, &self.out); err != nil {
-			e = err
-			return
-		} else {
-			return
-		}
-	}
+    if v==nil||len(v)==0 {
+        return
+    } else {
+        if err := rlp.DecodeBytes(v, &self.out); err != nil {
+            e=err
+            return
+        } else {
+            return
+        }
+    }
 }

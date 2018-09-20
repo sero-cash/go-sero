@@ -24,12 +24,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/p2p/netutil"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/p2p/nat"
+	"github.com/sero-cash/go-sero/p2p/netutil"
+	"github.com/sero-cash/go-sero/rlp"
 )
 
 const Version = 4

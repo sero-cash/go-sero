@@ -17,63 +17,64 @@
 package zstate
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
-	"github.com/sero-cash/go-sero/zero/utils"
-	"math/big"
+    "github.com/sero-cash/go-czero-import/keys"
+    "github.com/sero-cash/go-sero/zero/txs/stx"
+    "github.com/sero-cash/go-sero/zero/txs/zstate/tri"
+    "github.com/sero-cash/go-sero/common"
+    "math/big"
+    "github.com/sero-cash/go-sero/zero/utils"
 )
 
+
 type State struct {
-	State0
+    State0
 }
 
-func NewState(tri0 tri.Tri, num uint64) (state *State) {
-	state = &State{}
-	state.State0 = NewState0(tri0, num)
-	return
+func NewState(tri0 tri.Tri,num uint64)(state *State) {
+    state=&State{}
+    state.State0=NewState0(tri0,num)
+    return
 }
 
-func (self *State) Copy() *State {
-	return nil
+func (self *State) Copy()(*State) {
+    return nil
 }
 
 func (self *State) Update() {
-	self.State0.Update()
-	return
+    self.State0.Update()
+    return
 }
 
 func (self *State) Revert() {
-	self.State0.Revert()
-	return
+    self.State0.Revert()
+    return
 }
 
-func (state *State) addOut_O(out *stx.Out_O, currency *keys.Uint256) {
-	out0 := Out0{
-		*currency,
-		*out,
-	}
-	state.State0.AddOut(&out0, nil)
+func (state *State) addOut_O(out *stx.Out_O,currency *keys.Uint256) {
+    out0:=Out0{
+        *currency,
+        *out,
+    }
+    state.State0.AddOut(&out0,nil)
 }
 
-func (state *State) AddStx(st *stx.T) (e error) {
-	if err := state.State0.AddStx(st); err != nil {
-		e = err
-		return
-	} else {
-	}
-	return
+func (state *State) AddStx(st *stx.T) (e error){
+    if err:=state.State0.AddStx(st);err!=nil {
+        e=err
+        return
+    } else {
+    }
+    return
 }
 
 func (state *State) FinalizeGenWitness(tks []keys.Uint512) {
-	state1 := LoadState1(&state.State0)
-	state1.UpdateWitness(tks)
-	state1.Finalize()
-	return
+    state1:=LoadState1(&state.State0)
+    state1.UpdateWitness(tks)
+    state1.Finalize()
+    return
 }
 
 func (state *State) AddTxOut(addr common.Address, value *big.Int, currency *keys.Uint256) {
-	o := stx.Out_O{*addr.ToUint512(), utils.U256(*value), keys.Uint512{}}
-	state.addOut_O(&o, currency)
+    o := stx.Out_O{*addr.ToUint512(), utils.U256(*value), keys.Uint512{}}
+    state.addOut_O(&o,currency)
 }

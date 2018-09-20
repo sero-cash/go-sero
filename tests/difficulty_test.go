@@ -21,8 +21,8 @@ import (
 
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/params"
 )
 
 var (
@@ -56,8 +56,8 @@ func TestDifficulty(t *testing.T) {
 	dt.skipLoad("difficultyMorden\\.json")
 	dt.skipLoad("difficultyOlimpic\\.json")
 
-	dt.config("Ropsten", *params.TestnetChainConfig)
-	dt.config("Morden", *params.TestnetChainConfig)
+	dt.config("Ropsten", *params.AlphanetChainConfig)
+	dt.config("Morden", *params.AlphanetChainConfig)
 	dt.config("Frontier", params.ChainConfig{})
 
 	dt.config("Homestead", params.ChainConfig{
@@ -68,7 +68,7 @@ func TestDifficulty(t *testing.T) {
 		ByzantiumBlock: big.NewInt(0),
 	})
 
-	dt.config("Frontier", *params.TestnetChainConfig)
+	dt.config("Frontier", *params.AlphanetChainConfig)
 	dt.config("MainNetwork", mainnetChainConfig)
 	dt.config("CustomMainNetwork", mainnetChainConfig)
 	dt.config("difficulty.json", mainnetChainConfig)

@@ -21,12 +21,12 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/core/state"
+	"github.com/sero-cash/go-sero/core/vm"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/params"
 )
 
 // Config is a basic type specifying certain configuration flags for running
@@ -53,12 +53,7 @@ func setDefaults(cfg *Config) {
 	if cfg.ChainConfig == nil {
 		cfg.ChainConfig = &params.ChainConfig{
 			ChainID:        big.NewInt(1),
-			HomesteadBlock: new(big.Int),
-			DAOForkBlock:   new(big.Int),
-			DAOForkSupport: false,
-			EIP150Block:    new(big.Int),
-			EIP155Block:    new(big.Int),
-			EIP158Block:    new(big.Int),
+			ByzantiumBlock: new(big.Int),
 		}
 	}
 
@@ -99,7 +94,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(ethdb.NewMemDatabase()))
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(serodb.NewMemDatabase()), 0)
 	}
 	var (
 		address = common.BytesToAddress([]byte("contract"))
@@ -115,6 +110,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 		common.BytesToAddress([]byte("contract")),
 		input,
 		cfg.GasLimit,
+		"sero",
 		cfg.Value,
 	)
 
@@ -129,18 +125,21 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(ethdb.NewMemDatabase()))
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(serodb.NewMemDatabase()), 0)
 	}
 	var (
 		vmenv  = NewEnv(cfg)
 		sender = vm.AccountRef(cfg.Origin)
 	)
 
+	address := crypto.CreateAddress2(sender.Address(), common.Hash{}, input)
 	// Call the code with the given configuration.
-	code, address, leftOverGas, err := vmenv.Create(
+	code, leftOverGas, err := vmenv.Create(
 		sender,
+		address,
 		input,
 		cfg.GasLimit,
+		"sero",
 		cfg.Value,
 	)
 	return code, address, leftOverGas, err
@@ -163,6 +162,7 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 		address,
 		input,
 		cfg.GasLimit,
+		"sero",
 		cfg.Value,
 	)
 

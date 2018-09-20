@@ -29,23 +29,23 @@ import (
 
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-sero/common"
 )
 
 var (
 	cachetestDir, _   = filepath.Abs(filepath.Join("testdata", "keystore"))
 	cachetestAccounts = []accounts.Account{
 		{
-			Address: common.HexToAddress("7ef5a6135f1fd6a02593eedc869c6d41d934aef8"),
-			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "UTC--2016-03-22T12-57-55.920751759Z--7ef5a6135f1fd6a02593eedc869c6d41d934aef8")},
+			Address: common.Base58ToAddress("4dDHHzaHCr5eKgkEhtfCr9qQDBisDjJfka4zms94D51QKffCm1F1YzUdTofxafYYaNijTrNfWbsFZwiepmHkY7Pz"),
+			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "UTC--2018-09-11T10-50-15.518299056Z--4dDHHzaHCr5eKgkEhtfCr9qQDBisDjJfka4zms94D51QKffCm1F1YzUdTofxafYYaNijTrNfWbsFZwiepmHkY7Pz")},
 		},
 		{
-			Address: common.HexToAddress("f466859ead1932d743d622cb74fc058882e8648a"),
+			Address: common.Base58ToAddress("TKtF23g7WfnTFkSbskERmaMiMxUCCgPfG4rMRGEmrRCGrUFnHULC4XA6WEF8HxGF3JbQc4f8wj8Hg9T7yv91KHs"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "aaa")},
 		},
 		{
-			Address: common.HexToAddress("289d485d9771714cce91d3393d764e1311907acc"),
+			Address: common.Base58ToAddress("2DnJDxmGkeFvvxxMP6ZUwJNQx5uGEtRfY6ahpQBkzQruouvL7sCwbgTHTFN3hernDpM2bLbUQdZds3PyUBHqaAzA"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "zzz")},
 		},
 	}
@@ -54,7 +54,7 @@ var (
 func TestWatchNewFile(t *testing.T) {
 	t.Parallel()
 
-	dir, ks := tmpKeyStore(t, false)
+	dir, ks := tmpKeyStore(t)
 	defer os.RemoveAll(dir)
 
 	// Ensure the watcher is started before adding any files.
@@ -96,7 +96,7 @@ func TestWatchNoDir(t *testing.T) {
 
 	// Create ks but not the directory that it watches.
 	rand.Seed(time.Now().UnixNano())
-	dir := filepath.Join(os.TempDir(), fmt.Sprintf("eth-keystore-watch-test-%d-%d", os.Getpid(), rand.Int()))
+	dir := filepath.Join(os.TempDir(), fmt.Sprintf("sero-keystore-watch-test-%d-%d", os.Getpid(), rand.Int()))
 	ks := NewKeyStore(dir, LightScryptN, LightScryptP)
 
 	list := ks.Accounts()
@@ -146,45 +146,48 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 
 	accs := []accounts.Account{
 		{
-			Address: common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
+			Address: common.Base58ToAddress("4Ty8ZMWsP6EUP7jDDmN4tmxgTa4LfWpwbaDQPBxNRNibfhhWC6RhGfLwDnUu5FHDqxnfKjHm3NhFaBm1ZP5cB664"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "-309830980"},
 		},
 		{
-			Address: common.HexToAddress("2cac1adea150210703ba75ed097ddfe24e14f213"),
+			Address: common.Base58ToAddress("5TBbwPWNZo1cZ54vwrnM32GLgRRLExSfjwxj1r4DiL2don3bZj3jDHaweCjsidBZEMarLJCcTZDBRAJQpMNgQxsQ"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "ggg"},
 		},
 		{
-			Address: common.HexToAddress("8bda78331c916a08481428e4b07c96d3e916d165"),
+			Address: common.Base58ToAddress("2V6DVW81tuaoC1USymhvYAxENvTuRo9o9hMWqAcfRb9XJczFH2b8zJnyondpQytMSEaFQn7BfhHPWGvxfsVPoGPL"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "zzzzzz-the-very-last-one.keyXXX"},
 		},
 		{
-			Address: common.HexToAddress("d49ff4eeb0b2686ed89c0fc0f2b6ea533ddbbd5e"),
+			Address: common.Base58ToAddress("4dDHHzaHCr5eKgkEhtfCr9qQDBisDjJfka4zms94D51QKffCm1F1YzUdTofxafYYaNijTrNfWbsFZwiepmHkY7Pz"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "SOMETHING.key"},
 		},
 		{
-			Address: common.HexToAddress("7ef5a6135f1fd6a02593eedc869c6d41d934aef8"),
-			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "UTC--2016-03-22T12-57-55.920751759Z--7ef5a6135f1fd6a02593eedc869c6d41d934aef8"},
+			Address: common.Base58ToAddress("7ef5a6135f1fd6a02593eedc869c6d41d934aef8"),
+			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "UTC--2018-09-11T10-50-15.518299056Z--4dDHHzaHCr5eKgkEhtfCr9qQDBisDjJfka4zms94D51QKffCm1F1YzUdTofxafYYaNijTrNfWbsFZwiepmHkY7Pz"},
 		},
 		{
-			Address: common.HexToAddress("f466859ead1932d743d622cb74fc058882e8648a"),
+			Address: common.Base58ToAddress("TKtF23g7WfnTFkSbskERmaMiMxUCCgPfG4rMRGEmrRCGrUFnHULC4XA6WEF8HxGF3JbQc4f8wj8Hg9T7yv91KHs"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "aaa"},
 		},
 		{
-			Address: common.HexToAddress("289d485d9771714cce91d3393d764e1311907acc"),
+			Address: common.Base58ToAddress("2DnJDxmGkeFvvxxMP6ZUwJNQx5uGEtRfY6ahpQBkzQruouvL7sCwbgTHTFN3hernDpM2bLbUQdZds3PyUBHqaAzA"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "zzz"},
 		},
 	}
 	for _, a := range accs {
-		cache.add(a)
+		cache.add(a,false)
 	}
 	// Add some of them twice to check that they don't get reinserted.
-	cache.add(accs[0])
-	cache.add(accs[2])
+	cache.add(accs[0],false)
+	cache.add(accs[2],true)
 
 	// Check that the account list is sorted by filename.
-	wantAccounts := make([]accounts.Account, len(accs))
-	copy(wantAccounts, accs)
-	sort.Sort(accountsByURL(wantAccounts))
+	wantAccounts := make([]accountByTag, len(accs))
+
+	for _,a := range accs {
+		wantAccounts = append(wantAccounts,accountByTag{a,false})
+	}
+	sort.Sort(accountsByTag(wantAccounts))
 	list := cache.accounts()
 	if !reflect.DeepEqual(list, wantAccounts) {
 		t.Fatalf("got accounts: %s\nwant %s", spew.Sdump(accs), spew.Sdump(wantAccounts))
@@ -194,21 +197,21 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 			t.Errorf("expected hasAccount(%x) to return true", a.Address)
 		}
 	}
-	if cache.hasAddress(common.HexToAddress("fd9bd350f08ee3c0c19b85a8e16114a11a60aa4e")) {
-		t.Errorf("expected hasAccount(%x) to return false", common.HexToAddress("fd9bd350f08ee3c0c19b85a8e16114a11a60aa4e"))
+	if cache.hasAddress(common.Base58ToAddress("2DnJDxmGkeFvvxxMP6ZUwJNQx5uGEtRfY6ahpQBkzQruouvL7sCwbgTHTFN3hernDpM2bLbUQdZds3PyUBHqaAzA")) {
+		t.Errorf("expected hasAccount(%x) to return false", common.Base58ToAddress("2DnJDxmGkeFvvxxMP6ZUwJNQx5uGEtRfY6ahpQBkzQruouvL7sCwbgTHTFN3hernDpM2bLbUQdZds3PyUBHqaAzA"))
 	}
 
 	// Delete a few keys from the cache.
 	for i := 0; i < len(accs); i += 2 {
-		cache.delete(wantAccounts[i])
+		cache.delete(wantAccounts[i].accountByURL)
 	}
-	cache.delete(accounts.Account{Address: common.HexToAddress("fd9bd350f08ee3c0c19b85a8e16114a11a60aa4e"), URL: accounts.URL{Scheme: KeyStoreScheme, Path: "something"}})
+	cache.delete(accounts.Account{Address: common.Base58ToAddress("TKtF23g7WfnTFkSbskERmaMiMxUCCgPfG4rMRGEmrRCGrUFnHULC4XA6WEF8HxGF3JbQc4f8wj8Hg9T7yv91KHs"), URL: accounts.URL{Scheme: KeyStoreScheme, Path: "something"}})
 
 	// Check content again after deletion.
 	wantAccountsAfterDelete := []accounts.Account{
-		wantAccounts[1],
-		wantAccounts[3],
-		wantAccounts[5],
+		wantAccounts[1].accountByURL,
+		wantAccounts[3].accountByURL,
+		wantAccounts[5].accountByURL,
 	}
 	list = cache.accounts()
 	if !reflect.DeepEqual(list, wantAccountsAfterDelete) {
@@ -219,8 +222,8 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 			t.Errorf("expected hasAccount(%x) to return true", a.Address)
 		}
 	}
-	if cache.hasAddress(wantAccounts[0].Address) {
-		t.Errorf("expected hasAccount(%x) to return false", wantAccounts[0].Address)
+	if cache.hasAddress(wantAccounts[0].accountByURL.Address) {
+		t.Errorf("expected hasAccount(%x) to return false", wantAccounts[0].accountByURL.Address)
 	}
 }
 
@@ -231,28 +234,28 @@ func TestCacheFind(t *testing.T) {
 
 	accs := []accounts.Account{
 		{
-			Address: common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
+			Address: common.Base58ToAddress("2rkR2mi1WRhKdwsTkDXH1ij7jJzmJ13RMKdE5S33LAVytYrdT9EYQHUZxeoEUyEbvTzPn3E8qKYyakANyE8BLjeN"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "a.key")},
 		},
 		{
-			Address: common.HexToAddress("2cac1adea150210703ba75ed097ddfe24e14f213"),
+			Address: common.Base58ToAddress("5mLeU224vu2xzc76zVzYeFoJFn6QPb1fVnzrF9xJtV5EcqkGusFkATrmArjuiqi6mpGEdtAyRnhSo5aNmYSbJY8i"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "b.key")},
 		},
 		{
-			Address: common.HexToAddress("d49ff4eeb0b2686ed89c0fc0f2b6ea533ddbbd5e"),
+			Address: common.Base58ToAddress("2hxrVndUSTpuJwNspmrhDsUWCtsHStvdZVL5kkkzTuT17cvBFZhrN6txLxvsowGvbXLmTHAKYYRTPQUopoJq1hpt"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "c.key")},
 		},
 		{
-			Address: common.HexToAddress("d49ff4eeb0b2686ed89c0fc0f2b6ea533ddbbd5e"),
+			Address: common.Base58ToAddress("48M77Ro44VZ2a7wP5dMCrPfGJk2Fk31JiMK67R1DPicGAmW1dHUghRRrJ1GxXigFFG1dPq5vJkp7FJCz3mzHY8Dj"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "c2.key")},
 		},
 	}
 	for _, a := range accs {
-		cache.add(a)
+		cache.add(a,false)
 	}
 
 	nomatchAccount := accounts.Account{
-		Address: common.HexToAddress("f466859ead1932d743d622cb74fc058882e8648a"),
+		Address: common.Base58ToAddress("5hZAzZ1QuYuigswgipHTPEz2QuH4E1eEqWWGi9RznkyCq6v9uGS5DyQKyZTVWheimoqXYH4KgbrhECSDYsCauBmR"),
 		URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "something")},
 	}
 	tests := []struct {
@@ -322,7 +325,7 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 
 	// Create a temporary kesytore to test with
 	rand.Seed(time.Now().UnixNano())
-	dir := filepath.Join(os.TempDir(), fmt.Sprintf("eth-keystore-watch-test-%d-%d", os.Getpid(), rand.Int()))
+	dir := filepath.Join(os.TempDir(), fmt.Sprintf("sero-keystore-watch-test-%d-%d", os.Getpid(), rand.Int()))
 	ks := NewKeyStore(dir, LightScryptN, LightScryptP)
 
 	list := ks.Accounts()

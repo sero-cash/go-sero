@@ -19,8 +19,9 @@ package vm
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
 )
 
 func NoopCanTransfer(db StateDB, from common.Address, balance *big.Int) bool {
@@ -44,10 +45,11 @@ func (NoopEVMCallContext) DelegateCall(me ContractRef, addr common.Address, data
 }
 
 type NoopStateDB struct{}
-
+func (NoopStateDB) GetAndIndNonce() uint64 {return 0}
 func (NoopStateDB) CreateAccount(common.Address)                                       {}
-func (NoopStateDB) SubBalance(common.Address, *big.Int)                                {}
-func (NoopStateDB) AddBalance(common.Address, *big.Int)                                {}
+func (NoopStateDB) GetZState() (*zstate.State)                                         { return nil }
+func (NoopStateDB) SubBalance(common.Address, common.Hash, *big.Int)                                {}
+func (NoopStateDB) AddBalance(common.Address, common.Hash, *big.Int)                                {}
 func (NoopStateDB) GetBalance(common.Address) *big.Int                                 { return nil }
 func (NoopStateDB) GetNonce(common.Address) uint64                                     { return 0 }
 func (NoopStateDB) SetNonce(common.Address, uint64)                                    {}
@@ -59,7 +61,7 @@ func (NoopStateDB) AddRefund(uint64)                                            
 func (NoopStateDB) GetRefund() uint64                                                  { return 0 }
 func (NoopStateDB) GetState(common.Address, common.Hash) common.Hash                   { return common.Hash{} }
 func (NoopStateDB) SetState(common.Address, common.Hash, common.Hash)                  {}
-func (NoopStateDB) Suicide(common.Address) bool                                        { return false }
+func (NoopStateDB) Suicide(common.Address, common.Hash) bool                                        { return false }
 func (NoopStateDB) HasSuicided(common.Address) bool                                    { return false }
 func (NoopStateDB) Exist(common.Address) bool                                          { return false }
 func (NoopStateDB) Empty(common.Address) bool                                          { return false }
@@ -68,3 +70,17 @@ func (NoopStateDB) Snapshot() int                                               
 func (NoopStateDB) AddLog(*types.Log)                                                  {}
 func (NoopStateDB) AddPreimage(common.Hash, []byte)                                    {}
 func (NoopStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) {}
+func (NoopStateDB) IsContract(addr common.Address) (bool) {
+	return false
+}
+func (NoopStateDB) SetNonceAddress(addr common.Address, nonceAddr common.Address){
+
+}
+
+func (NoopStateDB) GetNonceAddress(addr common.Address, key []byte) common.Address {
+	return common.Address{}
+}
+
+func (NoopStateDB) GetAllNonceAddress(addr common.Address) []common.Address {
+	return []common.Address{}
+}

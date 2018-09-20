@@ -19,30 +19,30 @@ package keystore
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/base58"
+	"github.com/sero-cash/go-sero/crypto"
 	"github.com/pborman/uuid"
 )
 
 const (
-	version = 3
+	version = 1
 )
 
 type Key struct {
 	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
 	// to simplify lookups we also store the address
 	Address common.Address
+
+	Tk common.Address
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
 	PrivateKey *ecdsa.PrivateKey
@@ -57,26 +57,15 @@ type keyStore interface {
 	JoinPath(filename string) string
 }
 
-type plainKeyJSON struct {
-	Address    string `json:"address"`
-	PrivateKey string `json:"privatekey"`
-	Id         string `json:"id"`
-	Version    int    `json:"version"`
-}
 
-type encryptedKeyJSONV3 struct {
+type encryptedKeyJSONV1 struct {
 	Address string     `json:"address"`
+	Tk string          `json:"tk"`
 	Crypto  cryptoJSON `json:"crypto"`
 	Id      string     `json:"id"`
 	Version int        `json:"version"`
 }
 
-type encryptedKeyJSONV1 struct {
-	Address string     `json:"address"`
-	Crypto  cryptoJSON `json:"crypto"`
-	Id      string     `json:"id"`
-	Version string     `json:"version"`
-}
 
 type cryptoJSON struct {
 	Cipher       string                 `json:"cipher"`
@@ -91,47 +80,14 @@ type cipherparamsJSON struct {
 	IV string `json:"iv"`
 }
 
-func (k *Key) MarshalJSON() (j []byte, err error) {
-	jStruct := plainKeyJSON{
-		hex.EncodeToString(k.Address[:]),
-		hex.EncodeToString(crypto.FromECDSA(k.PrivateKey)),
-		k.Id.String(),
-		version,
-	}
-	j, err = json.Marshal(jStruct)
-	return j, err
-}
 
-func (k *Key) UnmarshalJSON(j []byte) (err error) {
-	keyJSON := new(plainKeyJSON)
-	err = json.Unmarshal(j, &keyJSON)
-	if err != nil {
-		return err
-	}
-
-	u := new(uuid.UUID)
-	*u = uuid.Parse(keyJSON.Id)
-	k.Id = *u
-	addr, err := hex.DecodeString(keyJSON.Address)
-	if err != nil {
-		return err
-	}
-	privkey, err := crypto.HexToECDSA(keyJSON.PrivateKey)
-	if err != nil {
-		return err
-	}
-
-	k.Address = common.BytesToAddress(addr)
-	k.PrivateKey = privkey
-
-	return nil
-}
 
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 	id := uuid.NewRandom()
 	key := &Key{
 		Id:         id,
-		Address:    crypto.PubkeyToAddress(privateKeyECDSA.PublicKey),
+		Address:    crypto.PrivkeyToAddress(privateKeyECDSA),
+		Tk:			crypto.PrivkeyToTk(privateKeyECDSA),
 		PrivateKey: privateKeyECDSA,
 	}
 	return key
@@ -152,9 +108,9 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
 	}
 	key := newKeyFromECDSA(privateKeyECDSA)
-	if !strings.HasPrefix(key.Address.Hex(), "0x00") {
-		return NewKeyForDirectICAP(rand)
-	}
+	//if !strings.HasPrefix(key.Address.Hex(), "0x00") {
+	//	return NewKeyForDirectICAP(rand)
+	//}
 	return key
 }
 
@@ -171,7 +127,7 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Accou
 	if err != nil {
 		return nil, accounts.Account{}, err
 	}
-	a := accounts.Account{Address: key.Address, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}}
+	a := accounts.Account{Address: key.Address,Tk:key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}}
 	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
 		zeroKey(key.PrivateKey)
 		return nil, a, err
@@ -205,7 +161,7 @@ func writeKeyFile(file string, content []byte) error {
 // UTC--<created_at UTC ISO8601>-<address hex>
 func keyFileName(keyAddr common.Address) string {
 	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr[:]))
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), base58.EncodeToString(keyAddr[:]))
 }
 
 func toISO8601(t time.Time) string {

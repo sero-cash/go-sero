@@ -19,7 +19,7 @@ package vm
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/sero-cash/go-sero/common"
 )
 
 // ContractRef is a reference to the contract's backing object
@@ -49,6 +49,8 @@ type Contract struct {
 	caller        ContractRef
 	self          ContractRef
 
+	//nonceAddres map[common.Address][64]byte
+
 	jumpdests destinations // result of JUMPDEST analysis.
 
 	Code     []byte
@@ -57,16 +59,23 @@ type Contract struct {
 	Input    []byte
 
 	Gas   uint64
+	//Currency common.Hash
 	value *big.Int
 
 	Args []byte
 
 	DelegateCall bool
+
+	addrs map[common.ContractAddress]common.Address
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
 func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uint64) *Contract {
 	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil}
+
+	c.addrs = map[common.ContractAddress]common.Address{}
+	c.addrs[caller.Address().ToContractAddress()] = caller.Address()
+	c.addrs[object.Address().ToContractAddress()] = object.Address()
 
 	if parent, ok := caller.(*Contract); ok {
 		// Reuse JUMPDEST analysis from parent context if available.
@@ -82,6 +91,19 @@ func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uin
 	c.value = value
 
 	return c
+}
+
+func (c *Contract) PutNonceAddress(statedb StateDB, addr common.Address) {
+	c.addrs[addr.ToContractAddress()] = addr
+	statedb.AddNonceAddress(addr[:20], addr)
+}
+
+func (c *Contract) GetNonceAddress(statedb StateDB, addr common.ContractAddress) common.Address {
+
+	if addresses, ok := c.addrs[addr]; ok {
+		return addresses
+	}
+	return statedb.GetNonceAddress(addr[:20])
 }
 
 // AsDelegate sets the contract to be a delegate call and returns the current

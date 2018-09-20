@@ -25,8 +25,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-sero/crypto"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -38,7 +38,7 @@ func importPreSaleKey(keyStore keyStore, keyJSON []byte, password string) (accou
 		return accounts.Account{}, nil, err
 	}
 	key.Id = uuid.NewRandom()
-	a := accounts.Account{Address: key.Address, URL: accounts.URL{Scheme: KeyStoreScheme, Path: keyStore.JoinPath(keyFileName(key.Address))}}
+	a := accounts.Account{Address: key.Address,Tk:key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: keyStore.JoinPath(keyFileName(key.Address))}}
 	err = keyStore.StoreKey(a.URL.Path, key, password)
 	return a, key, err
 }
@@ -81,7 +81,7 @@ func decryptPreSaleKey(fileContent []byte, password string) (key *Key, err error
 
 	key = &Key{
 		Id:         nil,
-		Address:    crypto.PubkeyToAddress(ecKey.PublicKey),
+		Address:    crypto.PrivkeyToAddress(ecKey),
 		PrivateKey: ecKey,
 	}
 	derivedAddr := hex.EncodeToString(key.Address.Bytes()) // needed because .Hex() gives leading "0x"

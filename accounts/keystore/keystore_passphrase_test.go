@@ -20,7 +20,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/sero-cash/go-sero/common"
 )
 
 const (
@@ -34,8 +34,8 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	password := ""
-	address := common.HexToAddress("45dea0fb0bba44f4fcf290bba71fd57d7117cbb8")
+	password := "123456"
+	address := common.Base58ToAddress("4oGNhAf3JRE1an7TPvKcxpfqHMY7rW6y1fupGcsn8krhWeUEAThkY4QsjHZqqacjMAENDE15tsXmdfsJvdeFVJDA")
 
 	// Do a few rounds of decryption and encryption
 	for i := 0; i < 3; i++ {

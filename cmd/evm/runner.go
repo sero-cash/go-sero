@@ -27,16 +27,16 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/ethereum/go-ethereum/cmd/evm/internal/compiler"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/core/vm/runtime"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/sero-cash/go-sero/cmd/evm/internal/compiler"
+	"github.com/sero-cash/go-sero/cmd/utils"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/core"
+	"github.com/sero-cash/go-sero/core/state"
+	"github.com/sero-cash/go-sero/core/vm"
+	"github.com/sero-cash/go-sero/core/vm/runtime"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/params"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -98,21 +98,21 @@ func runCmd(ctx *cli.Context) error {
 	}
 	if ctx.GlobalString(GenesisFlag.Name) != "" {
 		gen := readGenesis(ctx.GlobalString(GenesisFlag.Name))
-		db := ethdb.NewMemDatabase()
+		db := serodb.NewMemDatabase()
 		genesis := gen.ToBlock(db)
-		statedb, _ = state.New(genesis.Root(), state.NewDatabase(db))
+		statedb, _ = state.New(genesis.Root(), state.NewDatabase(db), genesis.NumberU64())
 		chainConfig = gen.Config
 		blockNumber = gen.Number
 	} else {
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(ethdb.NewMemDatabase()))
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(serodb.NewMemDatabase()), 0)
 	}
 	if ctx.GlobalString(SenderFlag.Name) != "" {
-		sender = common.HexToAddress(ctx.GlobalString(SenderFlag.Name))
+		sender = common.Base58ToAddress(ctx.GlobalString(SenderFlag.Name))
 	}
 	statedb.CreateAccount(sender)
 
 	if ctx.GlobalString(ReceiverFlag.Name) != "" {
-		receiver = common.HexToAddress(ctx.GlobalString(ReceiverFlag.Name))
+		receiver = common.Base58ToAddress(ctx.GlobalString(ReceiverFlag.Name))
 	}
 
 	var (

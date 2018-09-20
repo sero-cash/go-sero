@@ -205,6 +205,8 @@ func makeDecoder(typ reflect.Type, tags tags) (dec decoder, err error) {
 		return decodeBigInt, nil
 	case typ.AssignableTo(bigInt):
 		return decodeBigIntNoPtr, nil
+	case isInt(kind):
+		return decodeInt, nil
 	case isUint(kind):
 		return decodeUint, nil
 	case kind == reflect.Bool:
@@ -243,6 +245,17 @@ func decodeUint(s *Stream, val reflect.Value) error {
 		return wrapStreamError(err, val.Type())
 	}
 	val.SetUint(num)
+	return nil
+}
+
+func decodeInt(s *Stream, val reflect.Value) error {
+	typ := val.Type()
+	num, err := s.uint(typ.Bits())
+	if err != nil {
+		return wrapStreamError(err, val.Type())
+	}
+	v := int64(num)
+	val.SetInt(v)
 	return nil
 }
 

@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/math"
+	"github.com/sero-cash/go-sero/consensus/ethash"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/params"
 )
 
 //go:generate gencodec -type DifficultyTest -field-override difficultyTestMarshaling -out gen_difficultytest.go
@@ -53,7 +53,6 @@ func (test *DifficultyTest) Run(config *params.ChainConfig) error {
 		Difficulty: test.ParentDifficulty,
 		Time:       test.ParentTimestamp,
 		Number:     parentNumber,
-		UncleHash:  test.UncleHash,
 	}
 
 	actual := ethash.CalcDifficulty(config, test.CurrentTimestamp.Uint64(), parent)

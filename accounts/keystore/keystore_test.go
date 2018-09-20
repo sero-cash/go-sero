@@ -26,15 +26,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/event"
 )
 
 var testSigData = make([]byte, 32)
 
 func TestKeyStore(t *testing.T) {
-	dir, ks := tmpKeyStore(t, true)
+	dir, ks := tmpKeyStore(t)
 	defer os.RemoveAll(dir)
 
 	a, err := ks.NewAccount("foo")
@@ -68,53 +68,9 @@ func TestKeyStore(t *testing.T) {
 	}
 }
 
-func TestSign(t *testing.T) {
-	dir, ks := tmpKeyStore(t, true)
-	defer os.RemoveAll(dir)
-
-	pass := "" // not used but required by API
-	a1, err := ks.NewAccount(pass)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := ks.Unlock(a1, ""); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := ks.SignHash(accounts.Account{Address: a1.Address}, testSigData); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestSignWithPassphrase(t *testing.T) {
-	dir, ks := tmpKeyStore(t, true)
-	defer os.RemoveAll(dir)
-
-	pass := "passwd"
-	acc, err := ks.NewAccount(pass)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, unlocked := ks.unlocked[acc.Address]; unlocked {
-		t.Fatal("expected account to be locked")
-	}
-
-	_, err = ks.SignHashWithPassphrase(acc, pass, testSigData)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, unlocked := ks.unlocked[acc.Address]; unlocked {
-		t.Fatal("expected account to be locked")
-	}
-
-	if _, err = ks.SignHashWithPassphrase(acc, "invalid passwd", testSigData); err == nil {
-		t.Fatal("expected SignHashWithPassphrase to fail with invalid password")
-	}
-}
 
 func TestTimedUnlock(t *testing.T) {
-	dir, ks := tmpKeyStore(t, true)
+	dir, ks := tmpKeyStore(t)
 	defer os.RemoveAll(dir)
 
 	pass := "foo"
@@ -149,7 +105,7 @@ func TestTimedUnlock(t *testing.T) {
 }
 
 func TestOverrideUnlock(t *testing.T) {
-	dir, ks := tmpKeyStore(t, false)
+	dir, ks := tmpKeyStore(t)
 	defer os.RemoveAll(dir)
 
 	pass := "foo"
@@ -190,7 +146,7 @@ func TestOverrideUnlock(t *testing.T) {
 
 // This test should fail under -race if signing races the expiration goroutine.
 func TestSignRace(t *testing.T) {
-	dir, ks := tmpKeyStore(t, false)
+	dir, ks := tmpKeyStore(t)
 	defer os.RemoveAll(dir)
 
 	// Create a test account.
@@ -219,7 +175,7 @@ func TestSignRace(t *testing.T) {
 // addition and removal of wallet event subscriptions.
 func TestWalletNotifierLifecycle(t *testing.T) {
 	// Create a temporary kesytore to test with
-	dir, ks := tmpKeyStore(t, false)
+	dir, ks := tmpKeyStore(t)
 	defer os.RemoveAll(dir)
 
 	// Ensure that the notification updater is not running yet
@@ -280,7 +236,7 @@ type walletEvent struct {
 // Tests that wallet notifications and correctly fired when accounts are added
 // or deleted from the keystore.
 func TestWalletNotifications(t *testing.T) {
-	dir, ks := tmpKeyStore(t, false)
+	dir, ks := tmpKeyStore(t)
 	defer os.RemoveAll(dir)
 
 	// Subscribe to the wallet feed and collect events.
@@ -344,15 +300,15 @@ func checkAccounts(t *testing.T, live map[common.Address]accounts.Account, walle
 		t.Errorf("wallet list doesn't match required accounts: have %d, want %d", len(wallets), len(live))
 		return
 	}
-	liveList := make([]accounts.Account, 0, len(live))
+	liveList := make([]accountByTag, 0, len(live))
 	for _, account := range live {
-		liveList = append(liveList, account)
+		liveList = append(liveList, accountByTag{account,false})
 	}
-	sort.Sort(accountsByURL(liveList))
+	sort.Sort(accountsByTag(liveList))
 	for j, wallet := range wallets {
 		if accs := wallet.Accounts(); len(accs) != 1 {
 			t.Errorf("wallet %d: contains invalid number of accounts: have %d, want 1", j, len(accs))
-		} else if accs[0] != liveList[j] {
+		} else if accs[0] != liveList[j].accountByURL {
 			t.Errorf("wallet %d: account mismatch: have %v, want %v", j, accs[0], liveList[j])
 		}
 	}
@@ -374,14 +330,13 @@ func checkEvents(t *testing.T, want []walletEvent, have []walletEvent) {
 	}
 }
 
-func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
-	d, err := ioutil.TempDir("", "eth-keystore-test")
+func tmpKeyStore(t *testing.T) (string, *KeyStore) {
+	d, err := ioutil.TempDir("", "ser-keystore-test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	new := NewPlaintextKeyStore
-	if encrypted {
-		new = func(kd string) *KeyStore { return NewKeyStore(kd, veryLightScryptN, veryLightScryptP) }
-	}
-	return d, new(d)
+
+	new := func(kd *string) *KeyStore { return NewKeyStore(*kd, veryLightScryptN, veryLightScryptP) }
+
+	return d, new(&d)
 }

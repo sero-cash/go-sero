@@ -21,12 +21,12 @@ import (
 	"io"
 	"sync"
 	"time"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/rlp"
+	
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/metrics"
+	"github.com/sero-cash/go-sero/rlp"
 )
 
 var (
@@ -62,7 +62,7 @@ type DatabaseReader interface {
 // the disk database. The aim is to accumulate trie writes in-memory and only
 // periodically flush a couple tries to disk, garbage collecting the remainder.
 type Database struct {
-	diskdb ethdb.Database // Persistent storage for matured trie nodes
+	diskdb serodb.Database // Persistent storage for matured trie nodes
 
 	nodes  map[common.Hash]*cachedNode // Data and references relationships of a node
 	oldest common.Hash                 // Oldest tracked node, flush-list head
@@ -263,7 +263,7 @@ func expandNode(hash hashNode, n node, cachegen uint16) node {
 
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
-func NewDatabase(diskdb ethdb.Database) *Database {
+func NewDatabase(diskdb serodb.Database) *Database {
 	return &Database{
 		diskdb:    diskdb,
 		nodes:     map[common.Hash]*cachedNode{{}: {}},
@@ -273,6 +273,15 @@ func NewDatabase(diskdb ethdb.Database) *Database {
 
 // DiskDB retrieves the persistent storage backing the trie database.
 func (db *Database) DiskDB() DatabaseReader {
+	return db.diskdb
+}
+
+
+type DatabaseWriter interface {
+	Put(key []byte, value []byte) error
+}
+
+func (db *Database) WDiskDB() DatabaseWriter{
 	return db.diskdb
 }
 
@@ -522,7 +531,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 				db.lock.RUnlock()
 				return err
 			}
-			if batch.ValueSize() > ethdb.IdealBatchSize {
+			if batch.ValueSize() > serodb.IdealBatchSize {
 				if err := batch.Write(); err != nil {
 					db.lock.RUnlock()
 					return err
@@ -541,7 +550,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 			return err
 		}
 		// If we exceeded the ideal batch size, commit and reset
-		if batch.ValueSize() >= ethdb.IdealBatchSize {
+		if batch.ValueSize() >= serodb.IdealBatchSize {
 			if err := batch.Write(); err != nil {
 				log.Error("Failed to write flush list to disk", "err", err)
 				db.lock.RUnlock()
@@ -617,7 +626,7 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 			db.lock.RUnlock()
 			return err
 		}
-		if batch.ValueSize() > ethdb.IdealBatchSize {
+		if batch.ValueSize() > serodb.IdealBatchSize {
 			if err := batch.Write(); err != nil {
 				return err
 			}
@@ -667,7 +676,7 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 }
 
 // commit is the private locked version of Commit.
-func (db *Database) commit(hash common.Hash, batch ethdb.Batch) error {
+func (db *Database) commit(hash common.Hash, batch serodb.Batch) error {
 	// If the node does not exist, it's a previously committed node
 	node, ok := db.nodes[hash]
 	if !ok {
@@ -682,7 +691,7 @@ func (db *Database) commit(hash common.Hash, batch ethdb.Batch) error {
 		return err
 	}
 	// If we've reached an optimal batch size, commit and start over
-	if batch.ValueSize() >= ethdb.IdealBatchSize {
+	if batch.ValueSize() >= serodb.IdealBatchSize {
 		if err := batch.Write(); err != nil {
 			return err
 		}

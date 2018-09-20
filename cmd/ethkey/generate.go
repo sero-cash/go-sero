@@ -23,9 +23,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/sero-cash/go-sero/accounts/keystore"
+	"github.com/sero-cash/go-sero/cmd/utils"
+	"github.com/sero-cash/go-sero/crypto"
 	"github.com/pborman/uuid"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -85,7 +85,7 @@ If you want to encrypt an existing private key, it can be specified by setting
 		id := uuid.NewRandom()
 		key := &keystore.Key{
 			Id:         id,
-			Address:    crypto.PubkeyToAddress(privateKey.PublicKey),
+			Address:    crypto.PrivkeyToAddress(privateKey),
 			PrivateKey: privateKey,
 		}
 
@@ -106,7 +106,7 @@ If you want to encrypt an existing private key, it can be specified by setting
 
 		// Output some information.
 		out := outputGenerate{
-			Address: key.Address.Hex(),
+			Address: key.Address.Base58(),
 		}
 		if ctx.Bool(jsonFlag.Name) {
 			mustPrintJSON(out)

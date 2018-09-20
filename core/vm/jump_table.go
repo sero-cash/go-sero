@@ -20,7 +20,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/sero-cash/go-sero/params"
 )
 
 type (
@@ -85,15 +85,6 @@ func newConstantinopleInstructionSet() [256]operation {
 		gasCost:       gasExtCodeHash,
 		validateStack: makeStackFunc(1, 1),
 		valid:         true,
-	}
-	instructionSet[CREATE2] = operation{
-		execute:       opCreate2,
-		gasCost:       gasCreate2,
-		validateStack: makeStackFunc(4, 1),
-		memorySize:    memoryCreate2,
-		valid:         true,
-		writes:        true,
-		returns:       true,
 	}
 	return instructionSet
 }
@@ -920,15 +911,6 @@ func newFrontierInstructionSet() [256]operation {
 			memorySize:    memoryLog,
 			valid:         true,
 			writes:        true,
-		},
-		CREATE: {
-			execute:       opCreate,
-			gasCost:       gasCreate,
-			validateStack: makeStackFunc(3, 1),
-			memorySize:    memoryCreate,
-			valid:         true,
-			writes:        true,
-			returns:       true,
 		},
 		CALL: {
 			execute:       opCall,

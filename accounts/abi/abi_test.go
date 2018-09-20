@@ -17,18 +17,17 @@
 package abi
 
 import (
-	"bytes"
-	"encoding/hex"
-	"fmt"
-	"log"
-	"math/big"
-	"strings"
 	"testing"
-
+	"fmt"
+	"github.com/sero-cash/go-sero/common"
+	"strings"
 	"reflect"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	"math/big"
+	"github.com/sero-cash/go-sero/crypto"
+	"bytes"
+	"log"
+	"encoding/hex"
+	"encoding/json"
 )
 
 const jsondata = `
@@ -54,6 +53,150 @@ const jsondata2 = `
 	{ "type" : "function", "name" : "sliceAddress", "constant" : false, "inputs" : [ { "name" : "inputs", "type" : "address[]" } ] },
 	{ "type" : "function", "name" : "sliceMultiAddress", "constant" : false, "inputs" : [ { "name" : "a", "type" : "address[]" }, { "name" : "b", "type" : "address[]" } ] }
 ]`
+
+func newType(t string) Type {
+	typ, err := NewType(t)
+	if err != nil {
+		panic(t)
+	}
+	return typ
+}
+
+var (
+	bigInts = []*big.Int{}
+	uints   = []uint64{}
+	ints    = []int64{}
+)
+
+func TestALL(t *testing.T) {
+	fmt.Println(newType("bytes").T)
+
+
+	//fmt.Println(newType("uint8[2]").Kind)
+	//paramJson := `{"uint8[2]":[100,99]}`
+
+	//paramJson := `{"uint8[2][2]":[[100,99],[98,97]]}`
+
+	//paramJson := `{"string":"12345"}`
+
+	//paramJson := `{"bool":true}`
+
+	//paramJson := `{"address":"6gYcdwixFVFg1QLV29hURUnN2WLxoTFbDHBptvtC4GcCHfnG7ocmmTrebf3KvjNHfj6UJpp9UzkSiheYbCyDERF"}`
+
+	paramJson := `{"address[][]":[["6gYcdwixFVFg1QLV29hURUnN2WLxoTFbDHBptvtC4GcCHfnG7ocmmTrebf3KvjNHfj6UJpp9UzkSiheYbCyDERF"],["6gYcdwixFVFg1QLV29hURUnN2WLxoTFbDHBptvtC4GcCHfnG7ocmmTrebf3KvjNHfj6UJpp9UzkSiheYbCyDERF"]], "bytes":[1,2]}`
+
+	dec := json.NewDecoder(strings.NewReader(paramJson))
+	dec.UseNumber()
+
+	vs := map[string]interface{}{}
+
+	if err := dec.Decode(&vs); err != nil {
+		fmt.Print(err)
+	}
+
+	args := []Argument{}
+	inputs := []interface{}{}
+
+	var index int
+	for k, v := range vs {
+		//fmt.Printf("%t\n %t\n", k, v)
+		tv,_:=ValueTo(newType(k), v)
+		//fmt.Printf("address = %v\n",addr)
+		fmt.Printf("v=%v\n", tv)
+		args = append(args, Argument{"a"+strconv.Itoa(index), newType(k), false})
+		inputs = append(inputs, tv.Interface())
+		index += 1
+	}
+
+	//[2]uint32{uint32(100), uint32(99)}, "1234567890", common.HexToAddress("0xbbf289d846208c16edc8474705c748aff07732db"), common.HexToAddress("0x692a70d2e424a56d2c6c27aa97d1a86395877b3a"), "test", uint32(11)
+	method := Method{"test", false, args, nil}
+
+	outputs, err := method.Inputs.Pack(inputs...)
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	input := append(method.Id(), outputs...)
+	fmt.Println(common.Bytes2Hex(input))
+
+	type Event struct {
+		A0 common.Address
+		//A1 common.Address
+		//A2 []byte
+		//A2 string
+	}
+	var ev Event
+	aa := Arguments{
+		{"a0", newType("address"), false},
+		//{"a1", newType("address"), false},
+		{"a2", newType("bytes"), false},
+	}
+	unpack := aa.Unpack(&ev, outputs)
+	//unpack := method.Inputs.Unpack(&ev, outputs)
+	fmt.Println(unpack)
+	fmt.Println(ev)
+
+}
+
+
+func TestABIPACK(t *testing.T) {
+	fmt.Println(newType("bytes").T)
+
+
+	//fmt.Println(newType("uint8[2]").Kind)
+	//paramJson := `{"uint8[2]":[100,99]}`
+
+	//paramJson := `{"uint8[2][2]":[[100,99],[98,97]]}`
+
+	//paramJson := `{"string":"12345"}`
+
+	//paramJson := `{"bool":true}`
+
+	//paramJson := `{"address":"0xbbf289d846208c16edc8474705c748aff07732db"}`
+
+
+    datas :=[]string{`address:6gYcdwixFVFg1QLV29hURUnN2WLxoTFbDHBptvtC4GcCHfnG7ocmmTrebf3KvjNHfj6UJpp9UzkSiheYbCyDERF`}
+
+	inputs := []interface{}{}
+	args := []Argument{}
+	var index int
+	for _,line:=range datas{
+		pairs := strings.Split(line,":")
+		vs := map[string]interface{}{}
+		fmt.Printf("json=%v",`{"`+pairs[0]+`":"`+pairs[1]+`"}`)
+		dec := json.NewDecoder(strings.NewReader(`{"`+pairs[0]+`":"`+pairs[1]+`"}`))
+		dec.UseNumber()
+		if err := dec.Decode(&vs); err != nil {
+			fmt.Print(err)
+		}
+		for k, v := range vs {
+			//fmt.Printf("%t\n %t\n", k, v)
+			tv ,_:=ValueTo(newType(k), v)
+			fmt.Printf("v=%v\n", tv)
+			args = append(args, Argument{"a"+strconv.Itoa(index), newType(k), false})
+			inputs = append(inputs, tv.Interface())
+			index +=1
+		}
+
+	}
+
+
+
+
+
+
+
+	//[2]uint32{uint32(100), uint32(99)}, "1234567890", common.HexToAddress("0xbbf289d846208c16edc8474705c748aff07732db"), common.HexToAddress("0x692a70d2e424a56d2c6c27aa97d1a86395877b3a"), "test", uint32(11)
+	method := Method{"test", false, args, nil}
+
+	outputs, err := method.Inputs.Pack(inputs...)
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	input := append(method.Id(), outputs...)
+	fmt.Println(common.Bytes2Hex(input))
+}
 
 func TestReader(t *testing.T) {
 	Uint256, _ := NewType("uint256")
@@ -227,7 +370,7 @@ func ExampleJSON() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	out, err := abi.Pack("isBar", common.HexToAddress("01"))
+	out, err := abi.Pack("isBar", common.Base58ToAddress("01"))
 	if err != nil {
 		log.Fatalln(err)
 	}

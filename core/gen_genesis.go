@@ -7,10 +7,10 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-sero/common/math"
+	"github.com/sero-cash/go-sero/params"
 )
 
 var _ = (*genesisSpecMarshaling)(nil)
@@ -18,7 +18,7 @@ var _ = (*genesisSpecMarshaling)(nil)
 func (g Genesis) MarshalJSON() ([]byte, error) {
 	type Genesis struct {
 		Config     *params.ChainConfig                         `json:"config"`
-		Nonce      math.HexOrDecimal64                         `json:"nonce"`
+		//Nonce      math.HexOrDecimal64                         `json:"nonce"`
 		Timestamp  math.HexOrDecimal64                         `json:"timestamp"`
 		ExtraData  hexutil.Bytes                               `json:"extraData"`
 		GasLimit   math.HexOrDecimal64                         `json:"gasLimit"   gencodec:"required"`
@@ -32,7 +32,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 	}
 	var enc Genesis
 	enc.Config = g.Config
-	enc.Nonce = math.HexOrDecimal64(g.Nonce)
+	//enc.Nonce = math.HexOrDecimal64(g.Nonce)
 	enc.Timestamp = math.HexOrDecimal64(g.Timestamp)
 	enc.ExtraData = g.ExtraData
 	enc.GasLimit = math.HexOrDecimal64(g.GasLimit)
@@ -54,7 +54,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 func (g *Genesis) UnmarshalJSON(input []byte) error {
 	type Genesis struct {
 		Config     *params.ChainConfig                         `json:"config"`
-		Nonce      *math.HexOrDecimal64                        `json:"nonce"`
+		//Nonce      *math.HexOrDecimal64                        `json:"nonce"`
 		Timestamp  *math.HexOrDecimal64                        `json:"timestamp"`
 		ExtraData  *hexutil.Bytes                              `json:"extraData"`
 		GasLimit   *math.HexOrDecimal64                        `json:"gasLimit"   gencodec:"required"`
@@ -73,9 +73,9 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	if dec.Config != nil {
 		g.Config = dec.Config
 	}
-	if dec.Nonce != nil {
-		g.Nonce = uint64(*dec.Nonce)
-	}
+	//if dec.Nonce != nil {
+	//	g.Nonce = uint64(*dec.Nonce)
+	//}
 	if dec.Timestamp != nil {
 		g.Timestamp = uint64(*dec.Timestamp)
 	}

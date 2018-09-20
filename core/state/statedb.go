@@ -23,12 +23,15 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/trie"
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
+	"github.com/sero-cash/go-czero-import/keys"
+	"strings"
 )
 
 type revision struct {
@@ -42,6 +45,10 @@ var (
 
 	// emptyCode is the known hash of the empty EVM bytecode.
 	emptyCode = crypto.Keccak256Hash(nil)
+
+	EmptyAddress = common.BytesToAddress(crypto.Keccak512(nil))
+
+	currency_value = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000001")
 )
 
 // StateDBs within the ethereum protocol are used to store anything
@@ -50,12 +57,14 @@ var (
 // * Contracts
 // * Accounts
 type StateDB struct {
+	root common.Hash
 	db   Database
 	trie Trie
 
 	// This map holds 'live' objects, which will get modified while processing a state transition.
 	stateObjects      map[common.Address]*stateObject
 	stateObjectsDirty map[common.Address]struct{}
+	zstate            *zstate.State
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are
@@ -80,16 +89,70 @@ type StateDB struct {
 	validRevisions []revision
 	nextRevisionId int
 
-	lock sync.Mutex
+	seeds  []keys.Uint512
+	number uint64
+	lock   sync.Mutex
 }
 
-// Create a new state from a given trie.
-func New(root common.Hash, db Database) (*StateDB, error) {
+func (self *StateDB) IsContract(addr common.Address) (bool) {
+	return self.GetCode(addr) != nil
+}
+
+func (self *StateDB) GetSeeds() ([]keys.Uint512) {
+	return self.seeds
+}
+
+func (self *StateDB) SetSeeds(seeds []keys.Uint512) {
+	self.seeds = seeds
+}
+
+type StateDbGet interface {
+    Get(key []byte) ([]byte,error)
+}
+type StateDbPut interface {
+	Put(key, value []byte) error
+}
+type StateTri struct {
+	Tri Trie
+	Dbget StateDbGet
+	Dbput StateDbPut
+}
+
+func (self *StateTri) TryGet(key []byte) ([]byte, error) {
+	return self.Tri.TryGet(key)
+}
+
+func (self *StateTri) TryUpdate(key, value []byte) error {
+	return self.Tri.TryUpdate(key,value)
+}
+
+func (self *StateTri) TryGlobalGet(key []byte) ([]byte,error) {
+	return self.Dbget.Get(key)
+}
+
+func (self *StateTri) TryGlobalPut(key, value []byte) error {
+	return self.Dbput.Put(key,value)
+}
+
+func (self *StateDB) GetZState() (*zstate.State) {
+
+	if self.zstate == nil {
+		st:=StateTri{self.trie,self.db.TrieDB().DiskDB(),self.db.TrieDB().WDiskDB()}
+		self.zstate = zstate.NewState(&st,self.number)
+	}
+	return self.zstate
+}
+
+
+func NewGenesis(root common.Hash, db Database) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)
+
 	if err != nil {
 		return nil, err
 	}
+
 	return &StateDB{
+		root:              root,
 		db:                db,
 		trie:              tr,
 		stateObjects:      make(map[common.Address]*stateObject),
@@ -98,6 +161,134 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		preimages:         make(map[common.Hash][]byte),
 		journal:           newJournal(),
 	}, nil
+}
+
+// Create a new state from a given trie.
+func New(root common.Hash, db Database, number uint64) (*StateDB, error) {
+	tr, err := db.OpenTrie(root)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &StateDB{
+		root:              root,
+		db:                db,
+		trie:              tr,
+		stateObjects:      make(map[common.Address]*stateObject),
+		stateObjectsDirty: make(map[common.Address]struct{}),
+		logs:              make(map[common.Hash][]*types.Log),
+		preimages:         make(map[common.Hash][]byte),
+		journal:           newJournal(),
+		number:            number + 1,
+	}, nil
+}
+
+func (self *StateDB) GetAvgUsedGas(number uint64) *big.Int {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		value := stateObject.GetState(self.db, self.usedGasKey(number))
+		return big.NewInt(0).SetBytes(value.Bytes())
+	}
+	return new(big.Int)
+}
+
+
+func (self *StateDB) SetAvgUsedGas(number uint64, avgGsedGas *big.Int) {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		stateObject.SetState(self.db, self.usedGasKey(number), common.BigToHash(avgGsedGas))
+	}
+}
+
+func (self *StateDB) usedGasKey(number uint64) common.Hash {
+	bytes, _ := rlp.EncodeToBytes([]interface{}{"usedGas", number})
+	key := crypto.Keccak256Hash(bytes)
+	return key
+}
+
+
+//register
+func (self *StateDB) RegisterCurrency(coinName string) bool {
+	coinName = strings.ToLower(coinName)
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		key := crypto.Keccak256Hash([]byte(coinName))
+		value := stateObject.GetState(self.db, key)
+		if value == currency_value {
+			return false
+		}
+		stateObject.SetState(self.db, key, currency_value)
+		return true
+	}
+	return false
+}
+
+func (self *StateDB) ExistsCurrency(coinName string) bool {
+	coinName = strings.ToLower(coinName)
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		value := stateObject.GetState(self.db, crypto.Keccak256Hash([]byte(coinName)))
+		if value == currency_value {
+			return true
+		}
+	}
+	return false
+}
+
+func (self *StateDB) setCurrency(contractAddr common.Address, coinName string) common.Hash {
+	coinName = strings.ToLower(coinName)
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		//bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, coinName})
+		//hash := crypto.Keccak256Hash(bytes)
+		stateObject.SetState(self.db, crypto.Keccak256Hash([]byte(coinName)), currency_value)
+		return common.BytesToHash(common.LeftPadBytes([]byte(coinName), 32))
+	}
+	return common.Hash{}
+}
+
+func (self *StateDB) getCurrency(coinName string) common.Hash {
+	if strings.TrimSpace(coinName) == "" {
+		return common.Hash{}
+	}
+	coinName = strings.ToLower(coinName)
+	stateObject := self.getStateObject(EmptyAddress)
+	if stateObject != nil {
+		return stateObject.GetState(self.db, crypto.Keccak256Hash([]byte(coinName)))
+	}
+	return common.Hash{}
+}
+
+func (self *StateDB) AddNonceAddress(key []byte, nonceAddr common.Address) {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		key0 := crypto.Keccak256Hash(append([]byte("nonceAddr0"), key[:]...))
+		if stateObject.GetState(self.db, key0) != (common.Hash{}) {
+			return
+		}
+		key1 := crypto.Keccak256Hash(append([]byte("nonceAddr1"), key[:]...))
+		stateObject.SetState(self.db, key0, common.BytesToHash(nonceAddr[:32]))
+		stateObject.SetState(self.db, key1, common.BytesToHash(nonceAddr[32:]))
+	}
+}
+
+func (self *StateDB) GetNonceAddress(key []byte) common.Address {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		key0 := crypto.Keccak256Hash(append([]byte("nonceAddr0"), key[:]...))
+		key1 := crypto.Keccak256Hash(append([]byte("nonceAddr1"), key[:]...))
+		h := stateObject.GetState(self.db, key0)
+		if h == (common.Hash{}) {
+			return common.Address{}
+		}
+		l := stateObject.GetState(self.db, key1)
+		if l == (common.Hash{}) {
+			return common.Address{}
+		}
+		return common.BytesToAddress(append(h[:], l[:]...))
+	}
+	return common.Address{}
 }
 
 // setError remembers the first non-nil error it is called with.
@@ -188,21 +379,20 @@ func (self *StateDB) Empty(addr common.Address) bool {
 }
 
 // Retrieve the balance from the given address or 0 if object not found
-func (self *StateDB) GetBalance(addr common.Address) *big.Int {
+func (self *StateDB) GetBalance(addr common.Address, coinName string) *big.Int {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		return stateObject.Balance()
+		return stateObject.Balance(self.db, coinName)
 	}
 	return common.Big0
 }
 
-func (self *StateDB) GetNonce(addr common.Address) uint64 {
+func (self *StateDB) Balances(addr common.Address) map[string]*big.Int {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		return stateObject.Nonce()
+		return stateObject.Balances(self.db)
 	}
-
-	return 0
+	return map[string]*big.Int{}
 }
 
 func (self *StateDB) GetCode(addr common.Address) []byte {
@@ -273,32 +463,25 @@ func (self *StateDB) HasSuicided(addr common.Address) bool {
  */
 
 // AddBalance adds amount to the account associated with addr.
-func (self *StateDB) AddBalance(addr common.Address, amount *big.Int) {
+func (self *StateDB) AddBalance(addr common.Address, coinName string, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.AddBalance(amount)
+		stateObject.AddBalance(self.db, coinName, amount)
 	}
 }
 
 // SubBalance subtracts amount from the account associated with addr.
-func (self *StateDB) SubBalance(addr common.Address, amount *big.Int) {
+func (self *StateDB) SubBalance(addr common.Address, coinName string, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SubBalance(amount)
+		stateObject.SubBalance(self.db, coinName, amount)
 	}
 }
 
-func (self *StateDB) SetBalance(addr common.Address, amount *big.Int) {
+func (self *StateDB) SetBalance(addr common.Address, coinName string, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SetBalance(amount)
-	}
-}
-
-func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
-	stateObject := self.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SetNonce(nonce)
+		stateObject.SetBalance(self.db, coinName, amount)
 	}
 }
 
@@ -321,7 +504,7 @@ func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
 //
 // The account's state object is still available until the state is committed,
 // getStateObject will return a non-nil account after Suicide.
-func (self *StateDB) Suicide(addr common.Address) bool {
+func (self *StateDB) Suicide(addr common.Address, coinName string) bool {
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil {
 		return false
@@ -329,11 +512,10 @@ func (self *StateDB) Suicide(addr common.Address) bool {
 	self.journal.append(suicideChange{
 		account:     &addr,
 		prev:        stateObject.suicided,
-		prevbalance: new(big.Int).Set(stateObject.Balance()),
+		prevbalance: new(big.Int).Set(stateObject.Balance(self.db, coinName)),
 	})
 	stateObject.markSuicided()
-	stateObject.data.Balance = new(big.Int)
-
+	stateObject.SetBalance(self.db, coinName, new(big.Int));
 	return true
 }
 
@@ -403,7 +585,7 @@ func (self *StateDB) GetOrNewStateObject(addr common.Address) *stateObject {
 func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) {
 	prev = self.getStateObject(addr)
 	newobj = newObject(self, addr, Account{})
-	newobj.setNonce(0) // sets the object to dirty
+	//newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		self.journal.append(createObjectChange{account: &addr})
 	} else {
@@ -424,9 +606,16 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
 func (self *StateDB) CreateAccount(addr common.Address) {
-	new, prev := self.createObject(addr)
-	if prev != nil {
-		new.setBalance(prev.data.Balance)
+	self.createObject(addr)
+
+}
+
+func (db *StateDB) ForEachOuts(cb func(key, value common.Hash) bool) {
+	it := trie.NewIterator(db.trie.NodeIterator(nil))
+	for it.Next() {
+		// ignore cached values
+		key := common.BytesToHash(db.trie.GetKey(it.Key))
+		cb(key, common.BytesToHash(it.Value))
 	}
 }
 
@@ -459,10 +648,12 @@ func (self *StateDB) Copy() *StateDB {
 
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
+		root:              self.root,
 		db:                self.db,
 		trie:              self.db.CopyTrie(self.trie),
 		stateObjects:      make(map[common.Address]*stateObject, len(self.journal.dirties)),
 		stateObjectsDirty: make(map[common.Address]struct{}, len(self.journal.dirties)),
+		zstate:            self.zstate.Copy(),
 		refund:            self.refund,
 		logs:              make(map[common.Hash][]*types.Log, len(self.logs)),
 		logSize:           self.logSize,
@@ -471,7 +662,7 @@ func (self *StateDB) Copy() *StateDB {
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range self.journal.dirties {
-		// As documented [here](https://github.com/ethereum/go-ethereum/pull/16485#issuecomment-380438527),
+		// As documented [here](https://github.com/sero-cash/go-sero/pull/16485#issuecomment-380438527),
 		// and in the Finalise-method, there is a case where an object is in the journal but not
 		// in the stateObjects: OOG after touch on ripeMD prior to Byzantium. Thus, we need to check for
 		// nil
@@ -522,6 +713,8 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 	// Replay the journal to undo changes and remove invalidated snapshots
 	self.journal.revert(self, snapshot)
 	self.validRevisions = self.validRevisions[:idx]
+
+	self.GetZState().Revert()
 }
 
 // GetRefund returns the current value of the refund counter.
@@ -560,6 +753,7 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 // It is called in between transactions to get the root hash that
 // goes into transaction receipts.
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+	s.GetZState().Update()
 	s.Finalise(deleteEmptyObjects)
 	return s.trie.Hash()
 }
@@ -608,21 +802,27 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		delete(s.stateObjectsDirty, addr)
 	}
+	
+	s.GetZState().FinalizeGenWitness(s.GetSeeds())
+
 	// Write trie changes.
-	root, err = s.trie.Commit(func(leaf []byte, parent common.Hash) error {
-		var account Account
-		if err := rlp.DecodeBytes(leaf, &account); err != nil {
-			return nil
-		}
-		if account.Root != emptyState {
-			s.db.TrieDB().Reference(account.Root, parent)
-		}
-		code := common.BytesToHash(account.CodeHash)
-		if code != emptyCode {
-			s.db.TrieDB().Reference(code, parent)
-		}
-		return nil
-	})
+	root, err = s.trie.Commit(s.leafCallback)
+
 	log.Debug("Trie cache stats after commit", "misses", trie.CacheMisses(), "unloads", trie.CacheUnloads())
 	return root, err
+}
+
+func (s *StateDB) leafCallback(leaf []byte, parent common.Hash) error {
+	var account Account
+	if err := rlp.DecodeBytes(leaf, &account); err != nil {
+		return nil
+	}
+	if account.Root != emptyState {
+		s.db.TrieDB().Reference(account.Root, parent)
+	}
+	code := common.BytesToHash(account.CodeHash)
+	if code != emptyCode {
+		s.db.TrieDB().Reference(code, parent)
+	}
+	return nil
 }

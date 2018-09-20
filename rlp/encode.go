@@ -357,6 +357,8 @@ func makeWriter(typ reflect.Type, ts tags) (writer, error) {
 		return writeBigIntPtr, nil
 	case typ.AssignableTo(bigInt):
 		return writeBigIntNoPtr, nil
+	case isInt(kind):
+		return writeInt, nil
 	case isUint(kind):
 		return writeUint, nil
 	case kind == reflect.Bool:
@@ -389,6 +391,24 @@ func writeRawValue(val reflect.Value, w *encbuf) error {
 
 func writeUint(val reflect.Value, w *encbuf) error {
 	i := val.Uint()
+	if i == 0 {
+		w.str = append(w.str, 0x80)
+	} else if i < 128 {
+		// fits single byte
+		w.str = append(w.str, byte(i))
+	} else {
+		// TODO: encode int to w.str directly
+		s := putint(w.sizebuf[1:], i)
+		w.sizebuf[0] = 0x80 + byte(s)
+		w.str = append(w.str, w.sizebuf[:s+1]...)
+	}
+	return nil
+}
+
+
+func writeInt(val reflect.Value, w *encbuf) error {
+	v := val.Int()
+	i := uint64(v)
 	if i == 0 {
 		w.str = append(w.str, 0x80)
 	} else if i < 128 {

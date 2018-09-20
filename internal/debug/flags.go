@@ -24,10 +24,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/log/term"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/metrics/exp"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/log/term"
+	"github.com/sero-cash/go-sero/metrics"
+	"github.com/sero-cash/go-sero/metrics/exp"
 	"github.com/fjl/memsize/memsizeui"
 	colorable "github.com/mattn/go-colorable"
 	"gopkg.in/urfave/cli.v1"
@@ -43,7 +43,7 @@ var (
 	}
 	vmoduleFlag = cli.StringFlag{
 		Name:  "vmodule",
-		Usage: "Per-module verbosity: comma-separated list of <pattern>=<level> (e.g. eth/*=5,p2p=4)",
+		Usage: "Per-module verbosity: comma-separated list of <pattern>=<level> (e.g. sero/*=5,p2p=4)",
 		Value: "",
 	}
 	backtraceAtFlag = cli.StringFlag{

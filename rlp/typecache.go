@@ -154,3 +154,7 @@ func genTypeInfo(typ reflect.Type, tags tags) (info *typeinfo, err error) {
 func isUint(k reflect.Kind) bool {
 	return k >= reflect.Uint && k <= reflect.Uintptr
 }
+
+func isInt(k reflect.Kind) bool {
+	return k >= reflect.Int && k <= reflect.Int64
+}

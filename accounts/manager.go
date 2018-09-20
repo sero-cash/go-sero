@@ -21,7 +21,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/sero-cash/go-sero/event"
 )
 
 // Manager is an overarching account manager that can communicate with various
@@ -32,7 +32,7 @@ type Manager struct {
 	updates  chan WalletEvent           // Subscription sink for backend wallet changes
 	wallets  []Wallet                   // Cache of all wallets from all registered backends
 
-	feed event.Feed // Wallet feed notifying of arrivals/departures
+	feed    event.Feed // Wallet feed notifying of arrivals/departures
 
 	quit chan chan error
 	lock sync.RWMutex
@@ -106,7 +106,6 @@ func (am *Manager) update() {
 
 			// Notify any listeners of the event
 			am.feed.Send(event)
-
 		case errc := <-am.quit:
 			// Manager terminating, return
 			errc <- nil
@@ -120,7 +119,7 @@ func (am *Manager) Backends(kind reflect.Type) []Backend {
 	return am.backends[kind]
 }
 
-// Wallets returns all signer accounts registered under this account manager.
+// Wallets returns all abi accounts registered under this account manager.
 func (am *Manager) Wallets() []Wallet {
 	am.lock.RLock()
 	defer am.lock.RUnlock()
@@ -161,6 +160,8 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 	}
 	return nil, ErrUnknownAccount
 }
+
+
 
 // Subscribe creates an async subscription to receive notifications when the
 // manager detects the arrival or departure of a wallet from any of its backends.

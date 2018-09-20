@@ -21,11 +21,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/math"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/params"
+	"regexp"
 )
 
 var (
@@ -35,6 +36,12 @@ var (
 	errReturnDataOutOfBounds = errors.New("evm: return data out of bounds")
 	errExecutionReverted     = errors.New("evm: execution reverted")
 	errMaxCodeSizeExceeded   = errors.New("evm: max code size exceeded")
+	ErrToAddressError   = errors.New("evm: toAddr error")
+	ErrCoinNameError   = errors.New("evm: coin name error")
+
+	topic_issueToken    = common.HexToHash("0x25d7b0676eb16f8e7d1160b577510f33f54887867efcbc6ec3c712354706b6b0")
+	topic_sendAnonymous = common.HexToHash("0x2da7d636de04e3fdf864ae424b77b7c8ca8561cafd21f3317d8e131b96a22b02")
+	topic_selfBalance   = common.HexToHash("0x5c8c6e4c5998a1ee83ab3aa45fa23ca7c8ed4a75c654632eb22adcc5e1e6fb37")
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -386,23 +393,23 @@ func opSha3(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 }
 
 func opAddress(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(contract.Address().Big())
+	stack.push(contract.Address().ToContractAddress().Big())
 	return nil, nil
 }
 
 func opBalance(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	slot := stack.peek()
-	slot.Set(interpreter.evm.StateDB.GetBalance(common.BigToAddress(slot)))
+	slot.Set(new(big.Int))
 	return nil, nil
 }
 
 func opOrigin(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(interpreter.evm.Origin.Big())
+	stack.push(interpreter.evm.Origin.ToContractAddress().Big())
 	return nil, nil
 }
 
 func opCaller(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(contract.Caller().Big())
+	stack.push(contract.Caller().ToContractAddress().Big())
 	return nil, nil
 }
 
@@ -548,7 +555,7 @@ func opBlockhash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, me
 }
 
 func opCoinbase(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(interpreter.evm.Coinbase.Big())
+	stack.push(interpreter.evm.Coinbase.ToContractAddress().Big())
 	return nil, nil
 }
 
@@ -665,74 +672,17 @@ func opGas(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *
 	return nil, nil
 }
 
-func opCreate(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	var (
-		value        = stack.pop()
-		offset, size = stack.pop(), stack.pop()
-		input        = memory.Get(offset.Int64(), size.Int64())
-		gas          = contract.Gas
-	)
-	if interpreter.evm.ChainConfig().IsEIP150(interpreter.evm.BlockNumber) {
-		gas -= gas / 64
-	}
-
-	contract.UseGas(gas)
-	res, addr, returnGas, suberr := interpreter.evm.Create(contract, input, gas, value)
-	// Push item on the stack based on the returned error. If the ruleset is
-	// homestead we must check for CodeStoreOutOfGasError (homestead only
-	// rule) and treat as an error, if the ruleset is frontier we must
-	// ignore this error and pretend the operation was successful.
-	if interpreter.evm.ChainConfig().IsHomestead(interpreter.evm.BlockNumber) && suberr == ErrCodeStoreOutOfGas {
-		stack.push(interpreter.intPool.getZero())
-	} else if suberr != nil && suberr != ErrCodeStoreOutOfGas {
-		stack.push(interpreter.intPool.getZero())
-	} else {
-		stack.push(addr.Big())
-	}
-	contract.Gas += returnGas
-	interpreter.intPool.put(value, offset, size)
-
-	if suberr == errExecutionReverted {
-		return res, nil
-	}
-	return nil, nil
-}
-
-func opCreate2(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	var (
-		endowment    = stack.pop()
-		offset, size = stack.pop(), stack.pop()
-		salt         = stack.pop()
-		input        = memory.Get(offset.Int64(), size.Int64())
-		gas          = contract.Gas
-	)
-
-	// Apply EIP150
-	gas -= gas / 64
-	contract.UseGas(gas)
-	res, addr, returnGas, suberr := interpreter.evm.Create2(contract, input, gas, endowment, salt)
-	// Push item on the stack based on the returned error.
-	if suberr != nil {
-		stack.push(interpreter.intPool.getZero())
-	} else {
-		stack.push(addr.Big())
-	}
-	contract.Gas += returnGas
-	interpreter.intPool.put(endowment, offset, size, salt)
-
-	if suberr == errExecutionReverted {
-		return res, nil
-	}
-	return nil, nil
-}
-
 func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	// Pop gas. The actual gas in in interpreter.evm.callGasTemp.
 	interpreter.intPool.put(stack.pop())
 	gas := interpreter.evm.callGasTemp
 	// Pop other call parameters.
 	addr, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
-	toAddr := common.BigToAddress(addr)
+	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(addr))
+	//TODO
+	if toAddr == (common.Address{}) {
+		return nil, ErrToAddressError
+	}
 	value = math.U256(value)
 	// Get the arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
@@ -740,7 +690,7 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	if value.Sign() != 0 {
 		gas += params.CallStipend
 	}
-	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, value)
+	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, "sero", value)
 	if err != nil {
 		stack.push(interpreter.intPool.getZero())
 	} else {
@@ -761,7 +711,11 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	gas := interpreter.evm.callGasTemp
 	// Pop other call parameters.
 	addr, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
-	toAddr := common.BigToAddress(addr)
+	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(addr))
+	//TODO
+	if toAddr == (common.Address{}) {
+		return nil, ErrToAddressError
+	}
 	value = math.U256(value)
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
@@ -769,7 +723,7 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	if value.Sign() != 0 {
 		gas += params.CallStipend
 	}
-	ret, returnGas, err := interpreter.evm.CallCode(contract, toAddr, args, gas, value)
+	ret, returnGas, err := interpreter.evm.CallCode(contract, toAddr, args, gas, "sero", value)
 	if err != nil {
 		stack.push(interpreter.intPool.getZero())
 	} else {
@@ -790,7 +744,11 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract,
 	gas := interpreter.evm.callGasTemp
 	// Pop other call parameters.
 	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
-	toAddr := common.BigToAddress(addr)
+	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(addr))
+	//TODO
+	if toAddr == (common.Address{}) {
+		return nil, ErrToAddressError
+	}
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
@@ -815,7 +773,11 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, m
 	gas := interpreter.evm.callGasTemp
 	// Pop other call parameters.
 	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
-	toAddr := common.BigToAddress(addr)
+	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(addr))
+	//TODO
+	if toAddr == (common.Address{}) {
+		return nil, ErrToAddressError
+	}
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
@@ -855,16 +817,14 @@ func opStop(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 }
 
 func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	balance := interpreter.evm.StateDB.GetBalance(contract.Address())
-	interpreter.evm.StateDB.AddBalance(common.BigToAddress(stack.pop()), balance)
-
-	interpreter.evm.StateDB.Suicide(contract.Address())
+	//balance := interpreter.evm.StateDB.GetBalance(contract.Address())
+	//interpreter.evm.StateDB.AddBalance(common.BigToAddress(stack.pop()), balance)
+	//
+	//interpreter.evm.StateDB.Suicide(contract.Address())
+	stack.pop()
 	return nil, nil
 }
 
-// following functions are used by the instruction jump  table
-
-// make log instruction function
 func makeLog(size int) executionFunc {
 	return func(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 		topics := make([]common.Hash, size)
@@ -874,14 +834,85 @@ func makeLog(size int) executionFunc {
 		}
 
 		d := memory.Get(mStart.Int64(), mSize.Int64())
-		interpreter.evm.StateDB.AddLog(&types.Log{
-			Address: contract.Address(),
-			Topics:  topics,
-			Data:    d,
-			// This is a non-consensus field, but assigned here because
-			// core/state doesn't know the current block number.
-			BlockNumber: interpreter.evm.BlockNumber.Uint64(),
-		})
+
+		end := mSize.Uint64()
+		if topics[0] == topic_issueToken {
+			total := new(big.Int).SetBytes(d[end-32:]);
+			nameLen := new(big.Int).SetBytes(d[end-64:end-32]).Uint64();
+
+			match,err :=regexp.Match("^[A-Za-z]{2,16}$",d[0:nameLen])
+			if  err != nil {
+				return nil ,err
+			}
+			if !match {
+				return nil ,ErrCoinNameError
+			}
+
+			coinName := string(d[0:nameLen])
+			if !interpreter.evm.StateDB.RegisterCurrency(coinName){
+				return nil, ErrCoinNameError
+			}
+			interpreter.evm.StateDB.AddBalance(contract.Address(), coinName, total)
+		} else if topics[0] == topic_selfBalance {
+			coinName := string(d[:new(big.Int).SetBytes(d[end-32:]).Uint64()])
+			if !interpreter.evm.StateDB.ExistsCurrency(coinName) {
+				memory.Set(mStart.Uint64()+end-32, 32, common.LeftPadBytes([]byte{0}, 32))
+				return nil, ErrCoinNameError
+			}
+			balance := interpreter.evm.StateDB.GetBalance(contract.Address(), coinName)
+			memory.Set(mStart.Uint64()+end-32, 32, common.LeftPadBytes(balance.Bytes(), 32))
+			//for j := 0; j< len(memory.store); j = j + 16 {
+			//	fmt.Println(memory.store[j:Min(j+16, len(memory.store))])
+			//}
+			//fmt.Println("--------------------------------------")
+			return balance.Bytes(), nil
+		} else if topics[0] == topic_sendAnonymous {
+
+			value := new(big.Int).SetBytes(d[end-32:])
+			addr := common.BytesToContractAddress(d[end-64+12 : end-32])
+			toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, addr)
+			if toAddr == (common.Address{}) {
+				memory.Set(mStart.Uint64()+end-32, 32, common.LeftPadBytes([]byte{0}, 32))
+				return nil, ErrCoinNameError
+			}
+
+			len := new(big.Int).SetBytes(d[end-96:end-64]).Uint64();
+			var currency string
+			if len == 0 {
+				currency = "sero"
+			} else {
+				if !interpreter.evm.StateDB.ExistsCurrency(string(d[:len])) {
+					memory.Set(mStart.Uint64()+end-32, 32, common.LeftPadBytes([]byte{0}, 32))
+					return nil, ErrCoinNameError
+				}
+				currency = string(d[:len])
+			}
+
+			balance := interpreter.evm.StateDB.GetBalance(contract.Address(), currency)
+			if balance.Cmp(value) <0 {
+				memory.Set(mStart.Uint64()+end-32, 32, common.LeftPadBytes([]byte{0}, 32))
+				return nil, ErrInsufficientBalance
+			}
+			gas := interpreter.evm.callGasTemp + params.CallStipend
+			ret, returnGas, err := interpreter.evm.Call(contract, toAddr, nil, gas, currency, value)
+
+			if err != nil {
+				memory.Set(mStart.Uint64()+end-32, 32, common.LeftPadBytes([]byte{0}, 32))
+				return nil, err
+			}
+			contract.Gas += returnGas
+			memory.Set(mStart.Uint64()+end-32, 32, common.LeftPadBytes([]byte{1}, 32))
+			return ret, nil
+		} else {
+			interpreter.evm.StateDB.AddLog(&types.Log{
+				Address: contract.Address(),
+				Topics:  topics,
+				Data:    d,
+				// This is a non-consensus field, but assigned here because
+				// core/state doesn't know the current block number.
+				BlockNumber: interpreter.evm.BlockNumber.Uint64(),
+			})
+		}
 
 		interpreter.intPool.put(mStart, mSize)
 		return nil, nil

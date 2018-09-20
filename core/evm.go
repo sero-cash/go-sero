@@ -19,10 +19,10 @@ package core
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/consensus"
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/core/vm"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -45,8 +45,8 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		beneficiary = *author
 	}
 	return vm.Context{
-		CanTransfer: CanTransfer,
 		Transfer:    Transfer,
+		CanTransfer: CanTransfer,
 		GetHash:     GetHashFn(header, chain),
 		Origin:      msg.From(),
 		Coinbase:    beneficiary,
@@ -86,12 +86,23 @@ func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash
 
 // CanTransfer checks whether there are enough funds in the address' account to make a transfer.
 // This does not take the necessary gas in to account to make the transfer valid.
-func CanTransfer(db vm.StateDB, addr common.Address, amount *big.Int) bool {
-	return db.GetBalance(addr).Cmp(amount) >= 0
+func CanTransfer(db vm.StateDB, addr common.Address, currency string, amount *big.Int) bool {
+	return db.GetBalance(addr, currency).Cmp(amount) >= 0
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
-func Transfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {
-	db.SubBalance(sender, amount)
-	db.AddBalance(recipient, amount)
+func Transfer(db vm.StateDB, sender, recipient common.Address, currency string, amount *big.Int) {
+	if amount == nil || amount.Sign() <= 0 {
+		return
+	}
+	if db.IsContract(sender) {
+		db.SubBalance(sender, currency, amount)
+		if (db.IsContract(recipient)) {
+			db.AddBalance(recipient, currency, amount)
+		} else {
+			db.GetZState().AddTxOut(recipient, amount, common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256())
+		}
+	} else if recipient != (common.Address{}) {
+		db.AddBalance(recipient, currency, amount)
+	}
 }

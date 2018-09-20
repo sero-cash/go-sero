@@ -22,15 +22,15 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-sero/common/math"
+	"github.com/sero-cash/go-sero/core"
+	"github.com/sero-cash/go-sero/core/state"
+	"github.com/sero-cash/go-sero/core/vm"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/params"
 )
 
 // VMTest checks EVM execution without block or transaction context.
@@ -79,7 +79,7 @@ type vmExecMarshaling struct {
 }
 
 func (t *VMTest) Run(vmconfig vm.Config) error {
-	statedb := MakePreState(ethdb.NewMemDatabase(), t.json.Pre)
+	statedb := MakePreState(serodb.NewMemDatabase(), t.json.Pre)
 	ret, gasRemaining, err := t.exec(statedb, vmconfig)
 
 	if t.json.GasRemaining == nil {
@@ -117,21 +117,21 @@ func (t *VMTest) Run(vmconfig vm.Config) error {
 func (t *VMTest) exec(statedb *state.StateDB, vmconfig vm.Config) ([]byte, uint64, error) {
 	evm := t.newEVM(statedb, vmconfig)
 	e := t.json.Exec
-	return evm.Call(vm.AccountRef(e.Caller), e.Address, e.Data, e.GasLimit, e.Value)
+	return evm.Call(vm.AccountRef(e.Caller), e.Address, e.Data, e.GasLimit, "sero", e.Value)
 }
 
 func (t *VMTest) newEVM(statedb *state.StateDB, vmconfig vm.Config) *vm.EVM {
-	initialCall := true
-	canTransfer := func(db vm.StateDB, address common.Address, amount *big.Int) bool {
-		if initialCall {
-			initialCall = false
-			return true
-		}
-		return core.CanTransfer(db, address, amount)
-	}
-	transfer := func(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {}
+	//initialCall := true
+	//canTransfer := func(db vm.StateDB, address common.Address, amount *big.Int) bool {
+	//	if initialCall {
+	//		initialCall = false
+	//		return true
+	//	}
+	//	return core.CanTransfer(db, address, amount)
+	//}
+	transfer := func(db vm.StateDB, sender, recipient common.Address, currency string, amount *big.Int) {}
 	context := vm.Context{
-		CanTransfer: canTransfer,
+		//CanTransfer: canTransfer,
 		Transfer:    transfer,
 		GetHash:     vmTestBlockHash,
 		Origin:      t.json.Exec.Origin,
@@ -143,7 +143,7 @@ func (t *VMTest) newEVM(statedb *state.StateDB, vmconfig vm.Config) *vm.EVM {
 		GasPrice:    t.json.Exec.GasPrice,
 	}
 	vmconfig.NoRecursion = true
-	return vm.NewEVM(context, statedb, params.MainnetChainConfig, vmconfig)
+	return vm.NewEVM(context, statedb, params.BetanetChainConfig, vmconfig)
 }
 
 func vmTestBlockHash(n uint64) common.Hash {

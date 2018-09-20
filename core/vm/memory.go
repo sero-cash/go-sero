@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/sero-cash/go-sero/common/math"
 )
 
 // Memory implements a simple memory model for the ethereum virtual machine.

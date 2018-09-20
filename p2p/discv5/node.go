@@ -30,8 +30,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/crypto"
 )
 
 // Node represents a host on the network.
@@ -109,7 +109,7 @@ func (n *Node) validateComplete() error {
 // The string representation of a Node is a URL.
 // Please see ParseNode for a description of the format.
 func (n *Node) String() string {
-	u := url.URL{Scheme: "enode"}
+	u := url.URL{Scheme: "snode"}
 	if n.Incomplete() {
 		u.Host = fmt.Sprintf("%x", n.ID[:])
 	} else {
@@ -123,7 +123,7 @@ func (n *Node) String() string {
 	return u.String()
 }
 
-var incompleteNodeURL = regexp.MustCompile("(?i)^(?:enode://)?([0-9a-f]+)$")
+var incompleteNodeURL = regexp.MustCompile("(?i)^(?:snode://)?([0-9a-f]+)$")
 
 // ParseNode parses a node designator.
 //
@@ -144,10 +144,10 @@ var incompleteNodeURL = regexp.MustCompile("(?i)^(?:enode://)?([0-9a-f]+)$")
 // query parameter "discport".
 //
 // In the following example, the node URL describes
-// a node with IP address 10.3.58.6, TCP listening port 30303
-// and UDP discovery port 30301.
+// a node with IP address 10.3.58.6, TCP listening port 60603
+// and UDP discovery port 60601.
 //
-//    enode://<hex node id>@10.3.58.6:30303?discport=30301
+//    enode://<hex node id>@10.3.58.6:60603?discport=60601
 func ParseNode(rawurl string) (*Node, error) {
 	if m := incompleteNodeURL.FindStringSubmatch(rawurl); m != nil {
 		id, err := HexID(m[1])
@@ -169,8 +169,8 @@ func parseComplete(rawurl string) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	if u.Scheme != "enode" {
-		return nil, errors.New("invalid URL scheme, want \"enode\"")
+	if u.Scheme != "snode" {
+		return nil, errors.New("invalid URL scheme, want \"snode\"")
 	}
 	// Parse the Node ID from the user portion.
 	if u.User == nil {
