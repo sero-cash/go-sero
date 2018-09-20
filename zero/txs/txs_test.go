@@ -74,7 +74,7 @@ func (self *user) addOut(v int) {
 }
 
 func (self *user) Logout() {
-	db := ethdb.NewMemDatabase()
+	db := serodb.NewMemDatabase()
 	ca := state.NewDatabase(db)
 	st, _ := state.New(common.Hash{}, ca, 0)
 	fmt.Printf("\n\n===========user(%v)============\n", self.i)

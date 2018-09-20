@@ -50,7 +50,7 @@ func (self *State) Revert() {
 	return
 }
 
-func (state *State) addOut_O(out *stx.Out_O, currency *keys.Uint256) {
+func (state *State) AddOut_O(out *stx.Out_O, currency *keys.Uint256) {
 	out0 := Out0{
 		*currency,
 		*out,
@@ -76,5 +76,5 @@ func (state *State) FinalizeGenWitness(tks []keys.Uint512) {
 
 func (state *State) AddTxOut(addr common.Address, value *big.Int, currency *keys.Uint256) {
 	o := stx.Out_O{*addr.ToUint512(), utils.U256(*value), keys.Uint512{}}
-	state.addOut_O(&o, currency)
+	state.AddOut_O(&o, currency)
 }
