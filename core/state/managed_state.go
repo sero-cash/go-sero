@@ -26,7 +26,7 @@ import (
 type account struct {
 	stateObject *stateObject
 	//nstart      uint64
-	nonces      []bool
+	nonces []bool
 }
 
 type ManagedState struct {
@@ -41,7 +41,7 @@ func (ms *ManagedState) GetAllNonceAddress(addr common.Address) []common.Address
 	return []common.Address{}
 }
 
-func (ms *ManagedState) setNonceAddress(addr common.Address, nonceAddr common.Address){
+func (ms *ManagedState) setNonceAddress(addr common.Address, nonceAddr common.Address) {
 
 }
 
@@ -49,7 +49,7 @@ func (ms *ManagedState) GetNonceAddress(addr common.Address, key []byte) common.
 	return common.Address{}
 }
 
-func (ms *ManagedState) IsContract(addr common.Address) (bool) {
+func (ms *ManagedState) IsContract(addr common.Address) bool {
 	return ms.GetCode(addr) == nil
 }
 
@@ -61,8 +61,8 @@ func ManageState(statedb *StateDB) *ManagedState {
 	}
 }
 
-func (ms *ManagedState)GetZState() (*zstate.State) {
-	if ms.StateDB==nil {
+func (ms *ManagedState) GetZState() *zstate.State {
+	if ms.StateDB == nil {
 		return nil
 	}
 	return ms.StateDB.GetZState()

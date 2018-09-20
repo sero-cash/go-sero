@@ -101,9 +101,9 @@ type (
 
 	// Changes to individual accounts.
 	balanceChange struct {
-		account *common.Address
-		currency    string
-		prev    *big.Int
+		account  *common.Address
+		currency string
+		prev     *big.Int
 	}
 
 	storageChange struct {

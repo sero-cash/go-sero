@@ -31,10 +31,10 @@ import (
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -233,7 +233,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 	sero := common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32))
 	for addr, account := range g.Alloc {
 
-		if account.Code != nil && len(account.Code) >0 {
+		if account.Code != nil && len(account.Code) > 0 {
 			statedb.AddBalance(addr, "sero", account.Balance)
 			statedb.SetCode(addr, account.Code)
 		} else {
@@ -290,8 +290,6 @@ func (g *Genesis) Commit(db serodb.Database) (*types.Block, error) {
 	rawdb.WriteHeadBlockHash(db, block.Hash())
 	rawdb.WriteHeadHeaderHash(db, block.Hash())
 
-
-
 	config := g.Config
 	if config == nil {
 		config = params.AllEthashProtocolChanges
@@ -319,21 +317,21 @@ func GenesisBlockForTesting(db serodb.Database, addr common.Address, balance *bi
 // DefaultGenesisBlock returns the Ethereum main net genesis block.
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
-		Config: params.BetanetChainConfig,
+		Config:     params.BetanetChainConfig,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		GasLimit:   79999998,
 		Difficulty: big.NewInt(17179869184),
 		Alloc:      decodePrealloc(mainnetAllocData),
 		Coinbase:   common.Base58ToAddress("1111111111111111111111111111111111111111111111111111111111111111"),
 		ParentHash: common.Hash{},
-		Mixhash:common.Hash{},
+		Mixhash:    common.Hash{},
 	}
 }
 
 // DefaultAlphanetGenesisBlock returns the Ropsten network genesis block.
 func DefaultAlphanetGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.AlphanetChainConfig,
+		Config: params.AlphanetChainConfig,
 		//Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
 		GasLimit:   16777216,
@@ -341,10 +339,11 @@ func DefaultAlphanetGenesisBlock() *Genesis {
 		Alloc:      decodePrealloc(testnetAllocData),
 	}
 }
+
 // DeveloperGenesisBlock returns the 'gero --dev' genesis block. Note, this must
 func DeveloperGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.DevnetChainConfig,
+		Config: params.DevnetChainConfig,
 		//Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x52657370656374206d7920617574686f7269746168207e452e436172746d616e42eb768f2244c8811c63729a21a3569731535f067ffc57839b00206d1ad20c69a1981b489f772031b279182d99e65703f0076e4812653aab85fca0f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
 		GasLimit:   16777216,

@@ -28,9 +28,9 @@ import (
 // priced-sorted transactions to discard when the pool fills up.
 type priceHeap []*types.Transaction
 
-func (h priceHeap) Len() int      { return len(h) }
+func (h priceHeap) Len() int { return len(h) }
 func (h priceHeap) Swap(i, j int) {
-	if i<0 || j<0 {
+	if i < 0 || j < 0 {
 		return
 	}
 	h[i], h[j] = h[j], h[i]
@@ -120,7 +120,7 @@ func (l *txPricedList) Len() int {
 	return l.items.Len()
 }
 
-func (l *txPricedList) Remove(tx *types.Transaction) (bool) {
+func (l *txPricedList) Remove(tx *types.Transaction) bool {
 	// Remove the transaction from the set
 	if l.all.Get(tx.Hash()) == nil {
 		return false

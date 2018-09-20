@@ -26,9 +26,9 @@ import (
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 // ChainIndexerBackend defines the methods needed to process chain segments in

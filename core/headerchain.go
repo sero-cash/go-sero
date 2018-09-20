@@ -26,14 +26,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/golang-lru"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/params"
-	"github.com/hashicorp/golang-lru"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 const (
@@ -107,7 +107,6 @@ func NewHeaderChain(chainDb serodb.Database, config *params.ChainConfig, engine 
 
 	return hc, nil
 }
-
 
 // GetBlockNumber retrieves the block number belonging to the given hash
 // from the cache or database
@@ -233,7 +232,7 @@ func (hc *HeaderChain) ValidateHeaderChain(chain []*types.Header, checkFreq int)
 	defer close(abort)
 
 	// Iterate over the headers and ensure they all check out
-	for i, _ := range chain {
+	for i := range chain {
 		// If the chain is terminating, stop processing blocks
 		if hc.procInterrupt() {
 			log.Debug("Premature abort during headers verification")

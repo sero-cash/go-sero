@@ -32,9 +32,9 @@ import (
 	"github.com/sero-cash/go-sero/core/vm"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/crypto/sha3"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 // StateTest checks transaction processing without block context.
@@ -232,7 +232,7 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 		return nil, fmt.Errorf("invalid tx data %q", dataHex)
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, "sero",value, gasLimit, tx.GasPrice, data, true)
+	msg := types.NewMessage(from, to, tx.Nonce, "sero", value, gasLimit, tx.GasPrice, data, true)
 	return msg, nil
 }
 

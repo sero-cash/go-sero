@@ -58,7 +58,7 @@ type Contract struct {
 	CodeAddr *common.Address
 	Input    []byte
 
-	Gas   uint64
+	Gas uint64
 	//Currency common.Hash
 	value *big.Int
 

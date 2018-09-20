@@ -20,14 +20,14 @@ import (
 	"math/big"
 
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
 )
 
 // StateDB is an EVM database for full state querying.
 type StateDB interface {
 	CreateAccount(common.Address)
-	GetZState() (*zstate.State)
+	GetZState() *zstate.State
 	SubBalance(common.Address, string, *big.Int)
 	AddBalance(common.Address, string, *big.Int)
 	GetBalance(common.Address, string) *big.Int

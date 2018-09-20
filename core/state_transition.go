@@ -30,7 +30,6 @@ import (
 
 var (
 	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
-
 )
 
 type StateTransition struct {
@@ -175,7 +174,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		vmerr error
 	)
 
-	if st.value != nil && st.value.Sign() > 0 && !st.evm.StateDB.ExistsCurrency(msg.Currency()){
+	if st.value != nil && st.value.Sign() > 0 && !st.evm.StateDB.ExistsCurrency(msg.Currency()) {
 		return nil, 0, false, fmt.Errorf("currency %s not exists", msg.Currency())
 	}
 
@@ -213,7 +212,6 @@ func (st *StateTransition) refundGas() {
 	// Return ETH for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
 	st.state.GetZState().AddTxOut(st.msg.From(), remaining, common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256())
-
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.

@@ -29,8 +29,8 @@ import (
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/vm"
 	"github.com/sero-cash/go-sero/crypto"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/params"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 // VMTest checks EVM execution without block or transaction context.

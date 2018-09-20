@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"sync"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/trie"
-	lru "github.com/hashicorp/golang-lru"
 )
 
 // Trie cache generation limit after which to evict trie nodes from memory.

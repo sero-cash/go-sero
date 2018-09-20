@@ -28,9 +28,7 @@ var Forks = map[string]*params.ChainConfig{
 	"Byzantium": {
 		ChainID:        big.NewInt(1),
 		ByzantiumBlock: big.NewInt(0),
-
 	},
-
 }
 
 // UnsupportedForkError is returned when a test requests a fork that isn't implemented.

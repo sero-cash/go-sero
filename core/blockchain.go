@@ -20,6 +20,8 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/hashicorp/golang-lru"
+	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/mclock"
@@ -28,17 +30,15 @@ import (
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/core/vm"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/metrics"
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/trie"
 	stx "github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/hashicorp/golang-lru"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"io"
 	"math/big"
@@ -145,9 +145,9 @@ type BlockChain struct {
 
 	accountManager *accounts.Manager
 
-	walletCh chan accounts.WalletEvent
+	walletCh    chan accounts.WalletEvent
 	walletChSub event.Subscription
-	downloader Downloader
+	downloader  Downloader
 }
 
 // NewBlockChain returns a fully initialised block chain using information

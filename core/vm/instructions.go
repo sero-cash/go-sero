@@ -36,8 +36,8 @@ var (
 	errReturnDataOutOfBounds = errors.New("evm: return data out of bounds")
 	errExecutionReverted     = errors.New("evm: execution reverted")
 	errMaxCodeSizeExceeded   = errors.New("evm: max code size exceeded")
-	ErrToAddressError   = errors.New("evm: toAddr error")
-	ErrCoinNameError   = errors.New("evm: coin name error")
+	ErrToAddressError        = errors.New("evm: toAddr error")
+	ErrCoinNameError         = errors.New("evm: coin name error")
 
 	topic_issueToken    = common.HexToHash("0x25d7b0676eb16f8e7d1160b577510f33f54887867efcbc6ec3c712354706b6b0")
 	topic_sendAnonymous = common.HexToHash("0x2da7d636de04e3fdf864ae424b77b7c8ca8561cafd21f3317d8e131b96a22b02")
@@ -837,19 +837,19 @@ func makeLog(size int) executionFunc {
 
 		end := mSize.Uint64()
 		if topics[0] == topic_issueToken {
-			total := new(big.Int).SetBytes(d[end-32:]);
-			nameLen := new(big.Int).SetBytes(d[end-64:end-32]).Uint64();
+			total := new(big.Int).SetBytes(d[end-32:])
+			nameLen := new(big.Int).SetBytes(d[end-64 : end-32]).Uint64()
 
-			match,err :=regexp.Match("^[A-Za-z]{2,16}$",d[0:nameLen])
-			if  err != nil {
-				return nil ,err
+			match, err := regexp.Match("^[A-Za-z]{2,16}$", d[0:nameLen])
+			if err != nil {
+				return nil, err
 			}
 			if !match {
-				return nil ,ErrCoinNameError
+				return nil, ErrCoinNameError
 			}
 
 			coinName := string(d[0:nameLen])
-			if !interpreter.evm.StateDB.RegisterCurrency(coinName){
+			if !interpreter.evm.StateDB.RegisterCurrency(coinName) {
 				return nil, ErrCoinNameError
 			}
 			interpreter.evm.StateDB.AddBalance(contract.Address(), coinName, total)
@@ -876,7 +876,7 @@ func makeLog(size int) executionFunc {
 				return nil, ErrCoinNameError
 			}
 
-			len := new(big.Int).SetBytes(d[end-96:end-64]).Uint64();
+			len := new(big.Int).SetBytes(d[end-96 : end-64]).Uint64()
 			var currency string
 			if len == 0 {
 				currency = "sero"
@@ -889,7 +889,7 @@ func makeLog(size int) executionFunc {
 			}
 
 			balance := interpreter.evm.StateDB.GetBalance(contract.Address(), currency)
-			if balance.Cmp(value) <0 {
+			if balance.Cmp(value) < 0 {
 				memory.Set(mStart.Uint64()+end-32, 32, common.LeftPadBytes([]byte{0}, 32))
 				return nil, ErrInsufficientBalance
 			}

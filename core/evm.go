@@ -97,7 +97,7 @@ func Transfer(db vm.StateDB, sender, recipient common.Address, currency string, 
 	}
 	if db.IsContract(sender) {
 		db.SubBalance(sender, currency, amount)
-		if (db.IsContract(recipient)) {
+		if db.IsContract(recipient) {
 			db.AddBalance(recipient, currency, amount)
 		} else {
 			db.GetZState().AddTxOut(recipient, amount, common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256())

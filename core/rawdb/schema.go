@@ -41,7 +41,7 @@ var (
 	// fastTrieProgressKey tracks the number of trie entries imported during fast sync.
 	fastTrieProgressKey = []byte("TrieSync")
 
-	indexPrefix 	   = []byte("indexB")
+	indexPrefix = []byte("indexB")
 	// Data item prefixes (use single byte to avoid mixing data types, avoid `i`, used for indexes).
 	headerPrefix       = []byte("h") // headerPrefix + num (uint64 big endian) + hash -> header
 	headerTDSuffix     = []byte("t") // headerPrefix + num (uint64 big endian) + hash + headerTDSuffix -> td
@@ -79,7 +79,7 @@ func encodeBlockNumber(number uint64) []byte {
 	return enc
 }
 
-func indexKey(number uint64) []byte{
+func indexKey(number uint64) []byte {
 	return append(indexPrefix, encodeBlockNumber(number)...)
 }
 

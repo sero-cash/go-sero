@@ -24,17 +24,17 @@ import (
 	"time"
 
 	"github.com/deckarep/golang-set"
+	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/core/vm"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/params"
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 const (
@@ -123,7 +123,7 @@ type worker struct {
 	snapshotBlock *types.Block
 	snapshotState *state.StateDB
 
-	uncleMu        sync.Mutex
+	uncleMu sync.Mutex
 
 	unconfirmed *unconfirmedBlocks // set of locally mined blocks pending canonicalness confirmations
 
@@ -134,20 +134,20 @@ type worker struct {
 
 func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
 	worker := &worker{
-		config:         config,
-		engine:         engine,
-		eth:            eth,
-		mux:            mux,
-		txsCh:          make(chan core.NewTxsEvent, txChanSize),
-		chainHeadCh:    make(chan core.ChainHeadEvent, chainHeadChanSize),
-		chainSideCh:    make(chan core.ChainSideEvent, chainSideChanSize),
-		chainDb:        eth.ChainDb(),
-		recv:           make(chan *Result, resultQueueSize),
-		chain:          eth.BlockChain(),
-		proc:           eth.BlockChain().Validator(),
-		coinbase:       coinbase,
-		agents:         make(map[Agent]struct{}),
-		unconfirmed:    newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
+		config:      config,
+		engine:      engine,
+		eth:         eth,
+		mux:         mux,
+		txsCh:       make(chan core.NewTxsEvent, txChanSize),
+		chainHeadCh: make(chan core.ChainHeadEvent, chainHeadChanSize),
+		chainSideCh: make(chan core.ChainSideEvent, chainSideChanSize),
+		chainDb:     eth.ChainDb(),
+		recv:        make(chan *Result, resultQueueSize),
+		chain:       eth.BlockChain(),
+		proc:        eth.BlockChain().Validator(),
+		coinbase:    coinbase,
+		agents:      make(map[Agent]struct{}),
+		unconfirmed: newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -383,7 +383,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		seeds := []keys.Uint512{}
 		for _, w := range self.eth.AccountManager().Wallets() {
 			seed := w.Accounts()[0].Tk
-			seeds = append(seeds,  *seed.ToUint512())
+			seeds = append(seeds, *seed.ToUint512())
 		}
 		work.state.SetSeeds(seeds)
 	}
@@ -436,8 +436,8 @@ func (self *worker) commitNewWork() {
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
 	if atomic.LoadInt32(&self.mining) == 1 {
 		addr := common.Address{}
-		pkr:=keys.Addr2PKr(self.coinbase.ToUint512(),nil)
-		copy(addr[:],pkr[:])
+		pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
+		copy(addr[:], pkr[:])
 		header.Coinbase = addr
 	}
 	if err := self.engine.Prepare(self.chain, header); err != nil {
@@ -461,7 +461,6 @@ func (self *worker) commitNewWork() {
 	}
 	txs := types.NewTransactionsByPrice(pending)
 	work.commitTransactions(self.mux, txs, self.chain, header.Coinbase)
-
 
 	// Create the new block to seal with the consensus engine
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {

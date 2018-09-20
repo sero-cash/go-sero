@@ -80,7 +80,7 @@ var (
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
 
-	ErrCurrencyError   = errors.New("currency error")
+	ErrCurrencyError = errors.New("currency error")
 )
 
 var (
@@ -128,7 +128,7 @@ type blockChain interface {
 
 // TxPoolConfig are the configuration parameters of the transaction pool.
 type TxPoolConfig struct {
-	NoLocals  bool          // Whether local transaction handling should be disabled
+	NoLocals bool // Whether local transaction handling should be disabled
 
 	PriceLimit uint64 // Minimum gas priced to enforce for acceptance into the pool
 
@@ -144,7 +144,7 @@ type TxPoolConfig struct {
 // pool.
 var DefaultTxPoolConfig = TxPoolConfig{
 
-	PriceLimit: 1,
+	PriceLimit:   1,
 	AccountSlots: 16,
 	GlobalSlots:  4096,
 	AccountQueue: 64,
@@ -213,7 +213,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		config:      config,
 		chainconfig: chainconfig,
 		chain:       chain,
-		beats:    make(map[common.Hash]time.Time),
+		beats:       make(map[common.Hash]time.Time),
 		all:         newTxLookup(),
 		chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
 		gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
@@ -427,7 +427,6 @@ func (pool *TxPool) Stats() (int, int) {
 	return pool.newPending.Len(), pool.newQueue.Len()
 }
 
-
 // Content retrieves the data content of the transaction pool, returning all the
 // pending as well as queued transactions, grouped by account and sorted by nonce.
 func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
@@ -511,7 +510,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 			return false, ErrUnderpriced
 		}
 		// New transaction is better than our worse ones, make room for it
-		drop := pool.priced.Discard(pool.gasPrice, pool.all.Count() - int(pool.config.GlobalSlots+pool.config.GlobalQueue-1))
+		drop := pool.priced.Discard(pool.gasPrice, pool.all.Count()-int(pool.config.GlobalSlots+pool.config.GlobalQueue-1))
 		for _, tx := range drop {
 			pool.removeTx(tx.Hash())
 			log.Trace("Discarding freshly underpriced transaction", "hash", tx.Hash(), "priced", tx.GasPrice())
@@ -670,7 +669,7 @@ func (pool *TxPool) promoteExecutables() {
 
 	// Notify subsystem for new promoted transactions.
 	if len(promoted) > 0 {
- 		go pool.txFeed.Send(NewTxsEvent{promoted})
+		go pool.txFeed.Send(NewTxsEvent{promoted})
 	}
 
 	// If we've queued more transactions than the hard limit, drop oldest ones

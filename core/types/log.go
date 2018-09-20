@@ -134,5 +134,3 @@ func (l *LogForStorage) DecodeRLP(s *rlp.Stream) error {
 type Account struct {
 	seed common.Seed
 }
-
-

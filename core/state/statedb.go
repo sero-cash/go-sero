@@ -23,6 +23,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/crypto"
@@ -30,7 +31,6 @@ import (
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/trie"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
-	"github.com/sero-cash/go-czero-import/keys"
 	"strings"
 )
 
@@ -94,11 +94,11 @@ type StateDB struct {
 	lock   sync.Mutex
 }
 
-func (self *StateDB) IsContract(addr common.Address) (bool) {
+func (self *StateDB) IsContract(addr common.Address) bool {
 	return self.GetCode(addr) != nil
 }
 
-func (self *StateDB) GetSeeds() ([]keys.Uint512) {
+func (self *StateDB) GetSeeds() []keys.Uint512 {
 	return self.seeds
 }
 
@@ -107,13 +107,13 @@ func (self *StateDB) SetSeeds(seeds []keys.Uint512) {
 }
 
 type StateDbGet interface {
-    Get(key []byte) ([]byte,error)
+	Get(key []byte) ([]byte, error)
 }
 type StateDbPut interface {
 	Put(key, value []byte) error
 }
 type StateTri struct {
-	Tri Trie
+	Tri   Trie
 	Dbget StateDbGet
 	Dbput StateDbPut
 }
@@ -123,26 +123,25 @@ func (self *StateTri) TryGet(key []byte) ([]byte, error) {
 }
 
 func (self *StateTri) TryUpdate(key, value []byte) error {
-	return self.Tri.TryUpdate(key,value)
+	return self.Tri.TryUpdate(key, value)
 }
 
-func (self *StateTri) TryGlobalGet(key []byte) ([]byte,error) {
+func (self *StateTri) TryGlobalGet(key []byte) ([]byte, error) {
 	return self.Dbget.Get(key)
 }
 
 func (self *StateTri) TryGlobalPut(key, value []byte) error {
-	return self.Dbput.Put(key,value)
+	return self.Dbput.Put(key, value)
 }
 
-func (self *StateDB) GetZState() (*zstate.State) {
+func (self *StateDB) GetZState() *zstate.State {
 
 	if self.zstate == nil {
-		st:=StateTri{self.trie,self.db.TrieDB().DiskDB(),self.db.TrieDB().WDiskDB()}
-		self.zstate = zstate.NewState(&st,self.number)
+		st := StateTri{self.trie, self.db.TrieDB().DiskDB(), self.db.TrieDB().WDiskDB()}
+		self.zstate = zstate.NewState(&st, self.number)
 	}
 	return self.zstate
 }
-
 
 func NewGenesis(root common.Hash, db Database) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)
@@ -193,7 +192,6 @@ func (self *StateDB) GetAvgUsedGas(number uint64) *big.Int {
 	return new(big.Int)
 }
 
-
 func (self *StateDB) SetAvgUsedGas(number uint64, avgGsedGas *big.Int) {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
@@ -206,7 +204,6 @@ func (self *StateDB) usedGasKey(number uint64) common.Hash {
 	key := crypto.Keccak256Hash(bytes)
 	return key
 }
-
 
 //register
 func (self *StateDB) RegisterCurrency(coinName string) bool {
@@ -515,7 +512,7 @@ func (self *StateDB) Suicide(addr common.Address, coinName string) bool {
 		prevbalance: new(big.Int).Set(stateObject.Balance(self.db, coinName)),
 	})
 	stateObject.markSuicided()
-	stateObject.SetBalance(self.db, coinName, new(big.Int));
+	stateObject.SetBalance(self.db, coinName, new(big.Int))
 	return true
 }
 
@@ -802,7 +799,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		delete(s.stateObjectsDirty, addr)
 	}
-	
+
 	s.GetZState().FinalizeGenWitness(s.GetSeeds())
 
 	// Write trie changes.

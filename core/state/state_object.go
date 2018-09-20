@@ -290,7 +290,7 @@ func (self *stateObject) addLoadAddress(addr common.Address) {
 	self.data.LoadAddrs = append(self.data.LoadAddrs, addr)
 }
 
-func (self *stateObject) getLoadAddress() []common.Address{
+func (self *stateObject) getLoadAddress() []common.Address {
 	return self.data.LoadAddrs
 }
 
