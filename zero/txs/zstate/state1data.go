@@ -42,7 +42,7 @@ type State1DataGet struct {
 }
 
 func (self *State1DataGet) Unserial(v []byte) {
-	if v == nil || len(v) == 0 {
+	if len(v) == 0 {
 		return
 	} else {
 		if err := rlp.DecodeBytes(v, &self.out); err != nil {

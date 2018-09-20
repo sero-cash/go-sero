@@ -19,9 +19,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/sero-cash/go-czero-import/cpt"
-	"github.com/sero-cash/go-sero/common/base58"
-	"github.com/sero-cash/go-sero/zero/zconfig"
 	"math"
 	"os"
 	"runtime"
@@ -30,6 +27,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-sero/common/base58"
+	"github.com/sero-cash/go-sero/zero/zconfig"
+	cli "gopkg.in/urfave/cli.v1"
 
 	"github.com/elastic/gosigar"
 	"github.com/sero-cash/go-sero/accounts"
@@ -42,7 +44,6 @@ import (
 	"github.com/sero-cash/go-sero/node"
 	"github.com/sero-cash/go-sero/sero"
 	"github.com/sero-cash/go-sero/seroclient"
-	"gopkg.in/urfave/cli.v1"
 )
 
 const (

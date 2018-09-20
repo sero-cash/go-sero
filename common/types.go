@@ -21,12 +21,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common/base58"
-	"github.com/sero-cash/go-sero/common/hexutil"
 	"math/big"
 	"math/rand"
 	"reflect"
+
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/common/base58"
+	"github.com/sero-cash/go-sero/common/hexutil"
 )
 
 // Lengths of hashes and addresses in bytes.

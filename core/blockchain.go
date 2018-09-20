@@ -20,7 +20,15 @@ package core
 import (
 	"errors"
 	"fmt"
+	"io"
+	"math/big"
+	mrand "math/rand"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/hashicorp/golang-lru"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
@@ -40,12 +48,6 @@ import (
 	stx "github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"io"
-	"math/big"
-	mrand "math/rand"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 var (

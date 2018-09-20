@@ -33,6 +33,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"path/filepath"
+
 	"github.com/pborman/uuid"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/base58"
@@ -40,9 +44,6 @@ import (
 	"github.com/sero-cash/go-sero/crypto"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
-	"io"
-	"io/ioutil"
-	"path/filepath"
 )
 
 const (
@@ -66,6 +67,9 @@ const (
 
 	scryptR     = 8
 	scryptDKLen = 32
+
+	veryLightScryptN = 2
+	veryLightScryptP = 1
 )
 
 type keyStorePassphrase struct {

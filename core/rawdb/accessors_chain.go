@@ -19,8 +19,9 @@ package rawdb
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/sero-cash/go-sero/serodb"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/serodb"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"

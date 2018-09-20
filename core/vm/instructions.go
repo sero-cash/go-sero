@@ -21,12 +21,13 @@ import (
 	"fmt"
 	"math/big"
 
+	"regexp"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/params"
-	"regexp"
 )
 
 var (

@@ -139,7 +139,8 @@ func UpdateGlobalObj(tri Tri, key []byte, obj serial) {
 		if err := tri.TryGlobalPut(key, s); err != nil {
 			panic(err)
 			return
-		} else {}
+		} else {
+		}
 	}
 	return
 }

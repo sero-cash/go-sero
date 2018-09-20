@@ -19,11 +19,12 @@ package state
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"math/big"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/rlp"
-	"io"
-	"math/big"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)

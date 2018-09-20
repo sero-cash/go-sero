@@ -86,7 +86,6 @@ func (self *State1) load() {
 		}
 	} else {
 	}
-	return
 }
 
 func (self *State1) genLoadStateName() (ret string) {
@@ -290,7 +289,7 @@ func (state *State1) UpdateWitness(tks []keys.Uint512) {
 		state.del(&del)
 	}
 	for i, commitment := range state.State0.Block.Commitments {
-		tree := trees.trees[uint64(trees.start_index+uint64(i))]
+		tree := trees.trees[trees.start_index+uint64(i)]
 		out := tree.RootKey()
 		if os, err := state.State0.GetOut(&out); err != nil {
 			panic(err)

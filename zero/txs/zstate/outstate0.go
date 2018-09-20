@@ -73,7 +73,7 @@ type OutState0Get struct {
 }
 
 func (self *OutState0Get) Unserial(v []byte) (e error) {
-	if v == nil || len(v) == 0 {
+	if len(v) == 0 {
 		self.out = nil
 		return
 	} else {

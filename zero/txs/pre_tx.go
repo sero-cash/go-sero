@@ -82,7 +82,6 @@ func (self *z2zs) clear() {
 	for k := range self.z2z {
 		self.z2z[k] = utils.NewI256(0)
 	}
-	return
 }
 
 func (self *z2zs) sortcut(l int) (ret []utils.I256) {

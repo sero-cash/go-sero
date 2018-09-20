@@ -23,6 +23,8 @@ import (
 	"sort"
 	"sync"
 
+	"strings"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
@@ -31,7 +33,6 @@ import (
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/trie"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
-	"strings"
 )
 
 type revision struct {

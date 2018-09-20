@@ -20,6 +20,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
+	"time"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
@@ -46,9 +50,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/zconfig"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"math/big"
-	"strings"
-	"time"
 )
 
 const (
@@ -1141,7 +1142,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, addr
 	}
 	//nonce := state.GetNonce(address)
 	u := hexutil.Uint64(0)
-	return (*hexutil.Uint64)(&u), state.Error()
+	return &u, state.Error()
 }
 
 // GetTransactionByHash returns the transaction for the given hash

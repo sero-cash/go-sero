@@ -19,6 +19,7 @@ package common
 
 import (
 	"encoding/hex"
+
 	"github.com/sero-cash/go-sero/common/base58"
 )
 

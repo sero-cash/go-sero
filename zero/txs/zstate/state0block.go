@@ -47,7 +47,7 @@ type State0BlockGet struct {
 }
 
 func (self *State0BlockGet) Unserial(v []byte) (e error) {
-	if v == nil || len(v) == 0 {
+	if len(v) == 0 {
 		return
 	} else {
 		if err := rlp.DecodeBytes(v, &self.out); err != nil {

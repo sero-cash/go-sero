@@ -44,7 +44,7 @@ type CurrentGet struct {
 }
 
 func (self *CurrentGet) Unserial(v []byte) (e error) {
-	if v == nil || len(v) == 0 {
+	if len(v) == 0 {
 		self.out = NewCur()
 		return
 	} else {

@@ -21,14 +21,15 @@ import (
 	"sync/atomic"
 
 	"container/heap"
+	"io"
+	"strings"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/rlp"
 	zstx "github.com/sero-cash/go-sero/zero/txs/stx"
 	ztx "github.com/sero-cash/go-sero/zero/txs/tx"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"io"
-	"strings"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go

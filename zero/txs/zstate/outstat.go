@@ -45,7 +45,7 @@ type OutStatGet struct {
 }
 
 func (self *OutStatGet) Unserial(v []byte) (e error) {
-	if v == nil || len(v) == 0 {
+	if len(v) == 0 {
 		self.out = nil
 		return
 	} else {
@@ -135,5 +135,4 @@ func SortOutStats(st *State0, outs []*OutState1) {
 	for i, wrap := range wraps {
 		outs[i] = wrap.out
 	}
-	return
 }

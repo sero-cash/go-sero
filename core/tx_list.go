@@ -18,10 +18,11 @@ package core
 
 import (
 	"container/heap"
+	"math/big"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/log"
-	"math/big"
 )
 
 // priceHeap is a heap.Interface implementation over transactions for retrieving

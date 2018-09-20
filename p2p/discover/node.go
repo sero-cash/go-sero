@@ -178,11 +178,11 @@ func parseComplete(rawurl string) (*Node, error) {
 	}
 	if ip = net.ParseIP(host); ip == nil {
 		//if the host part is domain name, lookup the ip and return the ip
-		addres, err := net.LookupIP(host)
-		if err != nil || len(addres) == 0 {
+		address, err := net.LookupIP(host)
+		if err != nil || len(address) == 0 {
 			return nil, errors.New("invalid IP address")
 		} else {
-			ip = addres[0]
+			ip = address[0]
 		}
 	}
 	// Ensure the IP is 4 bytes long for IPv4 addresses.

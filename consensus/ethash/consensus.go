@@ -520,10 +520,9 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 	return types.NewBlock(header, txs, receipts), nil
 }
 
-// Some weird constants to avoid constant memory allocs for them.
-
 // AccumulateRewards credits the coinbase of the given block with the mining
-// reward.
+// reward. The total reward consists of the static block reward and rewards for
+// included uncles. The coinbase of each uncle block is also rewarded.
 func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, header *types.Header) {
 	// Select the correct block reward based on chain progression
 	if header.Number.Cmp(blockNumber.Mul(blockNumber, big.NewInt(10))) > 0 {

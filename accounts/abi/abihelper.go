@@ -3,10 +3,12 @@ package abi
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
+
 	"math/big"
 	"reflect"
 	"strings"
@@ -110,7 +112,6 @@ func ValueTo(typ Type, v interface{}, r *keys.Uint128, state *state.StateDB) (va
 	default:
 		panic(v)
 	}
-	return reflect.ValueOf(v), nil
 }
 
 func getArgs(pairs []string, r *keys.Uint128, state *state.StateDB) ([]interface{}, []common.Address, error) {
@@ -184,7 +185,7 @@ func (abi ABI) PrefixPack(input []byte, pairs []string, r *keys.Uint128, state *
 
 func (abi ABI) Transfer(input []byte, output []byte, state *state.StateDB, contractAddress common.Address, wallets []accounts.Wallet) ([]byte, error) {
 
-	if output == nil || len(output) == 0 {
+	if len(output) == 0 {
 		return output, nil
 	}
 

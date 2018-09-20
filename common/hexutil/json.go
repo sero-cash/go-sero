@@ -20,10 +20,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/sero-cash/go-sero/common/base58"
 	"math/big"
 	"reflect"
 	"strconv"
+
+	"github.com/sero-cash/go-sero/common/base58"
 )
 
 var (

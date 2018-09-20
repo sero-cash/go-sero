@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sero-cash/go-sero"
+	sero "github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/accounts/abi/bind"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/math"

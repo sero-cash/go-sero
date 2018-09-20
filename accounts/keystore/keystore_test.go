@@ -1,0 +1,237 @@
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
+package keystore
+
+import (
+	"io/ioutil"
+	"math/rand"
+	"os"
+	"runtime"
+	"sort"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/event"
+)
+
+func TestKeyStore(t *testing.T) {
+	dir, ks := tmpKeyStore(t)
+	defer os.RemoveAll(dir)
+
+	a, err := ks.NewAccount("foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(a.URL.Path, dir) {
+		t.Errorf("account file %s doesn't have dir prefix", a.URL)
+	}
+	stat, err := os.Stat(a.URL.Path)
+	if err != nil {
+		t.Fatalf("account file %s doesn't exist (%v)", a.URL, err)
+	}
+	if runtime.GOOS != "windows" && stat.Mode() != 0600 {
+		t.Fatalf("account file has wrong mode: got %o, want %o", stat.Mode(), 0600)
+	}
+	if !ks.HasAddress(a.Address) {
+		t.Errorf("HasAccount(%x) should've returned true", a.Address)
+	}
+	if err := ks.Update(a, "foo", "bar"); err != nil {
+		t.Errorf("Update error: %v", err)
+	}
+	if err := ks.Delete(a, "bar"); err != nil {
+		t.Errorf("Delete error: %v", err)
+	}
+	if common.FileExist(a.URL.Path) {
+		t.Errorf("account file %s should be gone after Delete", a.URL)
+	}
+	if ks.HasAddress(a.Address) {
+		t.Errorf("HasAccount(%x) should've returned true after Delete", a.Address)
+	}
+}
+
+// Tests that the wallet notifier loop starts and stops correctly based on the
+// addition and removal of wallet event subscriptions.
+func TestWalletNotifierLifecycle(t *testing.T) {
+	// Create a temporary kesytore to test with
+	dir, ks := tmpKeyStore(t)
+	defer os.RemoveAll(dir)
+
+	// Ensure that the notification updater is not running yet
+	time.Sleep(250 * time.Millisecond)
+	ks.mu.RLock()
+	updating := ks.updating
+	ks.mu.RUnlock()
+
+	if updating {
+		t.Errorf("wallet notifier running without subscribers")
+	}
+	// Subscribe to the wallet feed and ensure the updater boots up
+	updates := make(chan accounts.WalletEvent)
+
+	subs := make([]event.Subscription, 2)
+	for i := 0; i < len(subs); i++ {
+		// Create a new subscription
+		subs[i] = ks.Subscribe(updates)
+
+		// Ensure the notifier comes online
+		time.Sleep(250 * time.Millisecond)
+		ks.mu.RLock()
+		updating = ks.updating
+		ks.mu.RUnlock()
+
+		if !updating {
+			t.Errorf("sub %d: wallet notifier not running after subscription", i)
+		}
+	}
+	// Unsubscribe and ensure the updater terminates eventually
+	for i := 0; i < len(subs); i++ {
+		// Close an existing subscription
+		subs[i].Unsubscribe()
+
+		// Ensure the notifier shuts down at and only at the last close
+		for k := 0; k < int(walletRefreshCycle/(250*time.Millisecond))+2; k++ {
+			ks.mu.RLock()
+			updating = ks.updating
+			ks.mu.RUnlock()
+
+			if i < len(subs)-1 && !updating {
+				t.Fatalf("sub %d: event notifier stopped prematurely", i)
+			}
+			if i == len(subs)-1 && !updating {
+				return
+			}
+			time.Sleep(250 * time.Millisecond)
+		}
+	}
+	t.Errorf("wallet notifier didn't terminate after unsubscribe")
+}
+
+type walletEvent struct {
+	accounts.WalletEvent
+	a accounts.Account
+}
+
+// Tests that wallet notifications and correctly fired when accounts are added
+// or deleted from the keystore.
+func TestWalletNotifications(t *testing.T) {
+	dir, ks := tmpKeyStore(t)
+	defer os.RemoveAll(dir)
+
+	// Subscribe to the wallet feed and collect events.
+	var (
+		events  []walletEvent
+		updates = make(chan accounts.WalletEvent)
+		sub     = ks.Subscribe(updates)
+	)
+	defer sub.Unsubscribe()
+	go func() {
+		for {
+			select {
+			case ev := <-updates:
+				events = append(events, walletEvent{ev, ev.Wallet.Accounts()[0]})
+			case <-sub.Err():
+				close(updates)
+				return
+			}
+		}
+	}()
+
+	// Randomly add and remove accounts.
+	var (
+		live       = make(map[common.Address]accounts.Account)
+		wantEvents []walletEvent
+	)
+	for i := 0; i < 1024; i++ {
+		if create := len(live) == 0 || rand.Int()%4 > 0; create {
+			// Add a new account and ensure wallet notifications arrives
+			account, err := ks.NewAccount("")
+			if err != nil {
+				t.Fatalf("failed to create test account: %v", err)
+			}
+			live[account.Address] = account
+			wantEvents = append(wantEvents, walletEvent{accounts.WalletEvent{Kind: accounts.WalletArrived}, account})
+		} else {
+			// Delete a random account.
+			var account accounts.Account
+			for _, a := range live {
+				account = a
+				break
+			}
+			if err := ks.Delete(account, ""); err != nil {
+				t.Fatalf("failed to delete test account: %v", err)
+			}
+			delete(live, account.Address)
+			wantEvents = append(wantEvents, walletEvent{accounts.WalletEvent{Kind: accounts.WalletDropped}, account})
+		}
+	}
+
+	// Shut down the event collector and check events.
+	sub.Unsubscribe()
+	<-updates
+	checkAccounts(t, live, ks.Wallets())
+	checkEvents(t, wantEvents, events)
+}
+
+// checkAccounts checks that all known live accounts are present in the wallet list.
+func checkAccounts(t *testing.T, live map[common.Address]accounts.Account, wallets []accounts.Wallet) {
+	if len(live) != len(wallets) {
+		t.Errorf("wallet list doesn't match required accounts: have %d, want %d", len(wallets), len(live))
+		return
+	}
+	liveList := make([]accountByTag, 0, len(live))
+	for _, account := range live {
+		liveList = append(liveList, accountByTag{account, false})
+	}
+	sort.Sort(accountsByTag(liveList))
+	for j, wallet := range wallets {
+		if accs := wallet.Accounts(); len(accs) != 1 {
+			t.Errorf("wallet %d: contains invalid number of accounts: have %d, want 1", j, len(accs))
+		} else if accs[0] != liveList[j].accountByURL {
+			t.Errorf("wallet %d: account mismatch: have %v, want %v", j, accs[0], liveList[j])
+		}
+	}
+}
+
+// checkEvents checks that all events in 'want' are present in 'have'. Events may be present multiple times.
+func checkEvents(t *testing.T, want []walletEvent, have []walletEvent) {
+	for _, wantEv := range want {
+		nmatch := 0
+		for ; len(have) > 0; nmatch++ {
+			if have[0].Kind != wantEv.Kind || have[0].a != wantEv.a {
+				break
+			}
+			have = have[1:]
+		}
+		if nmatch == 0 {
+			t.Fatalf("can't find event with Kind=%v for %x", wantEv.Kind, wantEv.a.Address)
+		}
+	}
+}
+
+func tmpKeyStore(t *testing.T) (string, *KeyStore) {
+	d, err := ioutil.TempDir("", "ser-keystore-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	new := func(kd *string) *KeyStore { return NewKeyStore(*kd, veryLightScryptN, veryLightScryptP) }
+
+	return d, new(&d)
+}

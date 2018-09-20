@@ -18,7 +18,7 @@ package keystore
 
 import (
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero"
+	sero "github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
@@ -173,17 +173,17 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 
 	for i, ctx := range txt.CTxs {
 		tk := keys.Seed2Tk(seed.SeedToUint256())
-		outs, ammount, err := txs.GetRoots(&tk, state.GetZState(), ctx.Cost().ToRef(), &ctx.Currency)
+		outs, amount, err := txs.GetRoots(&tk, state.GetZState(), ctx.Cost().ToRef(), &ctx.Currency)
 		if err != nil {
 			return nil, err
 		}
 		ins := []tx.In{}
 		for _, out := range outs {
-			ins = append(ins, tx.In{out})
+			ins = append(ins, tx.In{Root: out})
 		}
 		txt.CTxs[i].Ins = ins
 
-		balance := ammount
+		balance := amount
 		balance.SubU(ctx.Cost().ToRef())
 
 		if balance.Cmp(&utils.U256_0) > 0 {
