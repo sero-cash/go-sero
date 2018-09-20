@@ -20,10 +20,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/sero-cash/go-sero/common/base58"
 	"math/big"
 	"reflect"
 	"strconv"
-	"github.com/sero-cash/go-sero/common/base58"
 )
 
 var (
@@ -47,10 +47,9 @@ func (b Bytes) MarshalText() ([]byte, error) {
 
 func (b Bytes) MarshalBase58Text() ([]byte, error) {
 	result := []byte{}
-	result = append(result,base58.Encode(b)...)
+	result = append(result, base58.Encode(b)...)
 	return result, nil
 }
-
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (b *Bytes) UnmarshalJSON(input []byte) error {
@@ -126,7 +125,7 @@ func UnmarshalFixedBase58Text(typname string, input, out []byte) error {
 	if err != nil {
 		return err
 	}
-	return base58.DecodeString(string(raw),out)
+	return base58.DecodeString(string(raw), out)
 }
 
 // UnmarshalFixedUnprefixedText decodes the input as a string with optional 0x prefix. The
@@ -155,7 +154,7 @@ func UnmarshalFixedUnprefixedBase58Text(typname string, input, out []byte) error
 	if err != nil {
 		return err
 	}
-	return base58.DecodeString(string(raw),out)
+	return base58.DecodeString(string(raw), out)
 }
 
 // Big marshals/unmarshals as a JSON string with 0x prefix.
@@ -310,7 +309,6 @@ func isString(input []byte) bool {
 func bytesHave0xPrefix(input []byte) bool {
 	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
 }
-
 
 func checkText(input []byte, wantPrefix bool) ([]byte, error) {
 	if len(input) == 0 {

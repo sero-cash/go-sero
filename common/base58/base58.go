@@ -1,10 +1,10 @@
 package base58
 
 import (
-	"math/big"
 	"fmt"
-	"regexp"
 	"github.com/sero-cash/go-czero-import/cpt"
+	"math/big"
+	"regexp"
 )
 
 var (
@@ -28,7 +28,7 @@ func EncodeToString(input []byte) string {
 	return *cpt.Base58Encode(input)
 }
 
-var Big0=big.NewInt(0)
+var Big0 = big.NewInt(0)
 
 func Encode(input []byte) []byte {
 
@@ -54,11 +54,11 @@ func Encode(input []byte) []byte {
 	//return result
 }
 
-func DecodeString(s string,out []byte) error {
+func DecodeString(s string, out []byte) error {
 
-	err := cpt.Base58Decode(&s,out[:])
+	err := cpt.Base58Decode(&s, out[:])
 	if err != nil {
-		return  err
+		return err
 	}
 	return nil
 
@@ -92,8 +92,8 @@ func DecodeString(s string,out []byte) error {
 
 func IsBase58Str(s string) bool {
 
-	pattern :="["+string(b58Alphabet)+"]+"
-	match,err:=regexp.MatchString(pattern,s)
+	pattern := "[" + string(b58Alphabet) + "]+"
+	match, err := regexp.MatchString(pattern, s)
 	if err != nil {
 		return false
 	}

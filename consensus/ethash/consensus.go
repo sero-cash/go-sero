@@ -516,7 +516,7 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 	accumulateRewards(chain.Config(), state, header)
 
 	header.Root = state.IntermediateRoot(true)
-	
+
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, receipts), nil
 }

@@ -32,23 +32,23 @@ var (
 var (
 	// BetanetChainConfig is the chain parameters to run a node on the main network.
 	BetanetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(1),
-		ByzantiumBlock:      big.NewInt(0),
-		Ethash:              new(EthashConfig),
+		ChainID:        big.NewInt(1),
+		ByzantiumBlock: big.NewInt(0),
+		Ethash:         new(EthashConfig),
 	}
 
 	// AlphanetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	AlphanetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(3),
-		ByzantiumBlock:      big.NewInt(0),
-		Ethash:              new(EthashConfig),
+		ChainID:        big.NewInt(3),
+		ByzantiumBlock: big.NewInt(0),
+		Ethash:         new(EthashConfig),
 	}
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
 	DevnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(4),
-		ByzantiumBlock:      big.NewInt(0),
-		Ethash:              new(EthashConfig),
+		ChainID:        big.NewInt(4),
+		ByzantiumBlock: big.NewInt(0),
+		Ethash:         new(EthashConfig),
 	}
 
 	// AllEthashProtocolChanges contains every protocol change (EIPs) introduced
@@ -66,10 +66,10 @@ var (
 	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
 
 	TestChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(1),
-		ByzantiumBlock:      big.NewInt(0),
+		ChainID:        big.NewInt(1),
+		ByzantiumBlock: big.NewInt(0),
 		//ConstantinopleBlock: nil,
-		Ethash:              new(EthashConfig),
+		Ethash: new(EthashConfig),
 	}
 )
 
@@ -81,7 +81,7 @@ var (
 type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
-	ByzantiumBlock      *big.Int `json:"byzantiumBlock,omitempty"`      // Byzantium switch block (nil = no fork, 0 = already on byzantium)
+	ByzantiumBlock *big.Int `json:"byzantiumBlock,omitempty"` // Byzantium switch block (nil = no fork, 0 = already on byzantium)
 
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
@@ -129,6 +129,7 @@ func (c *ChainConfig) String() string {
 func (c *ChainConfig) IsByzantium(num *big.Int) bool {
 	return isForked(c.ByzantiumBlock, num)
 }
+
 //
 //// IsConstantinople returns whether num is either equal to the Constantinople fork block or greater.
 //func (c *ChainConfig) IsConstantinople(num *big.Int) bool {
@@ -231,7 +232,7 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID     *big.Int
+	ChainID *big.Int
 	//IsHomestead bool
 	IsByzantium bool
 }

@@ -21,12 +21,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/common/base58"
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"math/big"
 	"math/rand"
 	"reflect"
-	"github.com/sero-cash/go-sero/common/hexutil"
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common/base58"
 )
 
 // Lengths of hashes and addresses in bytes.
@@ -35,8 +35,6 @@ const (
 	HashLength = 32
 	// AddressLength is the expected length of the adddress
 	AddressLength = 64
-
-
 )
 
 var (
@@ -142,7 +140,6 @@ func (h Hash) Value() (driver.Value, error) {
 	return h[:], nil
 }
 
-
 func (h Hash) HashToUint256() *keys.Uint256 {
 	u256 := keys.Uint256{}
 	copy(u256[:], h[:])
@@ -176,7 +173,6 @@ func (h UnprefixedHash) MarshalText() ([]byte, error) {
 type Address [AddressLength]byte
 type ContractAddress [20]byte
 
-
 // Big converts an address to a big integer.
 func (a Address) ToContractAddress() ContractAddress {
 	var addr ContractAddress
@@ -193,6 +189,7 @@ func (a *ContractAddress) SetBytes(b []byte) {
 	}
 	copy(a[20-len(b):], b)
 }
+
 // BytesToAddress returns Address with value b.
 // If b is larger than len(h), b will be cropped from the left.
 func BytesToAddress(b []byte) Address {
@@ -211,15 +208,15 @@ func BytesToContractAddress(b []byte) ContractAddress {
 // If b is larger than len(h), b will be cropped from the left.
 func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
 
-
 func BigToContractAddress(b *big.Int) ContractAddress { return BytesToContractAddress(b.Bytes()) }
+
 // HexToAddress returns Address with byte values of s.
 // If s is larger than len(h), s will be cropped from the left.
 //func HexToAddress(s string) Address { return BytesToAddress(FromHex(s)) }
 
 func Base58ToAddress(s string) Address {
-	out :=[AddressLength] byte{}
-	FromBase58(s,out[:])
+	out := [AddressLength]byte{}
+	FromBase58(s, out[:])
 	return BytesToAddress(out[:])
 }
 
@@ -309,7 +306,6 @@ func (a *Address) UnmarshalText(input []byte) error {
 func (a *Address) UnmarshalJSON(input []byte) error {
 	return hexutil.UnmarshalFixedBase58JSON(addressT, input, a[:])
 }
-
 
 // Scan implements Scanner for database/sql.
 func (a *Address) Scan(src interface{}) error {
@@ -411,7 +407,6 @@ func (ma *MixedcaseAddress) ValidChecksum() bool {
 func (ma *MixedcaseAddress) Original() string {
 	return ma.original
 }
-
 
 func ByteSliceEqual(a, b []byte) bool {
 	if len(a) != len(b) {

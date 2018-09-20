@@ -48,13 +48,13 @@ func FromHex(s string) []byte {
 	return Hex2Bytes(s)
 }
 
-func FromBase58(s string,out []byte)  {
+func FromBase58(s string, out []byte) {
 	if len(s) > 1 {
 		if s[0:2] == "zt" || s[0:2] == "ot" || s[0:2] == "OT" || s[0:2] == "ZT" {
 			s = s[2:]
 		}
 	}
-	base58.DecodeString(s,out)
+	base58.DecodeString(s, out)
 }
 
 // CopyBytes returns an exact copy of the provided bytes.
@@ -70,7 +70,7 @@ func CopyBytes(b []byte) (copiedBytes []byte) {
 
 // hasHexPrefix validates str begins with '0x' or '0X'.
 func hasBase58Prefix(str string) bool {
-	return len(str) >= 66 && (str[0] == 'S' ||str[0] == 'O' ||str[0] == 's' ||str[0] == 'o')&& (str[1] == 'T' || str[1] == 't')
+	return len(str) >= 66 && (str[0] == 'S' || str[0] == 'O' || str[0] == 's' || str[0] == 'o') && (str[1] == 'T' || str[1] == 't')
 }
 
 // isHexCharacter returns bool of c being a valid hexadecimal.
@@ -101,8 +101,6 @@ func Hex2Bytes(str string) []byte {
 	h, _ := hex.DecodeString(str)
 	return h
 }
-
-
 
 // Hex2BytesFixed returns bytes of a specified fixed length flen.
 func Hex2BytesFixed(str string, flen int) []byte {

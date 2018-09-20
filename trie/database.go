@@ -21,12 +21,12 @@ import (
 	"io"
 	"sync"
 	"time"
-	
+
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/metrics"
 	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 var (
@@ -276,12 +276,11 @@ func (db *Database) DiskDB() DatabaseReader {
 	return db.diskdb
 }
 
-
 type DatabaseWriter interface {
 	Put(key []byte, value []byte) error
 }
 
-func (db *Database) WDiskDB() DatabaseWriter{
+func (db *Database) WDiskDB() DatabaseWriter {
 	return db.diskdb
 }
 

@@ -21,10 +21,10 @@ import (
 	"math/big"
 
 	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rpc"
-	"github.com/sero-cash/go-sero/core/state"
 )
 
 // ChainReader defines a small collection of methods needed to access the local

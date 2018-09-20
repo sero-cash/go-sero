@@ -22,9 +22,9 @@ import (
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/crypto"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 // Prove constructs a merkle proof for key. The result contains all encoded nodes

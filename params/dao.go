@@ -30,6 +30,7 @@ var DAOForkBlockExtra = common.FromHex("0x64616f2d686172642d666f726b")
 // DAOForkExtraRange is the number of consecutive blocks from the DAO fork point
 // to override the extra-data in to prevent no-fork attacks.
 var DAOForkExtraRange = big.NewInt(10)
+
 //TODO zero delete
 
 // DAORefundContract is the address of the refund contract to send DAO balances to.

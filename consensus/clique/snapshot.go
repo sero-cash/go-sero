@@ -21,17 +21,17 @@ import (
 	"encoding/json"
 	"sort"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/params"
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 // Vote represents a single vote that an authorized abi made to modify the
 // list of authorizations.
 type Vote struct {
-	Signer    common.Address `json:"abi"`    // Authorized abi that cast this vote
+	Signer    common.Address `json:"abi"`       // Authorized abi that cast this vote
 	Block     uint64         `json:"block"`     // Block number the vote was cast in (expire old votes)
 	Address   common.Address `json:"address"`   // Account being voted on to change its authorization
 	Authorize bool           `json:"authorize"` // Whether to authorize or deauthorize the voted account

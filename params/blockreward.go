@@ -21,7 +21,6 @@ import (
 )
 
 var (
-
 	BetaBlockRewards = []*big.Int{
 		big.NewInt(34214780857),
 		big.NewInt(24757439115),
