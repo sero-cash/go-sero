@@ -35,12 +35,12 @@ import (
 	"io"
 
 	"github.com/elastic/gosigar"
+	"github.com/mohae/deepcopy"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/metrics"
 	"github.com/sero-cash/go-sero/p2p"
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rpc"
-	"github.com/mohae/deepcopy"
 	"golang.org/x/net/websocket"
 )
 

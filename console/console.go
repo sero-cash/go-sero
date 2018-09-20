@@ -28,12 +28,12 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/sero-cash/go-sero/internal/jsre"
-	"github.com/sero-cash/go-sero/internal/web3ext"
-	"github.com/sero-cash/go-sero/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"github.com/robertkrimen/otto"
+	"github.com/sero-cash/go-sero/internal/jsre"
+	"github.com/sero-cash/go-sero/internal/web3ext"
+	"github.com/sero-cash/go-sero/rpc"
 )
 
 var (
@@ -287,9 +287,9 @@ func (c *Console) Welcome() {
 	if apis, err := c.client.SupportedModules(); err == nil {
 		modules := make([]string, 0, len(apis))
 		for api, version := range apis {
-			if api == "sero"{
+			if api == "sero" {
 				modules = append(modules, fmt.Sprintf("%s:%s", "ser", version))
-			}else{
+			} else {
 				modules = append(modules, fmt.Sprintf("%s:%s", api, version))
 			}
 

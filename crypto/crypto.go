@@ -28,10 +28,10 @@ import (
 	"math/big"
 	"os"
 
+	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/crypto/sha3"
-	"github.com/sero-cash/go-czero-import/keys"
 )
 
 var (
@@ -205,7 +205,7 @@ func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
 func PrivkeyToAddress(priv *ecdsa.PrivateKey) common.Address {
 	privKey := FromECDSA(priv)
 	var seed keys.Uint256
-	copy(seed[:],privKey)
+	copy(seed[:], privKey)
 	pubBytes := keys.Seed2Addr(&seed)
 	return common.BytesToAddress(pubBytes[:])
 }
@@ -213,7 +213,7 @@ func PrivkeyToAddress(priv *ecdsa.PrivateKey) common.Address {
 func PrivkeyToTk(priv *ecdsa.PrivateKey) common.Address {
 	privKey := FromECDSA(priv)
 	var seed keys.Uint256
-	copy(seed[:],privKey)
+	copy(seed[:], privKey)
 	pubBytes := keys.Seed2Tk(&seed)
 	return common.BytesToAddress(pubBytes[:])
 }

@@ -25,8 +25,8 @@ import (
 
 	"github.com/sero-cash/go-sero/cmd/utils"
 	"github.com/sero-cash/go-sero/consensus/ethash"
-	"github.com/sero-cash/go-sero/sero"
 	"github.com/sero-cash/go-sero/params"
+	"github.com/sero-cash/go-sero/sero"
 	"gopkg.in/urfave/cli.v1"
 )
 

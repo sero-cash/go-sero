@@ -26,9 +26,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/sero-cash/go-sero/log"
 	"github.com/mohae/deepcopy"
 	"github.com/rjeczalik/notify"
+	"github.com/sero-cash/go-sero/log"
 )
 
 var emptyChunk = json.RawMessage("[]")

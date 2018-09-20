@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/robertkrimen/otto"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rpc"
-	"github.com/robertkrimen/otto"
 )
 
 // bridge is a collection of JavaScript utility methods to bride the .js runtime

@@ -20,10 +20,10 @@ import (
 	"reflect"
 
 	"github.com/sero-cash/go-sero/accounts"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/p2p"
 	"github.com/sero-cash/go-sero/rpc"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 // ServiceContext is a collection of service independent options inherited from

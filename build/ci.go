@@ -368,9 +368,9 @@ func doLint(cmdline []string) {
 // Release Packaging
 func doArchive(cmdline []string) {
 	var (
-		arch   = flag.String("arch", runtime.GOARCH, "Architecture cross packaging")
-		atype  = flag.String("type", "zip", "Type of archive to write (zip|tar)")
-		ext    string
+		arch  = flag.String("arch", runtime.GOARCH, "Architecture cross packaging")
+		atype = flag.String("type", "zip", "Type of archive to write (zip|tar)")
+		ext   string
 	)
 	flag.CommandLine.Parse(cmdline)
 	switch *atype {
@@ -457,7 +457,6 @@ func maybeSkipArchive(env build.Environment) {
 		os.Exit(0)
 	}
 }
-
 
 func makeWorkdir(wdflag string) string {
 	var err error
@@ -568,7 +567,6 @@ func (meta debMetadata) ExeName(exe debExecutable) string {
 	}
 	return exe.Package()
 }
-
 
 // ExeConflicts returns the content of the Conflicts field
 // for executable packages.

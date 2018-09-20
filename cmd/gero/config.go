@@ -27,12 +27,12 @@ import (
 
 	"gopkg.in/urfave/cli.v1"
 
+	"github.com/naoina/toml"
 	"github.com/sero-cash/go-sero/cmd/utils"
 	"github.com/sero-cash/go-sero/dashboard"
 	"github.com/sero-cash/go-sero/node"
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/sero"
-	"github.com/naoina/toml"
 )
 
 var (
@@ -79,7 +79,6 @@ type seroConfig struct {
 	Serostats serostatsConfig
 	Dashboard dashboard.Config
 }
-
 
 func loadConfig(file string, cfg *seroConfig) error {
 	f, err := os.Open(file)
@@ -137,10 +136,9 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, seroConfig) {
 	return stack, cfg
 }
 
-
 func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
-	
+
 	utils.RegisterEthService(stack, &cfg.Sero)
 
 	if ctx.GlobalBool(utils.DashboardEnabledFlag.Name) {

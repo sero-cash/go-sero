@@ -19,9 +19,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/zero/zconfig"
-	"github.com/sero-cash/go-czero-import/cpt"
 	"math"
 	"os"
 	"runtime"
@@ -261,18 +261,17 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	utils.StartNode(stack)
 	cpt.ZeroInit()
 
-
 	// Unlock any account specifically requested
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 
-	if zconfig.Is_Dev() && ctx.GlobalString(utils.DeveloperPasswordFlag.Name) !="" {
-		for _,wallet :=range ks.Wallets(){
-			err :=ks.Unlock(wallet.Accounts()[0],ctx.GlobalString(utils.DeveloperPasswordFlag.Name))
+	if zconfig.Is_Dev() && ctx.GlobalString(utils.DeveloperPasswordFlag.Name) != "" {
+		for _, wallet := range ks.Wallets() {
+			err := ks.Unlock(wallet.Accounts()[0], ctx.GlobalString(utils.DeveloperPasswordFlag.Name))
 			if err != nil {
-				fmt.Printf("unclock %v failed,%v",base58.EncodeToString(wallet.Accounts()[0].Address[:]),err)
+				fmt.Printf("unclock %v failed,%v", base58.EncodeToString(wallet.Accounts()[0].Address[:]), err)
 			}
 		}
-	}else {
+	} else {
 		passwords := utils.MakePasswordList(ctx)
 		unlocks := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
 		for i, account := range unlocks {
@@ -285,7 +284,6 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	// Register wallet event handlers to open and auto-derive wallets
 	events := make(chan accounts.WalletEvent, 16)
 	stack.AccountManager().Subscribe(events)
-
 
 	go func() {
 		// Create a chain state reader for self-derivation

@@ -26,14 +26,14 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/prometheus/prometheus/util/flock"
 	"github.com/sero-cash/go-sero/accounts"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/internal/debug"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/p2p"
 	"github.com/sero-cash/go-sero/rpc"
-	"github.com/prometheus/prometheus/util/flock"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 // Node is a container on which services can be registered.

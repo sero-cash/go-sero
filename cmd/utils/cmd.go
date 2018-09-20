@@ -32,11 +32,11 @@ import (
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/crypto"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/internal/debug"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/node"
 	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 const (

@@ -35,14 +35,14 @@ import (
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/sero"
 	"github.com/sero-cash/go-sero/event"
+	"github.com/sero-cash/go-sero/sero"
 	//"github.com/sero-cash/go-sero/lesdeprecate"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/p2p"
 	"github.com/sero-cash/go-sero/rpc"
 	"golang.org/x/net/websocket"
-	)
+)
 
 const (
 	// historyUpdateRange is the number of blocks a node should report upon login or
@@ -72,7 +72,7 @@ type Service struct {
 	server *p2p.Server // Peer-to-peer server to retrieve networking infos
 	eth    *sero.Sero  // Full Sero service if monitoring a full node
 	//lesdeprecate    *lesdeprecate.LightEthereum // Light Sero service if monitoring a light node
-	engine consensus.Engine   // Consensus engine to retrieve variadic block fields
+	engine consensus.Engine // Consensus engine to retrieve variadic block fields
 
 	node string // Name of the node to display on the monitoring page
 	pass string // Password to authorize access to the monitoring page
@@ -100,7 +100,7 @@ func New(url string, ethServ *sero.Sero) (*Service, error) {
 		//engine = lesServ.Engine()
 	}
 	return &Service{
-		eth:    ethServ,
+		eth: ethServ,
 		//lesdeprecate:    lesServ,
 		engine: engine,
 		node:   parts[1],
@@ -143,7 +143,7 @@ func (s *Service) loop() {
 	if s.eth != nil {
 		blockchain = s.eth.BlockChain()
 		txpool = s.eth.TxPool()
-	}else{
+	} else {
 		log.Error("les is not supported")
 	}
 	//else {
@@ -546,7 +546,7 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 			txs[i].Hash = tx.Hash()
 		}
 		uncles = block.Uncles()
-	}else{
+	} else {
 		log.Error("les is not supported")
 	}
 	//else {
@@ -592,7 +592,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 		var head int64
 		if s.eth != nil {
 			head = s.eth.BlockChain().CurrentHeader().Number.Int64()
-		}else{
+		} else {
 			log.Error("les is not supported")
 		}
 		//else {
@@ -613,7 +613,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 		var block *types.Block
 		if s.eth != nil {
 			block = s.eth.BlockChain().GetBlockByNumber(number)
-		}else{
+		} else {
 			log.Error("les is not supported")
 		}
 		//else {
@@ -658,7 +658,7 @@ func (s *Service) reportPending(conn *websocket.Conn) error {
 	var pending int
 	if s.eth != nil {
 		pending, _ = s.eth.TxPool().Stats()
-	}else{
+	} else {
 		log.Error("les is not supported")
 	}
 	//else {
@@ -709,7 +709,7 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 
 		price, _ := s.eth.APIBackend.SuggestPrice(context.Background())
 		gasprice = int(price.Uint64())
-	}else{
+	} else {
 		log.Error("les is not supported")
 	}
 	//else {

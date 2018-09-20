@@ -34,9 +34,9 @@ import (
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/vm"
 	"github.com/sero-cash/go-sero/core/vm/runtime"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/params"
+	"github.com/sero-cash/go-sero/serodb"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
