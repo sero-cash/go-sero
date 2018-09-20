@@ -17,7 +17,6 @@
 package core
 
 import (
-	"errors"
 	"math"
 	"math/big"
 
@@ -26,10 +25,6 @@ import (
 	"github.com/sero-cash/go-sero/core/vm"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/params"
-)
-
-var (
-	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
 )
 
 type StateTransition struct {

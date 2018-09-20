@@ -3,12 +3,11 @@ package base58
 import (
 	"fmt"
 	"github.com/sero-cash/go-czero-import/cpt"
-	"math/big"
 	"regexp"
 )
 
 var (
-	base        = big.NewInt(58)
+	//base        = big.NewInt(58)
 	b58Alphabet = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
 )
 
@@ -28,7 +27,7 @@ func EncodeToString(input []byte) string {
 	return *cpt.Base58Encode(input)
 }
 
-var Big0 = big.NewInt(0)
+//var Big0 = big.NewInt(0)
 
 func Encode(input []byte) []byte {
 
