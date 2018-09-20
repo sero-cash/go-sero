@@ -17,44 +17,42 @@
 package zstate
 
 import (
-    "github.com/sero-cash/go-sero/zero/witness/merkle"
-    "github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/zero/witness/merkle"
 )
 
-
 type Current struct {
-    Index int64
-    Tree merkle.Tree
+	Index int64
+	Tree  merkle.Tree
 }
 
 func NewCur() (ret Current) {
-    ret.Index=-1
-    return
+	ret.Index = -1
+	return
 }
 
-func (self *Current) Serial() (ret []byte,e error) {
-    if self!=nil {
-        return rlp.EncodeToBytes(self)
-    } else {
-        return
-    }
+func (self *Current) Serial() (ret []byte, e error) {
+	if self != nil {
+		return rlp.EncodeToBytes(self)
+	} else {
+		return
+	}
 }
 
 type CurrentGet struct {
-    out Current
+	out Current
 }
 
 func (self *CurrentGet) Unserial(v []byte) (e error) {
-    if v==nil||len(v)==0 {
-        self.out=NewCur()
-        return
-    } else {
-        if err := rlp.DecodeBytes(v, &self.out); err != nil {
-            e=err
-            return
-        } else {
-            return
-        }
-    }
+	if v == nil || len(v) == 0 {
+		self.out = NewCur()
+		return
+	} else {
+		if err := rlp.DecodeBytes(v, &self.out); err != nil {
+			e = err
+			return
+		} else {
+			return
+		}
+	}
 }
-
