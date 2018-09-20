@@ -29,12 +29,12 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/p2p"
 	"github.com/sero-cash/go-sero/p2p/discover"
 	"github.com/sero-cash/go-sero/p2p/simulations/adapters"
 	"github.com/sero-cash/go-sero/rpc"
-	"github.com/julienschmidt/httprouter"
 	"golang.org/x/net/websocket"
 )
 

@@ -42,13 +42,14 @@ type accountsByTag []accountByTag
 
 type accountByTag struct {
 	accountByURL accounts.Account
-	update bool
+	update       bool
 }
 
-
-func (s accountsByTag) Len() int           { return len(s) }
-func (s accountsByTag) Less(i, j int) bool { return s[i].accountByURL.URL.Cmp(s[j].accountByURL.URL) < 0 }
-func (s accountsByTag) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s accountsByTag) Len() int { return len(s) }
+func (s accountsByTag) Less(i, j int) bool {
+	return s[i].accountByURL.URL.Cmp(s[j].accountByURL.URL) < 0
+}
+func (s accountsByTag) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
 // AmbiguousAddrError is returned when attempting to unlock
 // an address for which more than one file exists.
@@ -96,8 +97,8 @@ func (ac *accountCache) accounts() []accounts.Account {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 	cpy := make([]accounts.Account, len(ac.all))
-	for _,accT := range ac.all{
-		cpy = append(cpy,accT.accountByURL)
+	for _, accT := range ac.all {
+		cpy = append(cpy, accT.accountByURL)
 	}
 	return cpy
 }
@@ -107,7 +108,7 @@ func (ac *accountCache) accountsByTag() []accountByTag {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 	cpy := make([]accountByTag, len(ac.all))
-	copy(cpy,ac.all)
+	copy(cpy, ac.all)
 	return cpy
 }
 
@@ -118,7 +119,7 @@ func (ac *accountCache) hasAddress(addr common.Address) bool {
 	return len(ac.byAddr[addr]) > 0
 }
 
-func (ac *accountCache) add(newAccount accounts.Account,update bool) {
+func (ac *accountCache) add(newAccount accounts.Account, update bool) {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
@@ -127,9 +128,9 @@ func (ac *accountCache) add(newAccount accounts.Account,update bool) {
 		return
 	}
 	// newAccount is not in the cache.
-	ac.all = append(ac.all, accountByTag{accountByURL:accounts.Account{}})
+	ac.all = append(ac.all, accountByTag{accountByURL: accounts.Account{}})
 	copy(ac.all[i+1:], ac.all[i:])
-	ac.all[i] = accountByTag{newAccount,update}
+	ac.all[i] = accountByTag{newAccount, update}
 	ac.byAddr[newAccount.Address] = append(ac.byAddr[newAccount.Address], newAccount)
 }
 
@@ -188,8 +189,8 @@ func (ac *accountCache) find(a accounts.Account) (accounts.Account, error) {
 	// Limit search to address candidates if possible.
 	matches := []accounts.Account{}
 
-	for _,accT:=range ac.all{
-		matches = append(matches,accT.accountByURL)
+	for _, accT := range ac.all {
+		matches = append(matches, accT.accountByURL)
 	}
 
 	if (a.Address != common.Address{}) {
@@ -216,7 +217,7 @@ func (ac *accountCache) find(a accounts.Account) (accounts.Account, error) {
 		return accounts.Account{}, ErrNoMatch
 	default:
 		err := &AmbiguousAddrError{Addr: a.Address, Matches: make([]accounts.Account, len(matches))}
-		copy(err.Matches,matches)
+		copy(err.Matches, matches)
 		//sort.Sort(accountsByURL(err.Matches))
 		return accounts.Account{}, err
 	}
@@ -298,7 +299,7 @@ func (ac *accountCache) scanAccounts() error {
 		case (addr == common.Address{}):
 			log.Debug("Failed to decode keystore key", "path", path, "err", "missing or zero address")
 		default:
-			return &accounts.Account{Address: addr,Tk:tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: path}}
+			return &accounts.Account{Address: addr, Tk: tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: path}}
 		}
 		return nil
 	}
@@ -307,7 +308,7 @@ func (ac *accountCache) scanAccounts() error {
 
 	for _, p := range creates.ToSlice() {
 		if a := readAccount(p.(string)); a != nil {
-			ac.add(*a,false)
+			ac.add(*a, false)
 		}
 	}
 
@@ -318,7 +319,7 @@ func (ac *accountCache) scanAccounts() error {
 		path := p.(string)
 		ac.deleteByFile(path)
 		if a := readAccount(path); a != nil {
-			ac.add(*a,true)
+			ac.add(*a, true)
 		}
 	}
 	end := time.Now()

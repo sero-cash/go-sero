@@ -26,8 +26,8 @@ import (
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/crypto/sha3"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/trie"
 )
 

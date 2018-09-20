@@ -30,7 +30,7 @@ import (
 // by the optional URL field.
 type Account struct {
 	Address common.Address `json:"address"` // Ethereum account address derived from the key
-	Tk     	common.Address `json:"tk"`      // Ethereum account tk derived from the key
+	Tk      common.Address `json:"tk"`      // Ethereum account tk derived from the key
 	URL     URL            `json:"url"`     // Optional resource locator within a backend
 }
 
@@ -131,12 +131,11 @@ type Wallet interface {
 	SignTxWithPassphrase(account Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 
 	*/
-    EncryptTx(account Account, tx *types.Transaction, txt *tx.T,state *state.StateDB) (*types.Transaction, error)
+	EncryptTx(account Account, tx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error)
 
-	EncryptTxWithPassphrase(account Account, passphrase string, tx *types.Transaction,txt *tx.T,state *state.StateDB) (*types.Transaction, error)
+	EncryptTxWithPassphrase(account Account, passphrase string, tx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error)
 
 	IsMine(onceAddress common.Address) bool
-
 }
 
 // Backend is a "wallet provider" that may contain a batch of accounts they can

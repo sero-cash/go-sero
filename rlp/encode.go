@@ -405,7 +405,6 @@ func writeUint(val reflect.Value, w *encbuf) error {
 	return nil
 }
 
-
 func writeInt(val reflect.Value, w *encbuf) error {
 	v := val.Int()
 	i := uint64(v)

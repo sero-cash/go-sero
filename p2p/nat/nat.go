@@ -25,8 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sero-cash/go-sero/log"
 	"github.com/jackpal/go-nat-pmp"
+	"github.com/sero-cash/go-sero/log"
 )
 
 // An implementation of nat.Interface can map local ports to ports

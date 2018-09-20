@@ -27,11 +27,11 @@ import (
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/core/vm"
-	"github.com/sero-cash/go-sero/sero/downloader"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rpc"
+	"github.com/sero-cash/go-sero/sero/downloader"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 // Backend interface provides the common API services (that are provided by

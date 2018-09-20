@@ -26,9 +26,9 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/robertkrimen/otto"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/internal/jsre/deps"
-	"github.com/robertkrimen/otto"
 )
 
 var (

@@ -25,8 +25,8 @@ import (
 	"github.com/sero-cash/go-sero/core/bloombits"
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/params"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 const (

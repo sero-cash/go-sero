@@ -32,7 +32,7 @@ type Manager struct {
 	updates  chan WalletEvent           // Subscription sink for backend wallet changes
 	wallets  []Wallet                   // Cache of all wallets from all registered backends
 
-	feed    event.Feed // Wallet feed notifying of arrivals/departures
+	feed event.Feed // Wallet feed notifying of arrivals/departures
 
 	quit chan chan error
 	lock sync.RWMutex
@@ -160,8 +160,6 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 	}
 	return nil, ErrUnknownAccount
 }
-
-
 
 // Subscribe creates an async subscription to receive notifications when the
 // manager detects the arrival or departure of a wallet from any of its backends.

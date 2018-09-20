@@ -42,7 +42,7 @@ import (
 	"github.com/sero-cash/go-sero/metrics"
 	"github.com/sero-cash/go-sero/p2p"
 	"github.com/sero-cash/go-sero/rlp"
-    //"github.com/sero-cash/go-sero/swarm/spancontext"
+	//"github.com/sero-cash/go-sero/swarm/spancontext"
 	//"github.com/sero-cash/go-sero/swarm/tracing"
 	//opentracing "github.com/opentracing/opentracing-go"
 )

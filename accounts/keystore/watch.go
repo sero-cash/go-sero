@@ -21,8 +21,8 @@ package keystore
 import (
 	"time"
 
-	"github.com/sero-cash/go-sero/log"
 	"github.com/rjeczalik/notify"
+	"github.com/sero-cash/go-sero/log"
 )
 
 type watcher struct {

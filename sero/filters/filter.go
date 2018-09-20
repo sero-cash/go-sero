@@ -25,9 +25,9 @@ import (
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/bloombits"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/rpc"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 type Backend interface {

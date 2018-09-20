@@ -17,17 +17,17 @@
 package abi
 
 import (
-	"testing"
-	"fmt"
-	"github.com/sero-cash/go-sero/common"
-	"strings"
-	"reflect"
-	"math/big"
-	"github.com/sero-cash/go-sero/crypto"
 	"bytes"
-	"log"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/crypto"
+	"log"
+	"math/big"
+	"reflect"
+	"strings"
+	"testing"
 )
 
 const jsondata = `
@@ -71,7 +71,6 @@ var (
 func TestALL(t *testing.T) {
 	fmt.Println(newType("bytes").T)
 
-
 	//fmt.Println(newType("uint8[2]").Kind)
 	//paramJson := `{"uint8[2]":[100,99]}`
 
@@ -100,10 +99,10 @@ func TestALL(t *testing.T) {
 	var index int
 	for k, v := range vs {
 		//fmt.Printf("%t\n %t\n", k, v)
-		tv,_:=ValueTo(newType(k), v)
+		tv, _ := ValueTo(newType(k), v)
 		//fmt.Printf("address = %v\n",addr)
 		fmt.Printf("v=%v\n", tv)
-		args = append(args, Argument{"a"+strconv.Itoa(index), newType(k), false})
+		args = append(args, Argument{"a" + strconv.Itoa(index), newType(k), false})
 		inputs = append(inputs, tv.Interface())
 		index += 1
 	}
@@ -138,10 +137,8 @@ func TestALL(t *testing.T) {
 
 }
 
-
 func TestABIPACK(t *testing.T) {
 	fmt.Println(newType("bytes").T)
-
 
 	//fmt.Println(newType("uint8[2]").Kind)
 	//paramJson := `{"uint8[2]":[100,99]}`
@@ -154,37 +151,30 @@ func TestABIPACK(t *testing.T) {
 
 	//paramJson := `{"address":"0xbbf289d846208c16edc8474705c748aff07732db"}`
 
-
-    datas :=[]string{`address:6gYcdwixFVFg1QLV29hURUnN2WLxoTFbDHBptvtC4GcCHfnG7ocmmTrebf3KvjNHfj6UJpp9UzkSiheYbCyDERF`}
+	datas := []string{`address:6gYcdwixFVFg1QLV29hURUnN2WLxoTFbDHBptvtC4GcCHfnG7ocmmTrebf3KvjNHfj6UJpp9UzkSiheYbCyDERF`}
 
 	inputs := []interface{}{}
 	args := []Argument{}
 	var index int
-	for _,line:=range datas{
-		pairs := strings.Split(line,":")
+	for _, line := range datas {
+		pairs := strings.Split(line, ":")
 		vs := map[string]interface{}{}
-		fmt.Printf("json=%v",`{"`+pairs[0]+`":"`+pairs[1]+`"}`)
-		dec := json.NewDecoder(strings.NewReader(`{"`+pairs[0]+`":"`+pairs[1]+`"}`))
+		fmt.Printf("json=%v", `{"`+pairs[0]+`":"`+pairs[1]+`"}`)
+		dec := json.NewDecoder(strings.NewReader(`{"` + pairs[0] + `":"` + pairs[1] + `"}`))
 		dec.UseNumber()
 		if err := dec.Decode(&vs); err != nil {
 			fmt.Print(err)
 		}
 		for k, v := range vs {
 			//fmt.Printf("%t\n %t\n", k, v)
-			tv ,_:=ValueTo(newType(k), v)
+			tv, _ := ValueTo(newType(k), v)
 			fmt.Printf("v=%v\n", tv)
-			args = append(args, Argument{"a"+strconv.Itoa(index), newType(k), false})
+			args = append(args, Argument{"a" + strconv.Itoa(index), newType(k), false})
 			inputs = append(inputs, tv.Interface())
-			index +=1
+			index += 1
 		}
 
 	}
-
-
-
-
-
-
 
 	//[2]uint32{uint32(100), uint32(99)}, "1234567890", common.HexToAddress("0xbbf289d846208c16edc8474705c748aff07732db"), common.HexToAddress("0x692a70d2e424a56d2c6c27aa97d1a86395877b3a"), "test", uint32(11)
 	method := Method{"test", false, args, nil}

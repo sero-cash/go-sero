@@ -23,9 +23,9 @@ import (
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/sero/downloader"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/p2p/discover"
+	"github.com/sero-cash/go-sero/sero/downloader"
 )
 
 const (

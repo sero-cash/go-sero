@@ -30,7 +30,7 @@ import (
 
 // SignerFn is a abi function callback when a contract requires a method to
 // sign the transaction before submission.
-type EncrypterFn func(common.Address, *types.Transaction,  *tx.T) (*types.Transaction, error)
+type EncrypterFn func(common.Address, *types.Transaction, *tx.T) (*types.Transaction, error)
 
 // CallOpts is the collection of options to fine tune a contract call request.
 type CallOpts struct {
@@ -43,9 +43,9 @@ type CallOpts struct {
 // TransactOpts is the collection of authorization data required to create a
 // valid Ethereum transaction.
 type TransactOpts struct {
-	From   common.Address // Ethereum account to send the transaction from
-	Nonce  *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
-	Encrypter EncrypterFn       // Method to use for signing the transaction (mandatory)
+	From      common.Address // Ethereum account to send the transaction from
+	Nonce     *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
+	Encrypter EncrypterFn    // Method to use for signing the transaction (mandatory)
 
 	Value    *big.Int // Funds to transfer along along the transaction (nil = 0 = no funds)
 	GasPrice *big.Int // Gas price to use for the transaction execution (nil = gas price oracle)

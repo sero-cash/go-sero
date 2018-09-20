@@ -31,8 +31,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sero-cash/go-sero/log"
 	"github.com/rs/cors"
+	"github.com/sero-cash/go-sero/log"
 )
 
 const (

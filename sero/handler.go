@@ -30,15 +30,15 @@ import (
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/sero/downloader"
-	"github.com/sero-cash/go-sero/sero/fetcher"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/p2p"
 	"github.com/sero-cash/go-sero/p2p/discover"
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/sero/downloader"
+	"github.com/sero-cash/go-sero/sero/fetcher"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 const (

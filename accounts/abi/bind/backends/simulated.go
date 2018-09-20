@@ -34,11 +34,11 @@ import (
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/core/vm"
-	"github.com/sero-cash/go-sero/sero/filters"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rpc"
+	"github.com/sero-cash/go-sero/sero/filters"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 // This nil assignment ensures compile time that SimulatedBackend implements bind.ContractBackend.
@@ -410,18 +410,19 @@ type callmsg struct {
 	ethereum.CallMsg
 }
 
-func (m callmsg) From() common.Address { return m.CallMsg.From }
-func (m callmsg) FromNonceAddr() *common.Address {return nil}
-func (m callmsg) Nonce() uint64        { return 0 }
-func (m callmsg) CheckNonce() bool     { return false }
-func (m callmsg) To() *common.Address  { return m.CallMsg.To }
-func (m callmsg) GasPrice() *big.Int   { return m.CallMsg.GasPrice }
-func (m callmsg) Gas() uint64          { return m.CallMsg.Gas }
-func (m callmsg) Value() *big.Int      { return m.CallMsg.Value }
-func (m callmsg) Data() []byte         { return m.CallMsg.Data }
+func (m callmsg) From() common.Address           { return m.CallMsg.From }
+func (m callmsg) FromNonceAddr() *common.Address { return nil }
+func (m callmsg) Nonce() uint64                  { return 0 }
+func (m callmsg) CheckNonce() bool               { return false }
+func (m callmsg) To() *common.Address            { return m.CallMsg.To }
+func (m callmsg) GasPrice() *big.Int             { return m.CallMsg.GasPrice }
+func (m callmsg) Gas() uint64                    { return m.CallMsg.Gas }
+func (m callmsg) Value() *big.Int                { return m.CallMsg.Value }
+func (m callmsg) Data() []byte                   { return m.CallMsg.Data }
 func (m callmsg) Currency() string {
 	return "sero"
 }
+
 // filterBackend implements filters.Backend to support filtering for logs without
 // taking bloom-bits acceleration structures into account.
 type filterBackend struct {

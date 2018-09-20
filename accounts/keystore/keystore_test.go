@@ -68,7 +68,6 @@ func TestKeyStore(t *testing.T) {
 	}
 }
 
-
 func TestTimedUnlock(t *testing.T) {
 	dir, ks := tmpKeyStore(t)
 	defer os.RemoveAll(dir)
@@ -302,7 +301,7 @@ func checkAccounts(t *testing.T, live map[common.Address]accounts.Account, walle
 	}
 	liveList := make([]accountByTag, 0, len(live))
 	for _, account := range live {
-		liveList = append(liveList, accountByTag{account,false})
+		liveList = append(liveList, accountByTag{account, false})
 	}
 	sort.Sort(accountsByTag(liveList))
 	for j, wallet := range wallets {

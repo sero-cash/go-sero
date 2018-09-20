@@ -202,5 +202,3 @@ func (t Type) pack(v reflect.Value) ([]byte, error) {
 func (t Type) requiresLengthPrefix() bool {
 	return t.T == StringTy || t.T == BytesTy || t.T == SliceTy
 }
-
-

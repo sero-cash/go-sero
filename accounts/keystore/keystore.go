@@ -39,9 +39,9 @@ import (
 )
 
 var (
-	ErrLocked  = accounts.NewAuthNeededError("password or unlock")
-	ErrNoMatch = errors.New("no key for given address or file")
-	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
+	ErrLocked      = accounts.NewAuthNeededError("password or unlock")
+	ErrNoMatch     = errors.New("no key for given address or file")
+	ErrDecrypt     = errors.New("could not decrypt key with given passphrase")
 	ErrNoStoreType = errors.New("could not support kestore type")
 )
 
@@ -56,7 +56,7 @@ const walletRefreshCycle = 3 * time.Second
 
 // KeyStore manages a key storage directory on disk.
 type KeyStore struct {
-	storage  keyStore                        // Storage backend, might be cleartext or encrypted
+	storage  keyStore                     // Storage backend, might be cleartext or encrypted
 	cache    *accountCache                // In-memory account cache over the filesystem storage
 	changes  chan struct{}                // Channel receiving change notifications from the cache
 	unlocked map[common.Address]*unlocked // Currently unlocked account (decrypted private keys)
@@ -81,8 +81,6 @@ func NewKeyStore(keydir string, scryptN, scryptP int) *KeyStore {
 	ks.init(keydir)
 	return ks
 }
-
-
 
 func (ks *KeyStore) init(keydir string) {
 	// Lock the mutex since the account cache might call back with events
@@ -141,7 +139,7 @@ func (ks *KeyStore) refreshWallets() {
 		// If there are no more wallets or the account is before the next, wrap new wallet
 		if len(ks.wallets) == 0 || ks.wallets[0].URL().Cmp(account.accountByURL.URL) > 0 {
 			wallet := &keystoreWallet{account: account.accountByURL, keystore: ks}
-			if (account.update){
+			if account.update {
 				events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletImport})
 			}
 			events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletArrived})
@@ -167,8 +165,6 @@ func (ks *KeyStore) refreshWallets() {
 		ks.updateFeed.Send(event)
 	}
 }
-
-
 
 // Subscribe implements accounts.Backend, creating an async subscription to
 // receive notifications on the addition or removal of keystore wallets.
@@ -410,7 +406,7 @@ func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
 	}
 	// Add the account to the cache immediately rather
 	// than waiting for file system notifications to pick it up.
-	ks.cache.add(account,false)
+	ks.cache.add(account, false)
 	ks.refreshWallets()
 	return account, nil
 }
@@ -452,11 +448,11 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (acco
 }
 
 func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, error) {
-	a := accounts.Account{Address: key.Address,Tk:key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.Address))}}
+	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.Address))}}
 	if err := ks.storage.StoreKey(a.URL.Path, key, passphrase); err != nil {
 		return accounts.Account{}, err
 	}
-	ks.cache.add(a,true)
+	ks.cache.add(a, true)
 	ks.refreshWallets()
 	return a, nil
 }
@@ -477,7 +473,7 @@ func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (account
 	if err != nil {
 		return a, err
 	}
-	ks.cache.add(a,true)
+	ks.cache.add(a, true)
 	ks.refreshWallets()
 	return a, nil
 }
@@ -490,9 +486,7 @@ func zeroKey(k *ecdsa.PrivateKey) {
 	}
 }
 
-
-
-func (ks *KeyStore) GetSeed(a accounts.Account) (*common.Seed, error){
+func (ks *KeyStore) GetSeed(a accounts.Account) (*common.Seed, error) {
 
 	// Look up the key to sign with and abort if it cannot be found
 	ks.mu.RLock()
@@ -504,21 +498,19 @@ func (ks *KeyStore) GetSeed(a accounts.Account) (*common.Seed, error){
 	}
 	priKey := crypto.FromECDSA(unlockedKey.PrivateKey)
 
-	seed :=common.Seed{}
-	copy(seed[:],priKey)
+	seed := common.Seed{}
+	copy(seed[:], priKey)
 	return &seed, nil
 }
 
-func (ks *KeyStore)  GetSeedWithPassphrase(account accounts.Account, passphrase string) (*common.Seed, error){
+func (ks *KeyStore) GetSeedWithPassphrase(account accounts.Account, passphrase string) (*common.Seed, error) {
 	_, key, err := ks.getDecryptedKey(account, passphrase)
 	if err != nil {
 		return nil, err
 	}
 	defer zeroKey(key.PrivateKey)
 	priKey := crypto.FromECDSA(key.PrivateKey)
-	seed :=common.Seed{}
-	copy(seed[:],priKey)
+	seed := common.Seed{}
+	copy(seed[:], priKey)
 	return &seed, nil
 }
-
-

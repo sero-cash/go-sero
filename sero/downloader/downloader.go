@@ -30,11 +30,11 @@ import (
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/metrics"
 	"github.com/sero-cash/go-sero/params"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 var (

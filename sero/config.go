@@ -28,9 +28,9 @@ import (
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus/ethash"
 	"github.com/sero-cash/go-sero/core"
+	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/sero/downloader"
 	"github.com/sero-cash/go-sero/sero/gasprice"
-	"github.com/sero-cash/go-sero/params"
 )
 
 // DefaultConfig contains default settings for use on the Sero main net.

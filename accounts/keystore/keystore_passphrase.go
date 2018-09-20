@@ -33,11 +33,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/pborman/uuid"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/crypto"
-	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 	"io"
@@ -242,7 +242,6 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV1, auth string) (keyBytes []byt
 	}
 	return plainText, keyId, err
 }
-
 
 func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 	authArray := []byte(auth)

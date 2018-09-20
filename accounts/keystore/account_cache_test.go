@@ -175,17 +175,17 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 		},
 	}
 	for _, a := range accs {
-		cache.add(a,false)
+		cache.add(a, false)
 	}
 	// Add some of them twice to check that they don't get reinserted.
-	cache.add(accs[0],false)
-	cache.add(accs[2],true)
+	cache.add(accs[0], false)
+	cache.add(accs[2], true)
 
 	// Check that the account list is sorted by filename.
 	wantAccounts := make([]accountByTag, len(accs))
 
-	for _,a := range accs {
-		wantAccounts = append(wantAccounts,accountByTag{a,false})
+	for _, a := range accs {
+		wantAccounts = append(wantAccounts, accountByTag{a, false})
 	}
 	sort.Sort(accountsByTag(wantAccounts))
 	list := cache.accounts()
@@ -251,7 +251,7 @@ func TestCacheFind(t *testing.T) {
 		},
 	}
 	for _, a := range accs {
-		cache.add(a,false)
+		cache.add(a, false)
 	}
 
 	nomatchAccount := accounts.Account{

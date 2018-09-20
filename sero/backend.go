@@ -36,10 +36,6 @@ import (
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/core/vm"
-	"github.com/sero-cash/go-sero/sero/downloader"
-	"github.com/sero-cash/go-sero/sero/filters"
-	"github.com/sero-cash/go-sero/sero/gasprice"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/internal/ethapi"
 	"github.com/sero-cash/go-sero/log"
@@ -49,6 +45,10 @@ import (
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/rpc"
+	"github.com/sero-cash/go-sero/sero/downloader"
+	"github.com/sero-cash/go-sero/sero/filters"
+	"github.com/sero-cash/go-sero/sero/gasprice"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 type LesServer interface {
