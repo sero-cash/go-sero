@@ -4,6 +4,7 @@ package sero
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -15,17 +16,21 @@ import (
 
 var _ = (*configMarshaling)(nil)
 
+// MarshalTOML marshals as TOML.
 func (c Config) MarshalTOML() (interface{}, error) {
 	type Config struct {
 		Genesis                 *core.Genesis `toml:",omitempty"`
 		NetworkId               uint64
 		SyncMode                downloader.SyncMode
+		NoPruning               bool
 		LightServ               int  `toml:",omitempty"`
 		LightPeers              int  `toml:",omitempty"`
 		SkipBcVersionCheck      bool `toml:"-"`
 		DatabaseHandles         int  `toml:"-"`
 		DatabaseCache           int
-		Etherbase               common.Address `toml:",omitempty"`
+		TrieCache               int
+		TrieTimeout             time.Duration
+		Serobase                common.Address `toml:",omitempty"`
 		MinerThreads            int            `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
@@ -39,12 +44,15 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.Genesis = c.Genesis
 	enc.NetworkId = c.NetworkId
 	enc.SyncMode = c.SyncMode
+	enc.NoPruning = c.NoPruning
 	enc.LightServ = c.LightServ
 	enc.LightPeers = c.LightPeers
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
 	enc.DatabaseHandles = c.DatabaseHandles
 	enc.DatabaseCache = c.DatabaseCache
-	enc.Etherbase = c.Etherbase
+	enc.TrieCache = c.TrieCache
+	enc.TrieTimeout = c.TrieTimeout
+	enc.Serobase = c.Serobase
 	enc.MinerThreads = c.MinerThreads
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
@@ -56,17 +64,21 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	return &enc, nil
 }
 
+// UnmarshalTOML unmarshals from TOML.
 func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	type Config struct {
 		Genesis                 *core.Genesis `toml:",omitempty"`
 		NetworkId               *uint64
 		SyncMode                *downloader.SyncMode
+		NoPruning               *bool
 		LightServ               *int  `toml:",omitempty"`
 		LightPeers              *int  `toml:",omitempty"`
 		SkipBcVersionCheck      *bool `toml:"-"`
 		DatabaseHandles         *int  `toml:"-"`
 		DatabaseCache           *int
-		Etherbase               *common.Address `toml:",omitempty"`
+		TrieCache               *int
+		TrieTimeout             *time.Duration
+		Serobase                *common.Address `toml:",omitempty"`
 		MinerThreads            *int            `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
@@ -89,6 +101,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.SyncMode != nil {
 		c.SyncMode = *dec.SyncMode
 	}
+	if dec.NoPruning != nil {
+		c.NoPruning = *dec.NoPruning
+	}
 	if dec.LightServ != nil {
 		c.LightServ = *dec.LightServ
 	}
@@ -104,8 +119,14 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.DatabaseCache != nil {
 		c.DatabaseCache = *dec.DatabaseCache
 	}
-	if dec.Etherbase != nil {
-		c.Etherbase = *dec.Etherbase
+	if dec.TrieCache != nil {
+		c.TrieCache = *dec.TrieCache
+	}
+	if dec.TrieTimeout != nil {
+		c.TrieTimeout = *dec.TrieTimeout
+	}
+	if dec.Serobase != nil {
+		c.Serobase = *dec.Serobase
 	}
 	if dec.MinerThreads != nil {
 		c.MinerThreads = *dec.MinerThreads

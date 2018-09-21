@@ -84,14 +84,14 @@ type Sero struct {
 
 	APIBackend *EthAPIBackend
 
-	miner     *miner.Miner
-	gasPrice  *big.Int
-	etherbase common.Address
+	miner    *miner.Miner
+	gasPrice *big.Int
+	serobase common.Address
 
 	networkID     uint64
 	netRPCService *ethapi.PublicNetAPI
 
-	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
+	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and serobase)
 }
 
 func (s *Sero) AddLesServer(ls LesServer) {
@@ -128,7 +128,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
 		gasPrice:       config.GasPrice,
-		etherbase:      config.Etherbase,
+		serobase:       config.Serobase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
@@ -303,42 +303,42 @@ func (s *Sero) ResetWithGenesisBlock(gb *types.Block) {
 
 func (s *Sero) Serobase() (eb common.Address, err error) {
 	s.lock.RLock()
-	etherbase := s.etherbase
+	serobase := s.serobase
 	s.lock.RUnlock()
 
-	if etherbase != (common.Address{}) {
-		return etherbase, nil
+	if serobase != (common.Address{}) {
+		return serobase, nil
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
 		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			etherbase := accounts[0].Address
+			serobase := accounts[0].Address
 
 			s.lock.Lock()
-			s.etherbase = etherbase
+			s.serobase = serobase
 			s.lock.Unlock()
 
-			log.Info("Serobase automatically configured", "address", etherbase)
-			return etherbase, nil
+			log.Info("Serobase automatically configured", "address", serobase)
+			return serobase, nil
 		}
 	}
 	return common.Address{}, fmt.Errorf("Serobase must be explicitly specified")
 }
 
 // SetSerobase sets the mining reward address.
-func (s *Sero) SetEtherbase(etherbase common.Address) {
+func (s *Sero) SetSerobase(serobase common.Address) {
 	s.lock.Lock()
-	s.etherbase = etherbase
+	s.serobase = serobase
 	s.lock.Unlock()
 
-	s.miner.SetSerobase(etherbase)
+	s.miner.SetSerobase(serobase)
 }
 
 //TODO zero modify StartMining
 func (s *Sero) StartMining(local bool) error {
 	eb, err := s.Serobase()
 	if err != nil {
-		log.Error("Cannot start mining without etherbase", "err", err)
-		return fmt.Errorf("etherbase missing: %v", err)
+		log.Error("Cannot start mining without serobase", "err", err)
+		return fmt.Errorf("serobase missing: %v", err)
 	}
 	if _, ok := s.engine.(*clique.Clique); ok {
 		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})

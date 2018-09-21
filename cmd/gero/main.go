@@ -94,7 +94,7 @@ var (
 		utils.ListenPortFlag,
 		utils.MaxPeersFlag,
 		utils.MaxPendingPeersFlag,
-		utils.EtherbaseFlag,
+		utils.SerobaseFlag,
 		utils.GasPriceFlag,
 		utils.MinerThreadsFlag,
 		utils.MiningEnabledFlag,

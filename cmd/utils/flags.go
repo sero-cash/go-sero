@@ -311,8 +311,8 @@ var (
 		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
 		Value: params.GenesisGasLimit,
 	}
-	EtherbaseFlag = cli.StringFlag{
-		Name:  "etherbase",
+	SerobaseFlag = cli.StringFlag{
+		Name:  "serobase",
 		Usage: "Public address for block mining rewards (default = first account created)",
 		Value: "0",
 	}
@@ -776,15 +776,15 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 	return accs[index], nil
 }
 
-// setEtherbase retrieves the etherbase either from the directly specified
+// setSerobase retrieves the serobase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *sero.Config) {
-	if ctx.GlobalIsSet(EtherbaseFlag.Name) {
-		account, err := MakeAddress(ks, ctx.GlobalString(EtherbaseFlag.Name))
+func setSerobase(ctx *cli.Context, ks *keystore.KeyStore, cfg *sero.Config) {
+	if ctx.GlobalIsSet(SerobaseFlag.Name) {
+		account, err := MakeAddress(ks, ctx.GlobalString(SerobaseFlag.Name))
 		if err != nil {
-			Fatalf("Option %q: %v", EtherbaseFlag.Name, err)
+			Fatalf("Option %q: %v", SerobaseFlag.Name, err)
 		}
-		cfg.Etherbase = account.Address
+		cfg.Serobase = account.Address
 	}
 }
 
@@ -997,7 +997,7 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	setEtherbase(ctx, ks, cfg)
+	setSerobase(ctx, ks, cfg)
 	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
 	setEthash(ctx, cfg)
