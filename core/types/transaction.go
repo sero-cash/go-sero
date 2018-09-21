@@ -216,7 +216,8 @@ func (tx *Transaction) Size() common.StorageSize {
 		return size.(common.StorageSize)
 	}
 	c := writeCounter(0)
-	rlp.Encode(&c, &tx.data)
+	rlpData := []interface{}{tx.data.Currency, tx.data.Payload, tx.data.Price}
+	rlp.Encode(&c, rlpData)
 	tx.size.Store(common.StorageSize(c))
 	return common.StorageSize(c)
 }
