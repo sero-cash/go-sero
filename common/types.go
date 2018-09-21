@@ -17,6 +17,7 @@
 package common
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"encoding/hex"
 	"encoding/json"
@@ -328,6 +329,18 @@ func (a *Address) Scan(src interface{}) error {
 // Value implements valuer for database/sql.
 func (a Address) Value() (driver.Value, error) {
 	return a[:], nil
+}
+
+type Addresses []Address
+
+func (self Addresses) Len() int {
+	return len(self)
+}
+func (self Addresses) Less(i, j int) bool {
+	return bytes.Compare(self[i][:], self[j][:]) < 0
+}
+func (self Addresses) Swap(i, j int) {
+	self[i], self[j] = self[j], self[i]
 }
 
 type Seed [AddressLength]byte

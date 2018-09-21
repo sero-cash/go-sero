@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 
 	"github.com/sero-cash/go-sero/common"
@@ -231,8 +232,13 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 	statedb.AddBalance(state.EmptyAddress, "sero", new(big.Int).SetUint64(50000000))
 
 	sero := common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32))
-	for addr, account := range g.Alloc {
-
+	var keys common.Addresses
+	for k := range g.Alloc {
+		keys = append(keys, k)
+	}
+	sort.Sort(keys)
+	for _, addr := range keys {
+		account := g.Alloc[addr]
 		if account.Code != nil && len(account.Code) > 0 {
 			statedb.AddBalance(addr, "sero", account.Balance)
 			statedb.SetCode(addr, account.Code)
@@ -306,12 +312,6 @@ func (g *Genesis) MustCommit(db serodb.Database) *types.Block {
 		panic(err)
 	}
 	return block
-}
-
-// GenesisBlockForTesting creates and writes a block in which addr has the given wei balance.
-func GenesisBlockForTesting(db serodb.Database, addr common.Address, balance *big.Int) *types.Block {
-	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
-	return g.MustCommit(db)
 }
 
 // DefaultGenesisBlock returns the Ethereum main net genesis block.
