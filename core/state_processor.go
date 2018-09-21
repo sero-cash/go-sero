@@ -18,10 +18,12 @@ package core
 
 import (
 	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/core/vm"
+	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/params"
 )
 
@@ -92,6 +94,16 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
+
+	log.Info("ApplyTransaction : ")
+	for i, desc_z := range tx.GetZZSTX().Desc_Zs {
+		log.Info("    desc_z : ", "index", i, "nil", hexutil.Encode(desc_z.In.Nil[:]), "trace", hexutil.Encode(desc_z.In.Trace[:]))
+	}
+	for _, desc_o := range tx.GetZZSTX().Desc_Os {
+		for i, out := range desc_o.Outs {
+			log.Info("    out : ", "index", i, "to", hexutil.Encode(out.Addr[:]))
+		}
+	}
 
 	if err == nil {
 		err = statedb.GetZState().AddStx(tx.GetZZSTX())

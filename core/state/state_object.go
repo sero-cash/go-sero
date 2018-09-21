@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"strings"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/crypto"
@@ -134,6 +135,10 @@ func (self *stateObject) setError(err error) {
 	}
 }
 
+func (self *stateObject) Suicided() {
+
+}
+
 func (self *stateObject) markSuicided() {
 	self.suicided = true
 }
@@ -142,13 +147,6 @@ func (c *stateObject) touch() {
 	c.db.journal.append(touchChange{
 		account: &c.address,
 	})
-
-	//TODO zero delete
-	/*if c.address == ripemd {
-		// Explicitly put it in the dirty-cache, which is otherwise generated from
-		// flattened journals.
-		c.db.journal.dirty(c.address)
-	}*/
 }
 
 func (c *stateObject) getTrie(db Database) Trie {
@@ -262,6 +260,7 @@ func (self *stateObject) SubBalance(db Database, coinName string, amount *big.In
 }
 
 func (self *stateObject) SetBalance(db Database, coinName string, amount *big.Int) {
+	coinName = strings.ToLower(coinName)
 	currency := common.BytesToHash(common.LeftPadBytes([]byte(coinName), 32))
 	prevalue := self.GetState(db, currency)
 	self.db.journal.append(storageChange{
@@ -277,10 +276,6 @@ func (self *stateObject) SetBalance(db Database, coinName string, amount *big.In
 	}
 	self.data.Currencys = append(self.data.Currencys, coinName)
 }
-
-//func (self *stateObject) setBalance(currency common.Hash, amount *big.Int) {
-//	self.data.Balances[currency] = amount.Bytes()
-//}
 
 func (self *stateObject) addLoadAddress(addr common.Address) {
 	for _, each := range self.data.LoadAddrs {
@@ -358,6 +353,7 @@ func (self *stateObject) CodeHash() []byte {
 }
 
 func (self *stateObject) Balance(db Database, coinName string) *big.Int {
+	coinName = strings.ToLower(coinName)
 	currency := common.BytesToHash(common.LeftPadBytes([]byte(coinName), 32))
 	return new(big.Int).SetBytes(self.GetState(db, currency).Bytes())
 }

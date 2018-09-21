@@ -502,18 +502,35 @@ func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
 //
 // The account's state object is still available until the state is committed,
 // getStateObject will return a non-nil account after Suicide.
-func (self *StateDB) Suicide(addr common.Address, coinName string) bool {
+func (self *StateDB) Suicide(addr common.Address, toAddr common.Address) bool {
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil {
 		return false
 	}
-	self.journal.append(suicideChange{
-		account:     &addr,
-		prev:        stateObject.suicided,
-		prevbalance: new(big.Int).Set(stateObject.Balance(self.db, coinName)),
-	})
+	if self.IsContract(toAddr) {
+		toStateObject := self.getStateObject(addr)
+		for _, coinName := range stateObject.data.Currencys {
+			value := new(big.Int).Set(stateObject.Balance(self.db, coinName))
+			self.journal.append(suicideChange{
+				account:     &addr,
+				prev:        stateObject.suicided,
+				prevbalance: value,
+			})
+			toStateObject.AddBalance(self.db, coinName, value)
+		}
+	} else {
+		for _, coinName := range stateObject.data.Currencys {
+			currency := common.BytesToHash(common.LeftPadBytes([]byte(coinName), 32))
+			value := new(big.Int).Set(stateObject.Balance(self.db, coinName))
+			self.journal.append(suicideChange{
+				account:     &addr,
+				prev:        stateObject.suicided,
+				prevbalance: value,
+			})
+			self.GetZState().AddTxOut(toAddr, value, currency.HashToUint256())
+		}
+	}
 	stateObject.markSuicided()
-	stateObject.SetBalance(self.db, coinName, new(big.Int))
 	return true
 }
 
@@ -593,15 +610,6 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 	return newobj, prev
 }
 
-// CreateAccount explicitly creates a state object. If a state object with the address
-// already exists the balance is carried over to the new account.
-//
-// CreateAccount is called during the EVM CREATE operation. The situation might arise that
-// a contract does the following:
-//
-//   1. sends funds to sha(account ++ (nonce + 1))
-//   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
-//
 // Carrying over the balance ensures that Ether doesn't disappear.
 func (self *StateDB) CreateAccount(addr common.Address) {
 	self.createObject(addr)

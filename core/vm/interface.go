@@ -51,7 +51,7 @@ type StateDB interface {
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
 
-	Suicide(common.Address, string) bool
+	Suicide(common.Address, common.Address) bool
 	HasSuicided(common.Address) bool
 	//
 	// Exist reports whether the given account exists in state.

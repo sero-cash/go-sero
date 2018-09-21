@@ -383,7 +383,7 @@ func (ma *MixedcaseAddress) UnmarshalJSON(input []byte) error {
 
 // MarshalJSON marshals the original value
 func (ma *MixedcaseAddress) MarshalJSON() ([]byte, error) {
-	return json.Marshal(fmt.Sprintf("%s", ma.original))
+	return json.Marshal(ma.original)
 }
 
 // Address returns the address

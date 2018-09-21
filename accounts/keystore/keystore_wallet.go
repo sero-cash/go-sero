@@ -21,9 +21,11 @@ import (
 	sero "github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/crypto/sha3"
+	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
@@ -203,9 +205,23 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 	})
 	copy(txt.Ehash[:], Ehash[:])
 
+	log.Info("EncryptTxWithSeed : ", "ctx_num", len(txt.CTxs))
+	for _, ctx := range txt.CTxs {
+		for i, in := range ctx.Ins {
+			log.Info("    ctx_in : ", "index", i, "root", in.Root)
+		}
+		for i, out := range ctx.Outs {
+			log.Info("    ctx_out : ", "index", i, "to", hexutil.Encode(out.Addr[:]))
+		}
+	}
+
 	stx, err := txs.Gen(seed.SeedToUint256(), txt, state.GetZState())
 	if err != nil {
 		return nil, err
+	}
+
+	for i, desc_z := range stx.Desc_Zs {
+		log.Info("    desc_z : ", "index", i, "nil", hexutil.Encode(desc_z.In.Nil[:]), "trace", hexutil.Encode(desc_z.In.Trace[:]))
 	}
 
 	return btx.WithEncrypt(&stx)
