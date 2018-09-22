@@ -409,9 +409,9 @@ func (bc *BlockChain) ResetWithImportAccount(genesis *types.Block) error {
 	bc.downloader.Wait()
 	defer bc.downloader.Notify()
 	bc.mu.Lock()
+	defer bc.mu.Unlock()
 	mainHash := bc.CurrentBlock().Hash()
 	last := bc.CurrentBlock().Number().Uint64()
-	bc.mu.Unlock()
 
 	if last == 0 {
 		return nil
