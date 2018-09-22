@@ -279,8 +279,8 @@ func (c *Console) Welcome() {
 	fmt.Fprintf(c.printer, "Welcome to the Gero JavaScript console!\n\n")
 	c.jsre.Run(`
 		console.log("instance: " + web3.version.node);
-		console.log("coinbase: " + ser.coinbase);
-		console.log("at block: " + ser.blockNumber + " (" + new Date(1000 * ser.getBlock(ser.blockNumber).timestamp) + ")");
+		console.log("coinbase: " + sero.coinbase);
+		console.log("at block: " + sero.blockNumber + " (" + new Date(1000 * sero.getBlock(sero.blockNumber).timestamp) + ")");
 		console.log(" datadir: " + admin.datadir);
 	`)
 	// List all the supported modules for the user to call
