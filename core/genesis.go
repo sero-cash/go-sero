@@ -334,7 +334,7 @@ func DefaultAlphanetGenesisBlock() *Genesis {
 		Config: params.AlphanetChainConfig,
 		//Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
-		GasLimit:   16777216,
+		GasLimit:   79999998,
 		Difficulty: big.NewInt(1048576),
 		Alloc:      decodePrealloc(testnetAllocData),
 	}
@@ -346,7 +346,7 @@ func DeveloperGenesisBlock() *Genesis {
 		Config: params.DevnetChainConfig,
 		//Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x52657370656374206d7920617574686f7269746168207e452e436172746d616e42eb768f2244c8811c63729a21a3569731535f067ffc57839b00206d1ad20c69a1981b489f772031b279182d99e65703f0076e4812653aab85fca0f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-		GasLimit:   16777216,
+		GasLimit:   79999998,
 		Difficulty: big.NewInt(1024),
 		//Alloc:      decodePrealloc(testnetAllocData),
 	}
