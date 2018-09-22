@@ -355,7 +355,7 @@ func (self *worker) push(work *Work) {
 	if atomic.LoadInt32(&self.mining) != 1 {
 		return
 	}
-	self.eth.TxPool().RemoveTxs(work.handledTxs)
+	//self.eth.TxPool().RemoveTxs(work.handledTxs)
 	for agent := range self.agents {
 		atomic.AddInt32(&self.atWork, 1)
 		if ch := agent.Work(); ch != nil {
