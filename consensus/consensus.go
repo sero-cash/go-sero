@@ -28,7 +28,7 @@ import (
 )
 
 // ChainReader defines a small collection of methods needed to access the local
-// blockchain during header and/or uncle verification.
+// blockchain during header verification.
 type ChainReader interface {
 	// Config retrieves the blockchain's chain configuration.
 	Config() *params.ChainConfig
@@ -66,10 +66,6 @@ type Engine interface {
 	// a results channel to retrieve the async verifications (the order is that of
 	// the input slice).
 	VerifyHeaders(chain ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error)
-
-	// VerifyUncles verifies that the given block's uncles conform to the consensus
-	// rules of a given engine.
-	VerifyUncles(chain ChainReader, block *types.Block) error
 
 	// VerifySeal checks whether the crypto seal on a header is valid according to
 	// the consensus rules of the given engine.

@@ -42,7 +42,6 @@ type BlockGen struct {
 	gasPool  *GasPool
 	txs      []*types.Transaction
 	receipts []*types.Receipt
-	uncles   []*types.Header
 
 	config *params.ChainConfig
 	engine consensus.Engine
@@ -113,20 +112,6 @@ func (b *BlockGen) AddUncheckedReceipt(receipt *types.Receipt) {
 	b.receipts = append(b.receipts, receipt)
 }
 
-// TxNonce returns the next valid transaction nonce for the
-// account at addr. It panics if the account does not exist.
-//func (b *BlockGen) TxNonce(addr common.Address) uint64 {
-//	if !b.statedb.Exist(addr) {
-//		panic("account does not exist")
-//	}
-//	return b.statedb.GetNonce(addr)
-//}
-
-// AddUncle adds an uncle header to the generated block.
-func (b *BlockGen) AddUncle(h *types.Header) {
-	b.uncles = append(b.uncles, h)
-}
-
 // PrevBlock returns a previously generated block by number. It panics if
 // num is greater or equal to the number of the block being generated.
 // For index -1, PrevBlock returns the parent block given to GenerateChain.
@@ -156,7 +141,7 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 // intermediate states and should contain the parent's state trie.
 //
 // The generator function is called with a new block generator for
-// every block. Any transactions and uncles added to the generator
+// every block. Any transactions added to the generator
 // become part of the block. If gen is nil, the blocks will be empty
 // and their coinbase will be the zero address.
 //

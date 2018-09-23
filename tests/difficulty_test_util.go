@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/consensus/ethash"
 	"github.com/sero-cash/go-sero/core/types"
@@ -30,12 +29,11 @@ import (
 //go:generate gencodec -type DifficultyTest -field-override difficultyTestMarshaling -out gen_difficultytest.go
 
 type DifficultyTest struct {
-	ParentTimestamp    *big.Int    `json:"parentTimestamp"`
-	ParentDifficulty   *big.Int    `json:"parentDifficulty"`
-	UncleHash          common.Hash `json:"parentUncles"`
-	CurrentTimestamp   *big.Int    `json:"currentTimestamp"`
-	CurrentBlockNumber uint64      `json:"currentBlockNumber"`
-	CurrentDifficulty  *big.Int    `json:"currentDifficulty"`
+	ParentTimestamp    *big.Int `json:"parentTimestamp"`
+	ParentDifficulty   *big.Int `json:"parentDifficulty"`
+	CurrentTimestamp   *big.Int `json:"currentTimestamp"`
+	CurrentBlockNumber uint64   `json:"currentBlockNumber"`
+	CurrentDifficulty  *big.Int `json:"currentDifficulty"`
 }
 
 type difficultyTestMarshaling struct {
@@ -43,7 +41,6 @@ type difficultyTestMarshaling struct {
 	ParentDifficulty   *math.HexOrDecimal256
 	CurrentTimestamp   *math.HexOrDecimal256
 	CurrentDifficulty  *math.HexOrDecimal256
-	UncleHash          common.Hash
 	CurrentBlockNumber math.HexOrDecimal64
 }
 
@@ -59,8 +56,8 @@ func (test *DifficultyTest) Run(config *params.ChainConfig) error {
 	exp := test.CurrentDifficulty
 
 	if actual.Cmp(exp) != 0 {
-		return fmt.Errorf("parent[time %v diff %v unclehash:%x] child[time %v number %v] diff %v != expected %v",
-			test.ParentTimestamp, test.ParentDifficulty, test.UncleHash,
+		return fmt.Errorf("parent[time %v diff %v] child[time %v number %v] diff %v != expected %v",
+			test.ParentTimestamp, test.ParentDifficulty,
 			test.CurrentTimestamp, test.CurrentBlockNumber, actual, exp)
 	}
 	return nil

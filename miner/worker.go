@@ -23,7 +23,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/deckarep/golang-set"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
@@ -63,14 +62,10 @@ type Agent interface {
 // all of the current state information
 type Work struct {
 	config *params.ChainConfig
-	//abi types.Signer
 
-	state     *state.StateDB // apply state changes here
-	ancestors mapset.Set     // ancestor set (used for checking uncle parent validity)
-	family    mapset.Set     // family set (used for checking uncle invalidity)
-	uncles    mapset.Set     // uncle set
-	tcount    int            // tx count in cycle
-	gasPool   *core.GasPool  // available gas used to pack transactions
+	state   *state.StateDB // apply state changes here
+	tcount  int            // tx count in cycle
+	gasPool *core.GasPool  // available gas used to pack transactions
 
 	Block *types.Block // the new block
 
@@ -122,8 +117,6 @@ type worker struct {
 	snapshotMu    sync.RWMutex
 	snapshotBlock *types.Block
 	snapshotState *state.StateDB
-
-	uncleMu sync.Mutex
 
 	unconfirmed *unconfirmedBlocks // set of locally mined blocks pending canonicalness confirmations
 
@@ -254,8 +247,6 @@ func (self *worker) update() {
 
 			// Handle ChainSideEvent
 		case <-self.chainSideCh:
-			self.uncleMu.Lock()
-			self.uncleMu.Unlock()
 
 			//Handle NewTxsEvent
 		case ev := <-self.txsCh:
@@ -373,9 +364,6 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	work := &Work{
 		config:    self.config,
 		state:     state,
-		ancestors: mapset.NewSet(),
-		family:    mapset.NewSet(),
-		uncles:    mapset.NewSet(),
 		header:    header,
 		createdAt: time.Now(),
 	}
@@ -388,15 +376,6 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		work.state.SetSeeds(seeds)
 	}
 
-	// when 08 is processed ancestors contain 07 (quick block)
-	for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {
-		for _, uncle := range ancestor.Uncles() {
-			work.family.Add(uncle.Hash())
-		}
-		work.family.Add(ancestor.Hash())
-		work.ancestors.Add(ancestor.Hash())
-	}
-
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
 	self.current = work
@@ -406,8 +385,6 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 func (self *worker) commitNewWork() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	self.uncleMu.Lock()
-	defer self.uncleMu.Unlock()
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
@@ -474,21 +451,6 @@ func (self *worker) commitNewWork() {
 	}
 	self.push(work)
 	self.updateSnapshot()
-}
-
-func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
-	hash := uncle.Hash()
-	if work.uncles.Contains(hash) {
-		return fmt.Errorf("uncle not unique")
-	}
-	if !work.ancestors.Contains(uncle.ParentHash) {
-		return fmt.Errorf("uncle's parent unknown (%x)", uncle.ParentHash[0:4])
-	}
-	if work.family.Contains(hash) {
-		return fmt.Errorf("uncle already in family (%x)", hash)
-	}
-	work.uncles.Add(uncle.Hash())
-	return nil
 }
 
 func (self *worker) updateSnapshot() {
