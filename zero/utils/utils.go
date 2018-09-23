@@ -347,17 +347,17 @@ type TimeRecord struct {
 }
 
 func TR_enter(name string) (tr TimeRecord) {
-	fmt.Printf("Start (" + name + ") ..... \n")
+	fmt.Printf("\n{{\nStart (" + name + ") >>>>>> \n")
 	tr.start = time.Now()
 	tr.name = name
 	return
 }
 
 func (tr *TimeRecord) Renter(name string) {
-	tr.Leave()
-	*tr = TR_enter(name)
+	fmt.Printf(" ...... [[ Ren ("+tr.name+":"+name+")     s=%v ]]\n", time.Since(tr.start))
+	tr.start = time.Now()
 }
 
 func (tr *TimeRecord) Leave() {
-	fmt.Printf(" ...... End ("+tr.name+")     s=%v\n", time.Since(tr.start))
+	fmt.Printf("End ("+tr.name+")     s=%v  <<<<<<<\n}}\n", time.Since(tr.start))
 }

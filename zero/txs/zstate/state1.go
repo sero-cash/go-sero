@@ -158,6 +158,7 @@ func (self *State1) addOut(tks []keys.Uint512, os *OutState0, os_tree *merkle.Tr
 
 	Debug_State1_addout_assert(self, os)
 
+	t := utils.TR_enter(fmt.Sprintf("ADD_OUT..MAX_NUM num=%v", self.State0.num))
 	max_num := uint64(0)
 	for _, wout := range self.G2wouts {
 		if src, err := self.GetOut(&wout); err != nil {
@@ -166,6 +167,8 @@ func (self *State1) addOut(tks []keys.Uint512, os *OutState0, os_tree *merkle.Tr
 			}
 		}
 	}
+
+	t.Renter("RANGE.WOUTS")
 
 	for _, wout := range self.G2wouts {
 		if src, err := self.GetOut(&wout); err != nil {
@@ -202,7 +205,9 @@ func (self *State1) addOut(tks []keys.Uint512, os *OutState0, os_tree *merkle.Tr
 
 	Debug_State1_addout_end_assert(self, os)
 
+	t.Renter("ADD.WOUTS")
 	self.addWouts(tks, os, os_tree)
+	t.Leave()
 	return
 }
 
