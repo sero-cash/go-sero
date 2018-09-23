@@ -110,8 +110,8 @@ func (w *keystoreWallet) EncryptTx(account accounts.Account, tx *types.Transacti
 }
 
 func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
-	w.keystore.mu.RLock()
-	defer w.keystore.mu.RUnlock()
+	w.keystore.mu.Lock()
+	defer w.keystore.mu.Unlock()
 	for i, ctx := range txt.CTxs {
 		tk := keys.Seed2Tk(seed.SeedToUint256())
 		outs, amount, err := txs.GetRoots(&tk, state.GetZState(), ctx.Cost().ToRef(), &ctx.Currency)
