@@ -27,7 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
@@ -68,7 +68,7 @@ const (
 	maxTimeFutureBlocks = 30
 	badBlockLimit       = 10
 	//triesInMemory       = 128
-	triesInMemory = 2
+	triesInMemory = 5
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion = 3
@@ -406,6 +406,10 @@ func (bc *BlockChain) Reset() error {
 }
 
 func (bc *BlockChain) ResetWithImportAccount(genesis *types.Block) error {
+	if !bc.cacheConfig.Disabled {
+		return nil
+	}
+	log.Info("reset with import account")
 	bc.downloader.Wait()
 	defer bc.downloader.Notify()
 	bc.mu.Lock()
@@ -417,7 +421,7 @@ func (bc *BlockChain) ResetWithImportAccount(genesis *types.Block) error {
 		return nil
 	}
 
-	if last > 36 {
+	if last > triesInMemory {
 		batch := bc.db.NewBatch()
 		for number := last; number > 0; number -= 1 {
 			hashs := rawdb.ReadHash(bc.db, number)
@@ -433,7 +437,7 @@ func (bc *BlockChain) ResetWithImportAccount(genesis *types.Block) error {
 						panic(fmt.Sprint("import account error at block number ", number, " hash ", hash))
 					}
 					mainHash = header.ParentHash
-					if len(hashs) > 1 && number <= last-35 {
+					if len(hashs) > 1 && number < last-triesInMemory {
 						rawdb.WriteHashs(batch, number, []common.Hash{hash})
 					}
 					break
@@ -466,7 +470,7 @@ func (bc *BlockChain) ResetWithImportAccount(genesis *types.Block) error {
 		if len(hashs) == 0 {
 			panic(fmt.Errorf("no hash block number ", number))
 		}
-
+		log.Info("reset with import account successed", "reset number", number)
 		for _, hash := range hashs {
 			header := rawdb.ReadHeader(bc.db, hash, number)
 			if header == nil {
@@ -480,7 +484,7 @@ func (bc *BlockChain) ResetWithImportAccount(genesis *types.Block) error {
 			st := state.StateTri{trie, bc.db, bc.db}
 			state := zstate.NewState(&st, number)
 
-			if last-number <= 35 || number == 0 {
+			if last-number < triesInMemory || number == 0 {
 				s1 := zstate.LoadState1(&state.State0)
 				state1 = &s1
 			} else {
@@ -489,12 +493,12 @@ func (bc *BlockChain) ResetWithImportAccount(genesis *types.Block) error {
 
 			state1.UpdateWitness(tks)
 
-			if last-number <= 36 {
+			if last-number < triesInMemory {
 				state1.Finalize()
 			}
 		}
 	}
-
+	log.Info("reset with import account successed")
 	return nil
 }
 
@@ -1046,7 +1050,8 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			chosen := header.Number.Uint64()
 
 			// If we exceeded out time allowance, flush an entire trie to disk
-			if bc.gcproc > bc.cacheConfig.TrieTimeLimit {
+			if chosen%5 == 0 {
+				//if bc.gcproc > bc.cacheConfig.TrieTimeLimit {
 				// If we're exceeding limits but haven't reached a large enough memory gap,
 				// warn the user that the system is becoming unstable.
 				if chosen < lastWrite+triesInMemory && bc.gcproc >= 2*bc.cacheConfig.TrieTimeLimit {
