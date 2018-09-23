@@ -67,10 +67,20 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	return
 }
 
+var state_chan = make(chan *State0, 30)
+var is_start = false
+
 func (state *State) FinalizeGenWitness(tks []keys.Uint512) {
-	state1 := LoadState1(&state.State0)
-	state1.UpdateWitness(tks)
-	state1.Finalize()
+	if !is_start {
+		is_start = true
+		go func() {
+			state0 := <-state_chan
+			state1 := LoadState1(state0)
+			state1.UpdateWitness(tks)
+			state1.Finalize()
+		}()
+	}
+	state_chan <- &state.State0
 	return
 }
 

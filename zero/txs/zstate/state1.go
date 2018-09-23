@@ -34,8 +34,9 @@ import (
 type State1 struct {
 	State0 *State0
 
-	G2outs  map[keys.Uint256]*OutState1
-	G2wouts []keys.Uint256
+	G2outs        map[keys.Uint256]*OutState1
+	G2wouts       []keys.Uint256
+	current_count uint32
 
 	data State1Data
 
@@ -59,6 +60,8 @@ func (self *State1) del_wout_dirty(i uint) {
 
 func (self *State1) append_wout_dirty(k *keys.Uint256) {
 	self.G2wouts = append(self.G2wouts, *k)
+	self.current_count++
+	self.data.LastCount++
 	self.is_dirty = true
 }
 
@@ -110,6 +113,9 @@ func (self *State1) toData() {
 		}
 	}
 	self.data.Outs = outs
+	if self.current_count > 0 {
+		self.data.LastCount = self.current_count
+	}
 }
 
 func (self *State1) dataTo() {
@@ -158,7 +164,8 @@ func (self *State1) addOut(tks []keys.Uint512, os *OutState0, os_tree *merkle.Tr
 
 	Debug_State1_addout_assert(self, os)
 
-	for _, wout := range self.G2wouts {
+	last_tx_wouts := self.G2wouts[uint32(len(self.G2wouts))-self.data.LastCount:]
+	for _, wout := range last_tx_wouts {
 		if src, err := self.GetOut(&wout); err != nil {
 			panic("gen witness wout can not find src")
 			return

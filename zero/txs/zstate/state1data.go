@@ -21,7 +21,8 @@ import (
 )
 
 type State1Data struct {
-	Outs []*OutState1
+	Outs      []*OutState1
+	LastCount uint32
 }
 
 func (self *State1Data) Serial() (ret []byte) {
