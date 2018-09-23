@@ -17,6 +17,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus"
@@ -93,6 +95,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
+	log.Info(fmt.Sprintf("ApplyTransaction headGasLimit = %v, blockNum =%v,crruentGasLimit= %v ,txGas = %v", header.GasLimit, header.Number.Uint64(), *gp, msg.Gas()))
 	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
 	log.Info("ApplyTransaction : ")
 	for i, desc_z := range tx.GetZZSTX().Desc_Zs {
