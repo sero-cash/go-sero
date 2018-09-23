@@ -40,6 +40,9 @@ type State0 struct {
 	g2outs_dirty   map[keys.Uint256]bool
 }
 
+func (self *State0) Num() uint64 {
+	return self.num
+}
 func NewState0(tri tri.Tri, num uint64) (state State0) {
 	state = State0{tri: tri, num: num}
 	state.clear()
