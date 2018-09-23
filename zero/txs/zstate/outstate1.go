@@ -27,6 +27,7 @@ import (
 type OutState1 struct {
 	Witness witness.Witness
 	Index   uint64
+	Num     uint64
 	Tk      keys.Uint512
 	Out_O   Out0
 	Desc_Z  *stx.Desc_Z `rlp:"nil"`

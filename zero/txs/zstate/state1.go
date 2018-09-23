@@ -34,9 +34,8 @@ import (
 type State1 struct {
 	State0 *State0
 
-	G2outs        map[keys.Uint256]*OutState1
-	G2wouts       []keys.Uint256
-	current_count uint32
+	G2outs  map[keys.Uint256]*OutState1
+	G2wouts []keys.Uint256
 
 	data State1Data
 
@@ -60,8 +59,6 @@ func (self *State1) del_wout_dirty(i uint) {
 
 func (self *State1) append_wout_dirty(k *keys.Uint256) {
 	self.G2wouts = append(self.G2wouts, *k)
-	self.current_count++
-	self.data.LastCount++
 	self.is_dirty = true
 }
 
@@ -113,9 +110,6 @@ func (self *State1) toData() {
 		}
 	}
 	self.data.Outs = outs
-	if self.current_count > 0 {
-		self.data.LastCount = self.current_count
-	}
 }
 
 func (self *State1) dataTo() {
@@ -164,12 +158,23 @@ func (self *State1) addOut(tks []keys.Uint512, os *OutState0, os_tree *merkle.Tr
 
 	Debug_State1_addout_assert(self, os)
 
-	last_tx_wouts := self.G2wouts[uint32(len(self.G2wouts))-self.data.LastCount:]
-	for _, wout := range last_tx_wouts {
+	max_num := uint64(0)
+	for _, wout := range self.G2wouts {
+		if src, err := self.GetOut(&wout); err != nil {
+			if max_num < src.Num {
+				max_num = src.Num
+			}
+		}
+	}
+
+	for _, wout := range self.G2wouts {
 		if src, err := self.GetOut(&wout); err != nil {
 			panic("gen witness wout can not find src")
 			return
 		} else {
+			if src.Num < max_num {
+				continue
+			}
 			if src == nil {
 				panic("gen witness can not find wout in G2outs")
 			} else {
@@ -229,6 +234,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *OutState0, os_tree *merkle
 					wos.Desc_Z.Out.EInfo = einfo
 					wos.Nil = info.Nil
 					wos.Z = false
+					wos.Num = state.State0.num
 					state.add_out_dirty(&root, &wos)
 					state.add_out_dirty(&info.Nil, &wos)
 					break
@@ -259,6 +265,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *OutState0, os_tree *merkle
 					wos.Index = os.Index
 					wos.Nil = info.Nil
 					wos.Z = true
+					wos.Num = state.State0.num
 					state.add_out_dirty(&root, &wos)
 					state.add_out_dirty(&info.Nil, &wos)
 				} else {
