@@ -162,6 +162,9 @@ func (self *State1) addOut(tks []keys.Uint512, os *OutState0, os_tree *merkle.Tr
 	max_num := uint64(0)
 	for _, wout := range self.G2wouts {
 		if src, err := self.GetOut(&wout); err != nil {
+			panic("gen witness wout can not find src")
+			return
+		} else {
 			if max_num < src.Num {
 				max_num = src.Num
 			}
