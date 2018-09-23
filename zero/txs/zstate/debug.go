@@ -27,6 +27,7 @@ import (
 )
 
 func Need_debug() bool {
+	return false
 	if false {
 		return true
 	} else {

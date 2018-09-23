@@ -216,8 +216,8 @@ func (tx *Transaction) Size() common.StorageSize {
 		return size.(common.StorageSize)
 	}
 	c := writeCounter(0)
-	rlpData := []interface{}{tx.data.Currency, tx.data.Payload, tx.data.Price}
-	rlp.Encode(&c, rlpData)
+	//rlpData := []interface{}{tx.data.Currency, tx.data.Payload, tx.data.Price}
+	rlp.Encode(&c, &tx.data)
 	tx.size.Store(common.StorageSize(c))
 	return common.StorageSize(c)
 }
@@ -371,6 +371,17 @@ func (t *TransactionsByPrice) Pop() *Transaction {
 		return nil
 	}
 	return transaction.(*Transaction)
+}
+
+func (t *TransactionsByPrice) Size() int {
+	count := 0
+	if t.txs == nil {
+		return count
+	}
+	for _, value := range t.txs {
+		count += len(value)
+	}
+	return count
 }
 
 // Message is a fully derived transaction and implements core.Message

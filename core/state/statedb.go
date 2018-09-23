@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"sort"
 	"sync"
+	"time"
 
 	"strings"
 
@@ -785,6 +786,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	for addr := range s.journal.dirties {
 		s.stateObjectsDirty[addr] = struct{}{}
 	}
+	start := time.Now()
 	// Commit objects to the trie.
 	for addr, stateObject := range s.stateObjects {
 		_, isDirty := s.stateObjectsDirty[addr]
@@ -808,9 +810,10 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		delete(s.stateObjectsDirty, addr)
 	}
-
-	s.GetZState().FinalizeGenWitness(s.GetSeeds())
-
+	log.Info(fmt.Sprintf("Commit objects to the trie done in %v\n", time.Since(start)))
+	start = time.Now()
+	go s.GetZState().FinalizeGenWitness(s.GetSeeds())
+	log.Info(fmt.Sprintf("Commit FinalizeGenWitness done in %v\n", time.Since(start)))
 	// Write trie changes.
 	root, err = s.trie.Commit(s.leafCallback)
 

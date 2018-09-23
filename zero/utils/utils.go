@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rlp"
 )
 
@@ -343,18 +342,22 @@ func (self *U256) SubU(a *U256) {
 }
 
 type TimeRecord struct {
-	start int64
+	start time.Time
 	name  string
 }
 
 func TR_enter(name string) (tr TimeRecord) {
-	log.Info("Start (" + name + ") ..... ")
-	tr.start = time.Now().UnixNano()
+	fmt.Printf("Start (" + name + ") ..... \n")
+	tr.start = time.Now()
 	tr.name = name
 	return
 }
 
+func (tr *TimeRecord) Renter(name string) {
+	tr.Leave()
+	*tr = TR_enter(name)
+}
+
 func (tr *TimeRecord) Leave() {
-	end_time := time.Now().UnixNano()
-	log.Info(" ...... End ("+tr.name+") ", "s", float64((end_time-tr.start)/1000)/1000000)
+	fmt.Printf(" ...... End ("+tr.name+")     s=%v\n", time.Since(tr.start))
 }
