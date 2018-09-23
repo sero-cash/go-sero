@@ -74,10 +74,12 @@ func (state *State) FinalizeGenWitness(tks []keys.Uint512) {
 	if !is_start {
 		is_start = true
 		go func() {
-			state0 := <-state_chan
-			state1 := LoadState1(state0)
-			state1.UpdateWitness(tks)
-			state1.Finalize()
+			for {
+				state0 := <-state_chan
+				state1 := LoadState1(state0)
+				state1.UpdateWitness(tks)
+				state1.Finalize()
+			}
 		}()
 	}
 	state_chan <- &state.State0
