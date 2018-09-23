@@ -333,7 +333,6 @@ func (s *Sero) SetSerobase(serobase common.Address) {
 	s.miner.SetSerobase(serobase)
 }
 
-//TODO zero modify StartMining
 func (s *Sero) StartMining(local bool) error {
 	eb, err := s.Serobase()
 	if err != nil {

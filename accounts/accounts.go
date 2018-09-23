@@ -88,53 +88,15 @@ type Wallet interface {
 	// chain state reader.
 	SelfDerive(base DerivationPath, chain sero.ChainStateReader)
 
-	// SignHash requests the wallet to sign the given hash.
+	// EncryptTx requests the wallet to encryt the given transaction and tx.t.
 	//
 	// It looks up the account specified either solely via its address contained within,
 	// or optionally with the aid of any location metadata from the embedded URL field.
-	//
-	// If the wallet requires additional authentication to sign the request (e.g.
-	// a password to decrypt the account, or a PIN code o verify the transaction),
-	// an AuthNeededError instance will be returned, containing infos for the user
-	// about which fields or actions are needed. The user may retry by providing
-	// the needed details via SignHashWithPassphrase, or by other means (e.g. unlock
-	// the account in a keystore).
-
-	//TODO zero delete Sign
-	/*SignHash(account Account, hash []byte) ([]byte, error)
-
-	// SignTx requests the wallet to sign the given transaction.
-	//
-	// It looks up the account specified either solely via its address contained within,
-	// or optionally with the aid of any location metadata from the embedded URL field.
-	//
-	// If the wallet requires additional authentication to sign the request (e.g.
-	// a password to decrypt the account, or a PIN code o verify the transaction),
-	// an AuthNeededError instance will be returned, containing infos for the user
-	// about which fields or actions are needed. The user may retry by providing
-	// the needed details via SignTxWithPassphrase, or by other means (e.g. unlock
-	// the account in a keystore).
-	SignTx(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
-
-	// SignHashWithPassphrase requests the wallet to sign the given hash with the
-	// given passphrase as extra authentication information.
-	//
-	// It looks up the account specified either solely via its address contained within,
-	// or optionally with the aid of any location metadata from the embedded URL field.
-	SignHashWithPassphrase(account Account, passphrase string, hash []byte) ([]byte, error)
-
-	// SignTxWithPassphrase requests the wallet to sign the given transaction, with the
-	// given passphrase as extra authentication information.
-	//
-	// It looks up the account specified either solely via its address contained within,
-	// or optionally with the aid of any location metadata from the embedded URL field.
-	SignTxWithPassphrase(account Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
-
-	*/
 	EncryptTx(account Account, tx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error)
 
 	EncryptTxWithPassphrase(account Account, passphrase string, tx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error)
 
+	// IsMine return whether an once address is mine or not
 	IsMine(onceAddress common.Address) bool
 }
 

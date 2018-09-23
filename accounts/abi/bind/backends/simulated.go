@@ -23,8 +23,7 @@ import (
 	"sync"
 	"time"
 
-	sero "github.com/sero-cash/go-sero"
-	"github.com/sero-cash/go-sero/accounts/abi/bind"
+	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/consensus/ethash"
@@ -40,9 +39,6 @@ import (
 	"github.com/sero-cash/go-sero/sero/filters"
 	"github.com/sero-cash/go-sero/serodb"
 )
-
-// This nil assignment ensures compile time that SimulatedBackend implements bind.ContractBackend.
-var _ bind.ContractBackend = (*SimulatedBackend)(nil)
 
 var errBlockNumberUnsupported = errors.New("SimulatedBackend cannot access blocks other than the latest block")
 var errGasEstimationFailed = errors.New("gas required exceeds allowance or always failing transaction")
@@ -288,35 +284,6 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call sero.CallMsg, 
 	gaspool := new(core.GasPool).AddGas(math.MaxUint64)
 
 	return core.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
-}
-
-//TODO zero modify SendTransaction
-// SendTransaction updates the pending block to include the given transaction.
-// It panics if the transaction is invalid.
-func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	/*sender, err := types.Sender(types.HomesteadSigner{}, tx)
-	if err != nil {
-		panic(fmt.Errorf("invalid transaction: %v", err))
-	}
-	nonce := b.pendingState.GetNonce(sender)
-	if tx.Nonce() != nonce {
-		panic(fmt.Errorf("invalid transaction nonce: got %d, want %d", tx.Nonce(), nonce))
-	}
-
-	blocks, _ := core.GenerateChain(b.config, b.blockchain.CurrentBlock(), ethash.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
-		for _, tx := range b.pendingBlock.Transactions() {
-			block.AddTxWithChain(b.blockchain, tx)
-		}
-		block.AddTxWithChain(b.blockchain, tx)
-	})
-	statedb, _ := b.blockchain.State()
-
-	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())*/
-	return nil
 }
 
 // FilterLogs executes a log filter operation, blocking during execution and

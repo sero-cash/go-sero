@@ -83,51 +83,6 @@ func (b *bridge) NewAccount(call otto.FunctionCall) (response otto.Value) {
 	return ret
 }
 
-//TODO zero delete OpenWallet
-
-// OpenWallet is a wrapper around personal.openWallet which can interpret and
-// react to certain error messages, such as the Trezor PIN matrix request.
-/*func (b *bridge) OpenWallet(call otto.FunctionCall) (response otto.Value) {
-	// Make sure we have a wallet specified to open
-	if !call.Argument(0).IsString() {
-		throwJSException("first argument must be the wallet URL to open")
-	}
-	wallet := call.Argument(0)
-
-	var passwd otto.Value
-	if call.Argument(1).IsUndefined() || call.Argument(1).IsNull() {
-		passwd, _ = otto.ToValue("")
-	} else {
-		passwd = call.Argument(1)
-	}
-	// Open the wallet and return if successful in itself
-	val, err := call.Otto.Call("jeth.openWallet", nil, wallet, passwd)
-	if err == nil {
-		return val
-	}
-	// Wallet open failed, report error unless it's a PIN entry
-	if !strings.HasSuffix(err.Error(), usbwallet.ErrTrezorPINNeeded.Error()) {
-		throwJSException(err.Error())
-	}
-	// Trezor PIN matrix input requested, display the matrix to the user and fetch the data
-	fmt.Fprintf(b.printer, "Look at the device for number positions\n\n")
-	fmt.Fprintf(b.printer, "7 | 8 | 9\n")
-	fmt.Fprintf(b.printer, "--+---+--\n")
-	fmt.Fprintf(b.printer, "4 | 5 | 6\n")
-	fmt.Fprintf(b.printer, "--+---+--\n")
-	fmt.Fprintf(b.printer, "1 | 2 | 3\n\n")
-
-	if input, err := b.prompter.PromptPassword("Please enter current PIN: "); err != nil {
-		throwJSException(err.Error())
-	} else {
-		passwd, _ = otto.ToValue(input)
-	}
-	if val, err = call.Otto.Call("jeth.openWallet", nil, wallet, passwd); err != nil {
-		throwJSException(err.Error())
-	}
-	return val
-}*/
-
 // UnlockAccount is a wrapper around the personal.unlockAccount RPC method that
 // uses a non-echoing password prompt to acquire the passphrase and executes the
 // original RPC method (saved in jeth.unlockAccount) with it to actually execute

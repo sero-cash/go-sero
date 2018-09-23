@@ -116,9 +116,8 @@ func NewPublicTxPoolAPI(b Backend) *PublicTxPoolAPI {
 	return &PublicTxPoolAPI{b}
 }
 
-//TODO zero delete API.Content
 // Content returns the transactions contained within the transaction pool.
-/*func (s *PublicTxPoolAPI) Content() map[string]map[string]map[string]*RPCTransaction {
+func (s *PublicTxPoolAPI) Content() map[string]map[string]map[string]*RPCTransaction {
 	content := map[string]map[string]map[string]*RPCTransaction{
 		"pending": make(map[string]map[string]*RPCTransaction),
 		"queued":  make(map[string]map[string]*RPCTransaction),
@@ -129,7 +128,7 @@ func NewPublicTxPoolAPI(b Backend) *PublicTxPoolAPI {
 	for account, txs := range pending {
 		dump := make(map[string]*RPCTransaction)
 		for _, tx := range txs {
-			dump[fmt.Sprintf("%d", tx.Nonce())] = newRPCPendingTransaction(tx)
+			dump[fmt.Sprintf("%v", tx.Hash())] = newRPCPendingTransaction(tx)
 		}
 		content["pending"][account.Base58()] = dump
 	}
@@ -137,12 +136,12 @@ func NewPublicTxPoolAPI(b Backend) *PublicTxPoolAPI {
 	for account, txs := range queue {
 		dump := make(map[string]*RPCTransaction)
 		for _, tx := range txs {
-			dump[fmt.Sprintf("%d", tx.Nonce())] = newRPCPendingTransaction(tx)
+			dump[fmt.Sprintf("%d", tx.Hash())] = newRPCPendingTransaction(tx)
 		}
 		content["queued"][account.Base58()] = dump
 	}
 	return content
-}*/
+}
 
 // Status returns the number of pending and queued transaction in the pool.
 func (s *PublicTxPoolAPI) Status() map[string]hexutil.Uint {
@@ -153,10 +152,9 @@ func (s *PublicTxPoolAPI) Status() map[string]hexutil.Uint {
 	}
 }
 
-//TODO zero delete API.Inspect
 // Inspect retrieves the content of the transaction pool and flattens it into an
 // easily inspectable list.
-/*func (s *PublicTxPoolAPI) Inspect() map[string]map[string]map[string]string {
+func (s *PublicTxPoolAPI) Inspect() map[string]map[string]map[string]string {
 	content := map[string]map[string]map[string]string{
 		"pending": make(map[string]map[string]string),
 		"queued":  make(map[string]map[string]string),
@@ -174,7 +172,7 @@ func (s *PublicTxPoolAPI) Status() map[string]hexutil.Uint {
 	for account, txs := range pending {
 		dump := make(map[string]string)
 		for _, tx := range txs {
-			dump[fmt.Sprintf("%d", tx.Nonce())] = format(tx)
+			dump[fmt.Sprintf("%v", tx.Hash())] = format(tx)
 		}
 		content["pending"][account.Base58()] = dump
 	}
@@ -182,12 +180,12 @@ func (s *PublicTxPoolAPI) Status() map[string]hexutil.Uint {
 	for account, txs := range queue {
 		dump := make(map[string]string)
 		for _, tx := range txs {
-			dump[fmt.Sprintf("%d", tx.Nonce())] = format(tx)
+			dump[fmt.Sprintf("%v", tx.Hash())] = format(tx)
 		}
 		content["queued"][account.Base58()] = dump
 	}
 	return content
-}*/
+}
 
 // PublicAccountAPI provides an API to access accounts managed by this node.
 // It offers only methods that can retrieve accounts.
@@ -213,7 +211,10 @@ func (s *PublicAccountAPI) Accounts() []common.Address {
 
 func (s *PublicAccountAPI) IsMineOAddr(onceAddress common.Address) bool {
 	wallets := s.am.Wallets()
+	return isMine(wallets, onceAddress)
+}
 
+func isMine(wallets []accounts.Wallet, onceAddress common.Address) bool {
 	if len(wallets) == 0 {
 		return false
 	}
@@ -417,7 +418,7 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 // tries to sign it with the key associated with args.To. If the given passwd isn't
 // able to decrypt the key it fails. The transaction is returned in RLP-form, not broadcast
 // to other nodes
-func (s *PrivateAccountAPI) EncrptyTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
+func (s *PrivateAccountAPI) EncrptyTransaction(ctx context.Context, args SendTxArgs, passwd string) (*EncryptTransactionResult, error) {
 	// No need to obtain the noncelock mutex, since we won't be sending this
 	// tx into the transaction pool, but right back to the user
 	if args.Gas == nil {
@@ -437,7 +438,7 @@ func (s *PrivateAccountAPI) EncrptyTransaction(ctx context.Context, args SendTxA
 	if err != nil {
 		return nil, err
 	}
-	return &SignTransactionResult{data, signed}, nil
+	return &EncryptTransactionResult{data, signed}, nil
 }
 
 // signHash is a helper function that calculates a hash for the given message that can be
@@ -451,60 +452,6 @@ func signHash(data []byte) []byte {
 	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
 	return crypto.Keccak256([]byte(msg))
 }
-
-//TODO zero delete API Sign
-// Sign calculates an Ethereum ECDSA signature for:
-// keccack256("\x19Ethereum Signed Message:\n" + len(message) + message))
-//
-// Note, the produced signature conforms to the secp256k1 curve R, S and V values,
-// where the V value will be 27 or 28 for legacy reasons.
-//
-// The key used to calculate the signature is decrypted with the given password.
-//
-// https://github.com/sero-cash/go-sero/wiki/Management-APIs#personal_sign
-/*func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr common.Address, passwd string) (hexutil.Bytes, error) {
-	// Look up the wallet containing the requested abi
-	account := accounts.Account{Address: addr}
-
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return nil, err
-	}
-	// Assemble sign the data with the wallet
-	signature, err := wallet.SignHashWithPassphrase(account, passwd, signHash(data))
-	if err != nil {
-		return nil, err
-	}
-	signature[64] += 27 // Transform V from 0/1 to 27/28 according to the yellow paper
-	return signature, nil
-}*/
-
-//TODO zero delete  API EcRecover
-// EcRecover returns the address for the account that was used to create the signature.
-// Note, this function is compatible with sero_sign and personal_sign. As such it recovers
-// the address of:
-// hash = keccak256("\x19Ethereum Signed Message:\n"${message length}${message})
-// addr = ecrecover(hash, signature)
-//
-// Note, the signature must conform to the secp256k1 curve R, S and V values, where
-// the V value must be be 27 or 28 for legacy reasons.
-//
-// https://github.com/sero-cash/go-sero/wiki/Management-APIs#personal_ecRecover
-/*func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Bytes) (common.Address, error) {
-	if len(sig) != 65 {
-		return common.Address{}, fmt.Errorf("signature must be 65 bytes long")
-	}
-	if sig[64] != 27 && sig[64] != 28 {
-		return common.Address{}, fmt.Errorf("invalid Ethereum signature (V is not 27 or 28)")
-	}
-	sig[64] -= 27 // Transform yellow paper V from 27/28 to 0/1
-
-	rpk, err := crypto.SigToPub(signHash(data), sig)
-	if err != nil {
-		return common.Address{}, err
-	}
-	return crypto.PrivkeyToAddress(*rpk), nil
-}*/
 
 // SignAndSendTransaction was renamed to SendTransaction. This method is deprecated
 // and will be removed in the future. It primary goal is to give clients time to update.
@@ -957,7 +904,6 @@ type RPCTransaction struct {
 	Stx              *stx.T          `json:"stx"`
 }
 
-//TODO zero modify newRPCTransaction
 // newRPCTransaction returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
 func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) *RPCTransaction {
@@ -1370,34 +1316,8 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encod
 	return submitTransaction(ctx, s.b, tx)
 }
 
-//TODO zero delete API Sign
-// Sign calculates an ECDSA signature for:
-// keccack256("\x19Ethereum Signed Message:\n" + len(message) + message).
-//
-// Note, the produced signature conforms to the secp256k1 curve R, S and V values,
-// where the V value will be 27 or 28 for legacy reasons.
-//
-// The account associated with addr must be unlocked.
-//
-// https://github.com/ethereum/wiki/wiki/JSON-RPC#sero_sign
-/*func (s *PublicTransactionPoolAPI) Sign(addr common.Address, data hexutil.Bytes) (hexutil.Bytes, error) {
-	// Look up the wallet containing the requested abi
-	account := accounts.Account{Address: addr}
-
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return nil, err
-	}
-	// Sign the requested hash with the wallet
-	signature, err := wallet.SignHash(account, signHash(data))
-	if err == nil {
-		signature[64] += 27 // Transform V from 0/1 to 27/28 according to the yellow paper
-	}
-	return signature, err
-}*/
-
-// SignTransactionResult represents a RLP encoded signed transaction.
-type SignTransactionResult struct {
+// EncryptTransactionResult represents a RLP encoded signed transaction.
+type EncryptTransactionResult struct {
 	Raw hexutil.Bytes      `json:"raw"`
 	Tx  *types.Transaction `json:"tx"`
 }
@@ -1405,7 +1325,7 @@ type SignTransactionResult struct {
 // EncryptTransaction will sign the given transaction with the from account.
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
-func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
+func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args SendTxArgs) (*EncryptTransactionResult, error) {
 	if args.Gas == nil {
 		return nil, fmt.Errorf("gas not specified")
 	}
@@ -1442,81 +1362,24 @@ func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args 
 	if err != nil {
 		return nil, err
 	}
-	return &SignTransactionResult{data, signed}, nil
+	return &EncryptTransactionResult{data, signed}, nil
 }
 
-//TODO zero delete API PendingTransactions
 // PendingTransactions returns the transactions that are in the transaction pool
 // and have a from address that is one of the accounts this node manages.
-/*func (s *PublicTransactionPoolAPI) PendingTransactions() ([]*RPCTransaction, error) {
+func (s *PublicTransactionPoolAPI) PendingTransactions() ([]*RPCTransaction, error) {
 	pending, err := s.b.GetPoolTransactions()
 	if err != nil {
 		return nil, err
 	}
-	accounts := make(map[common.Address]struct{})
-	for _, wallet := range s.b.AccountManager().Wallets() {
-		for _, account := range wallet.Accounts() {
-			accounts[account.Address] = struct{}{}
-		}
-	}
 	transactions := make([]*RPCTransaction, 0, len(pending))
 	for _, tx := range pending {
-		var abi types.Signer = types.HomesteadSigner{}
-		if tx.Protected() {
-			abi = types.NewEIP155Signer(tx.ChainId())
-		}
-		from, _ := types.Sender(abi, tx)
-		if _, exists := accounts[from]; exists {
+		if isMine(s.b.AccountManager().Wallets(), tx.From()) {
 			transactions = append(transactions, newRPCPendingTransaction(tx))
 		}
 	}
 	return transactions, nil
-}*/
-
-//TODO zero delete API Resend
-// Resend accepts an existing transaction and a new gas price and limit. It will remove
-// the given transaction from the pool and reinsert it with the new gas price and limit.
-/*func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
-	if sendArgs.Nonce == nil {
-		return common.Hash{}, fmt.Errorf("missing transaction nonce in transaction spec")
-	}
-	if err := sendArgs.setDefaults(ctx, s.b); err != nil {
-		return common.Hash{}, err
-	}
-	matchTx := sendArgs.toTransaction()
-	pending, err := s.b.GetPoolTransactions()
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	for _, p := range pending {
-		var abi types.Signer = types.HomesteadSigner{}
-		if p.Protected() {
-			abi = types.NewEIP155Signer(p.ChainId())
-		}
-		wantSigHash := abi.Hash(matchTx)
-
-		if pFrom, err := types.Sender(abi, p); err == nil && pFrom == sendArgs.From && abi.Hash(p) == wantSigHash {
-			// Match. Re-sign and send the transaction.
-			if gasPrice != nil && (*big.Int)(gasPrice).Sign() != 0 {
-				sendArgs.GasPrice = gasPrice
-			}
-			if gasLimit != nil && *gasLimit != 0 {
-				sendArgs.Gas = gasLimit
-			}
-			signedTx, err := s.sign(sendArgs.From, sendArgs.toTransaction())
-			if err != nil {
-				return common.Hash{}, err
-			}
-			if err = s.b.SendTx(ctx, signedTx); err != nil {
-				return common.Hash{}, err
-			}
-			return signedTx.Hash(), nil
-		}
-	}
-
-	return common.Hash{}, fmt.Errorf("Transaction %#x not found", matchTx.Hash())
-}*/
+}
 
 // PublicDebugAPI is the collection of Ethereum APIs exposed over the public
 // debugging endpoint.

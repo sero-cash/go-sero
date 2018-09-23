@@ -39,8 +39,6 @@ func init() {
 		commandGenerate,
 		commandInspect,
 		commandChangePassphrase,
-		commandSignMessage,
-		commandVerifyMessage,
 	}
 }
 

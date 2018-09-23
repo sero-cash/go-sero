@@ -244,32 +244,7 @@ func (a Address) ToUint512() *keys.Uint512 {
 // Big converts an address to a big integer.
 func (a Address) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
 
-// Hash converts an address to a hash by left-padding it with zeros.
-//func (a Address) Hash() Hash { return BytesToHash(a[:]) }
-
-// Hex returns an EIP55-compliant hex string representation of the address.
-//TODO zero delete Hex
-/*func (a Address) Hex() string {
-	unchecksummed := hex.EncodeToString(a[:])
-	sha := sha3.NewKeccak256()
-	sha.Write([]byte(unchecksummed))
-	hash := sha.Sum(nil)
-
-	result := []byte(unchecksummed)
-	for i := 0; i < len(result); i++ {
-		hashByte := hash[i/2]
-		if i%2 == 0 {
-			hashByte = hashByte >> 4
-		} else {
-			hashByte &= 0xf
-		}
-		if result[i] > '9' && hashByte > 7 {
-			result[i] -= 32
-		}
-	}
-	return "0x" + string(result)
-}*/
-
+// Base58 returns base58 string representation of the address.
 func (a Address) Base58() string {
 	return base58.EncodeToString(a[:])
 }
