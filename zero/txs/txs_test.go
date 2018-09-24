@@ -70,7 +70,6 @@ func (self *user) addOut(v int) {
 	out.Value = utils.NewU256(uint64(v))
 	self.zstate.AddOut_O(&out, &keys.Uint256{})
 	self.zstate.Update()
-	self.zstate.FinalizeGenWitness(keys.Seeds2Tks(seeds))
 }
 
 func (self *user) Logout() {
@@ -134,7 +133,6 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 
 		self.zstate.AddStx(&s)
 		self.zstate.Update()
-		self.zstate.FinalizeGenWitness(keys.Seeds2Tks(seeds))
 	}
 }
 

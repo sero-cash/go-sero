@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package zstate
+package state1
 
 import (
 	"sort"
@@ -22,6 +22,7 @@ import (
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
@@ -95,20 +96,20 @@ func outStatName(root *keys.Uint256) (ret []byte) {
 	return
 }
 
-func UpdateOutStat(st *State0, out *OutState1) {
+func UpdateOutStat(st *zstate.State0, out *OutState1) {
 	os := OutStat{}
 	os.Z = out.Z
 	os.Value = out.Out_O.Out.Value
 	os.Time = time.Now().UnixNano()
-	tri.UpdateGlobalObj(st.tri, outStatName(out.Witness.Tree.RootKey().NewRef()), &os)
+	tri.UpdateGlobalObj(st.Tri(), outStatName(out.Witness.Tree.RootKey().NewRef()), &os)
 }
 
-func SortOutStats(st *State0, outs []*OutState1) {
+func SortOutStats(st *zstate.State0, outs []*OutState1) {
 	wraps := OutStats{}
 	for _, out := range outs {
 		out_root := out.Witness.Tree.RootKey()
 		get := OutStatGet{}
-		tri.GetGlobalObj(st.tri, outStatName(&out_root), &get)
+		tri.GetGlobalObj(st.Tri(), outStatName(&out_root), &get)
 		if get.out != nil {
 			wraps = append(
 				wraps,

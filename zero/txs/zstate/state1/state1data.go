@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package zstate
+package state1
 
 import (
 	"github.com/sero-cash/go-sero/rlp"

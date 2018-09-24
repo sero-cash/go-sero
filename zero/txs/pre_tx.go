@@ -24,6 +24,7 @@ import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
@@ -102,7 +103,7 @@ func (self *z2zs) sortcut(l int) (ret []utils.I256) {
 
 type preTxDesc_Z struct {
 	currency keys.Uint256
-	in       *zstate.OutState1
+	in       *state1.OutState1
 	out      *tx.Out
 	z2z      z2zs
 }
@@ -111,7 +112,7 @@ type preTxDesc_O struct {
 	currency keys.Uint256
 	fee      utils.U256
 	z2o      utils.I256
-	ins      []zstate.OutState1
+	ins      []state1.OutState1
 	outs     []tx.Out
 }
 
@@ -152,7 +153,7 @@ func (self *c2i) addC(currency *keys.Uint256) int {
 
 type preTx struct {
 	last_anchor keys.Uint256
-	uouts       []zstate.OutState1
+	uouts       []state1.OutState1
 	desc_zs     []preTxDesc_Z
 	desc_os     map[keys.Uint256]*preTxDesc_O
 	C2I         c2i
@@ -164,12 +165,12 @@ type preOut struct {
 }
 
 type tempZDesc struct {
-	z_ins  []zstate.OutState1
+	z_ins  []state1.OutState1
 	z_outs []preOut
 }
 
 func preGen(ts *tx.T, state *zstate.State) (p preTx, e error) {
-	state1 := zstate.LoadState1(&state.State0)
+	state1 := state1.CurrentState1()
 	p.desc_os = make(map[keys.Uint256]*preTxDesc_O)
 	p.last_anchor = state.State0.Cur.Tree.RootKey()
 	z_temp_descs := make(map[keys.Uint256]*tempZDesc)

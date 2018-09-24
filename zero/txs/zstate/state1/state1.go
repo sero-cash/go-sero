@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package zstate
+package state1
 
 import (
 	"bytes"
@@ -24,15 +24,15 @@ import (
 
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/utils"
 	"github.com/sero-cash/go-sero/zero/witness/merkle"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 )
 
 type State1 struct {
-	State0 *State0
+	State0 *zstate.State0
 
 	G2outs  map[keys.Uint256]*OutState1
 	G2wouts []keys.Uint256
@@ -42,9 +42,9 @@ type State1 struct {
 	is_dirty bool
 }
 
-func LoadState1(state0 *State0) (state State1) {
+func LoadState1(state0 *zstate.State0, loadName string) (state State1) {
 	state.State0 = state0
-	state.load()
+	state.load(loadName)
 	return
 }
 
@@ -66,38 +66,23 @@ func (state *State1) clear_dirty() {
 	state.is_dirty = false
 }
 
-func (self *State1) load() {
+func (self *State1) load(loadName string) {
 	self.G2outs = make(map[keys.Uint256]*OutState1)
 	self.G2wouts = []keys.Uint256{}
 	self.clear_dirty()
 
-	if self.State0.num > 0 {
-		current_state_name := self.genLoadStateName()
-		if current_state_name != "" {
-			current_file := zconfig.State1_file(current_state_name)
-			if bytes, err := ioutil.ReadFile(current_file); err != nil {
-				panic(err)
-			} else {
-				get := State1DataGet{}
-				get.Unserial(bytes)
-				self.data = get.out
-				self.dataTo()
-			}
+	if loadName != "" {
+		current_file := zconfig.State1_file(loadName)
+		if bytes, err := ioutil.ReadFile(current_file); err != nil {
+			panic(err)
+		} else {
+			get := State1DataGet{}
+			get.Unserial(bytes)
+			self.data = get.out
+			self.dataTo()
 		}
 	} else {
 	}
-}
-
-func (self *State1) genLoadStateName() (ret string) {
-	last_root := self.State0.Block.Tree.RootKey()
-	ret = fmt.Sprintf("%010d.%s", self.State0.num-1, hexutil.Encode(last_root[4:16]))
-	return
-}
-
-func (self *State1) genUpdateStateName() (ret string) {
-	last_root := self.State0.Cur.Tree.RootKey()
-	ret = fmt.Sprintf("%010d.%s", self.State0.num, hexutil.Encode(last_root[4:16]))
-	return
 }
 
 func (self *State1) toData() {
@@ -121,21 +106,16 @@ func (self *State1) dataTo() {
 	}
 }
 
-func (self *State1) Finalize() {
+func (self *State1) Finalize(saveName string) {
 	self.toData()
 	self.clear_dirty()
-	current_state_name := self.genUpdateStateName()
-	if current_state_name != "" {
-		current_file := zconfig.State1_file(current_state_name)
-		serial := self.data.Serial()
-		if err := ioutil.WriteFile(current_file, serial, os.ModePerm); err != nil {
-			panic(err)
-		} else {
-		}
+	current_file := zconfig.State1_file(saveName)
+	serial := self.data.Serial()
+	if err := ioutil.WriteFile(current_file, serial, os.ModePerm); err != nil {
+		panic(err)
 	} else {
-		panic("state1 finalize but name is empty")
 	}
-	zconfig.Remove_State1_dir_files(int(self.State0.num))
+	zconfig.Remove_State1_dir_files(int(self.State0.Num()))
 	return
 }
 
@@ -151,14 +131,14 @@ func (state *State1) GetOut(root *keys.Uint256) (src *OutState1, e error) {
 	}
 }
 
-func (self *State1) addOut(tks []keys.Uint512, os *OutState0, os_tree *merkle.Tree) {
+func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *merkle.Tree) {
 	out_hash := os.ToCommitment()
 	out_leaf := merkle.Leaf{}
 	copy(out_leaf[:], out_hash[:])
 
 	Debug_State1_addout_assert(self, os)
 
-	t := utils.TR_enter(fmt.Sprintf("ADD_OUT..MAX_NUM num=%v", self.State0.num))
+	t := utils.TR_enter(fmt.Sprintf("ADD_OUT..MAX_NUM num=%v", self.State0.Num()))
 	max_num := uint64(0)
 	for _, wout := range self.G2wouts {
 		if src, err := self.GetOut(&wout); err != nil {
@@ -214,7 +194,7 @@ func (self *State1) addOut(tks []keys.Uint512, os *OutState0, os_tree *merkle.Tr
 	return
 }
 
-func (state *State1) addWouts(tks []keys.Uint512, os *OutState0, os_tree *merkle.Tree) {
+func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, os_tree *merkle.Tree) {
 	for _, tk := range tks {
 		if os.IsO() {
 			out_o := os.Out_O
@@ -242,7 +222,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *OutState0, os_tree *merkle
 					wos.Desc_Z.Out.EInfo = einfo
 					wos.Nil = info.Nil
 					wos.Z = false
-					wos.Num = state.State0.num
+					wos.Num = state.State0.Num()
 					state.add_out_dirty(&root, &wos)
 					state.add_out_dirty(&info.Nil, &wos)
 					break
@@ -273,7 +253,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *OutState0, os_tree *merkle
 					wos.Index = os.Index
 					wos.Nil = info.Nil
 					wos.Z = true
-					wos.Num = state.State0.num
+					wos.Num = state.State0.Num()
 					state.add_out_dirty(&root, &wos)
 					state.add_out_dirty(&info.Nil, &wos)
 				} else {
@@ -311,7 +291,7 @@ func (state *State1) UpdateWitness(tks []keys.Uint512) {
 		state.del(&del)
 	}
 	for i, commitment := range state.State0.Block.Commitments {
-		tree := trees.trees[trees.start_index+uint64(i)]
+		tree := trees.Trees[trees.Start_index+uint64(i)]
 		out := tree.RootKey()
 		if os, err := state.State0.GetOut(&out); err != nil {
 			panic(err)

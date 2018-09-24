@@ -47,6 +47,7 @@ import (
 	"github.com/sero-cash/go-sero/trie"
 	stx "github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
@@ -203,6 +204,13 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	bc.walletChSub = bc.accountManager.Subscribe(bc.walletCh)
 	// Take ownership of this particular state
 	go bc.update()
+
+	state1.Run(
+		&State1BlockChain{
+			bc: bc,
+		},
+	)
+
 	return bc, nil
 }
 
@@ -212,6 +220,40 @@ func (bc *BlockChain) getProcInterrupt() bool {
 
 func (bc *BlockChain) SetDownloader(downloader Downloader) {
 	bc.downloader = downloader
+}
+
+type State1BlockChain struct {
+	bc *BlockChain
+}
+
+func (self *State1BlockChain) GetCurrenHeader() *types.Header {
+	return self.bc.hc.CurrentHeader()
+}
+func (self *State1BlockChain) GetHeader(hash *common.Hash) *types.Header {
+	return self.bc.GetHeaderByHash(*hash)
+}
+func (self *State1BlockChain) NewState(hash *common.Hash) *zstate.State {
+	header := self.bc.GetHeaderByHash(*hash)
+	num := header.Number.Uint64()
+	var st *state.StateDB
+	var e error
+	if num == 0 {
+		st, e = state.NewGenesis(header.Root, self.bc.stateCache)
+	} else {
+		st, e = state.New(header.Root, self.bc.stateCache, num-1)
+	}
+	if e != nil {
+		panic(e)
+	}
+	return st.GetZState()
+}
+func (self *State1BlockChain) GetTks() []keys.Uint512 {
+	tks := []keys.Uint512{}
+	for _, w := range self.bc.accountManager.Wallets() {
+		tk := w.Accounts()[0].Tk
+		tks = append(tks, *tk.ToUint512())
+	}
+	return tks
 }
 
 // loadLastState loads the last known chain state from the database. This method
@@ -406,99 +448,101 @@ func (bc *BlockChain) Reset() error {
 }
 
 func (bc *BlockChain) ResetWithImportAccount(genesis *types.Block) error {
-	if !bc.cacheConfig.Disabled {
-		return nil
-	}
-	log.Info("reset with import account")
-	bc.downloader.Wait()
-	defer bc.downloader.Notify()
-	bc.mu.Lock()
-	defer bc.mu.Unlock()
-	mainHash := bc.CurrentBlock().Hash()
-	last := bc.CurrentBlock().Number().Uint64()
+	/*
+		if !bc.cacheConfig.Disabled {
+			return nil
+		}
+		log.Info("reset with import account")
+		bc.downloader.Wait()
+		defer bc.downloader.Notify()
+		bc.mu.Lock()
+		defer bc.mu.Unlock()
+		mainHash := bc.CurrentBlock().Hash()
+		last := bc.CurrentBlock().Number().Uint64()
 
-	if last == 0 {
-		return nil
-	}
+		if last == 0 {
+			return nil
+		}
 
-	if last > triesInMemory {
-		batch := bc.db.NewBatch()
-		for number := last; number > 0; number -= 1 {
-			hashs := rawdb.ReadHash(bc.db, number)
-			if len(hashs) == 0 {
-				panic(fmt.Sprint("import account error at block number ", number))
-			}
-			var flag bool
-			for _, hash := range hashs {
-				if hash == mainHash {
-					flag = true
-					header := rawdb.ReadHeader(bc.db, hash, number)
-					if header == nil {
-						panic(fmt.Sprint("import account error at block number ", number, " hash ", hash))
+		if last > triesInMemory {
+			batch := bc.db.NewBatch()
+			for number := last; number > 0; number -= 1 {
+				hashs := rawdb.ReadHash(bc.db, number)
+				if len(hashs) == 0 {
+					panic(fmt.Sprint("import account error at block number ", number))
+				}
+				var flag bool
+				for _, hash := range hashs {
+					if hash == mainHash {
+						flag = true
+						header := rawdb.ReadHeader(bc.db, hash, number)
+						if header == nil {
+							panic(fmt.Sprint("import account error at block number ", number, " hash ", hash))
+						}
+						mainHash = header.ParentHash
+						if len(hashs) > 1 && number < last-triesInMemory {
+							rawdb.WriteHashs(batch, number, []common.Hash{hash})
+						}
+						break
 					}
-					mainHash = header.ParentHash
-					if len(hashs) > 1 && number < last-triesInMemory {
-						rawdb.WriteHashs(batch, number, []common.Hash{hash})
-					}
-					break
+				}
+				if !flag {
+					panic("import account main chain error")
+				}
+				if batch.ValueSize() > 1000 {
+					batch.Write()
 				}
 			}
-			if !flag {
-				panic("import account main chain error")
-			}
-			if batch.ValueSize() > 1000 {
-				batch.Write()
-			}
+			batch.Write()
 		}
-		batch.Write()
-	}
 
-	tks := []keys.Uint512{}
-	for _, w := range bc.accountManager.Wallets() {
-		tk := w.Accounts()[0].Tk
-		tks = append(tks, *tk.ToUint512())
-	}
-
-	var state1 *zstate.State1
-	for number := uint64(0); number <= last; number += 1 {
-		var hashs []common.Hash
-		if number == 0 {
-			hashs = append(hashs, bc.genesisBlock.Hash())
-		} else {
-			hashs = rawdb.ReadHash(bc.db, number)
+		tks := []keys.Uint512{}
+		for _, w := range bc.accountManager.Wallets() {
+			tk := w.Accounts()[0].Tk
+			tks = append(tks, *tk.ToUint512())
 		}
-		if len(hashs) == 0 {
-			panic(fmt.Errorf("no hash block number ", number))
-		}
-		log.Info("reset with import account successed", "reset number", number)
-		for _, hash := range hashs {
-			header := rawdb.ReadHeader(bc.db, hash, number)
-			if header == nil {
-				panic(fmt.Errorf("block header not found hash : ", hash))
-			}
-			trie, err := bc.stateCache.OpenTrie(header.Root)
-			if err != nil {
-				panic(err)
-			}
 
-			st := state.StateTri{trie, bc.db, bc.db}
-			state := zstate.NewState(&st, number)
-
-			if last-number < triesInMemory || number == 0 {
-				s1 := zstate.LoadState1(&state.State0)
-				state1 = &s1
+		var state1 *zstate.State1
+		for number := uint64(0); number <= last; number += 1 {
+			var hashs []common.Hash
+			if number == 0 {
+				hashs = append(hashs, bc.genesisBlock.Hash())
 			} else {
-				state1.State0 = &state.State0
+				hashs = rawdb.ReadHash(bc.db, number)
 			}
+			if len(hashs) == 0 {
+				panic(fmt.Errorf("no hash block number ", number))
+			}
+			log.Info("reset with import account successed", "reset number", number)
+			for _, hash := range hashs {
+				header := rawdb.ReadHeader(bc.db, hash, number)
+				if header == nil {
+					panic(fmt.Errorf("block header not found hash : ", hash))
+				}
+				trie, err := bc.stateCache.OpenTrie(header.Root)
+				if err != nil {
+					panic(err)
+				}
 
-			state1.UpdateWitness(tks)
+				st := state.StateTri{trie, bc.db, bc.db}
+				state := zstate.NewState(&st, number)
 
-			if last-number < triesInMemory {
-				state1.Finalize()
+				if last-number < triesInMemory || number == 0 {
+					s1 := zstate.LoadState1(&state.State0)
+					state1 = &s1
+				} else {
+					state1.State0 = &state.State0
+				}
+
+				state1.UpdateWitness(tks)
+
+				if last-number < triesInMemory {
+					state1.Finalize()
+				}
 			}
 		}
-	}
-	log.Info("reset with import account successed")
+		log.Info("reset with import account successed")
+	*/
 	return nil
 }
 

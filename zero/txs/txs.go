@@ -24,6 +24,7 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
@@ -111,7 +112,7 @@ func Gen(seed *keys.Uint256, t *tx.T, state *zstate.State) (s stx.T, e error) {
 		}
 
 		for _, used_out := range preTx.uouts {
-			zstate.UpdateOutStat(&state.State0, &used_out)
+			state1.UpdateOutStat(&state.State0, &used_out)
 		}
 
 		return
@@ -223,10 +224,10 @@ func Verify(s *stx.T, state *zstate.State) (e error) {
 	return
 }
 
-func GetOuts(tk *keys.Uint512, state *zstate.State) (outs []*zstate.OutState1, e error) {
-	state1 := zstate.LoadState1(&state.State0)
-	for _, root := range state1.G2wouts {
-		if src, err := state1.GetOut(&root); err != nil {
+func GetOuts(tk *keys.Uint512, state *zstate.State) (outs []*state1.OutState1, e error) {
+	st1 := state1.CurrentState1()
+	for _, root := range st1.G2wouts {
+		if src, err := st1.GetOut(&root); err != nil {
 			e = err
 			return
 		} else {
@@ -242,7 +243,7 @@ func GetOuts(tk *keys.Uint512, state *zstate.State) (outs []*zstate.OutState1, e
 			}
 		}
 	}
-	zstate.SortOutStats(&state.State0, outs)
+	state1.SortOutStats(&state.State0, outs)
 	return
 }
 

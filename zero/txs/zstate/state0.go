@@ -40,9 +40,14 @@ type State0 struct {
 	g2outs_dirty   map[keys.Uint256]bool
 }
 
+func (self *State0) Tri() tri.Tri {
+	return self.tri
+}
+
 func (self *State0) Num() uint64 {
 	return self.num
 }
+
 func NewState0(tri tri.Tri, num uint64) (state State0) {
 	state = State0{tri: tri, num: num}
 	state.clear()
@@ -125,7 +130,7 @@ func (self *State0) load() {
 	if self.Block.Tree == nil {
 		tree := self.Cur.Tree.Clone()
 		self.Block.Tree = &tree
-		self.Update()
+		self.last_out_dirty = true
 	}
 }
 
@@ -147,6 +152,15 @@ func (self *State0) Update() {
 			self.Name2BKey(BLOCK_NAME, self.num),
 			&self.Block,
 		)
+
+		blockget := State0BlockGet{}
+		tri.GetObj(
+			self.tri,
+			self.Name2BKey(BLOCK_NAME, self.num),
+			&blockget,
+		)
+		i := 0
+		i++
 	}
 
 	g2ins_dirty := utils.Uint256s{}
@@ -287,20 +301,20 @@ func (state *State0) GetOut(root *keys.Uint256) (src *OutState0, e error) {
 }
 
 type State0Trees struct {
-	trees       map[uint64]merkle.Tree
-	roots       []keys.Uint256
-	start_index uint64
+	Trees       map[uint64]merkle.Tree
+	Roots       []keys.Uint256
+	Start_index uint64
 }
 
 func (state *State0) GenState0Trees() (ret State0Trees) {
 	if state.Cur.Index >= 0 {
-		ret.trees = make(map[uint64]merkle.Tree)
+		ret.Trees = make(map[uint64]merkle.Tree)
 		tree := state.Block.Tree.Clone()
-		ret.start_index = uint64(state.Cur.Index - int64(len(state.Block.Commitments)) + 1)
+		ret.Start_index = uint64(state.Cur.Index - int64(len(state.Block.Commitments)) + 1)
 		for i, commitment := range state.Block.Commitments {
 			tree.Append(merkle.Leaf(commitment))
-			ret.trees[ret.start_index+uint64(i)] = tree.Clone()
-			ret.roots = append(ret.roots, tree.RootKey())
+			ret.Trees[ret.Start_index+uint64(i)] = tree.Clone()
+			ret.Roots = append(ret.Roots, tree.RootKey())
 		}
 	}
 	return

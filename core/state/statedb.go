@@ -810,10 +810,9 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		delete(s.stateObjectsDirty, addr)
 	}
+
 	log.Info(fmt.Sprintf("Commit objects to the trie done in %v,num=%v\n", time.Since(start), s.GetZState().Num()))
-	start = time.Now()
-	s.GetZState().FinalizeGenWitness(s.GetSeeds())
-	log.Info(fmt.Sprintf("Commit FinalizeGenWitness done in %v,num=%v\n", time.Since(start), s.GetZState().Num()))
+
 	// Write trie changes.
 	root, err = s.trie.Commit(s.leafCallback)
 

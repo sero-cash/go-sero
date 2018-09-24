@@ -14,13 +14,14 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package zstate
+package state1
 
 import (
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/witness"
 )
 
@@ -29,7 +30,7 @@ type OutState1 struct {
 	Index   uint64
 	Num     uint64
 	Tk      keys.Uint512
-	Out_O   Out0
+	Out_O   zstate.Out0
 	Desc_Z  *stx.Desc_Z `rlp:"nil"`
 	Nil     keys.Uint256
 	Z       bool

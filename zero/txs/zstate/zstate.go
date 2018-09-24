@@ -17,7 +17,6 @@
 package zstate
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -65,31 +64,6 @@ func (state *State) AddStx(st *stx.T) (e error) {
 		return
 	} else {
 	}
-	return
-}
-
-var current_tks []keys.Uint512
-var state_chan = make(chan *State0, 30)
-var is_start = false
-
-func (state *State) FinalizeGenWitness(tks []keys.Uint512) {
-	if !is_start {
-		is_start = true
-		go func() {
-			for {
-				state0 := <-state_chan
-				t := utils.TR_enter(fmt.Sprintf("finalize gen witness->loadstate1 num=%v", state0.num))
-				state1 := LoadState1(state0)
-				t.Renter(fmt.Sprintf("finalize gen witness->updatewitness num=%v", state0.num))
-				state1.UpdateWitness(current_tks)
-				t.Renter(fmt.Sprintf("finalize gen witness->finalize num=%v", state0.num))
-				state1.Finalize()
-				t.Leave()
-			}
-		}()
-	}
-	current_tks = tks
-	state_chan <- &state.State0
 	return
 }
 
