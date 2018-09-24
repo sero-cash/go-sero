@@ -3,6 +3,8 @@ package state1
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-sero/log"
+
 	"time"
 
 	"os"
@@ -90,6 +92,9 @@ func run(bc BlockChain) {
 				load_name = state1_file_name(parent_num, &parent_hash)
 			}
 			state := bc.NewState(&current_hash)
+			if len(load_name) > 0 {
+				log.Info("STATE1 REPARSE BLOCK : ", "loadname", load_name[5:17], "savename", saved_name[5:17], "cmnum", len(state.Block.Commitments))
+			}
 			if st1 == nil {
 				s1 := LoadState1(&state.State0, load_name)
 				st1 = &s1

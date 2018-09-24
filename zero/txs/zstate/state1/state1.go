@@ -139,14 +139,14 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 	Debug_State1_addout_assert(self, os)
 
 	t := utils.TR_enter(fmt.Sprintf("ADD_OUT..MAX_NUM num=%v", self.State0.Num()))
-	max_num := uint64(0)
+
 	for _, wout := range self.G2wouts {
 		if src, err := self.GetOut(&wout); err != nil {
 			panic("gen witness wout can not find src")
 			return
 		} else {
-			if max_num < src.Num {
-				max_num = src.Num
+			if self.data.MaxNum < src.Num {
+				self.data.MaxNum = src.Num
 			}
 		}
 	}
@@ -158,7 +158,7 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 			panic("gen witness wout can not find src")
 			return
 		} else {
-			if src.Num < max_num {
+			if src.Num < self.data.MaxNum {
 				continue
 			}
 			if src == nil {
