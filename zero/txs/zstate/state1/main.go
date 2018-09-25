@@ -109,6 +109,15 @@ func run(bc BlockChain) {
 			}
 		}
 
+		if current_state1 == nil {
+			current_num := current_header.Number.Uint64()
+			current_hash := current_header.Hash()
+			state_name := state1_file_name(current_num, &current_hash)
+			st := bc.NewState(&current_hash)
+			st1 := LoadState1(&st.State0, state_name)
+			current_state1 = &st1
+		}
+
 		if len(need_load) == 0 {
 			time.Sleep(1000 * 1000 * 1000)
 		} else {
