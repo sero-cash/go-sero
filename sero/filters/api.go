@@ -490,7 +490,7 @@ func (args *FilterCriteria) UnmarshalJSON(data []byte) error {
 	args.Addresses = []common.Address{}
 
 	if raw.Addresses != nil {
-		// raw.Address can contain a single address or an array of addresses
+		// raw.Data can contain a single address or an array of addresses
 		switch rawAddr := raw.Addresses.(type) {
 		case []interface{}:
 			for i, addr := range rawAddr {

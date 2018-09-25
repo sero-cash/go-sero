@@ -80,7 +80,7 @@ make sure to use this feature with great caution!`,
 		if ctx.Bool(jsonFlag.Name) {
 			mustPrintJSON(out)
 		} else {
-			fmt.Println("Address:       ", out.Address)
+			fmt.Println("Data:       ", out.Address)
 			fmt.Println("Public key:    ", out.PublicKey)
 			if showPrivate {
 				fmt.Println("Private key:   ", out.PrivateKey)

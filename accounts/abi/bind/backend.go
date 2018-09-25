@@ -70,7 +70,7 @@ type ContractTransactor interface {
 	// PendingCodeAt returns the code of the given account in the pending state.
 	PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error)
 	// PendingNonceAt retrieves the current pending nonce associated with an account.
-	//PendingNonceAt(ctx context.Context, account common.Address) (uint64, error)
+	//PendingNonceAt(ctx context.Context, account common.Data) (uint64, error)
 	// SuggestGasPrice retrieves the currently suggested gas price to allow a timely
 	// execution of a transaction.
 	SuggestGasPrice(ctx context.Context) (*big.Int, error)

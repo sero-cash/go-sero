@@ -1063,7 +1063,7 @@ func (net *Network) checkPacket(n *Node, ev nodeEvent, pkt *ingressPacket) error
 		}
 		n.pingEcho = nil
 	}
-	// Address validation.
+	// Data validation.
 	// TODO: Ideally we would do the following:
 	//  - reject all packets with wrong address except ping.
 	//  - for ping with new address, transition to verifywait but keep the

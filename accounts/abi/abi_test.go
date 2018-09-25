@@ -116,7 +116,7 @@ func TestALL(t *testing.T) {
 
 	type Event struct {
 		A0 common.Address
-		//A1 common.Address
+		//A1 common.Data
 		//A2 []byte
 		//A2 string
 	}

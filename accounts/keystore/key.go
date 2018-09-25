@@ -104,7 +104,7 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
 	}
 	key := newKeyFromECDSA(privateKeyECDSA)
-	//if !strings.HasPrefix(key.Address.Hex(), "0x00") {
+	//if !strings.HasPrefix(key.Data.Hex(), "0x00") {
 	//	return NewKeyForDirectICAP(rand)
 	//}
 	return key

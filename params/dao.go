@@ -38,8 +38,8 @@ var DAOForkExtraRange = big.NewInt(10)
 
 // DAODrainList is the list of accounts whose full balances will be moved into a
 // refund contract at the beginning of the dao-fork block.
-/*func DAODrainList() []common.Address {
-	return []common.Address{
+/*func DAODrainList() []common.Data {
+	return []common.Data{
 		common.HexToAddress("0xd4fe7bc31cedb7bfb8a345f31e668033056b2728"),
 		common.HexToAddress("0xb3fb0e5aba0e20e5c49d252dfd30e102b171a425"),
 		common.HexToAddress("0x2c19c7f9ae8b751e37aeb2d93a699722395ae18f"),

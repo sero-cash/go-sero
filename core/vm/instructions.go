@@ -394,7 +394,7 @@ func opSha3(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 }
 
 func opAddress(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(contract.Address().ToContractAddress().Big())
+	stack.push(contract.Address().ToCaddr().Big())
 	return nil, nil
 }
 
@@ -405,12 +405,12 @@ func opBalance(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 }
 
 func opOrigin(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(interpreter.evm.Origin.ToContractAddress().Big())
+	stack.push(interpreter.evm.Origin.ToCaddr().Big())
 	return nil, nil
 }
 
 func opCaller(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(contract.Caller().ToContractAddress().Big())
+	stack.push(contract.Caller().ToCaddr().Big())
 	return nil, nil
 }
 
@@ -556,7 +556,7 @@ func opBlockhash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, me
 }
 
 func opCoinbase(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(interpreter.evm.Coinbase.ToContractAddress().Big())
+	stack.push(interpreter.evm.Coinbase.ToCaddr().Big())
 	return nil, nil
 }
 

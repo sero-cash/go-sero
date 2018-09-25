@@ -212,7 +212,7 @@ func bindUnnestedTypeGo(stringKind string) (int, string) {
 
 	switch {
 	case strings.HasPrefix(stringKind, "address"):
-		return len("address"), "common.Address"
+		return len("address"), "common.Data"
 
 	case strings.HasPrefix(stringKind, "bytes"):
 		parts := regexp.MustCompile(`bytes([0-9]*)`).FindStringSubmatch(stringKind)
@@ -265,7 +265,7 @@ func bindUnnestedTypeJava(stringKind string) (int, string) {
 			return len(stringKind), stringKind
 		}
 		if parts[1] == "" {
-			return len("address"), "Address"
+			return len("address"), "Data"
 		}
 		return len(parts[0]), "Addresses"
 

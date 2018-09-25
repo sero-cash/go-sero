@@ -178,7 +178,7 @@ func (b *EthAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction 
 	return b.eth.txPool.Get(hash)
 }
 
-//func (b *EthAPIBackend) GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error) {
+//func (b *EthAPIBackend) GetPoolNonce(ctx context.Context, addr common.Data) (uint64, error) {
 //	return b.sero.txPool.State().GetNonce(addr), nil
 //}
 

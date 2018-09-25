@@ -45,7 +45,7 @@ type StateTransition struct {
 type Message interface {
 	From() common.Address
 
-	//FromFrontier() (common.Address, error)
+	//FromFrontier() (common.Data, error)
 	To() *common.Address
 
 	GasPrice() *big.Int

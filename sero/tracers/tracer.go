@@ -247,7 +247,7 @@ func (cw *contractWrapper) pushObject(vm *duktape.Context) {
 	})
 	vm.PutPropString(obj, "getCaller")
 
-	// Push the wrapper for contract.Address
+	// Push the wrapper for contract.Data
 	vm.PushGoFunction(func(ctx *duktape.Context) int {
 		ptr := ctx.PushFixedBuffer(20)
 		copy(makeSlice(ptr, 20), cw.contract.Address().Bytes())
@@ -351,7 +351,7 @@ func New(code string) (*Tracer, error) {
 		return 1
 	})
 	tracer.vm.PushGlobalGoFunction("toContract", func(ctx *duktape.Context) int {
-		//var from common.Address
+		//var from common.Data
 		//if ptr, size := ctx.GetBuffer(-2); ptr != nil {
 		//	from = common.BytesToAddress(makeSlice(ptr, size))
 		//} else {

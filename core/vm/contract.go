@@ -36,7 +36,7 @@ type ContractRef interface {
 // is a ContractRef.
 type AccountRef common.Address
 
-// Address casts AccountRef to a Address
+// Data casts AccountRef to a Data
 func (ar AccountRef) Address() common.Address { return (common.Address)(ar) }
 
 // Contract represents an ethereum contract in the state database. It contains
@@ -49,7 +49,7 @@ type Contract struct {
 	caller        ContractRef
 	self          ContractRef
 
-	//nonceAddres map[common.Address][64]byte
+	//nonceAddres map[common.Data][64]byte
 
 	jumpdests destinations // result of JUMPDEST analysis.
 
@@ -74,8 +74,8 @@ func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uin
 	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil}
 
 	c.addrs = map[common.ContractAddress]common.Address{}
-	c.addrs[caller.Address().ToContractAddress()] = caller.Address()
-	c.addrs[object.Address().ToContractAddress()] = object.Address()
+	c.addrs[caller.Address().ToCaddr()] = caller.Address()
+	c.addrs[object.Address().ToCaddr()] = object.Address()
 
 	if parent, ok := caller.(*Contract); ok {
 		// Reuse JUMPDEST analysis from parent context if available.
@@ -94,7 +94,7 @@ func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uin
 }
 
 func (c *Contract) PutNonceAddress(statedb StateDB, addr common.Address) {
-	caddress := addr.ToContractAddress()
+	caddress := addr.ToCaddr()
 	c.addrs[caddress] = addr
 	statedb.AddNonceAddress(caddress[:], addr)
 }
@@ -151,7 +151,7 @@ func (c *Contract) UseGas(gas uint64) (ok bool) {
 	return true
 }
 
-// Address returns the contracts address
+// Data returns the contracts address
 func (c *Contract) Address() common.Address {
 	return c.self.Address()
 }

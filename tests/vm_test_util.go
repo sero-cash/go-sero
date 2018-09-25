@@ -122,7 +122,7 @@ func (t *VMTest) exec(statedb *state.StateDB, vmconfig vm.Config) ([]byte, uint6
 
 func (t *VMTest) newEVM(statedb *state.StateDB, vmconfig vm.Config) *vm.EVM {
 	//initialCall := true
-	//canTransfer := func(db vm.StateDB, address common.Address, amount *big.Int) bool {
+	//canTransfer := func(db vm.StateDB, address common.Data, amount *big.Int) bool {
 	//	if initialCall {
 	//		initialCall = false
 	//		return true

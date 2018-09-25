@@ -84,12 +84,12 @@ func ValueTo(typ Type, v interface{}, r *keys.Uint128, state *state.StateDB) (va
 	case AddressTy:
 		address := common.Base58ToAddress(v.(string))
 		if state.IsContract(address) {
-			return reflect.ValueOf(address.ToContractAddress()), []common.Address{address}
+			return reflect.ValueOf(address.ToCaddr()), []common.Address{address}
 		} else {
 			pkr := keys.Addr2PKr(address.ToUint512(), r.ToUint256().NewRef())
 			onceAddr := common.Address{}
 			onceAddr.SetBytes(pkr[:])
-			return reflect.ValueOf(onceAddr.ToContractAddress()), []common.Address{onceAddr}
+			return reflect.ValueOf(onceAddr.ToCaddr()), []common.Address{onceAddr}
 		}
 	case StringTy:
 		return reflect.ValueOf(v.(string)), nil

@@ -129,7 +129,7 @@ func (b *SimulatedBackend) BalanceAt(ctx context.Context, contract common.Addres
 }
 
 // NonceAt returns the nonce of a certain account in the blockchain.
-//func (b *SimulatedBackend) NonceAt(ctx context.Context, contract common.Address, blockNumber *big.Int) (uint64, error) {
+//func (b *SimulatedBackend) NonceAt(ctx context.Context, contract common.Data, blockNumber *big.Int) (uint64, error) {
 //	b.mu.Lock()
 //	defer b.mu.Unlock()
 //
@@ -195,7 +195,7 @@ func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call sero.Ca
 
 // PendingNonceAt implements PendingStateReader.PendingNonceAt, retrieving
 // the nonce currently pending for the account.
-//func (b *SimulatedBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
+//func (b *SimulatedBackend) PendingNonceAt(ctx context.Context, account common.Data) (uint64, error) {
 //	b.mu.Lock()
 //	defer b.mu.Unlock()
 //

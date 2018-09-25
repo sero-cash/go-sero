@@ -111,7 +111,7 @@ If you want to encrypt an existing private key, it can be specified by setting
 		if ctx.Bool(jsonFlag.Name) {
 			mustPrintJSON(out)
 		} else {
-			fmt.Println("Address:", out.Address)
+			fmt.Println("Data:", out.Address)
 		}
 		return nil
 	},
