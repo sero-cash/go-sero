@@ -1186,6 +1186,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
     },{"../utils/base58":17,"../utils/config":19,"../utils/utils":21,"./param":11,"bignumber.js":"bignumber.js"}],10:[function(require,module,exports){
         var f = require('./formatters');
         var SolidityType = require('./type');
+        var utils = require('../utils/utils');
 
         /**
          * SolidityTypeInt is a prootype that represents int type
@@ -1206,6 +1207,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         var SolidityTypeInt = function () {
             this._inputFormatter = f.formatInputInt;
             this._outputFormatter = f.formatOutputInt;
+            this._seroInputFormatter =  function (value){
+                return utils.toBigNumber(value).toString(10);
+            }
         };
 
         SolidityTypeInt.prototype = new SolidityType({});
@@ -1217,7 +1221,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         module.exports = SolidityTypeInt;
 
-    },{"./formatters":9,"./type":14}],11:[function(require,module,exports){
+    },{"../utils/utils":21,"./formatters":9,"./type":14}],11:[function(require,module,exports){
         /*
     This file is part of web3.js.
 
@@ -1644,6 +1648,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 })();
 
             }
+            if (self._seroInputFormatter) {
+                return self._seroInputFormatter(value);
+            }
 
             return value;
         };
@@ -1718,6 +1725,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
     },{"./formatters":9,"./param":11}],15:[function(require,module,exports){
         var f = require('./formatters');
         var SolidityType = require('./type');
+        var utils = require('../utils/utils');
+
 
         /**
          * SolidityTypeUInt is a prootype that represents uint type
@@ -1738,6 +1747,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         var SolidityTypeUInt = function () {
             this._inputFormatter = f.formatInputInt;
             this._outputFormatter = f.formatOutputUInt;
+            this._seroInputFormatter =  function (value){
+                return utils.toBigNumber(value).toString(10);
+            }
         };
 
         SolidityTypeUInt.prototype = new SolidityType({});
@@ -1749,7 +1761,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         module.exports = SolidityTypeUInt;
 
-    },{"./formatters":9,"./type":14}],16:[function(require,module,exports){
+    },{"../utils/utils":21,"./formatters":9,"./type":14}],16:[function(require,module,exports){
         var f = require('./formatters');
         var SolidityType = require('./type');
 
