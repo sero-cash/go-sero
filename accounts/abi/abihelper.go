@@ -43,17 +43,18 @@ func ValueTo(typ Type, v interface{}, r *keys.Uint128, state *state.StateDB) (va
 	case UintTy:
 		_, ok := v.(string)
 		elem := reflect.New(typ.Type).Elem()
-		if ok {
-			newInt := big.NewInt(1)
-			newInt.SetString(v.(string), 10)
-			elem.SetUint(newInt.Uint64())
-			return elem, nil
-		}
 		if typ.Size == 8 || typ.Size == 16 || typ.Size == 32 || typ.Size == 64 {
+			if ok {
+				newInt := big.NewInt(1)
+				newInt.SetString(v.(string), 10)
+				elem.SetUint(newInt.Uint64())
+				return elem, nil
+			} else {
+				i, _ := v.(json.Number).Int64()
+				elem.SetUint(uint64(i))
+				return elem, nil
+			}
 
-			i, _ := v.(json.Number).Int64()
-			elem.SetUint(uint64(i))
-			return elem, nil
 		} else {
 			newInt := big.NewInt(1)
 			newInt.SetString(string(v.(json.Number)), 10)
@@ -62,17 +63,17 @@ func ValueTo(typ Type, v interface{}, r *keys.Uint128, state *state.StateDB) (va
 	case IntTy:
 		_, ok := v.(string)
 		elem := reflect.New(typ.Type).Elem()
-		if ok {
-			newInt := big.NewInt(1)
-			newInt.SetString(v.(string), 10)
-			elem.SetInt(newInt.Int64())
-			return elem, nil
-		}
 		if typ.Size == 8 || typ.Size == 16 || typ.Size == 32 || typ.Size == 64 {
-
-			i, _ := v.(json.Number).Int64()
-			elem.SetInt(i)
-			return elem, nil
+			if ok {
+				newInt := big.NewInt(1)
+				newInt.SetString(string(v.(json.Number)), 10)
+				elem.SetInt(newInt.Int64())
+				return elem, nil
+			} else {
+				i, _ := v.(json.Number).Int64()
+				elem.SetInt(i)
+				return elem, nil
+			}
 
 		} else {
 			newInt := big.NewInt(1)
