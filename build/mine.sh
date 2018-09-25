@@ -317,7 +317,8 @@ if [ "${result}" == "-1" ]; then
     verifyServerPort $SERVERPORT SERVERPORT
     verifyServerPort $RPCPORT RPCPORT
     set -o xtrace
-    nohup ./gero --alpha --datadir=${DATADIR} --rpc --rpcport ${RPCPORT}  --port ${SERVERPORT} --rpccorsdomain "*" > gero.log 2>&1 &
+    nohup ./bin/gero --alpha --datadir=${DATADIR} --rpc --rpcport ${RPCPORT}  --port ${SERVERPORT} --rpccorsdomain "*" >
+     gero.log 2>&1 &
     set +x
     sleep 30
 fi
@@ -333,7 +334,7 @@ fi
 mkfifo -Z --mode='a=rwx' /tmp/gero-input
 mkfifo -Z --mode='a=rwx' /tmp/gero-output
 mkfifo -Z --mode='a=rwx' ./localio
-cat /tmp/gero-input|./gero --datadir=~/.datadir attach > /tmp/gero-output &
+cat /tmp/gero-input|./bin/gero --datadir=~/.datadir attach > /tmp/gero-output &
 exec 9<> /tmp/gero-input
 readingFromOutput &
 backgroundPid=$!
