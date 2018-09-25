@@ -135,8 +135,6 @@ const (
 
 	// WalletDropped
 	WalletDropped
-
-	WalletImport
 )
 
 // WalletEvent is an event fired by an account backend when a wallet arrival or

@@ -370,17 +370,6 @@ func (t *TransactionsByPrice) Pop() *Transaction {
 	return transaction.(*Transaction)
 }
 
-func (t *TransactionsByPrice) Size() int {
-	count := 0
-	if t.txs == nil {
-		return count
-	}
-	for _, value := range t.txs {
-		count += len(value)
-	}
-	return count
-}
-
 // Message is a fully derived transaction and implements core.Message
 //
 // NOTE: In a future PR this will be removed.
