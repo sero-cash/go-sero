@@ -25,8 +25,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sero-cash/go-sero/core"
-
 	sero "github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/rawdb"
@@ -194,8 +192,6 @@ type BlockChain interface {
 
 	// InsertReceiptChain inserts a batch of receipts into the local chain.
 	InsertReceiptChain(types.Blocks, []types.Receipts) (int, error)
-
-	SetDownloader(downloader core.Downloader)
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
@@ -229,7 +225,6 @@ func New(mode SyncMode, stateDb serodb.Database, mux *event.TypeMux, chain Block
 		},
 		trackStateReq: make(chan *stateReq),
 	}
-	chain.SetDownloader(dl)
 	go dl.qosTuner()
 	go dl.stateFetcher()
 	return dl

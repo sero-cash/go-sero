@@ -269,7 +269,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		for _, wallet := range ks.Wallets() {
 			err := ks.Unlock(wallet.Accounts()[0], ctx.GlobalString(utils.DeveloperPasswordFlag.Name))
 			if err != nil {
-				fmt.Printf("unclock %v failed,%v", base58.EncodeToString(wallet.Accounts()[0].Address[:]), err)
+				fmt.Printf("unclock %v failed,%v", base58.EncodeToString(wallet.Accounts()[0].Address.Bytes()), err)
 			}
 		}
 	} else {

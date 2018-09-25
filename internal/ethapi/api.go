@@ -647,7 +647,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		r := getContractSeed(*args.To)
 		pkr := keys.Addr2PKr(addr.ToUint512(), r.ToUint256().NewRef())
 		onceAddr := common.Address{}
-		copy(onceAddr[:], pkr[:])
+		onceAddr.SetBytes(pkr[:])
 		addr = onceAddr
 	}
 
@@ -1171,13 +1171,13 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 func genContractAddr() common.Address {
 	random := keys.RandUint512()
 	var to = common.Address{}
-	copy(to[:], random[:])
+	to.SetBytes(random[:])
 	return to
 }
 
 func getContractSeed(addr common.Address) keys.Uint128 {
 	s := keys.Uint128{}
-	copy(s[:], addr[:16])
+	copy(s[:], addr.Bytes()[:16])
 	return s
 }
 

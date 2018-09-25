@@ -178,8 +178,7 @@ func (tx *Transaction) GetZZSTX() *zstx.T {
 func (tx *Transaction) To() *common.Address {
 	for _, desc_o := range tx.data.Stxt.Desc_Os {
 		for _, out := range desc_o.Outs {
-			var addr common.Address
-			copy(addr[:], out.Addr[:])
+			addr := common.BytesToAddress(out.Addr[:])
 			return &addr
 		}
 	}
@@ -191,9 +190,7 @@ func (tx *Transaction) Stxt() *zstx.T {
 }
 
 func (tx *Transaction) From() common.Address {
-	var addr common.Address
-	copy(addr[:], tx.data.Stxt.From[:])
-	return addr
+	return common.BytesToAddress(tx.data.Stxt.From[:])
 }
 
 // Hash hashes the RLP encoding of tx.

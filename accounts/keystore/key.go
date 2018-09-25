@@ -157,7 +157,7 @@ func writeKeyFile(file string, content []byte) error {
 // UTC--<created_at UTC ISO8601>-<address hex>
 func keyFileName(keyAddr common.Address) string {
 	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), base58.EncodeToString(keyAddr[:]))
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), base58.EncodeToString(keyAddr.Bytes()))
 }
 
 func toISO8601(t time.Time) string {

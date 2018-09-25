@@ -88,7 +88,7 @@ func ValueTo(typ Type, v interface{}, r *keys.Uint128, state *state.StateDB) (va
 		} else {
 			pkr := keys.Addr2PKr(address.ToUint512(), r.ToUint256().NewRef())
 			onceAddr := common.Address{}
-			copy(onceAddr[:], pkr[:])
+			onceAddr.SetBytes(pkr[:])
 			return reflect.ValueOf(onceAddr.ToContractAddress()), []common.Address{onceAddr}
 		}
 	case StringTy:
@@ -146,7 +146,7 @@ func (abi ABI) PrefixCreatePack(input []byte, pairs []string, r *keys.Uint128, s
 
 	prefix := common.LeftPadBytes(big.NewInt(int64(len(address))).Bytes(), 2)
 	for _, addr := range address {
-		prefix = append(prefix, addr[:]...)
+		prefix = append(prefix, addr.Bytes()...)
 	}
 	// constructor
 	arguments, err := abi.Constructor.Inputs.Pack(args...)
@@ -167,7 +167,7 @@ func (abi ABI) PrefixPack(input []byte, pairs []string, r *keys.Uint128, state *
 
 	prefix := common.LeftPadBytes(big.NewInt(int64(len(address))).Bytes(), 2)
 	for _, addr := range address {
-		prefix = append(prefix, addr[:]...)
+		prefix = append(prefix, addr.Bytes()...)
 	}
 	sigdata := input[:4]
 	method, err := abi.MethodById(sigdata)

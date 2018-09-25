@@ -267,8 +267,8 @@ func (self *StateDB) AddNonceAddress(key []byte, nonceAddr common.Address) {
 			return
 		}
 		key1 := crypto.Keccak256Hash(append([]byte("nonceAddr1"), key[:]...))
-		stateObject.SetState(self.db, key0, common.BytesToHash(nonceAddr[:32]))
-		stateObject.SetState(self.db, key1, common.BytesToHash(nonceAddr[32:]))
+		stateObject.SetState(self.db, key0, common.BytesToHash(nonceAddr.Bytes()[:32]))
+		stateObject.SetState(self.db, key1, common.BytesToHash(nonceAddr.Bytes()[32:]))
 	}
 }
 
@@ -544,16 +544,16 @@ func (self *StateDB) updateStateObject(stateObject *stateObject) {
 	addr := stateObject.Address()
 	data, err := rlp.EncodeToBytes(stateObject)
 	if err != nil {
-		panic(fmt.Errorf("can't encode object at %x: %v", addr[:], err))
+		panic(fmt.Errorf("can't encode object at %x: %v", addr.Bytes(), err))
 	}
-	self.setError(self.trie.TryUpdate(addr[:], data))
+	self.setError(self.trie.TryUpdate(addr.Bytes(), data))
 }
 
 // deleteStateObject removes the given object from the state trie.
 func (self *StateDB) deleteStateObject(stateObject *stateObject) {
 	stateObject.deleted = true
 	addr := stateObject.Address()
-	self.setError(self.trie.TryDelete(addr[:]))
+	self.setError(self.trie.TryDelete(addr.Bytes()))
 }
 
 // Retrieve a state object given by the address. Returns nil if not found.
@@ -567,7 +567,7 @@ func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObje
 	}
 
 	// Load the object from the database.
-	enc, err := self.trie.TryGet(addr[:])
+	enc, err := self.trie.TryGet(addr.Bytes())
 	if len(enc) == 0 {
 		self.setError(err)
 		return nil

@@ -150,7 +150,6 @@ type BlockChain struct {
 
 	walletCh    chan accounts.WalletEvent
 	walletChSub event.Subscription
-	downloader  Downloader
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -201,7 +200,6 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	if err := bc.loadLastState(); err != nil {
 		return nil, err
 	}
-	bc.walletChSub = bc.accountManager.Subscribe(bc.walletCh)
 	// Take ownership of this particular state
 	go bc.update()
 
@@ -216,10 +214,6 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 
 func (bc *BlockChain) getProcInterrupt() bool {
 	return atomic.LoadInt32(&bc.procInterrupt) == 1
-}
-
-func (bc *BlockChain) SetDownloader(downloader Downloader) {
-	bc.downloader = downloader
 }
 
 type State1BlockChain struct {

@@ -132,7 +132,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 		sender = vm.AccountRef(cfg.Origin)
 	)
 
-	address := crypto.CreateAddress2(sender.Address(), common.Hash{}, input)
+	address := common.BytesToAddress(crypto.Keccak512([]byte{0xff}, sender.Address().Bytes(), []byte{}, input))
 	// Call the code with the given configuration.
 	code, leftOverGas, err := vmenv.Create(
 		sender,

@@ -94,8 +94,9 @@ func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uin
 }
 
 func (c *Contract) PutNonceAddress(statedb StateDB, addr common.Address) {
-	c.addrs[addr.ToContractAddress()] = addr
-	statedb.AddNonceAddress(addr[:20], addr)
+	caddress := addr.ToContractAddress()
+	c.addrs[caddress] = addr
+	statedb.AddNonceAddress(caddress[:], addr)
 }
 
 func (c *Contract) GetNonceAddress(statedb StateDB, addr common.ContractAddress) common.Address {
@@ -103,7 +104,7 @@ func (c *Contract) GetNonceAddress(statedb StateDB, addr common.ContractAddress)
 	if addresses, ok := c.addrs[addr]; ok {
 		return addresses
 	}
-	return statedb.GetNonceAddress(addr[:20])
+	return statedb.GetNonceAddress(addr[:])
 }
 
 // AsDelegate sets the contract to be a delegate call and returns the current

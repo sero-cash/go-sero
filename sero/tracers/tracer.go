@@ -347,7 +347,7 @@ func New(code string) (*Tracer, error) {
 			addr = common.Base58ToAddress(ctx.GetString(-1))
 		}
 		ctx.Pop()
-		copy(makeSlice(ctx.PushFixedBuffer(20), 20), addr[:])
+		copy(makeSlice(ctx.PushFixedBuffer(20), 20), addr.Bytes())
 		return 1
 	})
 	tracer.vm.PushGlobalGoFunction("toContract", func(ctx *duktape.Context) int {
@@ -587,7 +587,7 @@ func (jst *Tracer) GetResult() (json.RawMessage, error) {
 
 		case common.Address:
 			ptr := jst.vm.PushFixedBuffer(20)
-			copy(makeSlice(ptr, 20), val[:])
+			copy(makeSlice(ptr, 20), val.Bytes())
 
 		case *big.Int:
 			pushBigInt(val, jst.vm)

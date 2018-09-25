@@ -415,7 +415,7 @@ func (self *worker) commitNewWork() {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		addr := common.Address{}
 		pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
-		copy(addr[:], pkr[:])
+		addr.SetBytes(pkr[:])
 		header.Coinbase = addr
 	}
 	if err := self.engine.Prepare(self.chain, header); err != nil {

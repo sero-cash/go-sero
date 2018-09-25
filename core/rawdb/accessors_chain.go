@@ -372,7 +372,7 @@ func WriteHash(db serodb.Database, number uint64, hash common.Hash) {
 	}
 
 	hashs = append(hashs, hash)
-	//log.Info("block", "number", number, "hashs ", common.HashToHex(hashs))
+	log.Info("block", "number", number, "hashs ", common.HashToHex(hashs))
 	data, err := rlp.EncodeToBytes(hashs)
 	if err != nil {
 		log.Crit("Failed to RLP encode hashs", "err", err)

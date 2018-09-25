@@ -178,7 +178,7 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 		return common.Address{}, err
 	}
 	var signer common.Address
-	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+	signer.SetBytes(crypto.Keccak256(pubkey[1:])[12:])
 
 	sigcache.Add(hash, signer)
 	return signer, nil
@@ -341,7 +341,7 @@ func (c *Clique) verifyCascadingFields(chain consensus.ChainReader, header *type
 	if number%c.config.Epoch == 0 {
 		signers := make([]byte, len(snap.Signers)*common.AddressLength)
 		for i, signer := range snap.signers() {
-			copy(signers[i*common.AddressLength:], signer[:])
+			copy(signers[i*common.AddressLength:], signer.Bytes())
 		}
 		extraSuffix := len(header.Extra) - extraSeal
 		if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
@@ -381,7 +381,7 @@ func (c *Clique) snapshot(chain consensus.ChainReader, number uint64, hash commo
 			}
 			signers := make([]common.Address, (len(genesis.Extra)-extraVanity-extraSeal)/common.AddressLength)
 			for i := 0; i < len(signers); i++ {
-				copy(signers[i][:], genesis.Extra[extraVanity+i*common.AddressLength:])
+				signers[i].SetBytes(genesis.Extra[extraVanity+i*common.AddressLength:])
 			}
 			snap = newSnapshot(c.config, c.signatures, 0, genesis.Hash(), signers)
 			if err := snap.store(c.db); err != nil {
@@ -523,7 +523,7 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 
 	if number%c.config.Epoch == 0 {
 		for _, signer := range snap.signers() {
-			header.Extra = append(header.Extra, signer[:]...)
+			header.Extra = append(header.Extra, signer.Bytes()...)
 		}
 	}
 	header.Extra = append(header.Extra, make([]byte, extraSeal)...)

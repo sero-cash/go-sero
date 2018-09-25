@@ -39,9 +39,7 @@ func makeTopics(query ...[]interface{}) ([][]common.Hash, error) {
 			case common.Hash:
 				copy(topic[:], rule[:])
 			case common.Address:
-				//copy(topic[common.AddressLength:], rule[:])
-				//TODO zero modify
-				copy(topic[:], rule[:])
+				copy(topic[:], rule.Bytes())
 			case *big.Int:
 				blob := rule.Bytes()
 				copy(topic[common.HashLength-len(blob):], blob)
@@ -167,11 +165,8 @@ func parseTopics(out interface{}, fields abi.Arguments, topics []common.Hash) er
 
 			case reflectAddress:
 				var addr common.Address
-				//TODO zero modify
-				copy(addr[:], topics[0][0:])
-				//copy(addr[:], topics[0][common.HashLength-common.AddressLength:])
+				addr.SetBytes(topics[0][0:])
 				field.Set(reflect.ValueOf(addr))
-
 			case reflectBigInt:
 				num := new(big.Int).SetBytes(topics[0][:])
 				field.Set(reflect.ValueOf(num))
