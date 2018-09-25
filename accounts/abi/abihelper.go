@@ -41,9 +41,9 @@ func ValueTo(typ Type, v interface{}, r *keys.Uint128, state *state.StateDB) (va
 		reflect.Copy(arr, val)
 		return arr, addrs
 	case UintTy:
-		_, ok := v.(string)
-		elem := reflect.New(typ.Type).Elem()
 		if typ.Size == 8 || typ.Size == 16 || typ.Size == 32 || typ.Size == 64 {
+			_, ok := v.(string)
+			elem := reflect.New(typ.Type).Elem()
 			if ok {
 				newInt := big.NewInt(1)
 				newInt.SetString(v.(string), 10)
@@ -61,9 +61,9 @@ func ValueTo(typ Type, v interface{}, r *keys.Uint128, state *state.StateDB) (va
 			return reflect.ValueOf(newInt), nil
 		}
 	case IntTy:
-		_, ok := v.(string)
-		elem := reflect.New(typ.Type).Elem()
 		if typ.Size == 8 || typ.Size == 16 || typ.Size == 32 || typ.Size == 64 {
+			_, ok := v.(string)
+			elem := reflect.New(typ.Type).Elem()
 			if ok {
 				newInt := big.NewInt(1)
 				newInt.SetString(string(v.(json.Number)), 10)
