@@ -70,15 +70,15 @@ This command will:
    This too is optional and if you leave it out you can always attach to an already running sero instance
    with `sero attach`.
 
-### Full node on the Ethereum test network
+### Full node on the Sero alpha network
 
 Transitioning towards developers, if you'd like to play around with creating Ethereum contracts, you
 almost certainly would like to do that without any real money involved until you get the hang of the
-entire system. In other words, instead of attaching to the main network, you want to join the **test**
+entire system. In other words, instead of attaching to the main network, you want to join the **alpha**
 network with your node, which is fully equivalent to the main network, but with play-Ether only.
 
 ```
-$ sero --alphanet console
+$ sero --alpha console
 ```
 
 The `console` subcommand have the exact same meaning as above and they are equally useful on the
@@ -90,7 +90,7 @@ Specifying the `--alpha` flag however will reconfigure your sero instance a bit:
    itself one level deeper into a `alpha` subfolder (`~/.ethereum/alpha` on Linux). Note, on OSX
    and Linux this also means that attaching to a running testnet node requires the use of a custom
    endpoint since `sero attach` will try to attach to a production node endpoint by default. E.g.
-   `gero attach <datadir>/testnet/sero.ipc`. Windows users are not affected by this.
+   `gero attach <datadir>/alpha/sero.ipc`. Windows users are not affected by this.
  * Instead of connecting the main Ethereum network, the client will connect to the test network,
    which uses different P2P bootnodes, different network IDs and genesis states.
    
@@ -99,27 +99,20 @@ over between the main(beta) network and alpha network, you should make sure to a
 for play-money and real-money. Unless you manually move accounts, sero will by default correctly
 separate the two networks and will not make any accounts available between them.*
 
-### Full node on the Rinkeby test network
 
-The above alpha network is a cross client one based on the ethash proof-of-work consensus algorithm. As such, it has 
-certain extra overhead and is more susceptible to reorganization attacks due to the network's low difficulty / 
-security.
-```
-$ sero --rinkeby console
-```
 
 ### Configuration
 
-As an alternative to passing the numerous flags to the `sero` binary, you can also pass a configuration file via:
+As an alternative to passing the numerous flags to the `gero` binary, you can also pass a configuration file via:
 
 ```
-$ sero --config /path/to/your_config.toml
+$ gero --config /path/to/your_config.toml
 ```
 
 To get an idea how the file should look like you can use the `dumpconfig` subcommand to export your existing configuration:
 
 ```
-$ sero --your-favourite-flags dumpconfig
+$ gero --your-favourite-flags dumpconfig
 ```
 
 
