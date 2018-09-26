@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
@@ -14,103 +16,159 @@ import (
 	"strings"
 )
 
-func ValueTo(typ Type, v interface{}, r *keys.Uint128, state *state.StateDB) (val reflect.Value, addrs []common.Address) {
+func ValueTo(typ Type, v interface{}, r *keys.Uint128, state *state.StateDB) (val reflect.Value, addrs []common.Address, err error) {
 
 	switch typ.T {
 	case SliceTy:
-		val := reflect.MakeSlice(typ.Type, 0, 0)
-		fmt.Println("before : ", val)
-
-		for _, t := range v.([]interface{}) {
-			res, addresss := ValueTo(*typ.Elem, t, r, state)
-			addrs = append(addrs, addresss...)
-			val = reflect.Append(val, res)
-		}
-		fmt.Println("after : ", val)
-		return val, addrs
-	case ArrayTy:
-		val := reflect.MakeSlice(reflect.SliceOf(typ.Elem.Type), 0, 0)
-		fmt.Println("before : ", val)
-		for _, t := range v.([]interface{}) {
-			res, addresss := ValueTo(*typ.Elem, t, r, state)
-			addrs = append(addrs, addresss...)
-			val = reflect.Append(val, res)
-		}
-		fmt.Println("after : ", val)
-		arr := reflect.ValueOf(reflect.New(typ.Type).Interface()).Elem()
-		reflect.Copy(arr, val)
-		return arr, addrs
-	case UintTy:
-		_, ok := v.(string)
-		var numStr string
-		if ok {
-			numStr = v.(string)
+		if _, ok := v.([]interface{}); ok {
+			val := reflect.MakeSlice(typ.Type, 0, 0)
+			for _, t := range v.([]interface{}) {
+				res, addresss, err := ValueTo(*typ.Elem, t, r, state)
+				if err != nil {
+					return reflect.Value{}, nil, err
+				}
+				addrs = append(addrs, addresss...)
+				val = reflect.Append(val, res)
+			}
+			return val, addrs, nil
 		} else {
-			numStr = string(v.(json.Number))
+			return reflect.Value{}, nil, errors.New("param type erroy,need " + typ.stringKind)
 		}
+
+	case ArrayTy:
+		if _, ok := v.([]interface{}); ok {
+			val := reflect.MakeSlice(reflect.SliceOf(typ.Elem.Type), 0, 0)
+			for _, t := range v.([]interface{}) {
+				res, addresss, err := ValueTo(*typ.Elem, t, r, state)
+				if err != nil {
+					return reflect.Value{}, nil, err
+				}
+				addrs = append(addrs, addresss...)
+				val = reflect.Append(val, res)
+			}
+			arr := reflect.ValueOf(reflect.New(typ.Type).Interface()).Elem()
+			reflect.Copy(arr, val)
+			return arr, addrs, nil
+		} else {
+			return reflect.Value{}, nil, errors.New("param type erroy,need " + typ.stringKind)
+		}
+
+	case UintTy:
+		var numStr string
+		if _, ok := v.(string); ok {
+			numStr = v.(string)
+			if _, ok := big.NewInt(1).SetString(numStr, 10); !ok {
+
+				return reflect.Value{}, nil, errors.New("param type erroy,need " + typ.stringKind)
+			}
+		} else {
+			if _, ok := v.(json.Number); ok {
+				numStr = string(v.(json.Number))
+			} else {
+				return reflect.Value{}, nil, errors.New("param type erroy,need " + typ.stringKind)
+			}
+		}
+
 		if typ.Size == 8 || typ.Size == 16 || typ.Size == 32 || typ.Size == 64 {
 			elem := reflect.New(typ.Type).Elem()
 			newInt := big.NewInt(1)
 			newInt.SetString(numStr, 10)
 			elem.SetUint(newInt.Uint64())
-			return elem, nil
+			return elem, nil, nil
 
 		} else {
 			newInt := big.NewInt(1)
 			newInt.SetString(numStr, 10)
-			return reflect.ValueOf(newInt), nil
+			return reflect.ValueOf(newInt), nil, nil
 		}
 	case IntTy:
-		_, ok := v.(string)
 		var numStr string
-		if ok {
+		if _, ok := v.(string); ok {
 			numStr = v.(string)
+			if _, ok := big.NewInt(1).SetString(numStr, 10); !ok {
+				return reflect.Value{}, nil, errors.New("param type erroy,need " + typ.stringKind)
+			}
 		} else {
-			numStr = string(v.(json.Number))
+			if _, ok := v.(json.Number); ok {
+				numStr = string(v.(json.Number))
+			} else {
+				return reflect.Value{}, nil, errors.New("param type erroy,need " + typ.stringKind)
+			}
 		}
 		if typ.Size == 8 || typ.Size == 16 || typ.Size == 32 || typ.Size == 64 {
 			elem := reflect.New(typ.Type).Elem()
 			newInt := big.NewInt(1)
 			newInt.SetString(numStr, 10)
 			elem.SetInt(newInt.Int64())
-			return elem, nil
+			return elem, nil, nil
 		} else {
 			newInt := big.NewInt(1)
 			newInt.SetString(numStr, 10)
-			return reflect.ValueOf(newInt), nil
+			return reflect.ValueOf(newInt), nil, nil
 		}
 	case BoolTy:
-		return reflect.ValueOf(v.(bool)), nil
-	case AddressTy:
-		address := common.Base58ToAddress(v.(string))
-		if state.IsContract(address) {
-			return reflect.ValueOf(address.ToCaddr()), []common.Address{address}
+		if _, ok := v.(bool); ok {
+			return reflect.ValueOf(v.(bool)), nil, nil
 		} else {
-			pkr := keys.Addr2PKr(address.ToUint512(), r.ToUint256().NewRef())
-			onceAddr := common.Address{}
-			onceAddr.SetBytes(pkr[:])
-			return reflect.ValueOf(onceAddr.ToCaddr()), []common.Address{onceAddr}
+			return reflect.Value{}, nil, errors.New("param type erroy,need " + typ.stringKind)
 		}
+	case AddressTy:
+		if _, ok := v.(string); ok {
+			address := common.Base58ToAddress(v.(string))
+			if state.IsContract(address) {
+				return reflect.ValueOf(address.ToCaddr()), []common.Address{address}, nil
+			} else {
+				pkr := keys.Addr2PKr(address.ToUint512(), r.ToUint256().NewRef())
+				onceAddr := common.Address{}
+				onceAddr.SetBytes(pkr[:])
+				return reflect.ValueOf(onceAddr.ToCaddr()), []common.Address{onceAddr}, nil
+			}
+		} else {
+			return reflect.Value{}, nil, errors.New("param type erroy,need " + typ.stringKind)
+		}
+
 	case StringTy:
-		return reflect.ValueOf(v.(string)), nil
+		if _, ok := v.(string); ok {
+			return reflect.ValueOf(v.(string)), nil, nil
+		} else {
+			return reflect.Value{}, nil, errors.New("param type erroy,need " + typ.stringKind)
+		}
 	case FixedBytesTy:
-		elem := reflect.New(typ.Type).Elem()
-		for i, t := range v.([]interface{}) {
-			v, _ := t.(json.Number).Int64()
-			elem.Index(i).Set(reflect.ValueOf(byte(v)))
+		if _, ok := v.([]interface{}); ok {
+			elem := reflect.New(typ.Type).Elem()
+			for i, t := range v.([]interface{}) {
+				if _, ok := t.(json.Number); ok {
+					v, _ := t.(json.Number).Int64()
+					elem.Index(i).Set(reflect.ValueOf(byte(v)))
+				} else {
+					return reflect.Value{}, nil, errors.New("param type erroy,must be byte number ")
+				}
+			}
+			return elem, nil, nil
+		} else {
+			return reflect.Value{}, nil, errors.New("param type erroy,need " + typ.stringKind)
 		}
-		return elem, nil
+
 	case BytesTy:
-		elem := reflect.New(typ.Type).Elem()
-		buffer := []byte{}
-		for _, t := range v.([]interface{}) {
-			i, _ := t.(json.Number).Int64()
-			buffer = append(buffer, byte(i))
+		if _, ok := v.([]interface{}); ok {
+			elem := reflect.New(typ.Type).Elem()
+			buffer := []byte{}
+			for _, t := range v.([]interface{}) {
+				if _, ok := t.(json.Number); ok {
+					i, _ := t.(json.Number).Int64()
+					buffer = append(buffer, byte(i))
+				} else {
+					return reflect.Value{}, nil, errors.New("param type erroy,must be byte number ")
+				}
+			}
+			elem.SetBytes(buffer)
+			return elem, nil, nil
+		} else {
+			return reflect.Value{}, nil, errors.New("param type erroy,need " + typ.stringKind)
 		}
-		elem.SetBytes(buffer)
-		return elem, nil
+
 	default:
-		panic(v)
+		return reflect.Value{}, nil, errors.New("not support abi data type")
 	}
 }
 
@@ -127,7 +185,10 @@ func getArgs(pairs []string, r *keys.Uint128, state *state.StateDB) ([]interface
 		for k, v := range vs {
 			//fmt.Printf("%t\n %t\n", k, v)
 			typeT, _ := NewType(k)
-			tv, addrs := ValueTo(typeT, v, r, state)
+			tv, addrs, err := ValueTo(typeT, v, r, state)
+			if err != nil {
+				return nil, nil, err
+			}
 			address = append(address, addrs...)
 			inputs = append(inputs, tv.Interface())
 		}
