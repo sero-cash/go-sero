@@ -870,7 +870,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		// --dev mode can't use p2p networking.
 		//cfg.MaxPeers = 0
 		//cfg.ListenAddr = ":0"
-		cfg.NoDiscovery = true
+		//cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
 		zconfig.Init_Dev(true)
 	}
