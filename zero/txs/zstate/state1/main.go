@@ -118,6 +118,10 @@ func run(bc BlockChain) {
 			current_state1 = &st1
 		}
 
+		if len(need_load) > 0 {
+			log.Info("End parse block chain for state1 : ", "out_num", len(current_state1.G2wouts))
+		}
+
 		if len(need_load) == 0 {
 			time.Sleep(1000 * 1000 * 1000 * 5)
 		} else {
