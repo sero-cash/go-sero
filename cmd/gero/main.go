@@ -179,6 +179,7 @@ func init() {
 		licenseCommand,
 		// See config.go
 		dumpConfigCommand,
+		profileCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
