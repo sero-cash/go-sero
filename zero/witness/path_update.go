@@ -62,6 +62,7 @@ func NewPathGen(tr *merkle.Tree) (pg PathGen) {
 	pg.Leaf = l
 	pg.Index = index
 	pg.Root = tr.Root()
+	pg.Anchor = pg.Root
 	copy(pg.Path[:], path[:])
 	return
 }
