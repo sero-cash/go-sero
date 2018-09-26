@@ -95,7 +95,7 @@ func TestALL(t *testing.T) {
 	var index int
 	for k, v := range vs {
 		//fmt.Printf("%t\n %t\n", k, v)
-		tv, _ := ValueTo(newType(k), v, nil, nil)
+		tv, _, _ := ValueTo(newType(k), v, nil, nil)
 		//fmt.Printf("address = %v\n",addr)
 		fmt.Printf("v=%v\n", tv)
 		args = append(args, Argument{"a" + strconv.Itoa(index), newType(k), false})
@@ -163,7 +163,7 @@ func TestABIPACK(t *testing.T) {
 		}
 		for k, v := range vs {
 			//fmt.Printf("%t\n %t\n", k, v)
-			tv, _ := ValueTo(newType(k), v, nil, nil)
+			tv, _, _ := ValueTo(newType(k), v, nil, nil)
 			fmt.Printf("v=%v\n", tv)
 			args = append(args, Argument{"a" + strconv.Itoa(index), newType(k), false})
 			inputs = append(inputs, tv.Interface())
