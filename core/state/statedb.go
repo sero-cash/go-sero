@@ -208,17 +208,19 @@ func (self *StateDB) usedGasKey(number uint64) common.Hash {
 }
 
 //register
-func (self *StateDB) RegisterCurrency(coinName string) bool {
+func (self *StateDB) RegisterCurrency(contractAddr common.Address, coinName string) bool {
 	coinName = strings.ToLower(coinName)
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
 		key := crypto.Keccak256Hash([]byte(coinName))
 		value := stateObject.GetState(self.db, key)
-		if value == currency_value {
-			return false
+		hash := crypto.Keccak256Hash(contractAddr.Bytes())
+		if value == (common.Hash{}) {
+			stateObject.SetState(self.db, key, hash)
+			return true
+		} else {
+			return value == hash
 		}
-		stateObject.SetState(self.db, key, currency_value)
-		return true
 	}
 	return false
 }
@@ -228,7 +230,7 @@ func (self *StateDB) ExistsCurrency(coinName string) bool {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
 		value := stateObject.GetState(self.db, crypto.Keccak256Hash([]byte(coinName)))
-		if value == currency_value {
+		if value != (common.Hash{}) {
 			return true
 		}
 	}

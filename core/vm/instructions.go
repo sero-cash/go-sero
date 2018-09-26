@@ -847,7 +847,7 @@ func makeLog(size int) executionFunc {
 			}
 
 			coinName := string(d[0:nameLen])
-			if !interpreter.evm.StateDB.RegisterCurrency(coinName) {
+			if !interpreter.evm.StateDB.RegisterCurrency(contract.Address(), coinName) {
 				return nil, ErrCoinNameError
 			}
 			interpreter.evm.StateDB.AddBalance(contract.Address(), coinName, total)

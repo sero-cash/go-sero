@@ -100,9 +100,8 @@ func (s *stateObject) empty() bool {
 type Account struct {
 	Nonce uint64
 	//Balance   *big.Int
-	Root      common.Hash // merkle root of the storage trie
-	CodeHash  []byte
-	LoadAddrs []common.Address
+	Root     common.Hash // merkle root of the storage trie
+	CodeHash []byte
 
 	Currencys []string
 }
@@ -275,19 +274,6 @@ func (self *stateObject) SetBalance(db Database, coinName string, amount *big.In
 		}
 	}
 	self.data.Currencys = append(self.data.Currencys, coinName)
-}
-
-func (self *stateObject) addLoadAddress(addr common.Address) {
-	for _, each := range self.data.LoadAddrs {
-		if each == addr {
-			return
-		}
-	}
-	self.data.LoadAddrs = append(self.data.LoadAddrs, addr)
-}
-
-func (self *stateObject) getLoadAddress() []common.Address {
-	return self.data.LoadAddrs
 }
 
 // Return the gas back to the origin. Used by the Virtual machine or Closures

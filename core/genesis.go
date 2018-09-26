@@ -26,6 +26,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/sero-cash/go-sero/crypto"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/common/math"
@@ -228,7 +230,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 		db = serodb.NewMemDatabase()
 	}
 	statedb, _ := state.NewGenesis(common.Hash{}, state.NewDatabase(db))
-	statedb.RegisterCurrency("sero")
+	statedb.RegisterCurrency(common.BytesToAddress(crypto.Keccak512(nil)), "sero")
 	statedb.AddBalance(state.EmptyAddress, "sero", new(big.Int).SetUint64(50000000))
 
 	sero := common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32))
