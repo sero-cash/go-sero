@@ -226,7 +226,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 			info.Text = out_o.Out.Memo
 			r := crypto.Keccak256(
 				pg.Root.ToUint256()[:],
-				keys.RandUint256()[:],
+				keys.RandUint256().NewRef()[:],
 			)
 			copy(info.R[:], r[:])
 			if succ, einfo, commitment := cpt.EncodeEInfo(&tk, &out_o.Out.Addr, &info); succ {
