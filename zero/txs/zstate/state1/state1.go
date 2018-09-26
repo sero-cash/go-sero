@@ -178,8 +178,8 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 				panic("gen witness can not find wout in G2outs")
 			} else {
 				if !src.Pg.IsComplete() {
-					temp_pg := src.Pg.Clone()
-					witness.NextPathGen(&index_cur, &temp_pg, &roots)
+					temp_pg := &src.Pg
+					witness.NextPathGen(&index_cur, temp_pg, &roots)
 					root := temp_pg.Anchor.ToUint256()
 					if src.Index+1 != os.Index {
 						panic("gen witness src.index+1!=os.Index")
@@ -189,7 +189,7 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 						panic("gen witness src wit root != out")
 					} else {
 					}
-					src.Pg = temp_pg
+					//src.Pg = temp_pg
 				} else {
 				}
 				src.Index++

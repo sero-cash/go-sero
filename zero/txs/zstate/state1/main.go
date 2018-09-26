@@ -102,9 +102,9 @@ func run(bc BlockChain) {
 				st1.State0 = &state.State0
 			}
 			st1.UpdateWitness(tks)
+			current_state1 = st1
 			if i < 30 {
 				st1.Finalize(saved_name)
-				current_state1 = st1
 				st1 = nil
 			}
 		}
@@ -119,9 +119,9 @@ func run(bc BlockChain) {
 		}
 
 		if len(need_load) == 0 {
-			time.Sleep(1000 * 1000 * 1000)
-		} else {
 			time.Sleep(1000 * 1000 * 1000 * 5)
+		} else {
+			time.Sleep(1000 * 1000 * 1000)
 		}
 	}
 }
