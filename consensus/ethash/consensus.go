@@ -24,6 +24,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/sero-cash/go-sero/log"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/consensus"
@@ -403,6 +405,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 	} else {
 		reward = reward.Mul(reward, big.NewInt(4)).Div(reward, big.NewInt(5))
 	}
+	log.Info(fmt.Sprintf("blockNumber =%v, Last_avgGas = %v, currentGasUsed = %v, reward =%v", header.Number.Uint64(), avgGas.Uint64(), header.GasUsed, reward.Uint64()))
 
 	if header.Number.Uint64() < 40000 {
 		avgGas = avgGas.Mul(avgGas, header.Number).Add(avgGas, new(big.Int).SetUint64(header.GasUsed)).Div(avgGas, new(big.Int).Add(header.Number, bigOne))
@@ -410,6 +413,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 		usedGas := new(big.Int).SetUint64(header.GasUsed)
 		avgGas = avgGas.Mul(avgGas, big39999).Div(avgGas, big4W).Add(avgGas, usedGas.Div(usedGas, big4W))
 	}
+
 	statedb.SetAvgUsedGas(header.Number.Uint64(), avgGas)
 
 	sero := common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32))
