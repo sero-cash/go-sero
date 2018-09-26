@@ -13,6 +13,7 @@ PATTERN_QUERY_ACCOUNTS="ser.*accounts"
 PATTERN_NEW_ACCOUNTS="personal.*newAccounts()"
 PATTERN_NEW_ACCOUNTS="personal.*newAccounts()"
 PATTERN_NEW_PASSPHRASE="Passphrase:"
+PATTERN_FATAL="Fatal.*"
 PATTERN_NEW_REPEAT_PASSPHRASE=".*Repeat.*"
 PATTERN_PASSPHRASE_WARN=".*Unsupported terminal.*"
 PATTERN_PASSWORD="[/w]+"
@@ -126,6 +127,13 @@ stringLength(){
 #    echo ${length} >&2
     return ${length}
 }
+checkProcessWorking(){
+    if [ $(ps -ef | grep $1 | grep -v grep | wc -l) -gt 0 ]; then
+        echo "1"
+    fi
+    echo "-1"
+}
+
 checkProcess(){
     if [ $(ps -ef | grep $1 | grep -v grep | wc -l) -gt 0 ]; then
         read -p "there is already a process like:$1 running, do you want to stop it:[*|no]" -e ans
@@ -136,8 +144,10 @@ checkProcess(){
                 return 0;;
             * ) 
                 echo "the old process like:$1 will be stopped" >&2
-                killProcess "$1"
-                echo "-1";;
+                killProcess "$1" >&2
+                sleep 15
+                echo "-1"
+                return 0;;
         esac
     fi
     echo "-1"
@@ -174,6 +184,9 @@ readingFromOutput(){
                 continue 
             elif [ "$LINEA_NO_WHITESPACE" == '[]' ]; then
                 echo "NEWACCOUNT:" >./localio
+            elif [[ "$LINEA_NO_WHITESPACE" =~ ${PATTERN_FATAL} ]]; then
+                echo "meet fatal error, please check the log in ~/working/gero.log" >&2
+                exit -1
             fi
             if [[ "$lineA" == $PATTERN_NEW_PASSPHRASE ]]; then 
                 echo "wait for password:">&2
@@ -317,11 +330,15 @@ if [ "${result}" == "-1" ]; then
     verifyServerPort $SERVERPORT SERVERPORT
     verifyServerPort $RPCPORT RPCPORT
     set -o xtrace
-    nohup ./bin/gero --alpha --datadir=${DATADIR} --rpc --rpcport ${RPCPORT}  --port ${SERVERPORT} --rpccorsdomain "*" >
-     gero.log 2>&1 &
+    nohup ./bin/gero --alpha --datadir=${DATADIR} --rpc --rpcport ${RPCPORT}  --port ${SERVERPORT} --rpccorsdomain "*" > gero.log 2>&1 &
     set +x
     sleep 30
 fi
+result=$(checkProcessWorking "$PATTERN_MAIN_PROCESS$DATADIR")
+if [ "${result}" == "-1" ]; then
+    echo "Please check why the main process of gero not running with log in ~/working/"
+    exit
+fi 
 if [ -p "/tmp/gero-input" ] || [ -f "/tmp/gero-input" ]; then
     rm /tmp/gero-input
 fi
