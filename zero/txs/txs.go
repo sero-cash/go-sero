@@ -233,6 +233,9 @@ func GetOuts(tk *keys.Uint512, state *zstate.State) (outs []*state1.OutState1, e
 		} else {
 			if src != nil {
 				if src.IsMine(tk) {
+					if state.State0.HasIn(&src.Trace) {
+						panic("get outs src.nil in state0")
+					}
 					if root != *src.Pg.Root.ToUint256() {
 						panic("get outs wout.root!=src.Root")
 					}

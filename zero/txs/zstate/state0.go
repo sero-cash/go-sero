@@ -274,10 +274,11 @@ func (state *State0) AddStx(st *stx.T) (e error) {
 		}
 	}
 	for _, desc_z := range st.Desc_Zs {
-		if err := state.addIn(&desc_z.In.Trace); err != nil {
+		if err := state.addIn(&desc_z.In.Nil); err != nil {
 			e = err
 			return
 		} else {
+			state.append_del_dirty(&desc_z.In.Nil)
 			state.append_del_dirty(&desc_z.In.Trace)
 		}
 		state.AddOut(nil, &desc_z)

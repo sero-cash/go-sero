@@ -18,9 +18,10 @@ package state1
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/sero-cash/go-sero/crypto"
 
 	"github.com/sero-cash/go-sero/zero/witness"
 
@@ -104,7 +105,7 @@ func (self *State1) dataTo() {
 		root := keys.Uint256(out.Pg.Root)
 		self.G2wouts = append(self.G2wouts, root)
 		self.G2outs[root] = out
-		self.G2outs[out.Nil] = out
+		self.G2outs[out.Trace] = out
 	}
 }
 
@@ -142,10 +143,13 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 	if roots[0] != out_leaf {
 		panic("gen path roots[0] != out leaf")
 	}
+	if pg.Index != os.Index {
+		panic("gen path index != os index")
+	}
 
 	Debug_State1_addout_assert(self, os)
 
-	t := utils.TR_enter(fmt.Sprintf("ADD_OUT..MAX_NUM num=%v", self.State0.Num()))
+	//t := utils.TR_enter(fmt.Sprintf("ADD_OUT..MAX_NUM num=%v", self.State0.Num()))
 
 	for _, wout := range self.G2wouts {
 		if src, err := self.GetOut(&wout); err != nil {
@@ -158,7 +162,7 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 		}
 	}
 
-	t.Renter("RANGE.WOUTS")
+	//t.Renter("RANGE.WOUTS")
 
 	index_cur := witness.NewIndexCur(&pg)
 	//for i := len(pgs) - 1; i > -1; i-- {
@@ -200,9 +204,9 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 
 	Debug_State1_addout_end_assert(self, os)
 
-	t.Renter("ADD.WOUTS")
+	//t.Renter("ADD.WOUTS")
 	self.addWouts(tks, os, &pg)
-	t.Leave()
+	//t.Leave()
 	return
 }
 
@@ -220,6 +224,11 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 			info.Currency = out_o.Currency
 			info.V = out_o.Out.Value.ToUint256()
 			info.Text = out_o.Out.Memo
+			r := crypto.Keccak256(
+				pg.Root.ToUint256()[:],
+				keys.RandUint256()[:],
+			)
+			copy(info.R[:], r[:])
 			if succ, einfo, commitment := cpt.EncodeEInfo(&tk, &out_o.Out.Addr, &info); succ {
 				if commitment == *os.ToCommitment() {
 					root := pg.Root.ToUint256()
@@ -232,11 +241,11 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 					wos.Desc_Z = &stx.Desc_Z{}
 					wos.Desc_Z.Out.Commitment = commitment
 					wos.Desc_Z.Out.EInfo = einfo
-					wos.Nil = info.Nil
+					wos.Trace = info.Trace
 					wos.Z = false
 					wos.Num = state.State0.Num()
 					state.add_out_dirty(root, &wos)
-					state.add_out_dirty(&info.Nil, &wos)
+					state.add_out_dirty(&wos.Trace, &wos)
 					break
 				} else {
 					panic("add wouts but commitment not match!")
@@ -263,11 +272,11 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 					wos.Tk = tk
 					wos.Desc_Z = os.Desc_Z
 					wos.Index = os.Index
-					wos.Nil = info.Nil
+					wos.Trace = info.Trace
 					wos.Z = true
 					wos.Num = state.State0.Num()
 					state.add_out_dirty(root, &wos)
-					state.add_out_dirty(&info.Nil, &wos)
+					state.add_out_dirty(&wos.Trace, &wos)
 				} else {
 				}
 				break
@@ -283,6 +292,8 @@ func (state *State1) del(del *keys.Uint256) (e error) {
 		return
 	} else {
 		if src == nil {
+			i := 0
+			i++
 		} else {
 			for i, wout := range state.G2wouts {
 				root := src.Pg.Root

@@ -73,16 +73,19 @@ func (self OutStats) Len() int {
 func (self OutStats) Less(i, j int) bool {
 	left := self[i]
 	right := self[j]
-	if left.stat.Time < right.stat.Time {
-		return true
+	if left.stat.Time != right.stat.Time {
+		return left.stat.Time < right.stat.Time
 	}
-	if left.stat.Value.Cmp(&right.stat.Value) > 0 {
+	/*if left.stat.Value.Cmp(&right.stat.Value) > 0 {
 		return true
 	}
 	if !left.stat.Z {
 		if right.stat.Z {
 			return true
 		}
+	}*/
+	if left.out.Pg.Index != right.out.Pg.Index {
+		return left.out.Pg.Index < right.out.Pg.Index
 	}
 	return false
 }

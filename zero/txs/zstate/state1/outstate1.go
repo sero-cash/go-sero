@@ -33,7 +33,7 @@ type OutState1 struct {
 	Tk     keys.Uint512
 	Out_O  zstate.Out0
 	Desc_Z *stx.Desc_Z `rlp:"nil"`
-	Nil    keys.Uint256
+	Trace  keys.Uint256
 	Z      bool
 }
 

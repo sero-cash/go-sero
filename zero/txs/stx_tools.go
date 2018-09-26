@@ -118,7 +118,8 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_zs [
 
 		wg.Add(1)
 
-		go func(params *genParams, desc_z *stx.Desc_Z) {
+		t_desc := desc
+		go func(params *genParams, desc_z *stx.Desc_Z, pre_desc *preTxDesc_Z) {
 
 			gen_cache <- 0
 			defer func() {
@@ -136,11 +137,16 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_zs [
 				desc_z.Out.Commitment = params.out.Commitment_ret
 				desc_z.Out.EInfo = params.out.EText_ret
 				desc_z.Proof.G = params.proof.G
+				if pre_desc.in != nil {
+					if pre_desc.in.Trace != params.in.Trace_ret {
+						panic("pre desc in trace != param in nil")
+					}
+				}
 			} else {
 				result = false
 			}
 
-		}(&params, t_desc_z)
+		}(&params, t_desc_z, &t_desc)
 
 	}
 
