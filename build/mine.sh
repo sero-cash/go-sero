@@ -289,7 +289,7 @@ getAccount() {
 # begin
 
 
-
+pkill cat &
 killProcess ${PATTERN_ATTACH_PROCESS}
 if [ -f ${GEROCFG} ]; then
     readCfg ${GEROCFG}
