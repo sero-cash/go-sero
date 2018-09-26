@@ -2,13 +2,36 @@ package witness
 
 import (
 	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"github.com/sero-cash/go-sero/zero/witness/merkle"
 )
 
 type PathGen struct {
-	Leaf  merkle.Leaf
-	Path  [merkle.DEPTH]merkle.Leaf
-	Index uint64
+	Root   merkle.Leaf
+	Anchor merkle.Leaf
+	Leaf   merkle.Leaf
+	Path   [merkle.DEPTH]merkle.Leaf
+	Index  uint64
+}
+
+func (p *PathGen) Clone() (ret PathGen) {
+	utils.DeepCopy(&ret, p)
+	return
+}
+
+func (p PathGen) ToRef() *PathGen {
+	return &p
+}
+
+func (pg *PathGen) IsComplete() bool {
+	for i := uint64(0); i < merkle.DEPTH; i++ {
+		flag := pg.Index & (uint64(0x1) << (merkle.DEPTH - i - 1))
+		if flag == 0 {
+			return false
+		} else {
+		}
+	}
+	return true
 }
 
 func GenRoots(pg *PathGen) (roots [merkle.DEPTH + 1]merkle.Leaf) {
@@ -32,14 +55,19 @@ func GenRoot(pg *PathGen) merkle.Leaf {
 	return roots[merkle.DEPTH]
 }
 
-func NewPathGen(tr *merkle.Tree) (pg PathGen, roots [merkle.DEPTH + 1]merkle.Leaf) {
+func NewPathGen(tr *merkle.Tree) (pg PathGen) {
 	l := merkle.Last(*tr)
 	w := Witness{Tree: tr.Clone()}
 	path, index := w.Path()
 	pg.Leaf = l
 	pg.Index = index
+	pg.Root = tr.Root()
 	copy(pg.Path[:], path[:])
+	return
+}
 
+func NewPathGenAndRoots(tr *merkle.Tree) (pg PathGen, roots [merkle.DEPTH + 1]merkle.Leaf) {
+	pg = NewPathGen(tr)
 	roots = GenRoots(&pg)
 	return
 }
@@ -73,4 +101,5 @@ func ParseIndex(pc *IndexCur, index uint64) uint64 {
 func NextPathGen(pc *IndexCur, pg *PathGen, roots *[merkle.DEPTH + 1]merkle.Leaf) {
 	start := ParseIndex(pc, pg.Index)
 	pg.Path[merkle.DEPTH-start-1] = roots[start]
+	pg.Anchor = roots[merkle.DEPTH]
 }

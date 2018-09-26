@@ -51,9 +51,8 @@ func Debug_State1_addout_end_assert(state *State1, os *zstate.OutState0) {
 			if out, err := state.GetOut(&wout); err != nil {
 				zstate.Debug_Weak_panic("get out err: %v,%v", err, i)
 			} else {
-				w_root := out.Witness.Root()
-				w_leaf := out.Witness.Logs[len(out.Witness.Logs)-1]
-				w_el := w_leaf.ToUint256()
+				w_root := out.Pg.Anchor
+				w_el := out.Pg.Leaf.ToUint256()
 				if w_root != merkle.Leaf(root) {
 					zstate.Debug_Weak_panic("w_root!=root")
 				}

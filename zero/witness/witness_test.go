@@ -39,14 +39,22 @@ func TestMerklePath(t *testing.T) {
 		tree.Append(leaf)
 		w := Witness{Tree: tree.Clone()}
 
-		pg, roots := NewPathGen(&tree)
+		pg, roots := NewPathGenAndRoots(&tree)
 		icur := NewIndexCur(&pg)
 		for i := len(pgs) - 1; i > -1; i-- {
 			wpt := pgs[i]
 			NextPathGen(&icur, wpt, &roots)
-			start := ParseIndex(&icur, wpt.Index)
-			wpt.Path[merkle.DEPTH-start-1] = roots[start]
 			path_w, index_w := wits[i].Path()
+			anchor_w := wits[i].Root()
+			root_w := wits[i].Tree.Root()
+
+			if root_w != wpt.Root {
+				t.Fail()
+			}
+
+			if anchor_w != wpt.Anchor {
+				t.Fail()
+			}
 
 			for j, w := range path_w {
 				if wpt.Path[j] != w {

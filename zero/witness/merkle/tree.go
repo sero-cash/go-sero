@@ -103,6 +103,10 @@ func (t *Tree) Clone() (ret Tree) {
 	return
 }
 
+func (t Tree) ToRef() *Tree {
+	return &t
+}
+
 func createEmpty() (ret [DEPTH + 1]Leaf) {
 	ret[0] = empty
 	for i := 1; i <= DEPTH; i++ {

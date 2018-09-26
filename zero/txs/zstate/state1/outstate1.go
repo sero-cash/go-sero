@@ -26,14 +26,15 @@ import (
 )
 
 type OutState1 struct {
-	Witness witness.Witness
-	Index   uint64
-	Num     uint64
-	Tk      keys.Uint512
-	Out_O   zstate.Out0
-	Desc_Z  *stx.Desc_Z `rlp:"nil"`
-	Nil     keys.Uint256
-	Z       bool
+	//Witness witness.Witness
+	Pg     witness.PathGen
+	Index  uint64
+	Num    uint64
+	Tk     keys.Uint512
+	Out_O  zstate.Out0
+	Desc_Z *stx.Desc_Z `rlp:"nil"`
+	Nil    keys.Uint256
+	Z      bool
 }
 
 func (self *OutState1) IsMine(tk *keys.Uint512) bool {
@@ -56,14 +57,14 @@ func (self *OutState1) Unserial(v []byte) (*OutState1, error) {
 	}
 }
 func (self *OutState1) ToWitness() (commitment keys.Uint256, index uint32, path [cpt.DEPTH * 32]byte, anchor keys.Uint256) {
-	el := self.Witness.Element()
+	el := self.Pg.Leaf
 	commitment = *el.ToUint256()
-	path_temp, index_temp := self.Witness.Path()
+	path_temp, index_temp := self.Pg.Path, self.Pg.Index
 	index = uint32(index_temp)
 	for i, p := range path_temp {
 		copy(path[i*32:], p[:])
 	}
-	anchor_temp := self.Witness.Root()
+	anchor_temp := self.Pg.Anchor
 	copy(anchor[:], anchor_temp[:])
 	return
 }

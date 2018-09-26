@@ -22,6 +22,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/sero-cash/go-sero/zero/witness"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -99,7 +101,7 @@ func (self *State1) toData() {
 
 func (self *State1) dataTo() {
 	for _, out := range self.data.Outs {
-		root := keys.Uint256(out.Witness.Tree.Root())
+		root := keys.Uint256(out.Pg.Root)
 		self.G2wouts = append(self.G2wouts, root)
 		self.G2outs[root] = out
 		self.G2outs[out.Nil] = out
@@ -136,6 +138,11 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 	out_leaf := merkle.Leaf{}
 	copy(out_leaf[:], out_hash[:])
 
+	pg, roots := witness.NewPathGenAndRoots(os_tree)
+	if roots[0] != out_leaf {
+		panic("gen path roots[0] != out leaf")
+	}
+
 	Debug_State1_addout_assert(self, os)
 
 	t := utils.TR_enter(fmt.Sprintf("ADD_OUT..MAX_NUM num=%v", self.State0.Num()))
@@ -153,7 +160,13 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 
 	t.Renter("RANGE.WOUTS")
 
-	for _, wout := range self.G2wouts {
+	index_cur := witness.NewIndexCur(&pg)
+	//for i := len(pgs) - 1; i > -1; i-- {
+	//	wpt := pgs[i]
+	//	NextPathGen(&icur, wpt, &roots)
+
+	for i := len(self.G2wouts) - 1; i > -1; i-- {
+		wout := self.G2wouts[i]
 		if src, err := self.GetOut(&wout); err != nil {
 			panic("gen witness wout can not find src")
 			return
@@ -164,20 +177,19 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 			if src == nil {
 				panic("gen witness can not find wout in G2outs")
 			} else {
-				if !src.Witness.IsComplete() {
-					wit := src.Witness.Clone()
-					wit.Append(out_leaf)
-					leaf := wit.Root()
-					root := leaf.ToUint256()
+				if !src.Pg.IsComplete() {
+					temp_pg := src.Pg.Clone()
+					witness.NextPathGen(&index_cur, &temp_pg, &roots)
+					root := temp_pg.Anchor.ToUint256()
 					if src.Index+1 != os.Index {
 						panic("gen witness src.index+1!=os.Index")
+					} else {
 					}
 					if *root != os_tree.RootKey() {
 						panic("gen witness src wit root != out")
 					} else {
-						src.Witness = wit
-
 					}
+					src.Pg = temp_pg
 				} else {
 				}
 				src.Index++
@@ -189,12 +201,12 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 	Debug_State1_addout_end_assert(self, os)
 
 	t.Renter("ADD.WOUTS")
-	self.addWouts(tks, os, os_tree)
+	self.addWouts(tks, os, &pg)
 	t.Leave()
 	return
 }
 
-func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, os_tree *merkle.Tree) {
+func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witness.PathGen) {
 	for _, tk := range tks {
 		if os.IsO() {
 			out_o := os.Out_O
@@ -210,10 +222,10 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, os_tree 
 			info.Text = out_o.Out.Memo
 			if succ, einfo, commitment := cpt.EncodeEInfo(&tk, &out_o.Out.Addr, &info); succ {
 				if commitment == *os.ToCommitment() {
-					root := os_tree.RootKey()
-					state.append_wout_dirty(&root)
+					root := pg.Root.ToUint256()
+					state.append_wout_dirty(root)
 					wos := OutState1{}
-					wos.Witness.Tree = os_tree.Clone()
+					wos.Pg = *pg
 					wos.Tk = tk
 					wos.Out_O = *os.Out_O
 					wos.Index = os.Index
@@ -223,7 +235,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, os_tree 
 					wos.Nil = info.Nil
 					wos.Z = false
 					wos.Num = state.State0.Num()
-					state.add_out_dirty(&root, &wos)
+					state.add_out_dirty(root, &wos)
 					state.add_out_dirty(&info.Nil, &wos)
 					break
 				} else {
@@ -240,21 +252,21 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, os_tree 
 				&desc_z.Out.Commitment,
 			); e == nil {
 				if bytes.Compare(info.V[:], keys.Empty_Uint256[:]) > 0 {
-					root := os_tree.RootKey()
-					state.append_wout_dirty(&root)
+					root := pg.Root.ToUint256()
+					state.append_wout_dirty(root)
 					wos := OutState1{}
+					wos.Pg = *pg
 					wos.Out_O.Out.Memo = info.Text
 					wos.Out_O.Out.Value = utils.NewU256_ByKey(&info.V)
 					//wos.Out_O.Out.R = info.R
 					wos.Out_O.Currency = info.Currency
 					wos.Tk = tk
-					wos.Witness.Tree = os_tree.Clone()
 					wos.Desc_Z = os.Desc_Z
 					wos.Index = os.Index
 					wos.Nil = info.Nil
 					wos.Z = true
 					wos.Num = state.State0.Num()
-					state.add_out_dirty(&root, &wos)
+					state.add_out_dirty(root, &wos)
 					state.add_out_dirty(&info.Nil, &wos)
 				} else {
 				}
@@ -273,7 +285,7 @@ func (state *State1) del(del *keys.Uint256) (e error) {
 		if src == nil {
 		} else {
 			for i, wout := range state.G2wouts {
-				root := src.Witness.Tree.Root()
+				root := src.Pg.Root
 				if wout == *root.ToUint256() {
 					state.del_wout_dirty(uint(i))
 					break

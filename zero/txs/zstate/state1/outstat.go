@@ -101,15 +101,15 @@ func UpdateOutStat(st *zstate.State0, out *OutState1) {
 	os.Z = out.Z
 	os.Value = out.Out_O.Out.Value
 	os.Time = time.Now().UnixNano()
-	tri.UpdateGlobalObj(st.Tri(), outStatName(out.Witness.Tree.RootKey().NewRef()), &os)
+	tri.UpdateGlobalObj(st.Tri(), outStatName(out.Pg.Root.ToUint256()), &os)
 }
 
 func SortOutStats(st *zstate.State0, outs []*OutState1) {
 	wraps := OutStats{}
 	for _, out := range outs {
-		out_root := out.Witness.Tree.RootKey()
+		out_root := out.Pg.Root.ToUint256()
 		get := OutStatGet{}
-		tri.GetGlobalObj(st.Tri(), outStatName(&out_root), &get)
+		tri.GetGlobalObj(st.Tri(), outStatName(out_root), &get)
 		if get.out != nil {
 			wraps = append(
 				wraps,

@@ -54,7 +54,7 @@ func Gen(seed *keys.Uint256, t *tx.T, state *zstate.State) (s stx.T, e error) {
 				s_desc_o.Ins = append(
 					s_desc_o.Ins,
 					stx.In_O{
-						Root: in.Witness.Tree.RootKey(),
+						Root: *in.Pg.Root.ToUint256(),
 					},
 				)
 			}
@@ -233,7 +233,7 @@ func GetOuts(tk *keys.Uint512, state *zstate.State) (outs []*state1.OutState1, e
 		} else {
 			if src != nil {
 				if src.IsMine(tk) {
-					if root != src.Witness.Tree.RootKey() {
+					if root != *src.Pg.Root.ToUint256() {
 						panic("get outs wout.root!=src.Root")
 					}
 					outs = append(outs, src)
@@ -254,9 +254,9 @@ func GetRoots(tk *keys.Uint512, state *zstate.State, v *utils.U256, currency *ke
 		return
 	} else {
 		for _, out := range outs {
-			root := out.Witness.Tree.RootKey()
+			root := out.Pg.Root.ToUint256()
 			if out.Out_O.Currency == *currency {
-				roots = append(roots, root)
+				roots = append(roots, *root)
 				amount.AddU(&out.Out_O.Out.Value)
 				out_o := out.Out_O
 				if value.Cmp(out_o.Out.Value.ToI256().ToRef()) < 0 {
