@@ -25,6 +25,46 @@ import (
 var genLeaf = merkle.GenLeaf
 var getLeaf = merkle.GetLeaf
 
+func test(v interface{}) {}
+
+func TestMerklePath(t *testing.T) {
+	tree := merkle.Tree{}
+	pgs := []*PathGen{}
+	wits := []*Witness{}
+	for i := uint64(0); i < 100; i++ {
+		leaf := merkle.Leaf{uint8(i)}
+		for _, wit := range wits {
+			wit.Append(leaf)
+		}
+		tree.Append(leaf)
+		w := Witness{Tree: tree.Clone()}
+
+		pg, roots := NewPathGen(&tree)
+		icur := NewIndexCur(&pg)
+		for i := len(pgs) - 1; i > -1; i-- {
+			wpt := pgs[i]
+			NextPathGen(&icur, wpt, &roots)
+			start := ParseIndex(&icur, wpt.Index)
+			wpt.Path[merkle.DEPTH-start-1] = roots[start]
+			path_w, index_w := wits[i].Path()
+
+			for j, w := range path_w {
+				if wpt.Path[j] != w {
+					t.Fail()
+				}
+			}
+
+			if index_w != wpt.Index {
+				t.Fail()
+			}
+		}
+
+		pgs = append(pgs, &pg)
+		wits = append(wits, &w)
+
+	}
+}
+
 func TestMerkle(t *testing.T) {
 	tree1 := merkle.Tree{}
 	w1 := Witness{Tree: tree1.Clone()}
