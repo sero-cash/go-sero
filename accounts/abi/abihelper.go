@@ -46,7 +46,7 @@ func ValueTo(typ Type, v interface{}, r *keys.Uint128, state *state.StateDB) (va
 			elem := reflect.New(typ.Type).Elem()
 			if ok {
 				newInt := big.NewInt(1)
-				newInt.SetString(v.(string), 10)
+				newInt.SetString(string(v.(json.Number)), 10)
 				elem.SetUint(newInt.Uint64())
 				return elem, nil
 			} else {
