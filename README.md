@@ -1,13 +1,13 @@
-## Go Ethereum
+## Go Sero
 
 Official golang implementation of the Ethereum protocol.
 
 [![API Reference](
 https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/68747470733a2f2f676f646f632e6f72672f6769746875622e636f6d2f676f6c616e672f6764646f3f7374617475732e737667
 )](https://godoc.org/github.com/sero-cash/go-sero)
-[![Go Report Card](https://goreportcard.com/badge/github.com/sero-cash/go-sero)](https://goreportcard.com/report/github.com/sero-cash/go-sero)
-[![Travis](https://travis-ci.org/sero-cash/go-sero.svg?branch=master)](https://travis-ci.org/sero-cash/go-sero)
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/sero-cash/go-sero?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
+
+
 
 Automated builds are available for stable releases and the unstable master branch.
 Binary archives are published at https://sero.ethereum.org/downloads/.
@@ -15,7 +15,7 @@ Binary archives are published at https://sero.ethereum.org/downloads/.
 ## Building the source
 
 For prerequisites and detailed build instructions please read the
-[Installation Instructions](https://github.com/sero-cash/go-sero/wiki/Building-Ethereum)
+[Installation Instructions](https://github.com/sero-cash/go-sero/wiki/Building-Sero)
 on the wiki.
 
 Building sero requires both a Go (version 1.7 or later) and a C++ compiler.
