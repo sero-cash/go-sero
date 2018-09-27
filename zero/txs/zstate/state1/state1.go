@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"sync"
 
 	"github.com/sero-cash/go-sero/zero/witness"
 
@@ -35,6 +36,7 @@ import (
 type State1 struct {
 	State0 *zstate.State0
 
+	mu      sync.RWMutex
 	G2outs  map[keys.Uint256]*OutState1
 	G2wouts []keys.Uint256
 
@@ -50,6 +52,8 @@ func LoadState1(state0 *zstate.State0, loadName string) (state State1) {
 }
 
 func (self *State1) add_out_dirty(k *keys.Uint256, state *OutState1) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
 	self.G2outs[*k] = state
 	self.is_dirty = true
 }
@@ -87,6 +91,8 @@ func (self *State1) load(loadName string) {
 }
 
 func (self *State1) toData() {
+	self.mu.RLock()
+	defer self.mu.RUnlock()
 	outs := []*OutState1{}
 	for _, root := range self.G2wouts {
 		if out, ok := self.G2outs[root]; !ok {
@@ -121,6 +127,8 @@ func (self *State1) Finalize(saveName string) {
 }
 
 func (state *State1) GetOut(root *keys.Uint256) (src *OutState1, e error) {
+	state.mu.RLock()
+	defer state.mu.RUnlock()
 	if out, ok := state.G2outs[*root]; ok {
 		if out != nil {
 			return out, nil
