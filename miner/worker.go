@@ -321,7 +321,7 @@ func (self *worker) wait() {
 
 			// Insert the block into the set of pending ones to wait for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
-			log.Info(fmt.Sprintf("mined new block do in %vs", time.Now().Unix()-block.Time().Int64()))
+			log.Info(fmt.Sprintf("mined new block done in %v, number = %v, txs = %v", time.Since(work.createdAt), block.NumberU64(), len(block.Body().Transactions)))
 			//fmt.Printf("------------------------------------\n")
 			//stateDB, _ := self.chain.StateAt(self.chain.CurrentBlock().Root())
 			//for _, seed := range work.state.GetSeeds() {
@@ -438,9 +438,10 @@ func (self *worker) commitNewWork() {
 		return
 	}
 	txs := types.NewTransactionsByPrice(pending)
-	begin := time.Now()
+
 	work.commitTransactions(self.mux, txs, self.chain, header.Coinbase)
-	log.Info(fmt.Sprintf("commitTransactions %v tx done in %v", len(pending), time.Since(begin)))
+
+	log.Info(fmt.Sprintf("commitTransactions %v tx done in %v ,number = %v", len(pending), time.Since(tstart)), header.Number.Uint64())
 
 	// Create the new block to seal with the consensus engine
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
