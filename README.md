@@ -212,7 +212,7 @@ resources (consider running on a single thread, no need for multiple ones either
 instance for mining, run it with all your usual flags, extended by:
 
 ```
-$ sero <usual-flags> --mine --minerthreads=1 --serobase=0x0000000000000000000000000000000000000000
+$ gero <usual-flags> --mine --minerthreads=1 --serobase=0x0000000000000000000000000000000000000000
 ```
 
 Which will start mining blocks and transactions on a single CPU thread, crediting all proceedings to
@@ -224,7 +224,7 @@ limit blocks converge to (`--targetgaslimit`) and the price transactions are acc
 Thank you for considering to help out with the source code! We welcome contributions from
 anyone on the internet, and are grateful for even the smallest of fixes!
 
-If you'd like to contribute to go-ethereum, please fork, fix, commit and send a pull request
+If you'd like to contribute to go-sero, please fork, fix, commit and send a pull request
 for the maintainers to review and merge into the main code base. If you wish to submit more
 complex changes though, please check up with the core devs first on [our gitter channel](https://gitter.im/sero-cash/go-sero)
 to ensure those changes are in line with the general philosophy of the project and/or get some

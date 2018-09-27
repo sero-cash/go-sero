@@ -25,7 +25,7 @@ declare -a REPEAT_PASSWORD
 declare -a END_PASSWORD
 declare -a NEWACCOUNT
 export PASSWORD=""
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/lib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/lib:`pwd`/czero/lib
 loadDefaultParams() {
    if [ ! -d "$DEFAULT_DATADIR" ]; then
        mkdir -p ~/.datadir

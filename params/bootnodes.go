@@ -28,7 +28,7 @@ var BetanetBootnodes = []string{
 // AlphanetBootnodes are the enode URLs of the P2P bootstrap nodes running on the
 // Ropsten test network.
 var AlphanetBootnodes = []string{
-	"snode://7cf1b6b5f1c86baf0efb228ba9864dbe2fa1ae3eafdfbbd635dd318d0eb30e93b2ed294e4b7f7d17740dc9a3faae0116e8d1bc7c7b06d4d1a95a628dd75d406a@192.168.15.166:60609",
+	"snode://a64756b1859b7d51a95cfd183e5a01b6fa581c5a572c62a6685a3c1f05adbd58f68d8153c2dad466b8d3c5903d0e09054776a8ee5d3e9fae50f61e68266744dc@192.168.15.166:60609",
 	"snode://a165f05475624a29ce76fd40721fef2408e2de117fb42f0133de861b0072981f8f437cb9b902c3748d860e4214740cda3177f270903f6286ea05745de182410f@118.25.146.113:60609",
 }
 
