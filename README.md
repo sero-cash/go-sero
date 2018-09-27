@@ -212,7 +212,7 @@ resources (consider running on a single thread, no need for multiple ones either
 instance for mining, run it with all your usual flags, extended by:
 
 ```
-$ gero <usual-flags> --mine --minerthreads=1 --serobase=0x0000000000000000000000000000000000000000
+$ gero <usual-flags> --mine --minerthreads=1 --serobase=0000000000000000000000000000000000000000
 ```
 
 Which will start mining blocks and transactions on a single CPU thread, crediting all proceedings to

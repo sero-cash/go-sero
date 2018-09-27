@@ -7,7 +7,7 @@
 GEROCFG=~/.gerocfg
 DEFAULT_DATADIR=~/.datadir
 PATTERN_ATTACH_PROCESS="gero.*attach"
-PATTERN_MAIN_PROCESS="gero.*datadir="
+PATTERN_MAIN_PROCESS="gero.*datadir"
 PATTERN_ACCOUNTS="\[*\]"
 PATTERN_QUERY_ACCOUNTS="ser.*accounts"
 PATTERN_NEW_ACCOUNTS="personal.*newAccounts()"
@@ -145,6 +145,7 @@ checkProcess(){
             * ) 
                 echo "the old process like:$1 will be stopped" >&2
                 killProcess "$1" >&2
+                pkill gero
                 sleep 15
                 echo "-1"
                 return 0;;
@@ -323,7 +324,7 @@ do
         * ) echo "Please answer yes or no.";;
     esac 
 done
-result=$(checkProcess "$PATTERN_MAIN_PROCESS$DATADIR")
+result=$(checkProcess "$PATTERN_MAIN_PROCESS")
 echo ${result}
 if [ "${result}" == "-1" ]; then
     echo    "now begin to start main proces"
@@ -334,7 +335,7 @@ if [ "${result}" == "-1" ]; then
     set +x
     sleep 30
 fi
-result=$(checkProcessWorking "$PATTERN_MAIN_PROCESS$DATADIR")
+result=$(checkProcessWorking "$PATTERN_MAIN_PROCESS")
 if [ "${result}" == "-1" ]; then
     echo "Please check why the main process of gero not running with log in ~/working/"
     exit
