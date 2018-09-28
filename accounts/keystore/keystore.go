@@ -32,7 +32,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/opentracing/opentracing-go/log"
+	"github.com/sero-cash/go-sero/log"
+
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/accounts"
@@ -143,10 +144,12 @@ func (ks *KeyStore) refreshWallets() {
 		if len(ks.wallets) == 0 || ks.wallets[0].URL().Cmp(account.accountByURL.URL) > 0 {
 			wallet := &keystoreWallet{account: account.accountByURL, keystore: ks}
 			if account.update {
-				stata1dir := zconfig.State1_file("")
-				err := os.RemoveAll(stata1dir)
+				log.Info("refresWallets improt", "account", account.accountByURL)
+				state1dir := zconfig.State1_file("")
+				err := os.RemoveAll(state1dir)
 				if err != nil {
-					log.Error(err)
+					log.Error("refresWallets import remvoe", "state1dir", state1dir)
+
 				}
 			}
 			events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletArrived})

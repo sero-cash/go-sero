@@ -308,7 +308,7 @@ func (ac *accountCache) scanAccounts() error {
 
 	for _, p := range creates.ToSlice() {
 		if a := readAccount(p.(string)); a != nil {
-			ac.add(*a, false)
+			ac.add(*a, true)
 		}
 	}
 
