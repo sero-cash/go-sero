@@ -329,9 +329,9 @@ func (state *State1) UpdateWitness(tks []keys.Uint512) {
 				panic("gen witness out!=os.Root()")
 			} else {
 			}
-			t := utils.TR_enter("UpdateWitness. addOut")
+			//t := utils.TR_enter("UpdateWitness. addOut")
 			state.addOut(tks, os, &tree)
-			t.Leave()
+			//t.Leave()
 		}
 	}
 	return
