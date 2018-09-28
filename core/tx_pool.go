@@ -467,7 +467,6 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	start := time.Now()
 	// If the transaction fails basic validation, discard it
 	if err := pool.validateTx(tx, local); err != nil {
-		log.Info("Discarding invalid transaction", "hash", hash, "err", err)
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		invalidTxCounter.Inc(1)
 		return false, err

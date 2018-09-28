@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
@@ -97,18 +96,10 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	// Apply the transaction to the current state (included in the env)
 	log.Info(fmt.Sprintf("ApplyTransaction headGasLimit = %v, blockNum =%v,crruentGasLimit= %v ,txGas = %v", header.GasLimit, header.Number.Uint64(), *gp, msg.Gas()))
 	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
-	log.Info("ApplyTransaction : ")
-	for i, desc_z := range tx.GetZZSTX().Desc_Zs {
-		log.Info("    desc_z : ", "index", i, "nil", hexutil.Encode(desc_z.In.Nil[:]), "trace", hexutil.Encode(desc_z.In.Trace[:]))
-	}
-	for _, desc_o := range tx.GetZZSTX().Desc_Os {
-		for i, out := range desc_o.Outs {
-			log.Info("    out : ", "index", i, "to", hexutil.Encode(out.Addr[:]))
-		}
-	}
 
 	if err == nil {
 		err = statedb.GetZState().AddStx(tx.GetZZSTX())
+		gp.AddGas(gas)
 	}
 	if err != nil {
 		return nil, 0, err
