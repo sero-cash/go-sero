@@ -243,11 +243,7 @@ func Base58ToAddress(s string) Address {
 // IsBase58Address verifies whether a string can represent a valid hex-encoded
 // Ethereum Data or not.
 func IsBase58Address(s string) bool {
-
-	if hasBase58Prefix(s) {
-		s = s[2:]
-	}
-	return len(s) == AddressLength && base58.IsBase58Str(s)
+	return base58.IsBase58Str(s)
 }
 
 // Bytes gets the string representation of the underlying Data.

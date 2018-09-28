@@ -82,6 +82,7 @@ func decryptPreSaleKey(fileContent []byte, password string) (key *Key, err error
 	key = &Key{
 		Id:         nil,
 		Address:    crypto.PrivkeyToAddress(ecKey),
+		Tk:         crypto.PrivkeyToTk(ecKey),
 		PrivateKey: ecKey,
 	}
 	derivedAddr := hex.EncodeToString(key.Address.Bytes()) // needed because .Hex() gives leading "0x"
