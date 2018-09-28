@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
 	"strings"
 	"time"
 
@@ -178,7 +177,7 @@ func (b *bridge) SendTransaction(call otto.FunctionCall) (response otto.Value) {
 
 	finish := make(chan struct{})
 	progress := uiprogress.New()
-	bar := progress.AddBar(2).PrependElapsed()
+	bar := progress.AddBar(160).PrependElapsed()
 	progress.Start()
 	go progressBar(bar, finish)
 	// Send the request to the backend and return
@@ -351,7 +350,9 @@ func throwJSException(msg interface{}) otto.Value {
 }
 
 func progressBar(bar *uiprogress.Bar, finish chan struct{}) {
-	t := time.NewTimer(time.Duration(uint64(bar.Total)) * 2 * time.Second)
+	startTotal := bar.Total
+	t := time.NewTimer(time.Duration(uint64(startTotal/2)) * time.Second)
+	count := 0
 	defer t.Stop()
 	for {
 		select {
@@ -360,13 +361,19 @@ func progressBar(bar *uiprogress.Bar, finish chan struct{}) {
 			//fmt.Printf("finish")
 			break
 		case <-t.C:
+			count++
+			if count > 3 {
+				break
+			}
 			bar.Total = bar.Total * 2
-			t.Reset(time.Duration(uint64(bar.Total)) * 2 * time.Second)
+			t.Reset(time.Duration(uint64(startTotal/(2*count))) * time.Second)
 		default:
-			time.Sleep(time.Millisecond * time.Duration(rand.Intn(500)))
+			time.Sleep(time.Millisecond * time.Duration(500))
 			enable := bar.Incr()
 			if !enable {
-				break
+				count++
+				bar.Total = bar.Total * 2
+				t.Reset(time.Duration(uint64(startTotal/(2*count))) * time.Second)
 			}
 		}
 
