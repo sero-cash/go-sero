@@ -26,11 +26,7 @@ The go-sero project comes with several wrappers/executables found in the `cmd` d
 
 | Command    | Description |
 |:----------:|-------------|
-| **sero** | Our main Sero CLI client. It is the entry point into the Sero network (main-, test- or private net), 
-capable of running as a full node (default), archive node (retaining all historical state) or a light node 
-(retrieving data live). It can be used by other processes as a gateway into the Sero network via JSON RPC endpoints 
-exposed on top of HTTP, WebSocket and/or IPC transports. `sero --help` and the [CLI Wiki page](https://github
-.com/Sero/go-Sero/wiki/Command-Line-Options) for command line options. |
+| **sero** | Our main Sero CLI client. It is the entry point into the Sero network (main-, test- or private net), capable of running as a full node (default), archive node (retaining all historical state) or a light node (retrieving data live). It can be used by other processes as a gateway into the Sero network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `sero --help` and the [CLI Wiki page](https://github .com/Sero/go-Sero/wiki/Command-Line-Options) for command line options. |
 | `abigen` | Source code generator to convert Sero contract definitions into easy to use, compile-time type-safe Go packages. It operates on plain [Sero contract ABIs](https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI) with expanded functionality if the contract bytecode is also available. However it also accepts Solidity source files, making development much more streamlined. Please see our [Native DApps](https://github.com/sero-cash/go-sero/wiki/Native-DApps:-Go-bindings-to-Ethereum-contracts) wiki page for details. |
 | `bootnode` | Stripped down version of our Sero client implementation that only takes part in the network node discovery protocol, but does not run any of the higher level application protocols. It can be used as a lightweight bootstrap node to aid in finding peers in private networks. |
 | `evm` | Developer utility version of the EVM (Sero Virtual Machine) that is capable of running bytecode snippets within a configurable environment and execution mode. Its purpose is to allow isolated, fine-grained debugging of EVM opcodes (e.g. `evm --code 60ff60ff --debug`). |
@@ -207,7 +203,7 @@ instance for mining, run it with all your usual flags, extended by:
 $ gero <usual-flags> --mine --minerthreads=1 --serobase=2S4kr7ZHFmgue2kLLngtWnAuHMQgV6jyv34SedvHifm1h3oomx59MEqfEmtnw3mCLnSA2FDojgjTA1WWydxHkUUt
 ```
 There is a script help beginner to create account and start mining. 
-[`setup account and start mine` URL](https://github.com/sero-cash/go-sero/wiki/start-mine)
+[`setup account and start mine` ](https://github.com/sero-cash/go-sero/wiki/start-mine)
 
 Which will start mining blocks and transactions on a single CPU thread, crediting all proceedings to
 the account specified by `--serobase`. You can further tune the mining by changing the default gas
@@ -219,11 +215,7 @@ Thank you for considering to help out with the source code! We welcome contribut
 anyone on the internet, and are grateful for even the smallest of fixes!
 
 If you'd like to contribute to go-sero, please fork, fix, commit and send a pull request
-for the maintainers to review and merge into the main code base. If you wish to submit more
-complex changes though, please check up with the core devs first on [our gitter channel](https://gitter.im/sero-cash/go-sero)
-to ensure those changes are in line with the general philosophy of the project and/or get some
-early feedback which can make both your efforts much lighter as well as our review and merge
-procedures quick and simple.
+for the maintainers to review and merge into the main code base. 
 
 Please make sure your contributions adhere to our coding guidelines:
 
