@@ -74,10 +74,10 @@ This command will:
 Transitioning towards developers, if you'd like to play around with creating Sero contracts, you
 almost certainly would like to do that without any real money involved until you get the hang of the
 entire system. In other words, instead of attaching to the main network, you want to join the **alpha**
-network with your node, which is fully equivalent to the main network, but with play-Ether only.
+network with your node, which is fully equivalent to the main network, but with play-Sero only.
 
 ```
-$ sero --alpha console
+$ gero --alpha console
 ```
 
 The `console` subcommand have the exact same meaning as above and they are equally useful on the
@@ -85,8 +85,8 @@ testnet too. Please see above for their explanations if you've skipped to here.
 
 Specifying the `--alpha` flag however will reconfigure your sero instance a bit:
 
- * Instead of using the default data directory (`~/.ethereum` on Linux for example), sero will nest
-   itself one level deeper into a `alpha` subfolder (`~/.ethereum/alpha` on Linux). Note, on OSX
+ * Instead of using the default data directory (`~/.datadir` on Linux for example), sero will nest
+   itself one level deeper into a `alpha` subfolder (`~/.datadir/alpha` on Linux). Note, on OSX
    and Linux this also means that attaching to a running testnet node requires the use of a custom
    endpoint since `sero attach` will try to attach to a production node endpoint by default. E.g.
    `gero attach <datadir>/alpha/sero.ipc`. Windows users are not affected by this.
@@ -200,7 +200,7 @@ need to configure a miner to process transactions and create new blocks for you.
 
 #### Running a private miner
 
-Mining on the public Ethereum network is a complex task as it's only feasible using GPUs, requiring
+Mining on the public Sero network is a complex task as it's only feasible using GPUs, requiring
 an OpenCL or CUDA enabled `ethminer` instance. For information on such a setup, please consult the
 [EtherMining subreddit](https://www.reddit.com/r/EtherMining/) and the [Genoil miner](https://github.com/Genoil/cpp-ethereum)
 repository.
@@ -211,7 +211,7 @@ resources (consider running on a single thread, no need for multiple ones either
 instance for mining, run it with all your usual flags, extended by:
 
 ```
-$ gero <usual-flags> --mine --minerthreads=1 --serobase=0000000000000000000000000000000000000000
+$ gero <usual-flags> --mine --minerthreads=1 --serobase=2S4kr7ZHFmgue2kLLngtWnAuHMQgV6jyv34SedvHifm1h3oomx59MEqfEmtnw3mCLnSA2FDojgjTA1WWydxHkUUt
 ```
 
 Which will start mining blocks and transactions on a single CPU thread, crediting all proceedings to
