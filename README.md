@@ -1,14 +1,8 @@
 ## Go Sero
 
-Official golang implementation of the Ethereum protocol.
+Official golang implementation of the Ethereum protocol plus zeroknowledge based anonymous cash tech.
 
 
-
-
-
-
-Automated builds are available for stable releases and the unstable master branch.
-Binary archives are published at https://sero.ethereum.org/downloads/.
 
 ## Building the source
 
@@ -28,11 +22,15 @@ or, to build the full suite of utilities:
 
 ## Executables
 
-The go-ethereum project comes with several wrappers/executables found in the `cmd` directory.
+The go-sero project comes with several wrappers/executables found in the `cmd` directory.
 
 | Command    | Description |
 |:----------:|-------------|
-| **sero** | Our main Sero CLI client. It is the entry point into the Sero network (main-, test- or private net), capable of running as a full node (default), archive node (retaining all historical state) or a light node (retrieving data live). It can be used by other processes as a gateway into the Sero network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `geth --help` and the [CLI Wiki page](https://github.com/Sero/go-Sero/wiki/Command-Line-Options) for command line options. |
+| **sero** | Our main Sero CLI client. It is the entry point into the Sero network (main-, test- or private net), 
+capable of running as a full node (default), archive node (retaining all historical state) or a light node 
+(retrieving data live). It can be used by other processes as a gateway into the Sero network via JSON RPC endpoints 
+exposed on top of HTTP, WebSocket and/or IPC transports. `sero --help` and the [CLI Wiki page](https://github
+.com/Sero/go-Sero/wiki/Command-Line-Options) for command line options. |
 | `abigen` | Source code generator to convert Sero contract definitions into easy to use, compile-time type-safe Go packages. It operates on plain [Sero contract ABIs](https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI) with expanded functionality if the contract bytecode is also available. However it also accepts Solidity source files, making development much more streamlined. Please see our [Native DApps](https://github.com/sero-cash/go-sero/wiki/Native-DApps:-Go-bindings-to-Ethereum-contracts) wiki page for details. |
 | `bootnode` | Stripped down version of our Sero client implementation that only takes part in the network node discovery protocol, but does not run any of the higher level application protocols. It can be used as a lightweight bootstrap node to aid in finding peers in private networks. |
 | `evm` | Developer utility version of the EVM (Sero Virtual Machine) that is capable of running bytecode snippets within a configurable environment and execution mode. Its purpose is to allow isolated, fine-grained debugging of EVM opcodes (e.g. `evm --code 60ff60ff --debug`). |
@@ -87,7 +85,7 @@ Specifying the `--alpha` flag however will reconfigure your sero instance a bit:
    and Linux this also means that attaching to a running testnet node requires the use of a custom
    endpoint since `sero attach` will try to attach to a production node endpoint by default. E.g.
    `gero attach <datadir>/alpha/sero.ipc`. Windows users are not affected by this.
- * Instead of connecting the main Ethereum network, the client will connect to the test network,
+ * Instead of connecting the main Sero network, the client will connect to the test network,
    which uses different P2P bootnodes, different network IDs and genesis states.
    
 *Note: Although there are some internal protective measures to prevent transactions from crossing
@@ -121,7 +119,7 @@ Do not forget `--rpcaddr 0.0.0.0`, if you want to access RPC from other containe
 
 ### Programatically interfacing sero nodes
 
-As a developer, sooner rather than later you'll want to start interacting with sero and the Ethereum
+As a developer, sooner rather than later you'll want to start interacting with sero and the Sero
 network via your own programs and not manually through the console. To aid this, sero has built-in
 support for a JSON-RPC based APIs ([standard APIs](https://github.com/ethereum/wiki/wiki/JSON-RPC) and
 [sero specific APIs](https://github.com/sero-cash/go-sero/wiki/Management-APIs)). These can be
@@ -152,7 +150,7 @@ via HTTP, WS or IPC to a sero node configured with the above flags and you'll ne
 on all transports. You can reuse the same connection for multiple requests!
 
 **Note: Please understand the security implications of opening up an HTTP/WS based transport before
-doing so! Hackers on the internet are actively trying to subvert Ethereum nodes with exposed APIs!
+doing so! Hackers on the internet are actively trying to subvert Sero nodes with exposed APIs!
 Further, all browser tabs can access locally running webservers, so malicious webpages could try to
 subvert locally available APIs!**
 
