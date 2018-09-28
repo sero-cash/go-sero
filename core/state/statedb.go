@@ -383,7 +383,7 @@ func (self *StateDB) Empty(addr common.Address) bool {
 func (self *StateDB) GetBalance(addr common.Address, coinName string) *big.Int {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		return stateObject.Balance(self.db, coinName)
+		return stateObject.Balance(coinName)
 	}
 	return common.Big0
 }
@@ -391,7 +391,7 @@ func (self *StateDB) GetBalance(addr common.Address, coinName string) *big.Int {
 func (self *StateDB) Balances(addr common.Address) map[string]*big.Int {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		return stateObject.Balances(self.db)
+		return stateObject.Balances()
 	}
 	return map[string]*big.Int{}
 }
@@ -467,7 +467,7 @@ func (self *StateDB) HasSuicided(addr common.Address) bool {
 func (self *StateDB) AddBalance(addr common.Address, coinName string, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.AddBalance(self.db, coinName, amount)
+		stateObject.AddBalance(coinName, amount)
 	}
 }
 
@@ -475,14 +475,14 @@ func (self *StateDB) AddBalance(addr common.Address, coinName string, amount *bi
 func (self *StateDB) SubBalance(addr common.Address, coinName string, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SubBalance(self.db, coinName, amount)
+		stateObject.SubBalance(coinName, amount)
 	}
 }
 
 func (self *StateDB) SetBalance(addr common.Address, coinName string, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SetBalance(self.db, coinName, amount)
+		stateObject.SetBalance(coinName, amount)
 	}
 }
 
@@ -512,25 +512,23 @@ func (self *StateDB) Suicide(addr common.Address, toAddr common.Address) bool {
 	}
 	if self.IsContract(toAddr) {
 		toStateObject := self.getStateObject(addr)
-		for _, coinName := range stateObject.data.Currencys {
-			value := new(big.Int).Set(stateObject.Balance(self.db, coinName))
+		for coinName, book := range stateObject.data.bookMap {
 			self.journal.append(suicideChange{
 				account:     &addr,
 				prev:        stateObject.suicided,
-				prevbalance: value,
+				prevbalance: new(big.Int).Set(book.Balance),
 			})
-			toStateObject.AddBalance(self.db, coinName, value)
+			toStateObject.AddBalance(coinName, book.Balance)
 		}
 	} else {
-		for _, coinName := range stateObject.data.Currencys {
-			currency := common.BytesToHash(common.LeftPadBytes([]byte(coinName), 32))
-			value := new(big.Int).Set(stateObject.Balance(self.db, coinName))
+		for coinName, book := range stateObject.data.bookMap {
 			self.journal.append(suicideChange{
 				account:     &addr,
 				prev:        stateObject.suicided,
-				prevbalance: value,
+				prevbalance: new(big.Int).Set(book.Balance),
 			})
-			self.GetZState().AddTxOut(toAddr, value, currency.HashToUint256())
+			currency := common.BytesToHash(common.LeftPadBytes([]byte(coinName), 32))
+			self.GetZState().AddTxOut(toAddr, book.Balance, currency.HashToUint256())
 		}
 	}
 	stateObject.markSuicided()

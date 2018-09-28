@@ -95,6 +95,11 @@ func (s *stateObject) empty() bool {
 	return false
 }
 
+type Book struct {
+	Balance  *big.Int
+	Currency string
+}
+
 // Account is the Ethereum consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account struct {
@@ -102,8 +107,8 @@ type Account struct {
 	//Balance   *big.Int
 	Root     common.Hash // merkle root of the storage trie
 	CodeHash []byte
-
-	Currencys []string
+	Books    []*Book
+	bookMap  map[string]*Book
 }
 
 // newObject creates a state object.
@@ -111,6 +116,14 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 
 	if data.CodeHash == nil {
 		data.CodeHash = emptyCodeHash
+	}
+
+	if data.bookMap == nil {
+		data.bookMap = map[string]*Book{}
+	}
+
+	for _, book := range data.Books {
+		data.bookMap[book.Currency] = book
 	}
 	return &stateObject{
 		db:            db,
@@ -236,44 +249,39 @@ func (self *stateObject) CommitTrie(db Database) error {
 
 // AddBalance removes amount from c's balance.
 // It is used to add funds to the destination account of a transfer.
-func (self *stateObject) AddBalance(db Database, coinName string, amount *big.Int) {
+func (self *stateObject) AddBalance(coinName string, amount *big.Int) {
 	if amount.Sign() == 0 {
 		return
 	}
 
-	value := self.Balance(db, coinName)
-	value = value.Add(value, amount)
-	self.SetBalance(db, coinName, value)
+	self.SetBalance(coinName, new(big.Int).Add(self.Balance(coinName), amount))
 }
 
 // SubBalance removes amount from c's balance.
 // It is used to remove funds from the origin account of a transfer.
-func (self *stateObject) SubBalance(db Database, coinName string, amount *big.Int) {
+func (self *stateObject) SubBalance(coinName string, amount *big.Int) {
 	if amount.Sign() == 0 {
 		return
 	}
 
-	value := self.Balance(db, coinName)
-	value = value.Sub(value, amount)
-	self.SetBalance(db, coinName, value)
+	self.SetBalance(coinName, new(big.Int).Sub(self.Balance(coinName), amount))
 }
 
-func (self *stateObject) SetBalance(db Database, coinName string, amount *big.Int) {
-	coinName = strings.ToLower(coinName)
-	currency := common.BytesToHash(common.LeftPadBytes([]byte(coinName), 32))
-	prevalue := self.GetState(db, currency)
-	self.db.journal.append(storageChange{
+func (self *stateObject) SetBalance(coinName string, amount *big.Int) {
+	self.db.journal.append(balanceChange{
 		account:  &self.address,
-		key:      currency,
-		prevalue: prevalue,
+		currency: coinName,
+		prev:     new(big.Int).Set(self.Balance(coinName)),
 	})
-	self.setState(currency, common.BigToHash(amount))
-	for _, v := range self.data.Currencys {
-		if v == coinName {
-			return
-		}
+
+	coinName = strings.ToLower(coinName)
+	if book, ok := self.data.bookMap[coinName]; ok {
+		book.Balance = amount
+	} else {
+		book := &Book{amount, coinName}
+		self.data.Books = append(self.data.Books, book)
+		self.data.bookMap[coinName] = book
 	}
-	self.data.Currencys = append(self.data.Currencys, coinName)
 }
 
 // Return the gas back to the origin. Used by the Virtual machine or Closures
@@ -338,16 +346,18 @@ func (self *stateObject) CodeHash() []byte {
 	return self.data.CodeHash
 }
 
-func (self *stateObject) Balance(db Database, coinName string) *big.Int {
+func (self *stateObject) Balance(coinName string) *big.Int {
 	coinName = strings.ToLower(coinName)
-	currency := common.BytesToHash(common.LeftPadBytes([]byte(coinName), 32))
-	return new(big.Int).SetBytes(self.GetState(db, currency).Bytes())
+	if book, ok := self.data.bookMap[coinName]; ok {
+		return book.Balance
+	}
+	return new(big.Int)
 }
 
-func (self *stateObject) Balances(db Database) map[string]*big.Int {
+func (self *stateObject) Balances() map[string]*big.Int {
 	result := map[string]*big.Int{}
-	for _, currency := range self.data.Currencys {
-		result[currency] = self.Balance(db, currency)
+	for currency, book := range self.data.bookMap {
+		result[currency] = book.Balance
 	}
 	return result
 }

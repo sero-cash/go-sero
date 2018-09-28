@@ -22,7 +22,6 @@ import (
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/bloombits"
 	"github.com/sero-cash/go-sero/core/rawdb"
@@ -134,7 +133,6 @@ func (b *EthAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 }
 
 func (b *EthAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
-	state.SetBalance(msg.From(), "sero", math.MaxBig256)
 	vmError := func() error { return nil }
 
 	context := core.NewEVMContext(msg, header, b.eth.BlockChain(), nil)

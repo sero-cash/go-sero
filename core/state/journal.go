@@ -153,7 +153,7 @@ func (ch suicideChange) revert(s *StateDB) {
 	obj := s.getStateObject(*ch.account)
 	if obj != nil {
 		obj.suicided = ch.prev
-		obj.SetBalance(s.db, ch.currency, ch.prevbalance)
+		obj.SetBalance(ch.currency, ch.prevbalance)
 	}
 }
 
@@ -169,7 +169,7 @@ func (ch touchChange) dirtied() *common.Address {
 }
 
 func (ch balanceChange) revert(s *StateDB) {
-	s.getStateObject(*ch.account).SetBalance(s.db, ch.currency, ch.prev)
+	s.getStateObject(*ch.account).SetBalance(ch.currency, ch.prev)
 }
 
 func (ch balanceChange) dirtied() *common.Address {

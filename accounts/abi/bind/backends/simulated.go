@@ -273,7 +273,7 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call sero.CallMsg, 
 	}
 	// Set infinite balance to the fake caller account.
 	from := statedb.GetOrNewStateObject(call.From)
-	from.SetBalance(statedb.Database(), "sero", math.MaxBig256)
+	from.SetBalance("sero", math.MaxBig256)
 	// Execute the call.
 	msg := callmsg{call}
 
