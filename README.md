@@ -174,7 +174,7 @@ $ bootnode --genkey=boot.key
 $ bootnode --nodekey=boot.key
 ```
 
-With the bootnode online, it will display an [`snode` URL](https://github.com/ethereum/wiki/wiki/enode-url-format)
+With the bootnode online, it will display an [`snode` URL](https://github.com/sero-cash/go-sero/wiki/snode-url-format)
 that other nodes can use to connect to it and exchange peer information. Make sure to replace the
 displayed IP address information (most probably `[::]`) with your externally accessible IP to get the
 actual `snode` URL.
@@ -197,10 +197,8 @@ need to configure a miner to process transactions and create new blocks for you.
 
 #### Running a private miner
 
-Mining on the public Sero network is a complex task as it's only feasible using GPUs, requiring
-an OpenCL or CUDA enabled `ethminer` instance. For information on such a setup, please consult the
-[EtherMining subreddit](https://www.reddit.com/r/EtherMining/) and the [Genoil miner](https://github.com/Genoil/cpp-ethereum)
-repository.
+Mining on the public Sero network need apply license before hand.
+
 
 In a private network setting however, a single CPU miner instance is more than enough for practical
 purposes as it can produce a stable stream of blocks at the correct intervals without needing heavy
@@ -210,6 +208,8 @@ instance for mining, run it with all your usual flags, extended by:
 ```
 $ gero <usual-flags> --mine --minerthreads=1 --serobase=2S4kr7ZHFmgue2kLLngtWnAuHMQgV6jyv34SedvHifm1h3oomx59MEqfEmtnw3mCLnSA2FDojgjTA1WWydxHkUUt
 ```
+There is a script help beginner to create account and start mining. 
+[`setup account and start mine` URL](https://github.com/sero-cash/go-sero/wiki/start-mine)
 
 Which will start mining blocks and transactions on a single CPU thread, crediting all proceedings to
 the account specified by `--serobase`. You can further tune the mining by changing the default gas
