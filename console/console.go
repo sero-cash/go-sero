@@ -137,7 +137,7 @@ func (c *Console) init(preload []string) error {
 	if err != nil {
 		return fmt.Errorf("api modules: %v", err)
 	}
-	flatten := "var ser = web3.ser; var personal = web3.personal; "
+	flatten := "var sero = web3.sero; var personal = web3.personal; "
 	for api := range apis {
 		if api == "web3" {
 			continue // manually mapped or ignore
@@ -189,6 +189,18 @@ func (c *Console) init(preload []string) error {
 			obj.Set("newAccount", bridge.NewAccount)
 			obj.Set("sign", bridge.Sign)
 		}
+
+		sero, err := c.jsre.Get("sero")
+		if err != nil {
+			return err
+		}
+
+		if obj := sero.Object(); obj != nil {
+			if _, err = c.jsre.Run(`jeth.sendTransaction = sero.sendTransaction;`); err != nil {
+				return fmt.Errorf("personal.sign: %v", err)
+			}
+			obj.Set("sendTransaction", bridge.SendTransaction)
+		}
 	}
 	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.
 	admin, err := c.jsre.Get("admin")
@@ -200,6 +212,7 @@ func (c *Console) init(preload []string) error {
 		obj.Set("sleep", bridge.Sleep)
 		obj.Set("clearHistory", c.clearHistory)
 	}
+
 	// Preload any JavaScript files before starting the console
 	for _, path := range preload {
 		if err := c.jsre.Exec(path); err != nil {
@@ -287,7 +300,7 @@ func (c *Console) Welcome() {
 		modules := make([]string, 0, len(apis))
 		for api, version := range apis {
 			if api == "sero" {
-				modules = append(modules, fmt.Sprintf("%s:%s", "ser", version))
+				modules = append(modules, fmt.Sprintf("%s:%s", "sero", version))
 			} else {
 				modules = append(modules, fmt.Sprintf("%s:%s", api, version))
 			}

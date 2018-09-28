@@ -20,8 +20,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"strings"
 	"time"
+
+	"github.com/gosuri/uiprogress"
 
 	"github.com/robertkrimen/otto"
 	"github.com/sero-cash/go-sero/log"
@@ -75,6 +78,7 @@ func (b *bridge) NewAccount(call otto.FunctionCall) (response otto.Value) {
 	default:
 		throwJSException("expected 0 or 1 string argument")
 	}
+
 	// Password acquired, execute the call and return
 	ret, err := call.Otto.Call("jeth.newAccount", nil, password)
 	if err != nil {
@@ -161,6 +165,39 @@ func (b *bridge) Sign(call otto.FunctionCall) (response otto.Value) {
 	if err != nil {
 		throwJSException(err.Error())
 	}
+	return val
+}
+
+func (b *bridge) SendTransaction(call otto.FunctionCall) (response otto.Value) {
+	var (
+		tx = call.Argument(0)
+	)
+	if !tx.IsObject() {
+		throwJSException("first argument must be the tx to send")
+	}
+
+	finish := make(chan struct{})
+	progress := uiprogress.New()
+	bar := progress.AddBar(2).PrependElapsed()
+	progress.Start()
+	go progressBar(bar, finish)
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.sendTransaction", nil, tx)
+
+	//time.Sleep(10 * time.Second)
+	if err != nil {
+
+		throwJSException(err.Error())
+	}
+	if err != nil {
+		progress.Stop()
+		finish <- struct{}{}
+		throwJSException(err.Error())
+	}
+	bar.Set(bar.Total)
+	progress.Stop()
+	finish <- struct{}{}
+
 	return val
 }
 
@@ -311,4 +348,27 @@ func throwJSException(msg interface{}) otto.Value {
 		log.Error("Failed to serialize JavaScript exception", "exception", msg, "err", err)
 	}
 	panic(val)
+}
+
+func progressBar(bar *uiprogress.Bar, finish chan struct{}) {
+	t := time.NewTimer(time.Duration(uint64(bar.Total)) * 2 * time.Second)
+	defer t.Stop()
+	for {
+		select {
+		case <-finish:
+			bar.Set(bar.Total)
+			//fmt.Printf("finish")
+			break
+		case <-t.C:
+			bar.Total = bar.Total * 2
+			t.Reset(time.Duration(uint64(bar.Total)) * 2 * time.Second)
+		default:
+			time.Sleep(time.Millisecond * time.Duration(rand.Intn(500)))
+			enable := bar.Incr()
+			if !enable {
+				break
+			}
+		}
+
+	}
 }
