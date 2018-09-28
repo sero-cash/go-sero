@@ -321,7 +321,7 @@ func (self *worker) wait() {
 
 			// Insert the block into the set of pending ones to wait for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
-			log.Info(fmt.Sprintf("gg %v, number = %v, txs = %v", time.Since(work.createdAt), block.NumberU64(), len(block.Body().Transactions)))
+			log.Info(fmt.Sprintf("mined new block done in %v, number = %v, txs = %v", time.Since(work.createdAt), block.NumberU64(), len(block.Body().Transactions)))
 			//fmt.Printf("------------------------------------\n")
 			//stateDB, _ := self.chain.StateAt(self.chain.CurrentBlock().Root())
 			//for _, seed := range work.state.GetSeeds() {

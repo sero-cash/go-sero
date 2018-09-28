@@ -195,10 +195,12 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 
 	// Verify that the gas limit remains within allowed bounds
 	diff := int64(parent.GasLimit) - int64(header.GasLimit)
+	divisor := uint64(1024)
 	if diff < 0 {
 		diff *= -1
+		divisor = uint64(128)
 	}
-	limit := parent.GasLimit / params.GasLimitBoundDivisor
+	limit := parent.GasLimit / divisor
 
 	if uint64(diff) >= limit || header.GasLimit < params.MinGasLimit {
 		return fmt.Errorf("invalid gas limit: have %d, want %d += %d", header.GasLimit, parent.GasLimit, limit)
