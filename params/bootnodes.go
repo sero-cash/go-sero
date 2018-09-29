@@ -34,6 +34,8 @@ var AlphanetBootnodes = []string{
 
 var DevBootnodes = []string{
 	"snode://ea30c41faf986f827ac5c6436e84645453eb0fd7974708b6172a49adfd87515e1c9043ab6e759da2678055eb296dded91cfd7ecbb90db0465dd50320eefd0a07@192.168.15.220:60609",
+	"snode://91d9d0c77947d376f66c2a60146b235ab3aab39116bfae238d9c2aabea318b15b5df0154fc5ff82c855b09bbadd362fae6dc8533729bdc6345d3c3b566ca7c02@192.168.15.165:60609",
+	"snode://63aa57c5f311a1e848f3b77b16ec00f9afe2456f171af8f4838a7211688bb9c1cc836aa20852c8aef3487b988e4021594eb3aa03a604b868482a6c764bf46fe5@192.168.15.169:60609",
 }
 
 // DiscoveryV5Bootnodes are the enode URLs of the P2P bootstrap nodes for the
