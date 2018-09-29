@@ -333,7 +333,7 @@ if [ "${result}" == "-1" ]; then
     verifyServerPort $SERVERPORT SERVERPORT
     verifyServerPort $RPCPORT RPCPORT
     set -o xtrace
-    nohup ./bin/gero   --datadir=${DATADIR} --rpc --rpcport ${RPCPORT}  --port ${SERVERPORT} --rpccorsdomain "*" > gero.log 2>&1 &
+    nohup ./bin/gero   --datadir=${DATADIR} --rpc --rpcport ${RPCPORT}  --port ${SERVERPORT} --rpccorsdomain "*" &> ~/.log/gero.log &
     set +x
     sleep 30
 fi
