@@ -50,7 +50,7 @@ var (
 			utils.DataDirFlag,
 			utils.CacheFlag,
 			utils.LightModeFlag,
-			utils.GCModeFlag,
+			//utils.GCModeFlag,
 			utils.CacheDatabaseFlag,
 			utils.CacheGCFlag,
 		},

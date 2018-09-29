@@ -84,7 +84,7 @@ var (
 		utils.TxPoolGlobalQueueFlag,
 		utils.TxPoolLifetimeFlag,
 		utils.SyncModeFlag,
-		utils.GCModeFlag,
+		//utils.GCModeFlag,
 		utils.LightPeersFlag,
 		utils.LightKDFFlag,
 		utils.CacheFlag,
