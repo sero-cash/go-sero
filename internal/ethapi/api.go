@@ -414,45 +414,6 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 	return submitTransaction(ctx, s.b, signed)
 }
 
-// SignTransaction will create a transaction from the given arguments and
-// tries to sign it with the key associated with args.To. If the given passwd isn't
-// able to decrypt the key it fails. The transaction is returned in RLP-form, not broadcast
-// to other nodes
-func (s *PrivateAccountAPI) EncrptyTransaction(ctx context.Context, args SendTxArgs, passwd string) (*EncryptTransactionResult, error) {
-	// No need to obtain the noncelock mutex, since we won't be sending this
-	// tx into the transaction pool, but right back to the user
-	if args.Gas == nil {
-		return nil, fmt.Errorf("gas not specified")
-	}
-	if args.GasPrice == nil {
-		return nil, fmt.Errorf("gasPrice not specified")
-	}
-	/*if args.Nonce == nil {
-		return nil, fmt.Errorf("nonce not specified")
-	}*/
-	signed, err := s.signTransaction(ctx, args, passwd)
-	if err != nil {
-		return nil, err
-	}
-	data, err := rlp.EncodeToBytes(signed)
-	if err != nil {
-		return nil, err
-	}
-	return &EncryptTransactionResult{data, signed}, nil
-}
-
-// signHash is a helper function that calculates a hash for the given message that can be
-// safely used to calculate a signature from.
-//
-// The hash is calulcated as
-//   keccak256("\x19Ethereum Signed Message:\n"${message length}${message}).
-//
-// This gives context to the signed message and prevents signing of transactions.
-func signHash(data []byte) []byte {
-	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
-	return crypto.Keccak256([]byte(msg))
-}
-
 // SignAndSendTransaction was renamed to SendTransaction. This method is deprecated
 // and will be removed in the future. It primary goal is to give clients time to update.
 func (s *PrivateAccountAPI) SignAndSendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
@@ -1306,15 +1267,6 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	return submitTransaction(ctx, s.b, signed)
 }
 
-// SendRawTransaction will add the signed transaction to the transaction pool.
-// The sender is responsible for signing the transaction and using the correct nonce.
-func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
-	tx := new(types.Transaction)
-	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
-		return common.Hash{}, err
-	}
-	return submitTransaction(ctx, s.b, tx)
-}
 
 // EncryptTransactionResult represents a RLP encoded signed transaction.
 type EncryptTransactionResult struct {

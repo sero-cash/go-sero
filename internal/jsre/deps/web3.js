@@ -2683,7 +2683,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
     },{"./base58":17,"./sha3.js":20,"bignumber.js":"bignumber.js","utf8":85}],22:[function(require,module,exports){
         module.exports={
-            "version": "0.20.6"
+            "version": "0.0.1"
         }
 
     },{}],23:[function(require,module,exports){
@@ -5791,32 +5791,11 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 outputFormatter: utils.toDecimal
             });
 
-            var sendRawTransaction = new Method({
-                name: 'sendRawTransaction',
-                call: 'sero_sendRawTransaction',
-                params: 1,
-                inputFormatter: [null]
-            });
-
             var sendTransaction = new Method({
                 name: 'sendTransaction',
                 call: 'sero_sendTransaction',
                 params: 1,
                 inputFormatter: [formatters.inputTransactionFormatter]
-            });
-
-            var encryptTransaction = new Method({
-                name: 'EncryptTransaction',
-                call: 'sero_encryptTransaction',
-                params: 1,
-                inputFormatter: [formatters.inputTransactionFormatter]
-            });
-
-            var sign = new Method({
-                name: 'sign',
-                call: 'sero_sign',
-                params: 2,
-                inputFormatter: [formatters.inputAddressFormatter, null]
             });
 
             var call = new Method({
@@ -5880,10 +5859,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 getTransactionCount,
                 call,
                 estimateGas,
-                sendRawTransaction,
-                encryptTransaction,
                 sendTransaction,
-                sign,
                 compileSolidity,
                 compileLLL,
                 compileSerpent,
