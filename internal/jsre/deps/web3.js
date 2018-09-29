@@ -2041,15 +2041,15 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         var BigNumber = require('bignumber.js');
         var sha3 = require('./sha3.js');
         var utf8 = require('utf8');
-        var  base58 = require('./base58')
+        var base58 = require('./base58')
 
 
         var unitMap = {
-            'noether':      '0',
-            'ta':          '1',
-            'Ta':          '1',
-            'sero':         '1000000000',
-            'Sero':         '1000000000'
+            'noether': '0',
+            'ta': '1',
+            'Ta': '1',
+            'sero': '1000000000',
+            'Sero': '1000000000'
         };
 
         /**
@@ -2085,14 +2085,14 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {String} string in hex
          * @returns {String} ascii string representation of hex value
          */
-        var toUtf8 = function(hex) {
+        var toUtf8 = function (hex) {
 // Find termination
             var str = "";
             var i = 0, l = hex.length;
             if (hex.substring(0, 2) === '0x') {
                 i = 2;
             }
-            for (; i < l; i+=2) {
+            for (; i < l; i += 2) {
                 var code = parseInt(hex.substr(i, 2), 16);
                 if (code === 0)
                     break;
@@ -2109,14 +2109,14 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {String} string in hex
          * @returns {String} ascii string representation of hex value
          */
-        var toAscii = function(hex) {
+        var toAscii = function (hex) {
 // Find termination
             var str = "";
             var i = 0, l = hex.length;
             if (hex.substring(0, 2) === '0x') {
                 i = 2;
             }
-            for (; i < l; i+=2) {
+            for (; i < l; i += 2) {
                 var code = parseInt(hex.substr(i, 2), 16);
                 str += String.fromCharCode(code);
             }
@@ -2132,10 +2132,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {Boolean} allowZero to convert code point zero to 00 instead of end of string
          * @returns {String} hex representation of input string
          */
-        var fromUtf8 = function(str, allowZero) {
+        var fromUtf8 = function (str, allowZero) {
             str = utf8.encode(str);
             var hex = "";
-            for(var i = 0; i < str.length; i++) {
+            for (var i = 0; i < str.length; i++) {
                 var code = str.charCodeAt(i);
                 if (code === 0) {
                     if (allowZero) {
@@ -2160,9 +2160,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {Number} optional padding
          * @returns {String} hex representation of input string
          */
-        var fromAscii = function(str) {
+        var fromAscii = function (str) {
             var hex = "";
-            for(var i = 0; i < str.length; i++) {
+            for (var i = 0; i < str.length; i++) {
                 var code = str.charCodeAt(i);
                 var n = code.toString(16);
                 hex += n.length < 2 ? '0' + n : n;
@@ -2183,7 +2183,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 return json.name;
             }
 
-            var typeName = json.inputs.map(function(i){return i.type; }).join();
+            var typeName = json.inputs.map(function (i) {
+                return i.type;
+            }).join();
             return json.name + '(' + typeName + ')';
         };
 
@@ -2263,10 +2265,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             if (isString(val)) {
                 if (val.indexOf('-0x') === 0)
                     return fromDecimal(val);
-                else if(val.indexOf('0x') === 0)
+                else if (val.indexOf('0x') === 0)
                     return val;
                 else if (!isFinite(val))
-                    return fromUtf8(val,1);
+                    return fromUtf8(val, 1);
             }
 
             return fromDecimal(val);
@@ -2281,14 +2283,14 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {Array} bytes
          * @return {String} the hex string
          */
-        var bytesToHex = function(bytes) {
+        var bytesToHex = function (bytes) {
             for (var hex = [], i = 0; i < bytes.length; i++) {
                 /* jshint ignore:start */
                 hex.push((bytes[i] >>> 4).toString(16));
                 hex.push((bytes[i] & 0xF).toString(16));
                 /* jshint ignore:end */
             }
-            return '0x'+ hex.join("");
+            return '0x' + hex.join("");
         };
 
         /**
@@ -2298,9 +2300,20 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {Array} bytes
          * @return {String} the base58 string
          */
-        var bytesToBase58 = function(bytes) {
+        var bytesToBase58 = function (bytes) {
             return base58.encode(bytes);
         };
+
+        /**
+         * Convert a base58 string to a byte array
+         *
+         * @method base58ToBytes
+         * @param {String} the base58 string
+         * @return {Array} bytes
+         */
+        var base58ToBytes = function (bs58) {
+            return base58.decode(bs58);
+        }
 
         /**
          * Check if string is HEX, requires a 0x in front
@@ -2322,10 +2335,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {string} hex
          * @return {Array} the byte array
          */
-        var hexToBytes = function(hex) {
+        var hexToBytes = function (hex) {
             hex = hex.toString(16);
 
-            hex = hex.replace(/^0x/i,'');
+            hex = hex.replace(/^0x/i, '');
 
             for (var bytes = [], c = 0; c < hex.length; c += 2)
                 bytes.push(parseInt(hex.substr(c, 2), 16));
@@ -2333,9 +2346,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
 
-
         /**
-         * Returns value of unit in Wei
+         * Returns value of unit in Ta
          *
          * @method getValueOfUnit
          * @param {String} unit the unit to convert to, default ether
@@ -2352,7 +2364,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
         /**
-         * Takes a number of wei and converts it to any other ether unit.
+         * Takes a number of Ta and converts it to any other sero unit.
          *
          *
          * @method fromTa
@@ -2360,20 +2372,20 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {String} unit the unit to convert to, default ether
          * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
          */
-        var fromTa = function(number, unit) {
+        var fromTa = function (number, unit) {
             var returnValue = toBigNumber(number).dividedBy(getValueOfUnit(unit));
 
             return isBigNumber(number) ? returnValue : returnValue.toString(10);
         };
 
         /**
-         * Takes a number of a unit and converts it to wei.
+         * Takes a number of a unit and converts it to ta.
          * @method toTa
          * @param {Number|String|BigNumber} number can be a number, number string or a HEX of a decimal
          * @param {String} unit the unit to convert from, default ether
          * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
          */
-        var toTa = function(number, unit) {
+        var toTa = function (number, unit) {
             var returnValue = toBigNumber(number).times(getValueOfUnit(unit));
 
             return isBigNumber(number) ? returnValue : returnValue.toString(10);
@@ -2386,14 +2398,14 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {Number|String|BigNumber} a number, string, HEX string or BigNumber
          * @return {BigNumber} BigNumber
          */
-        var toBigNumber = function(number) {
+        var toBigNumber = function (number) {
             /*jshint maxcomplexity:5 */
             number = number || 0;
             if (isBigNumber(number))
                 return number;
 
             if (isString(number) && (number.indexOf('0x') === 0 || number.indexOf('-0x') === 0)) {
-                return new BigNumber(number.replace('0x',''), 16);
+                return new BigNumber(number.replace('0x', ''), 16);
             }
 
             return new BigNumber(number.toString(10), 10);
@@ -2418,11 +2430,20 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * Checks if the given string is strictly an address
          *
          * @method isStrictAddress
-         * @param {String} address the given HEX adress
+         * @param {String} address the given base58 adress
          * @return {Boolean}
          */
         var isStrictAddress = function (address) {
-            return /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{84,103}$/i.test(address);
+
+            if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{84,103}$/i.test(address)) {
+                bytes = base58ToBytes(address)
+                if (bytes.length !== 64) {
+                    return false;
+                }
+                return true;
+            } else {
+                return false;
+            }
         };
 
         /**
@@ -2433,16 +2454,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @return {Boolean}
          */
         var isAddress = function (address) {
-            if (!/^(0x)?[0-9a-f]{40}$/i.test(address)) {
-                // check if it has the basic requirements of an address
-                return false;
-            } else if (/^(0x)?[0-9a-f]{40}$/.test(address) || /^(0x)?[0-9A-F]{40}$/.test(address)) {
-                // If it's all small caps or all all caps, return true
-                return true;
-            } else {
-                // Otherwise check each case
-                return isChecksumAddress(address);
-            }
+            return isStrictAddress(address)
         };
 
         /**
@@ -2454,10 +2466,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          */
         var isChecksumAddress = function (address) {
             // Check each case
-            address = address.replace('0x','');
+            address = address.replace('0x', '');
             var addressHash = sha3(address.toLowerCase());
 
-            for (var i = 0; i < 40; i++ ) {
+            for (var i = 0; i < 40; i++) {
                 // the nth letter should be uppercase if the nth digit of casemap is 1
                 if ((parseInt(addressHash[i], 16) > 7 && address[i].toUpperCase() !== address[i]) || (parseInt(addressHash[i], 16) <= 7 && address[i].toLowerCase() !== address[i])) {
                     return false;
@@ -2465,7 +2477,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }
             return true;
         };
-
 
 
         /**
@@ -2478,11 +2489,11 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         var toChecksumAddress = function (address) {
             if (typeof address === 'undefined') return '';
 
-            address = address.toLowerCase().replace('0x','');
+            address = address.toLowerCase().replace('0x', '');
             var addressHash = sha3(address);
             var checksumAddress = '0x';
 
-            for (var i = 0; i < address.length; i++ ) {
+            for (var i = 0; i < address.length; i++) {
                 // If ith character is 9 to f then make it uppercase
                 if (parseInt(addressHash[i], 16) > 7) {
                     checksumAddress += address[i].toUpperCase();
@@ -2666,7 +2677,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             bytesToHex: bytesToHex,
             hexToBytes: hexToBytes,
             bytesToBase58: bytesToBase58,
-            bytesToString:bytesToString,
+            base58ToBytes: base58ToBytes,
+            bytesToString: bytesToString,
         };
 
     },{"./base58":17,"./sha3.js":20,"bignumber.js":"bignumber.js","utf8":85}],22:[function(require,module,exports){
