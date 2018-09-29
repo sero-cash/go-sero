@@ -181,9 +181,9 @@ readingFromOutput(){
             LINEA_NO_WHITESPACE="$(echo -e "${lineA}" | tr -d '[:space:]')"
             stringLength ${LINEA_NO_WHITESPACE}
             length=$?
-            echo "trimed:$LINEA_NO_WHITESPACE==${length}"
+            # echo "trimed:$LINEA_NO_WHITESPACE==${length}"
             if [ $length == 1 -a "${LINEA_NO_WHITESPACE}" == ">" ]  ; then
-                echo "it is a hint" >&2
+             #    echo "it is a hint" >&2
                 continue 
             elif [ "$LINEA_NO_WHITESPACE" == '[]' ]; then
                 echo "NEWACCOUNT:" >./localio
@@ -192,14 +192,14 @@ readingFromOutput(){
                 exit -1
             fi
             if [[ "$lineA" == $PATTERN_NEW_PASSPHRASE ]]; then 
-                echo "wait for password:">&2
+              #  echo "wait for password:">&2
                 BEGIN_PASSWORD="true"
                 echo "BEGIN_PASSWORD:true" >./localio
                 #echo "now input ${PASSWORD} directlly"
                 #printf '%s\n' "${PASSWORD}" >/tmp/gero-input &
                 sleep 5
             elif [[ "$lineA" =~ ${PATTERN_NEW_REPEAT_PASSPHRASE} ]]; then  
-                echo "repeat password:">&2
+              #  echo "repeat password:">&2
                 REPEAT_PASSWORD="true" 
                 #echo "now repeat input ${PASSWORD} directlly"
                 echo "REPEAT_PASSWORD:${REPEAT_PASSWORD}" >./localio
@@ -231,12 +231,12 @@ checkOutputAndWorkNex() {
             if [ "$lineB" == "BEGIN_PASSWORD:true" ]; then
                 sleep 3
                 printf '%s\n' "${PASSWORD}" >/tmp/gero-input & 
-                echo "${PASSWORD}"
+              #  echo "${PASSWORD}"
                 echo "waiting for repeat password"
             elif [ "$lineB" == "REPEAT_PASSWORD:true" ]; then
                 sleep 3
                 printf '%s\n' "${PASSWORD}" >/tmp/gero-input & 
-                echo "${PASSWORD}"
+              #  echo "${PASSWORD}"
                 echo "waiting for account created"
             elif [[ "$lineB" == "NEWACCOUNT:"* ]]; then
                 sleep 3
