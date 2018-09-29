@@ -183,11 +183,6 @@ func (b *bridge) SendTransaction(call otto.FunctionCall) (response otto.Value) {
 	// Send the request to the backend and return
 	val, err := call.Otto.Call("jeth.sendTransaction", nil, tx)
 
-	//time.Sleep(10 * time.Second)
-	if err != nil {
-
-		throwJSException(err.Error())
-	}
 	if err != nil {
 		progress.Stop()
 		finish <- struct{}{}
