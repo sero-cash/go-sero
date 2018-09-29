@@ -7,7 +7,7 @@
 GEROCFG=~/.gerocfg
 DEFAULT_DATADIR=~/.datadir
 PATTERN_ATTACH_PROCESS="gero.*attach"
-PATTERN_MAIN_PROCESS="gero.*datadir"
+PATTERN_MAIN_PROCESS=".*gero.*datadir.*port.*"
 PATTERN_ACCOUNTS="\[*\]"
 PATTERN_QUERY_ACCOUNTS="ser.*accounts"
 PATTERN_NEW_ACCOUNTS="personal.*newAccounts()"
@@ -35,13 +35,16 @@ loadDefaultParams() {
    echo "export RPCPORT=8545" >> $GEROCFG 
 }
 killProcess() {
-    if [[ -z $1 ]]; then
+    if [[ -z $1  ]]; then
         echo "please input the process pattern to kill" 
     fi
-    if [ $(ps -ef | grep $1 | grep -v grep | awk '{print $2}'|wc -l) -gt 0 ]; then 
+    result=`ps -ef | grep "$1" | grep -v grep | awk '{print $2}'|wc -l`
+    echo "now there is $result process like:$1 are running"
+    if [ $result -gt 0  ]; then 
         echo "to kill process with pattern:$1"
         ps -ef | grep $1 | grep -v grep | awk '{print $2}' | xargs kill -9
     fi
+
 
 }
 readCfg()  { 
@@ -145,7 +148,6 @@ checkProcess(){
             * ) 
                 echo "the old process like:$1 will be stopped" >&2
                 killProcess "$1" >&2
-                pkill gero
                 sleep 15
                 echo "-1"
                 return 0;;
@@ -331,7 +333,7 @@ if [ "${result}" == "-1" ]; then
     verifyServerPort $SERVERPORT SERVERPORT
     verifyServerPort $RPCPORT RPCPORT
     set -o xtrace
-    nohup ./bin/gero --alpha --datadir=${DATADIR} --rpc --rpcport ${RPCPORT}  --port ${SERVERPORT} --rpccorsdomain "*" > gero.log 2>&1 &
+    nohup ./bin/gero   --datadir=${DATADIR} --rpc --rpcport ${RPCPORT}  --port ${SERVERPORT} --rpccorsdomain "*" > gero.log 2>&1 &
     set +x
     sleep 30
 fi
