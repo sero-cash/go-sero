@@ -1,6 +1,6 @@
 ## Go Sero
 
-Official golang implementation of the Ethereum protocol plus zeroknowledge based anonymous cash tech.
+ Anonymous cash tech based on Zeroknowledge Proof tech and Refacted Ethereum protocol using golang .
 
 
 
