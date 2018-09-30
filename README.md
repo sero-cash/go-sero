@@ -45,7 +45,7 @@ sero have 3 network options : alpha, dev, main(the main network will be online s
 
 it is choosed through gero startup options 
 
-```gero --alpho .... ``` will connect to Sero's alpha network, it is a testing network with public bootnodes and public
+```gero --alpha .... ``` will connect to Sero's alpha network, it is a testing network with public bootnodes and public
 miner member supported
 
 
