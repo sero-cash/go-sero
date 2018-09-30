@@ -69,7 +69,7 @@ To do so:
 $ gero --${NETWORK_OPTIONS} console
 ```
 
-**you are connecting sero main network if startup gero __without__ ${NETWORK_OPTIONS}, , it is not officially public**
+**You are connecting sero main network if startup gero __without__ ${NETWORK_OPTIONS}, it is not officially public**
 
 **online now, but it will be online soon**
 
@@ -117,7 +117,7 @@ separate the two networks and will not make any accounts available between them.
 ```
 $ gero --dev console
 ```
-with dev option, developer should config bootnode in local private network and develop new functions without affect 
+With dev option, developer should config bootnode in local private network and develop new functions without affect 
 
 outside Sero networks
 
