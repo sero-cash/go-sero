@@ -115,7 +115,16 @@ func createEmpty() (ret [DEPTH + 1]Leaf) {
 	return
 }
 
-var EmptyRoots = createEmpty()
+var emptyRoots [DEPTH + 1]Leaf
+var is_load bool
+
+func EmptyRoots() []Leaf {
+	if !is_load {
+		is_load = true
+		emptyRoots = createEmpty()
+	}
+	return emptyRoots[:]
+}
 
 func (t *Tree) IsComplete() bool {
 	return t.TempIsComplete(DEPTH)
@@ -245,7 +254,7 @@ func (pf *PathFiller) Next(depth uint) Leaf {
 		pf.Remove(e)
 		return e.Value.(Leaf)
 	} else {
-		return EmptyRoots[depth]
+		return EmptyRoots()[depth]
 	}
 }
 

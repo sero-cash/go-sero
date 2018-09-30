@@ -119,7 +119,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_zs [
 		wg.Add(1)
 
 		t_desc := desc
-		go func(params *genParams, desc_z *stx.Desc_Z, pre_desc *preTxDesc_Z) {
+		func(params *genParams, desc_z *stx.Desc_Z, pre_desc *preTxDesc_Z) {
 
 			gen_cache <- 0
 			defer func() {

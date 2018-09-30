@@ -31,7 +31,7 @@ import (
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/zero/zconfig"
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 
 	"github.com/elastic/gosigar"
 	"github.com/sero-cash/go-sero/accounts"
@@ -255,12 +255,12 @@ func gero(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
+	cpt.ZeroInit()
 
 	debug.Memsize.Add("node", stack)
 
 	// Start up the node itself
 	utils.StartNode(stack)
-	cpt.ZeroInit()
 
 	// Unlock any account specifically requested
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
