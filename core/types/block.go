@@ -173,7 +173,6 @@ type StorageBlock Block
 type extblock struct {
 	Header *Header
 	Txs    []*Transaction
-	Uncles []*Header
 }
 
 // [deprecated by sero/63]
@@ -181,7 +180,6 @@ type extblock struct {
 type storageblock struct {
 	Header *Header
 	Txs    []*Transaction
-	Uncles []*Header
 	TD     *big.Int
 }
 

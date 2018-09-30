@@ -157,35 +157,17 @@ var (
 		Usage: "Document Root for HTTPClient file scheme",
 		Value: DirectoryString{homeDir()},
 	}
-	FastSyncFlag = cli.BoolFlag{
-		Name:  "fast",
-		Usage: "Enable fast syncing through state downloads (replaced by --syncmode)",
-	}
-	LightModeFlag = cli.BoolFlag{
-		Name:  "light",
-		Usage: "Enable light client mode (replaced by --syncmode)",
-	}
 	defaultSyncMode = sero.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
 		Value: &defaultSyncMode,
 	}
-	//GCModeFlag = cli.StringFlag{
-	//	Name:  "gcmode",
-	//	Usage: `Blockchain garbage collection mode ("full", "archive")`,
-	//	Value: "full",
+	//LightPeersFlag = cli.IntFlag{
+	//	Name:  "lightpeers",
+	//	Usage: "Maximum number of LES client peers",
+	//	Value: sero.DefaultConfig.LightPeers,
 	//}
-	//LightServFlag = cli.IntFlag{
-	//	Name:  "lightserv",
-	//	Usage: "Maximum percentage of time allowed for serving LES requests (0-90)",
-	//	Value: 0,
-	//}
-	LightPeersFlag = cli.IntFlag{
-		Name:  "lightpeers",
-		Usage: "Maximum number of LES client peers",
-		Value: sero.DefaultConfig.LightPeers,
-	}
 	LightKDFFlag = cli.BoolFlag{
 		Name:  "lightkdf",
 		Usage: "Reduce key-derivation RAM & CPU usage at some expense of KDF strength",
@@ -813,37 +795,37 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setBootstrapNodes(ctx, cfg)
 	setBootstrapNodesV5(ctx, cfg)
 
-	lightClient := ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalString(SyncModeFlag.Name) == "light"
-	//lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
-	lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
-
-	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
-		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
-		//if lightServer && !ctx.GlobalIsSet(LightPeersFlag.Name) {
-		//	cfg.MaxPeers += lightPeers
-		//}
-	} else {
-		//if lightServer {
-		//	cfg.MaxPeers += lightPeers
-		//}
-		if lightClient && ctx.GlobalIsSet(LightPeersFlag.Name) && cfg.MaxPeers < lightPeers {
-			cfg.MaxPeers = lightPeers
-		}
-	}
-	//if !(lightClient || lightServer) {
-	if !(lightClient) {
-		lightPeers = 0
-	}
-	ethPeers := cfg.MaxPeers - lightPeers
-	if lightClient {
-		ethPeers = 0
-	}
-	log.Info("Maximum peer count", "ETH", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
+	//lightClient := ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalString(SyncModeFlag.Name) == "light"
+	////lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
+	//lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
+	//
+	//if ctx.GlobalIsSet(MaxPeersFlag.Name) {
+	//	cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
+	//	//if lightServer && !ctx.GlobalIsSet(LightPeersFlag.Name) {
+	//	//	cfg.MaxPeers += lightPeers
+	//	//}
+	//} else {
+	//	//if lightServer {
+	//	//	cfg.MaxPeers += lightPeers
+	//	//}
+	//	if lightClient && ctx.GlobalIsSet(LightPeersFlag.Name) && cfg.MaxPeers < lightPeers {
+	//		cfg.MaxPeers = lightPeers
+	//	}
+	//}
+	////if !(lightClient || lightServer) {
+	//if !(lightClient) {
+	//	lightPeers = 0
+	//}
+	//ethPeers := cfg.MaxPeers - lightPeers
+	//if lightClient {
+	//	ethPeers = 0
+	//}
+	//log.Info("Maximum peer count", "ETH", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
 
 	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
 	}
-	if ctx.GlobalIsSet(NoDiscoverFlag.Name) || lightClient {
+	if ctx.GlobalIsSet(NoDiscoverFlag.Name) {
 		cfg.NoDiscovery = true
 	}
 
@@ -851,7 +833,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	// unless it is explicitly disabled with --nodiscover note that explicitly specifying
 	// --v5disc overrides --nodiscover, in which case the later only disables v4 discovery
 	//forceV5Discovery := (lightClient || lightServer) && !ctx.GlobalBool(NoDiscoverFlag.Name)
-	forceV5Discovery := (lightClient) && !ctx.GlobalBool(NoDiscoverFlag.Name)
+	forceV5Discovery := !ctx.GlobalBool(NoDiscoverFlag.Name)
 	if ctx.GlobalIsSet(DiscoveryV5Flag.Name) {
 		cfg.DiscoveryV5 = ctx.GlobalBool(DiscoveryV5Flag.Name)
 	} else if forceV5Discovery {
@@ -994,7 +976,7 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	// Avoid conflicting network flags
 	checkExclusive(ctx, AlphanetFlag, DeveloperFlag)
-	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
+	//checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	setSerobase(ctx, ks, cfg)
@@ -1116,11 +1098,6 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) serodb.Database {
 		handles = makeDatabaseHandles()
 	)
 	name := "chaindata"
-	if ctx.GlobalBool(LightModeFlag.Name) {
-		//log.Error("lightchain is not supported")
-		Fatalf("lightchain is not supported")
-		//name = "lightchaindata"
-	}
 	chainDb, err := stack.OpenDatabase(name, cache, handles)
 	if err != nil {
 		Fatalf("Could not open database: %v", err)

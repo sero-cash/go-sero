@@ -253,7 +253,7 @@ func (s *Sero) APIs() []rpc.API {
 		{
 			Namespace: "sero",
 			Version:   "1.0",
-			Service:   NewPublicEthereumAPI(s),
+			Service:   NewPublicSeroAPI(s),
 			Public:    true,
 		}, {
 			Namespace: "sero",

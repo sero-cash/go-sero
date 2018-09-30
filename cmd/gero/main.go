@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/sero-cash/go-czero-import/cpt"
 	"math"
 	"os"
 	"runtime"
@@ -28,7 +29,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 	"gopkg.in/urfave/cli.v1"
@@ -85,7 +85,6 @@ var (
 		utils.TxPoolLifetimeFlag,
 		utils.SyncModeFlag,
 		//utils.GCModeFlag,
-		utils.LightPeersFlag,
 		utils.LightKDFFlag,
 		utils.CacheFlag,
 		utils.CacheDatabaseFlag,
@@ -161,7 +160,7 @@ func init() {
 		exportPreimagesCommand,
 		copydbCommand,
 		removedbCommand,
-		dumpCommand,
+		//dumpCommand,
 		// See monitorcmd.go:
 		monitorCommand,
 		// See accountcmd.go:
@@ -326,7 +325,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
 		// Mining only makes sense if a full Sero node is running
-		if ctx.GlobalBool(utils.LightModeFlag.Name) || ctx.GlobalString(utils.SyncModeFlag.Name) == "light" {
+		if ctx.GlobalString(utils.SyncModeFlag.Name) == "light" {
 			utils.Fatalf("Light clients do not support mining")
 		}
 		var sero *sero.Sero

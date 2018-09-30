@@ -75,10 +75,8 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.AlphanetFlag,
 			utils.DeveloperFlag,
 			utils.SyncModeFlag,
-			//utils.GCModeFlag,
 			utils.SeroStatsURLFlag,
 			utils.IdentityFlag,
-			utils.LightPeersFlag,
 			utils.LightKDFFlag,
 		},
 	},
@@ -206,13 +204,6 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.MetricsInfluxDBUsernameFlag,
 			utils.MetricsInfluxDBPasswordFlag,
 			utils.MetricsInfluxDBHostTagFlag,
-		},
-	},
-	{
-		Name: "DEPRECATED",
-		Flags: []cli.Flag{
-			utils.FastSyncFlag,
-			utils.LightModeFlag,
 		},
 	},
 	{

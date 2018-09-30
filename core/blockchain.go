@@ -20,6 +20,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -47,7 +48,6 @@ import (
 	"github.com/sero-cash/go-sero/trie"
 	stx "github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
-	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
@@ -1133,15 +1133,14 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		}
 		state, err := state.New(parent.Root(), bc.stateCache, parent.NumberU64())
 
-		seeds := []keys.Uint512{}
-		for _, w := range bc.accountManager.Wallets() {
-			seed := w.Accounts()[0].Tk
-			seeds = append(seeds, *seed.ToUint512())
+		if bc.accountManager != nil {
+			seeds := []keys.Uint512{}
+			for _, w := range bc.accountManager.Wallets() {
+				seed := w.Accounts()[0].Tk
+				seeds = append(seeds, *seed.ToUint512())
+			}
+			state.SetSeeds(seeds)
 		}
-		//if len(seeds) == 0 {
-		//	return i, events, coalescedLogs, fmt.Errorf("no seeds error")
-		//}
-		state.SetSeeds(seeds)
 
 		if err != nil {
 			return i, events, coalescedLogs, err

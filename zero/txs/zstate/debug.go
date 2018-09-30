@@ -56,11 +56,6 @@ func Debug_State0_addout_assert(state *State0, os *OutState0) {
 			} else {
 			}
 		}
-		log_el := tree.Logs[len(tree.Logs)-1]
-		log_leaf := log_el.ToUint256()
-		if *log_leaf != *leaf {
-			Debug_Weak_panic("")
-		}
 	}
 }
 

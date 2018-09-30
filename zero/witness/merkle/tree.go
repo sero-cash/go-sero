@@ -22,7 +22,6 @@ import (
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"github.com/sero-cash/go-sero/zero/zconfig"
 )
 
 //====================
@@ -95,7 +94,6 @@ type Tree struct {
 	Left  *Leaf `rlp:"nil"`
 	Right *Leaf `rlp:"nil"`
 	Pats  []Parent
-	Logs  []Leaf
 }
 
 func (t *Tree) Clone() (ret Tree) {
@@ -147,12 +145,6 @@ func (t *Tree) TempIsComplete(depth uint) bool {
 func (t *Tree) Append(l Leaf) {
 	if t.IsComplete() {
 		panic("tree is full")
-	}
-	if zconfig.Is_Dev() {
-		t.Logs = append(t.Logs, l)
-		if len(t.Logs) > 10 {
-			t.Logs = append(t.Logs[:0], t.Logs[1:]...)
-		}
 	}
 	if t.Left == nil {
 		t.Left = &l

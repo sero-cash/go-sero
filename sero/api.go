@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/rpc"
 	"io"
 	"math/big"
 	"os"
@@ -37,33 +38,32 @@ import (
 	"github.com/sero-cash/go-sero/miner"
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rlp"
-	"github.com/sero-cash/go-sero/rpc"
 	"github.com/sero-cash/go-sero/trie"
 )
 
-// PublicEthereumAPI provides an API to access Sero full node-related
+// PublicSeroAPI provides an API to access Sero full node-related
 // information.
-type PublicEthereumAPI struct {
+type PublicSeroAPI struct {
 	e *Sero
 }
 
-// NewPublicEthereumAPI creates a new Sero protocol API for full nodes.
-func NewPublicEthereumAPI(e *Sero) *PublicEthereumAPI {
-	return &PublicEthereumAPI{e}
+// NewPublicSeroAPI creates a new Sero protocol API for full nodes.
+func NewPublicSeroAPI(e *Sero) *PublicSeroAPI {
+	return &PublicSeroAPI{e}
 }
 
 // Serobase is the address that mining rewards will be send to
-func (api *PublicEthereumAPI) Serobase() (common.Address, error) {
+func (api *PublicSeroAPI) Serobase() (common.Address, error) {
 	return api.e.Serobase()
 }
 
 // Coinbase is the address that mining rewards will be send to (alias for Serobase)
-func (api *PublicEthereumAPI) Coinbase() (common.Address, error) {
+func (api *PublicSeroAPI) Coinbase() (common.Address, error) {
 	return api.Serobase()
 }
 
 // Hashrate returns the POW hashrate
-func (api *PublicEthereumAPI) Hashrate() hexutil.Uint64 {
+func (api *PublicSeroAPI) Hashrate() hexutil.Uint64 {
 	return hexutil.Uint64(api.e.Miner().HashRate())
 }
 
@@ -297,13 +297,13 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 // PublicDebugAPI is the collection of Sero full node APIs exposed
 // over the public debugging endpoint.
 type PublicDebugAPI struct {
-	eth *Sero
+	sero *Sero
 }
 
 // NewPublicDebugAPI creates a new API definition for the full node-
 // related public debug methods of the Sero service.
 func NewPublicDebugAPI(eth *Sero) *PublicDebugAPI {
-	return &PublicDebugAPI{eth: eth}
+	return &PublicDebugAPI{sero: eth}
 }
 
 // DumpBlock retrieves the entire state of the database at a given block.
@@ -312,19 +312,19 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 		// If we're dumping the pending state, we need to request
 		// both the pending block as well as the pending state from
 		// the miner and operate on those
-		_, stateDb := api.eth.miner.Pending()
+		_, stateDb := api.sero.miner.Pending()
 		return stateDb.RawDump(), nil
 	}
 	var block *types.Block
 	if blockNr == rpc.LatestBlockNumber {
-		block = api.eth.blockchain.CurrentBlock()
+		block = api.sero.blockchain.CurrentBlock()
 	} else {
-		block = api.eth.blockchain.GetBlockByNumber(uint64(blockNr))
+		block = api.sero.blockchain.GetBlockByNumber(uint64(blockNr))
 	}
 	if block == nil {
 		return state.Dump{}, fmt.Errorf("block #%d not found", blockNr)
 	}
-	stateDb, err := api.eth.BlockChain().StateAt(block.Root(), block.NumberU64())
+	stateDb, err := api.sero.BlockChain().StateAt(block.Root(), block.NumberU64())
 	if err != nil {
 		return state.Dump{}, err
 	}

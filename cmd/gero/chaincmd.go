@@ -17,7 +17,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"runtime"
@@ -29,8 +28,6 @@ import (
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/console"
 	"github.com/sero-cash/go-sero/core"
-	"github.com/sero-cash/go-sero/core/state"
-	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/event"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/sero/downloader"
@@ -49,7 +46,6 @@ var (
 		Flags: []cli.Flag{
 			utils.DataDirFlag,
 			utils.CacheFlag,
-			utils.LightModeFlag,
 			//utils.GCModeFlag,
 			utils.CacheDatabaseFlag,
 			utils.CacheGCFlag,
@@ -70,7 +66,6 @@ processing will proceed even if an individual RLP-file import failure occurs.`,
 		Flags: []cli.Flag{
 			utils.DataDirFlag,
 			utils.CacheFlag,
-			utils.LightModeFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -88,7 +83,6 @@ be gzipped.`,
 		Flags: []cli.Flag{
 			utils.DataDirFlag,
 			utils.CacheFlag,
-			utils.LightModeFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -102,7 +96,6 @@ be gzipped.`,
 		Flags: []cli.Flag{
 			utils.DataDirFlag,
 			utils.CacheFlag,
-			utils.LightModeFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -133,62 +126,61 @@ The first argument must be the directory containing the blockchain to download f
 		ArgsUsage: " ",
 		Flags: []cli.Flag{
 			utils.DataDirFlag,
-			utils.LightModeFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
 Remove blockchain and state databases`,
 	}
-	dumpCommand = cli.Command{
-		Action:    utils.MigrateFlags(dump),
-		Name:      "dump",
-		Usage:     "Dump a specific block from storage",
-		ArgsUsage: "[<blockHash> | <blockNum>]...",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
-			utils.CacheFlag,
-			utils.LightModeFlag,
-		},
-		Category: "BLOCKCHAIN COMMANDS",
-		Description: `
-The arguments are interpreted as block numbers or hashes.
-Use "ethereum dump 0" to dump the genesis block.`,
-	}
+
+//	dumpCommand = cli.Command{
+//		Action:    utils.MigrateFlags(dump),
+//		Name:      "dump",
+//		Usage:     "Dump a specific block from storage",
+//		ArgsUsage: "[<blockHash> | <blockNum>]...",
+//		Flags: []cli.Flag{
+//			utils.DataDirFlag,
+//			utils.CacheFlag,
+//		},
+//		Category: "BLOCKCHAIN COMMANDS",
+//		Description: `
+//The arguments are interpreted as block numbers or hashes.
+//Use "ethereum dump 0" to dump the genesis block.`,
+//	}
 )
 
 // initGenesis will initialise the given JSON format genesis file and writes it as
 // the zero'd block (i.e. genesis) or will fail hard if it can't succeed.
-func initGenesis(ctx *cli.Context) error {
-	// Make sure we have a valid genesis JSON
-	genesisPath := ctx.Args().First()
-	if len(genesisPath) == 0 {
-		utils.Fatalf("Must supply path to genesis JSON file")
-	}
-	file, err := os.Open(genesisPath)
-	if err != nil {
-		utils.Fatalf("Failed to read genesis file: %v", err)
-	}
-	defer file.Close()
-
-	genesis := new(core.Genesis)
-	if err := json.NewDecoder(file).Decode(genesis); err != nil {
-		utils.Fatalf("invalid genesis file: %v", err)
-	}
-	// Open an initialise both full and light databases
-	stack := makeFullNode(ctx)
-	for _, name := range []string{"chaindata", "lightchaindata"} {
-		chaindb, err := stack.OpenDatabase(name, 0, 0)
-		if err != nil {
-			utils.Fatalf("Failed to open database: %v", err)
-		}
-		_, hash, err := core.SetupGenesisBlock(chaindb, genesis)
-		if err != nil {
-			utils.Fatalf("Failed to write genesis block: %v", err)
-		}
-		log.Info("Successfully wrote genesis state", "database", name, "hash", hash)
-	}
-	return nil
-}
+//func initGenesis(ctx *cli.Context) error {
+//	// Make sure we have a valid genesis JSON
+//	genesisPath := ctx.Args().First()
+//	if len(genesisPath) == 0 {
+//		utils.Fatalf("Must supply path to genesis JSON file")
+//	}
+//	file, err := os.Open(genesisPath)
+//	if err != nil {
+//		utils.Fatalf("Failed to read genesis file: %v", err)
+//	}
+//	defer file.Close()
+//
+//	genesis := new(core.Genesis)
+//	if err := json.NewDecoder(file).Decode(genesis); err != nil {
+//		utils.Fatalf("invalid genesis file: %v", err)
+//	}
+//	// Open an initialise both full and light databases
+//	stack := makeFullNode(ctx)
+//	for _, name := range []string{"chaindata"} {
+//		chaindb, err := stack.OpenDatabase(name, 0, 0)
+//		if err != nil {
+//			utils.Fatalf("Failed to open database: %v", err)
+//		}
+//		_, hash, err := core.SetupGenesisBlock(chaindb, genesis)
+//		if err != nil {
+//			utils.Fatalf("Failed to write genesis block: %v", err)
+//		}
+//		log.Info("Successfully wrote genesis state", "database", name, "hash", hash)
+//	}
+//	return nil
+//}
 
 func importChain(ctx *cli.Context) error {
 	if len(ctx.Args()) < 1 {
@@ -399,7 +391,7 @@ func copyDb(ctx *cli.Context) error {
 func removeDB(ctx *cli.Context) error {
 	stack, _ := makeConfigNode(ctx)
 
-	for _, name := range []string{"chaindata", "lightchaindata"} {
+	for _, name := range []string{"chaindata"} {
 		// Ensure the database exists in the first place
 		logger := log.New("database", name)
 
@@ -425,31 +417,32 @@ func removeDB(ctx *cli.Context) error {
 	return nil
 }
 
-func dump(ctx *cli.Context) error {
-	stack := makeFullNode(ctx)
-	chain, chainDb := utils.MakeChain(ctx, stack)
-	for _, arg := range ctx.Args() {
-		var block *types.Block
-		if hashish(arg) {
-			block = chain.GetBlockByHash(common.HexToHash(arg))
-		} else {
-			num, _ := strconv.Atoi(arg)
-			block = chain.GetBlockByNumber(uint64(num))
-		}
-		if block == nil {
-			fmt.Println("{}")
-			utils.Fatalf("block not found")
-		} else {
-			state, err := state.New(block.Root(), state.NewDatabase(chainDb), block.NumberU64())
-			if err != nil {
-				utils.Fatalf("could not create new state: %v", err)
-			}
-			fmt.Printf("%s\n", state.Dump())
-		}
-	}
-	chainDb.Close()
-	return nil
-}
+//
+//func dump(ctx *cli.Context) error {
+//	stack := makeFullNode(ctx)
+//	chain, chainDb := utils.MakeChain(ctx, stack)
+//	for _, arg := range ctx.Args() {
+//		var block *types.Block
+//		if hashish(arg) {
+//			block = chain.GetBlockByHash(common.HexToHash(arg))
+//		} else {
+//			num, _ := strconv.Atoi(arg)
+//			block = chain.GetBlockByNumber(uint64(num))
+//		}
+//		if block == nil {
+//			fmt.Println("{}")
+//			utils.Fatalf("block not found")
+//		} else {
+//			state, err := state.New(block.Root(), state.NewDatabase(chainDb), block.NumberU64())
+//			if err != nil {
+//				utils.Fatalf("could not create new state: %v", err)
+//			}
+//			fmt.Printf("%s\n", state.Dump())
+//		}
+//	}
+//	chainDb.Close()
+//	return nil
+//}
 
 // hashish returns true for strings that look like hashes.
 func hashish(x string) bool {
