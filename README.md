@@ -41,7 +41,8 @@ own sero instance.
 
 ## Sero networks
 
-sero have 4 networks: dev, alpha(internal test), beta(public test), main(the main network will be online soon)
+sero have 4 networks: **dev**, **alpha**(internal test), **beta**(public test), main(the main network will be online 
+soon)
 
 For example 
 
@@ -51,7 +52,7 @@ miner in it.
 ```gero --alpha ... ``` will connect to Sero's alpha network, it is a testing network with public bootnodes and public
 miner member supported
 
-```gero ...```  will connect to Sero's beta network, it is for public testing. License is needed for mining
+```gero ...```  will connect to Sero's **beta** network, it is for public testing. License is needed for mining
 
 ### Go into console with the Sero network options
 
