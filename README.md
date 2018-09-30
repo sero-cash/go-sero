@@ -61,7 +61,7 @@ By far the most common scenario is people wanting to simply interact with the Se
 create accounts; transfer funds; deploy and interact with contracts. For this particular use-case
 the user doesn't care about years-old historical data, so we can fast-sync quickly to the current
 state of the network. **mining in main sero network need to be licensed, please send apply email to
- gordon@sero.vip **
+ gordon@sero.vip**
 
 To do so:
 
