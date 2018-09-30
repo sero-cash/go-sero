@@ -1,6 +1,6 @@
 ## Go Sero
 
- Anonymous cash tech based on zero-knowledge proof and refactored ethereum protocol by Golang.
+ Anonymous cash tech based on zero-knowledge proof tech and refactored ethereum protocol by Golang.
 
 
 
@@ -41,21 +41,19 @@ own sero instance.
 
 ## Sero networks
 
-sero have 3 network options : alpha, dev, main(will be online soon)
+sero have 3 network options : alpha, dev, main(the main network will be online soon)
 
 it is choosed through gero startup options 
 
-```gero --alpho .... ```
+```gero --alpho .... ``` will connect to Sero's alpha network, it is a testing network with public bootnodes and 
 
-will connect to Sero's alpha network, it is a testing network with public bootnodes and miner supported
+miner supported
 
-```gero --dev ... ```
 
-will connect to a private network for development
+```gero --dev ... ``` will connect to a private network for development
 
-```gero ...```
 
-will connect to Sero's main network, **it will be online soon**
+```gero ...```  will connect to Sero's main network, **it will be online soon**
 
 ### Go into console with the Sero network options(will be online soon)
 
@@ -79,8 +77,9 @@ This command will:
 
 
  * Start up sero's built-in interactive [JavaScript console](https://github.com/sero-cash/console/blob/master/README.md), (via the trailing `console` subcommand) 
-   through which you can invoke all official [`web3` methods](https://github.com/sero-cash/go-sero/wiki/JavaScript-Console) as well as sero's own [management APIs](https://github.com/sero-cash/go-sero/wiki/Management-APIs).
-   This too is optional and if you leave it out you can always attach to an already running sero instance with `sero attach`.
+   through which you can invoke all official [`web3` methods](https://github.com/sero-cash/go-sero/wiki/JavaScript-Console) .
+   This too is optional and if you leave it out you can always attach to an already running sero instance with `sero 
+   --datadir=${DATADIR} attach`.
    
  
 
