@@ -55,7 +55,7 @@ miner in it.
 
 ```gero ...```  will connect to Sero's main network, **it will be online soon**
 
-### Go into console with the Sero network options(will be online soon)
+### Go into console with the Sero network options
 
 By far the most common scenario is people wanting to simply interact with the Sero network:
 create accounts; transfer funds; deploy and interact with contracts. For this particular use-case
