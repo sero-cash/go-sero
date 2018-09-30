@@ -7,7 +7,7 @@
 ## Building the source
 
 For prerequisites and detailed build instructions please read the
-[Installation Instructions](https://github.com/sero-cash/go-sero/wiki/Building-Sero)
+[Installation Instructions](https://github.com/sero4cash/go-sero/wiki/Building-Sero)
 on the wiki.
 
 Building sero requires both a Go (version 1.7 or later) and a C++ compiler.
@@ -26,7 +26,7 @@ The go-sero project comes with several wrappers/executables found in the `cmd` d
 
 | Command    | Description |
 |:----------:|-------------|
-| **gero** | Our main Gero CLI client. It is the entry point into the Sero network (alpha or dev net), capable of running as a full node (default). It can be used by other processes as a gateway into the Sero network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `gero --help` and the [CLI Wiki page](https://github.com/sero-cash/go-Sero/wiki/Command-Line-Options) for command line options. |
+| **gero** | Our main Gero CLI client. It is the entry point into the Sero network (alpha or dev net), capable of running as a full node (default). It can be used by other processes as a gateway into the Sero network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `gero --help` and the [CLI Wiki page](https://github.com/sero4cash/go-Sero/wiki/Command-Line-Options) for command line options. |
 | `bootnode` | Stripped down version of our Sero client implementation that only takes part in the network node discovery protocol, but does not run any of the higher level application protocols. It can be used as a lightweight bootstrap node to aid in finding peers in private networks. |
 | `evm` | Developer utility version of the EVM (Sero Virtual Machine) that is capable of running bytecode snippets within a configurable environment and execution mode. Its purpose is to allow isolated, fine-grained debugging of EVM opcodes (e.g. `evm --code 60ff60ff --debug`). |
 | `rlpdump` | Developer utility tool to convert binary RLP ([Recursive Length Prefix](https://github.com/ethereum/wiki/wiki/RLP)) dumps (data encoding used by the Sero protocol both network as well as consensus wise) to user friendlier hierarchical representation (e.g. `rlpdump --hex CE0183FFFFFFC4C304050583616263`). |
@@ -35,7 +35,7 @@ The go-sero project comes with several wrappers/executables found in the `cmd` d
 ## Running gero
 
 Going through all the possible command line flags is out of scope here (please consult our
-[CLI Wiki page](https://github.com/sero-cash/go-sero/wiki/Command-Line-Options)), but we've
+[CLI Wiki page](https://github.com/sero4cash/go-sero/wiki/Command-Line-Options)), but we've
 enumerated a few common parameter combos to get you up to speed quickly on how you can run your
 own sero instance.
 
@@ -73,7 +73,7 @@ $ gero --${NETWORK_OPTIONS} console
 This command will:
 
 
- * Start up sero's built-in interactive [JavaScript console](https://github.com/sero-cash/console/blob/master/README.md), (via the trailing `console` subcommand) 
+ * Start up sero's built-in interactive [JavaScript console](https://github.com/sero4cash/console/blob/master/README.md), (via the trailing `console` subcommand) 
    through which you can invoke all official(here just reference ethereum web3 style) [`web3` methods](https://github.com/ethereum/wiki/wiki/JavaScript-API) .
    This too is optional and if you leave it out you can always attach to an already running sero instance with 
    `gero --datadir=${DATADIR} attach`.
@@ -145,7 +145,7 @@ $ gero --your-favourite-flags dumpconfig
 As a developer, sooner rather than later you'll want to start interacting with sero and the Sero
 network via your own programs and not manually through the console. To aid this, sero has built-in
 support for a JSON-RPC based APIs ([standard APIs](https://github.com/ethereum/wiki/wiki/JSON-RPC) and
-[sero specific APIs](https://github.com/sero-cash/console/blob/master/README.md)). These can be
+[sero specific APIs](https://github.com/sero4cash/console/blob/master/README.md)). These can be
 exposed via HTTP, WebSockets and IPC (unix sockets on unix based platforms, and named pipes on Windows).
 
 The IPC interface is enabled by default and exposes all the APIs supported by sero, whereas the HTTP
@@ -190,7 +190,7 @@ $ bootnode --genkey=boot.key
 $ bootnode --nodekey=boot.key
 ```
 
-With the bootnode online, it will display an [`snode` URL](https://github.com/sero-cash/go-sero/wiki/snode-url-format)
+With the bootnode online, it will display an [`snode` URL](https://github.com/sero4cash/go-sero/wiki/snode-url-format)
 that other nodes can use to connect to it and exchange peer information. Make sure to replace the
 displayed IP address information (most probably `[::]`) with your externally accessible IP to get the
 actual `snode` URL.
@@ -233,7 +233,7 @@ the account specified by `--serobase`. You can further tune the mining by changi
 limit blocks converge to (`--targetgaslimit`) and the price transactions are accepted at (`--gasprice`).
 
 If beginner want to do mining directlly , There is a script help beginner to create account and start mining. 
-[`setup account and start mine` ](https://github.com/sero-cash/go-sero/wiki/start-mine)
+[`setup account and start mine` ](https://github.com/sero4cash/go-sero/wiki/start-mine)
 
 ## Contribution
 
@@ -251,7 +251,7 @@ Please make sure your contributions adhere to our coding guidelines:
  * Commit messages should be prefixed with the package(s) they modify.
    * E.g. "sero, rpc: make trace configs optional"
 
-Please see the [Developers' Guide](https://github.com/sero-cash/go-sero/wiki/Developers'-Guide)
+Please see the [Developers' Guide](https://github.com/sero4cash/go-sero/wiki/Developers'-Guide)
 for more details on configuring your environment, managing project dependencies and testing procedures.
 
 ## License
