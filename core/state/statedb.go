@@ -671,7 +671,7 @@ func (self *StateDB) Copy() *StateDB {
 	for addr := range self.journal.dirties {
 		// As documented [here](https://github.com/sero-cash/go-sero/pull/16485#issuecomment-380438527),
 		// and in the Finalise-method, there is a case where an object is in the journal but not
-		// in the stateObjects: OOG after touch on ripeMD prior to Byzantium. Thus, we need to check for
+		// in the stateObjects: OOG after touch on ripeMD prior to AutumnTwilight. Thus, we need to check for
 		// nil
 		if object, exist := self.stateObjects[addr]; exist {
 			state.stateObjects[addr] = object.deepCopy(state)

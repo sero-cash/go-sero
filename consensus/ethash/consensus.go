@@ -229,7 +229,7 @@ func (ethash *Ethash) CalcDifficulty(chain consensus.ChainReader, time uint64, p
 // the difficulty that a new block should have when created at time
 // given the parent block's time and difficulty.
 func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
-	return calcDifficultyByzantium(time, parent)
+	return calcDifficultyAutumnTwilight(time, parent)
 }
 
 // Some weird constants to avoid constant memory allocs for them.
@@ -242,10 +242,10 @@ var (
 	bigMinus99    = big.NewInt(-99)
 )
 
-// calcDifficultyByzantium is the difficulty adjustment algorithm. It returns
+// calcDifficultyAutumnTwilight is the difficulty adjustment algorithm. It returns
 // the difficulty that a new block should have when created at time given the
-// parent block's time and difficulty. The calculation uses the Byzantium rules.
-func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
+// parent block's time and difficulty. The calculation uses the AutumnTwilight rules.
+func calcDifficultyAutumnTwilight(time uint64, parent *types.Header) *big.Int {
 	// https://github.com/ethereum/EIPs/issues/100.
 	// algorithm:
 	// diff = (parent_diff +

@@ -25,9 +25,9 @@ import (
 
 // Forks table defines supported forks and their chain config.
 var Forks = map[string]*params.ChainConfig{
-	"Byzantium": {
-		ChainID:        big.NewInt(1),
-		ByzantiumBlock: big.NewInt(0),
+	"AutumnTwilight": {
+		ChainID:             big.NewInt(1),
+		AutumnTwilightBlock: big.NewInt(0),
 	},
 }
 

@@ -32,23 +32,23 @@ var (
 var (
 	// BetanetChainConfig is the chain parameters to run a node on the main network.
 	BetanetChainConfig = &ChainConfig{
-		ChainID:        big.NewInt(1),
-		ByzantiumBlock: big.NewInt(0),
-		Ethash:         new(EthashConfig),
+		ChainID:             big.NewInt(1),
+		AutumnTwilightBlock: big.NewInt(0),
+		Ethash:              new(EthashConfig),
 	}
 
 	// AlphanetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	AlphanetChainConfig = &ChainConfig{
-		ChainID:        big.NewInt(3),
-		ByzantiumBlock: big.NewInt(0),
-		Ethash:         new(EthashConfig),
+		ChainID:             big.NewInt(3),
+		AutumnTwilightBlock: big.NewInt(0),
+		Ethash:              new(EthashConfig),
 	}
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
 	DevnetChainConfig = &ChainConfig{
-		ChainID:        big.NewInt(4),
-		ByzantiumBlock: big.NewInt(0),
-		Ethash:         new(EthashConfig),
+		ChainID:             big.NewInt(4),
+		AutumnTwilightBlock: big.NewInt(0),
+		Ethash:              new(EthashConfig),
 	}
 
 	// AllEthashProtocolChanges contains every protocol change (EIPs) introduced
@@ -66,8 +66,8 @@ var (
 	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
 
 	TestChainConfig = &ChainConfig{
-		ChainID:        big.NewInt(1),
-		ByzantiumBlock: big.NewInt(0),
+		ChainID:             big.NewInt(1),
+		AutumnTwilightBlock: big.NewInt(0),
 		//ConstantinopleBlock: nil,
 		Ethash: new(EthashConfig),
 	}
@@ -81,7 +81,7 @@ var (
 type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
-	ByzantiumBlock *big.Int `json:"byzantiumBlock,omitempty"` // Byzantium switch block (nil = no fork, 0 = already on byzantium)
+	AutumnTwilightBlock *big.Int `json:"AutumnTwilightBlock,omitempty"` // AutumnTwilightBlock switch block (nil = no fork, 0 = already on AutumnTwilightBlock)
 
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
@@ -118,16 +118,16 @@ func (c *ChainConfig) String() string {
 	default:
 		engine = "unknown"
 	}
-	return fmt.Sprintf("{ChainID: %v Byzantium: %v Engine: %v}",
+	return fmt.Sprintf("{ChainID: %v AutumnTwilight: %v Engine: %v}",
 		c.ChainID,
-		c.ByzantiumBlock,
+		c.AutumnTwilightBlock,
 		engine,
 	)
 }
 
-// IsByzantium returns whether num is either equal to the Byzantium fork block or greater.
-func (c *ChainConfig) IsByzantium(num *big.Int) bool {
-	return isForked(c.ByzantiumBlock, num)
+// IsAutumnTwilight returns whether num is either equal to the AutumnTwilight fork block or greater.
+func (c *ChainConfig) IsAutumnTwilight(num *big.Int) bool {
+	return isForked(c.AutumnTwilightBlock, num)
 }
 
 //
@@ -162,12 +162,9 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 }
 
 func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {
-	if isForkIncompatible(c.ByzantiumBlock, newcfg.ByzantiumBlock, head) {
-		return newCompatError("Byzantium fork block", c.ByzantiumBlock, newcfg.ByzantiumBlock)
+	if isForkIncompatible(c.AutumnTwilightBlock, newcfg.AutumnTwilightBlock, head) {
+		return newCompatError("AutumnTwilight fork block", c.AutumnTwilightBlock, newcfg.AutumnTwilightBlock)
 	}
-	//if isForkIncompatible(c.ConstantinopleBlock, newcfg.ConstantinopleBlock, head) {
-	//	return newCompatError("Constantinople fork block", c.ConstantinopleBlock, newcfg.ConstantinopleBlock)
-	//}
 	return nil
 }
 
@@ -232,9 +229,8 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID *big.Int
-	//IsHomestead bool
-	IsByzantium bool
+	ChainID          *big.Int
+	IsAutumnTwilight bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -243,5 +239,5 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	if chainID == nil {
 		chainID = new(big.Int)
 	}
-	return Rules{ChainID: new(big.Int).Set(chainID), IsByzantium: c.IsByzantium(num)}
+	return Rules{ChainID: new(big.Int).Set(chainID), IsAutumnTwilight: c.IsAutumnTwilight(num)}
 }

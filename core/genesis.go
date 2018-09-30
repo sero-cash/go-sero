@@ -337,7 +337,7 @@ func DefaultAlphanetGenesisBlock() *Genesis {
 		//Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
 		GasLimit:   5000000,
-		Difficulty: big.NewInt(1048576),
+		Difficulty: big.NewInt(51485767),
 		Alloc:      decodePrealloc(testnetAllocData),
 	}
 }

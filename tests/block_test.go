@@ -34,7 +34,7 @@ func TestBlockchain(t *testing.T) {
 	bt.skipLoad(`(?i)(constantinople)`)
 
 	// Still failing tests
-	bt.skipLoad(`^bcWalletTest.*_Byzantium$`)
+	bt.skipLoad(`^bcWalletTest.*_AutumnTwilight$`)
 
 	bt.walk(t, blockTestDir, func(t *testing.T, name string, test *BlockTest) {
 		if err := bt.checkFailure(t, name, test.Run()); err != nil {

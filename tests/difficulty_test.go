@@ -26,8 +26,8 @@ import (
 
 var (
 	mainnetChainConfig = params.ChainConfig{
-		ChainID:        big.NewInt(1),
-		ByzantiumBlock: big.NewInt(4370000),
+		ChainID:             big.NewInt(1),
+		AutumnTwilightBlock: big.NewInt(4370000),
 	}
 )
 
@@ -52,12 +52,12 @@ func TestDifficulty(t *testing.T) {
 	dt.config("Morden", *params.AlphanetChainConfig)
 	dt.config("Frontier", params.ChainConfig{})
 
-	dt.config("Byzantium", params.ChainConfig{
-		ByzantiumBlock: big.NewInt(0),
+	dt.config("AutumnTwilight", params.ChainConfig{
+		AutumnTwilightBlock: big.NewInt(0),
 	})
 
-	dt.config("Byzantium", params.ChainConfig{
-		ByzantiumBlock: big.NewInt(0),
+	dt.config("AutumnTwilight", params.ChainConfig{
+		AutumnTwilightBlock: big.NewInt(0),
 	})
 
 	dt.config("Frontier", *params.AlphanetChainConfig)

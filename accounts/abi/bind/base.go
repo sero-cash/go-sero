@@ -41,9 +41,9 @@ type CallOpts struct {
 }
 
 // TransactOpts is the collection of authorization data required to create a
-// valid Ethereum transaction.
+// valid Sero transaction.
 type TransactOpts struct {
-	From      common.Address // Ethereum account to send the transaction from
+	From      common.Address // Sero account to send the transaction from
 	Nonce     *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
 	Encrypter EncrypterFn    // Method to use for signing the transaction (mandatory)
 
@@ -74,8 +74,8 @@ type WatchOpts struct {
 // Ethereum network. It contains a collection of methods that are used by the
 // higher level contract bindings to operate.
 type BoundContract struct {
-	address    common.Address     // Deployment address of the contract on the Ethereum blockchain
-	abi        abi.ABI            // Reflect based ABI to access the correct Ethereum methods
+	address    common.Address     // Deployment address of the contract on the Sero blockchain
+	abi        abi.ABI            // Reflect based ABI to access the correct Sero methods
 	caller     ContractCaller     // Read interface to interact with the blockchain
 	transactor ContractTransactor // Write interface to interact with the blockchain
 	filterer   ContractFilterer   // Event filtering to interact with the blockchain

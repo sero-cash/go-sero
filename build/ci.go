@@ -72,13 +72,8 @@ var (
 	// Files that end up in the gero-alltools*.zip archive.
 	allToolsArchiveFiles = []string{
 		"COPYING",
-		executablePath("abigen"),
 		executablePath("bootnode"),
-		executablePath("evm"),
 		executablePath("gero"),
-		executablePath("puppeth"),
-		executablePath("rlpdump"),
-		executablePath("wnode"),
 	}
 
 	// Files that end up in the swarm*.zip archive.
@@ -90,32 +85,12 @@ var (
 	// A debian package is created for all executables listed here.
 	debExecutables = []debExecutable{
 		{
-			BinaryName:  "abigen",
-			Description: "Source code generator to convert Ethereum contract definitions into easy to use, compile-time type-safe Go packages.",
-		},
-		{
 			BinaryName:  "bootnode",
-			Description: "Ethereum bootnode.",
-		},
-		{
-			BinaryName:  "evm",
-			Description: "Developer utility version of the EVM (Ethereum Virtual Machine) that is capable of running bytecode snippets within a configurable environment and execution mode.",
+			Description: "Sero bootnode.",
 		},
 		{
 			BinaryName:  "gero",
-			Description: "Ethereum CLI client.",
-		},
-		{
-			BinaryName:  "puppeth",
-			Description: "Ethereum private network manager.",
-		},
-		{
-			BinaryName:  "rlpdump",
-			Description: "Developer utility tool that prints RLP structures.",
-		},
-		{
-			BinaryName:  "wnode",
-			Description: "Ethereum Whisper diagnostic tool",
+			Description: "Sero CLI client.",
 		},
 	}
 
@@ -123,13 +98,13 @@ var (
 	debSwarmExecutables = []debExecutable{
 		{
 			BinaryName:  "swarm",
-			PackageName: "ethereum-swarm",
-			Description: "Ethereum Swarm daemon and tools",
+			PackageName: "Sero-swarm",
+			Description: "Sero Swarm daemon and tools",
 		},
 	}
 
-	debEthereum = debPackage{
-		Name:        "ethereum",
+	debSero = debPackage{
+		Name:        "Sero",
 		Version:     params.Version,
 		Executables: debExecutables,
 	}
@@ -517,7 +492,7 @@ func (d debExecutable) Package() string {
 func newDebMetadata(distro, author string, env build.Environment, t time.Time, name string, version string, exes []debExecutable) debMetadata {
 	if author == "" {
 		// No signing key, use default author.
-		author = "Ethereum Builds <fjl@ethereum.org>"
+		author = "Sero Builds <huma@sero.vip>"
 	}
 	return debMetadata{
 		PackageName: name,
