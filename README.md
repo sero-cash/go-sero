@@ -43,7 +43,7 @@ own sero instance.
 
 sero have 3 network options : alpha, dev, main(the main network will be online soon)
 
-it is choosed through gero startup options 
+For example 
 
 ```gero --alpha .... ``` will connect to Sero's alpha network, it is a testing network with public bootnodes and public
 miner member supported
@@ -69,7 +69,7 @@ To do so:
 $ gero --${NETWORK_OPTIONS} console
 ```
 
-**if startup gero without ${NETWORK_OPTIONS}, then you are connecting sero main network, it is not officially public**
+**you are connecting sero main network if startup gero __without__ ${NETWORK_OPTIONS}, , it is not officially public**
 
 **online now, but it will be online soon**
 
