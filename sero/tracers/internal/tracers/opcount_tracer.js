@@ -1,4 +1,4 @@
-// Copyright 2017 The go-sero Authors
+// copyright 2018 The go-sero Authors
 // This file is part of the go-sero library.
 //
 // The go-sero library is free software: you can redistribute it and/or modify

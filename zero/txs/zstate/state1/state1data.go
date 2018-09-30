@@ -1,4 +1,4 @@
-// Copyright 2015 The sero.cash Authors
+// copyright 2018 The sero.cash Authors
 // This file is part of the go-sero library.
 //
 // The go-sero library is free software: you can redistribute it and/or modify
