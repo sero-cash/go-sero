@@ -101,9 +101,9 @@ Specifying the `--alpha` flag however will reconfigure your sero instance a bit:
 
  * Instead of using the default data directory (`~/.datadir` on Linux for example), sero will nest
    itself one level deeper into a `alpha` subfolder (`~/.datadir/alpha` on Linux). Note, on OSX
-   and Linux this also means that attaching to a running testnet node requires the use of a custom
+   and Linux this also means that attaching to a running alpha network node requires the use of a custom
    endpoint since `sero attach` will try to attach to a production node endpoint by default. E.g.
-   `gero attach <datadir>/alpha/sero.ipc`. Windows users are not affected by this.
+   `gero attach <datadir>/alpha/sero.ipc`.
  * Instead of connecting the main Sero network, the client will connect to the alpha network,
    which uses different P2P bootnodes, different network IDs and genesis states.
    
