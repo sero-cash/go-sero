@@ -1,6 +1,6 @@
 ## Go Sero
 
- Anonymous cash tech based on zero-knowledge proof tech and refactored ethereum protocol by Golang.
+ Anonymous digital currency based on zero-knowledge proof technology and refactored ethereum protocol by Golang.
 
 
 
