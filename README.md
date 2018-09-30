@@ -41,27 +41,24 @@ own sero instance.
 
 ## Sero networks
 
-sero have 3 network options : alpha, dev, main(the main network will be online soon)
+sero have 4 network options : dev, alpha(internal test), beta(public test), main(the main network will be online soon)
 
 For example 
-
-```gero --alpha .... ``` will connect to Sero's alpha network, it is a testing network with public bootnodes and public
-miner member supported
-
 
 ```gero --dev ... ``` will connect to a private network for development, developer need to setup bootnode and member 
 miner in it.
 
+```gero --alpha ... ``` will connect to Sero's alpha network, it is a testing network with public bootnodes and public
+miner member supported
 
-```gero ...```  will connect to Sero's main network, **it will be online soon**
+```gero ...```  will connect to Sero's beta network, it is for public testing, license is needed for mining
 
 ### Go into console with the Sero network options
 
 By far the most common scenario is people wanting to simply interact with the Sero network:
-create accounts; transfer funds; deploy and interact with contracts. For this particular use-case
-the user doesn't care about years-old historical data, so we can fast-sync quickly to the current
-state of the network. **Mining in main sero network need to be licensed, please send apply email to
- gordon@sero.vip**
+create accounts; transfer funds; deploy and interact with contracts. 
+ **Mining in sero beta network need to be licensed because it is for public testing,  please send apply email to 
+ gordon@sero .vip**
 
 To do so:
 
@@ -69,17 +66,16 @@ To do so:
 $ gero --${NETWORK_OPTIONS} console
 ```
 
-**You are connecting sero main network if startup gero __without__ ${NETWORK_OPTIONS}, it is not officially public**
-
-**online now, but it will be online soon**
+**You are connecting sero beta network if startup gero __without__ ${NETWORK_OPTIONS}, main network is not online yet, 
+ it will be online soon**
 
 This command will:
 
 
  * Start up sero's built-in interactive [JavaScript console](https://github.com/sero-cash/console/blob/master/README.md), (via the trailing `console` subcommand) 
    through which you can invoke all official [`web3` methods](https://github.com/sero-cash/go-sero/wiki/JavaScript-Console) .
-   This too is optional and if you leave it out you can always attach to an already running sero instance with `sero 
-   --datadir=${DATADIR} attach`.
+   This too is optional and if you leave it out you can always attach to an already running sero instance with 
+   `gero --datadir=${DATADIR} attach`.
    
  
 
