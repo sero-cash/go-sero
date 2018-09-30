@@ -60,7 +60,7 @@ miner in it.
 By far the most common scenario is people wanting to simply interact with the Sero network:
 create accounts; transfer funds; deploy and interact with contracts. For this particular use-case
 the user doesn't care about years-old historical data, so we can fast-sync quickly to the current
-state of the network. **mining in main sero network need to be licensed, please send apply email to
+state of the network. **Mining in main sero network need to be licensed, please send apply email to
  gordon@sero.vip**
 
 To do so:
@@ -117,7 +117,7 @@ separate the two networks and will not make any accounts available between them.
 ```
 $ gero --dev console
 ```
-with dev option, developer can config bootnode in local private network and develop new functions without affect 
+with dev option, developer should config bootnode in local private network and develop new functions without affect 
 
 outside Sero networks
 
@@ -148,7 +148,7 @@ $ gero --your-favourite-flags dumpconfig
 As a developer, sooner rather than later you'll want to start interacting with sero and the Sero
 network via your own programs and not manually through the console. To aid this, sero has built-in
 support for a JSON-RPC based APIs ([standard APIs](https://github.com/ethereum/wiki/wiki/JSON-RPC) and
-[sero specific APIs](https://github.com/sero-cash/go-sero/wiki/Management-APIs)). These can be
+[sero specific APIs](https://github.com/sero-cash/console/blob/master/README.md)). These can be
 exposed via HTTP, WebSockets and IPC (unix sockets on unix based platforms, and named pipes on Windows).
 
 The IPC interface is enabled by default and exposes all the APIs supported by sero, whereas the HTTP
