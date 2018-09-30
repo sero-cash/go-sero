@@ -387,9 +387,9 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 	blockRewards := params.DefaultBlockRewards
 	if config.ChainID.Uint64() == 1 {
 		blockRewards = params.BetaBlockRewards
-	} else if config.ChainID.Uint64() == 2 {
-		blockRewards = params.AiphaBlockRewards
 	} else if config.ChainID.Uint64() == 3 {
+		blockRewards = params.AiphaBlockRewards
+	} else if config.ChainID.Uint64() == 4 {
 		blockRewards = params.DevBlockRewards
 	}
 
