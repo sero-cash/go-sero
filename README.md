@@ -7,7 +7,7 @@
 ## Building the source
 
 For prerequisites and detailed build instructions please read the
-[Installation Instructions](https://github.com/sero4cash/go-sero/wiki/Building-Sero)
+[Installation Instructions](https://github.com/sero-cash/go-sero/wiki/Building-Sero)
 on the wiki.
 
 Building sero requires both a Go (version 1.7 or later) and a C++ compiler.
