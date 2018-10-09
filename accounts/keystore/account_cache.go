@@ -96,7 +96,7 @@ func (ac *accountCache) accounts() []accounts.Account {
 	ac.maybeReload()
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
-	cpy := make([]accounts.Account, len(ac.all))
+	cpy := []accounts.Account{}
 	for _, accT := range ac.all {
 		cpy = append(cpy, accT.accountByURL)
 	}

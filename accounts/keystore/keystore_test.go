@@ -226,7 +226,7 @@ func checkEvents(t *testing.T, want []walletEvent, have []walletEvent) {
 }
 
 func tmpKeyStore(t *testing.T) (string, *KeyStore) {
-	d, err := ioutil.TempDir("", "ser-keystore-test")
+	d, err := ioutil.TempDir("", "sero-keystore-test")
 	if err != nil {
 		t.Fatal(err)
 	}
