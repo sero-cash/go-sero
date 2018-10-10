@@ -66,6 +66,81 @@ func TestKeyStore(t *testing.T) {
 	}
 }
 
+func TestTimedUnlock(t *testing.T) {
+	dir, ks := tmpKeyStore(t)
+	defer os.RemoveAll(dir)
+
+	pass := "foo"
+	a1, err := ks.NewAccount(pass)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Signing without passphrase fails because account is locked
+	_, err = ks.GetSeed(a1)
+	if err != ErrLocked {
+		t.Fatal("Signing should've failed with ErrLocked before unlocking, got ", err)
+	}
+
+	// Signing with passphrase works
+	if err = ks.TimedUnlock(a1, pass, 100*time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+
+	// Signing without passphrase works because account is temp unlocked
+	_, err = ks.GetSeed(a1)
+	if err != nil {
+		t.Fatal("Signing shouldn't return an error after unlocking, got ", err)
+	}
+
+	// Signing fails again after automatic locking
+	time.Sleep(250 * time.Millisecond)
+	_, err = ks.GetSeed(a1)
+	if err != ErrLocked {
+		t.Fatal("Signing should've failed with ErrLocked timeout expired, got ", err)
+	}
+}
+
+func TestOverrideUnlock(t *testing.T) {
+	dir, ks := tmpKeyStore(t)
+	defer os.RemoveAll(dir)
+
+	pass := "foo"
+	a1, err := ks.NewAccount(pass)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Unlock indefinitely.
+	if err = ks.TimedUnlock(a1, pass, 5*time.Minute); err != nil {
+		t.Fatal(err)
+	}
+
+	// Signing without passphrase works because account is temp unlocked
+	_, err = ks.GetSeed(a1)
+	if err != nil {
+		t.Fatal("Signing shouldn't return an error after unlocking, got ", err)
+	}
+
+	// reset unlock to a shorter period, invalidates the previous unlock
+	if err = ks.TimedUnlock(a1, pass, 100*time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+
+	// Signing without passphrase still works because account is temp unlocked
+	_, err = ks.GetSeed(a1)
+	if err != nil {
+		t.Fatal("Signing shouldn't return an error after unlocking, got ", err)
+	}
+
+	// Signing fails again after automatic locking
+	time.Sleep(250 * time.Millisecond)
+	_, err = ks.GetSeed(a1)
+	if err != ErrLocked {
+		t.Fatal("Signing should've failed with ErrLocked timeout expired, got ", err)
+	}
+}
+
 // Tests that the wallet notifier loop starts and stops correctly based on the
 // addition and removal of wallet event subscriptions.
 func TestWalletNotifierLifecycle(t *testing.T) {
@@ -230,7 +305,6 @@ func tmpKeyStore(t *testing.T) (string, *KeyStore) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	new := func(kd *string) *KeyStore { return NewKeyStore(*kd, veryLightScryptN, veryLightScryptP) }
 
 	return d, new(&d)
