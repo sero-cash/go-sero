@@ -228,6 +228,7 @@ func init() {
 		console.Stdin.Close() // Resets terminal mode.
 		return nil
 	}
+	cpt.ZeroInit()
 }
 
 func main() {
@@ -254,7 +255,7 @@ func gero(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
-	cpt.ZeroInit()
+
 
 	debug.Memsize.Add("node", stack)
 
