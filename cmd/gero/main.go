@@ -19,7 +19,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/sero-cash/go-czero-import/cpt"
 	"math"
 	"os"
 	"runtime"
@@ -29,9 +28,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/cpt"
+	cli "gopkg.in/urfave/cli.v1"
+
 	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/zero/zconfig"
-	"gopkg.in/urfave/cli.v1"
 
 	"github.com/elastic/gosigar"
 	"github.com/sero-cash/go-sero/accounts"
@@ -255,7 +256,6 @@ func gero(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
-
 
 	debug.Memsize.Add("node", stack)
 

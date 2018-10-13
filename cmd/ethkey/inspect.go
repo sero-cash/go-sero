@@ -70,7 +70,7 @@ make sure to use this feature with great caution!`,
 		showPrivate := ctx.Bool("private")
 		out := outputInspect{
 			Address: key.Address.Base58(),
-			Tk: key.Tk.Base58(),
+			Tk:      key.Tk.Base58(),
 		}
 		if showPrivate {
 			out.PrivateKey = hex.EncodeToString(crypto.FromECDSA(key.PrivateKey))

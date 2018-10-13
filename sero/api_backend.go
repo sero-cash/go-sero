@@ -18,9 +18,10 @@ package sero
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/miner"
-	"math/big"
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"

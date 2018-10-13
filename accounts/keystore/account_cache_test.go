@@ -38,17 +38,17 @@ var (
 	cachetestAccounts = []accounts.Account{
 		{
 			Address: common.Base58ToAddress("64t1MPxFp4yzxNJ64zp1NmrTXWsrLuw9DMiMZeujbD2HVAKhjR3zpKnuFVjjAXAp86G2PzSVSsdiMdwp5JPoqxtP"),
-			Tk:common.Base58ToAddress("48rGJTGEeQKiFcCi82rbZdvZeyhoJHnVqeDrV627nT4vKTUtYUKJGYmt4dMnRX94RDAtXJV4SEXKyFPH9TdhFxiB"),
+			Tk:      common.Base58ToAddress("48rGJTGEeQKiFcCi82rbZdvZeyhoJHnVqeDrV627nT4vKTUtYUKJGYmt4dMnRX94RDAtXJV4SEXKyFPH9TdhFxiB"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "UTC--2018-08-11T10-19-38.165083119Z--64t1MPxFp4yzxNJ64zp1NmrTXWsrLuw9DMiMZeujbD2HVAKhjR3zpKnuFVjjAXAp86G2PzSVSsdiMdwp5JPoqxtP")},
 		},
 		{
 			Address: common.Base58ToAddress("4raP8fYEznZDD9WXc8pvS2tMg992iZiWXssvwhCrXTFEhafcRt8urTeDyANfTrtXpJjnfz65cbYvr7g5WauAJgdc"),
-			Tk:common.Base58ToAddress("5W5KsFo2di2kzrP2xEjT1iYpx66BoryPJccDRXz4BH5J2MWxKnnWZtmKm7a7BqjheBfi8rKJCqKFPME7hDLuiEJA"),
+			Tk:      common.Base58ToAddress("5W5KsFo2di2kzrP2xEjT1iYpx66BoryPJccDRXz4BH5J2MWxKnnWZtmKm7a7BqjheBfi8rKJCqKFPME7hDLuiEJA"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "aaa")},
 		},
 		{
 			Address: common.Base58ToAddress("3Fov1AdSTVSTEWTEGfbknRrmHxBCoZ6AktyJA4jGFytHu7xDWEYysnR9YkwkKj5Knzttc6tNw4ENY4JZiirrksYw"),
-			Tk:common.Base58ToAddress("fLFiBSN8JojjcECipDA4yNafv19BvcFEoP91BVsxRsd1qda9QkBXJM3Car9Y6V9VfYpZULx8dcPUnb2iNFnk4JX"),
+			Tk:      common.Base58ToAddress("fLFiBSN8JojjcECipDA4yNafv19BvcFEoP91BVsxRsd1qda9QkBXJM3Car9Y6V9VfYpZULx8dcPUnb2iNFnk4JX"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "zzz")},
 		},
 	}
@@ -69,7 +69,7 @@ func TestWatchNewFile(t *testing.T) {
 	for i := range cachetestAccounts {
 		wantAccounts[i] = accounts.Account{
 			Address: cachetestAccounts[i].Address,
-			Tk: cachetestAccounts[i].Tk,
+			Tk:      cachetestAccounts[i].Tk,
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, filepath.Base(cachetestAccounts[i].URL.Path))},
 		}
 		if err := cp.CopyFile(wantAccounts[i].URL.Path, cachetestAccounts[i].URL.Path); err != nil {
@@ -179,21 +179,21 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 		},
 	}
 	for _, a := range accs {
-		cache.add(a,false)
+		cache.add(a, false)
 	}
 	// Add some of them twice to check that they don't get reinserted.
-	cache.add(accs[0],false)
-	cache.add(accs[2],false)
+	cache.add(accs[0], false)
+	cache.add(accs[2], false)
 
 	// Check that the account list is sorted by filename.
-	wantAccountsByTag :=[]accountByTag{}
-	for _,acc :=range accs {
-		wantAccountsByTag = append(wantAccountsByTag,accountByTag{acc,false})
+	wantAccountsByTag := []accountByTag{}
+	for _, acc := range accs {
+		wantAccountsByTag = append(wantAccountsByTag, accountByTag{acc, false})
 	}
 	sort.Sort(accountsByTag(wantAccountsByTag))
-	wantAccounts :=[]accounts.Account{}
-	for _,acc :=range wantAccountsByTag {
-		wantAccounts = append(wantAccounts,acc.accountByURL)
+	wantAccounts := []accounts.Account{}
+	for _, acc := range wantAccountsByTag {
+		wantAccounts = append(wantAccounts, acc.accountByURL)
 	}
 	list := cache.accounts()
 	if !reflect.DeepEqual(list, wantAccounts) {
@@ -258,7 +258,7 @@ func TestCacheFind(t *testing.T) {
 		},
 	}
 	for _, a := range accs {
-		cache.add(a,false)
+		cache.add(a, false)
 	}
 
 	nomatchAccount := accounts.Account{

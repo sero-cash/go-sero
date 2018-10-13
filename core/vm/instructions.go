@@ -19,8 +19,9 @@ package vm
 import (
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/log"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/log"
 
 	"regexp"
 
@@ -850,7 +851,7 @@ func makeLog(size int) executionFunc {
 			}
 
 			if !interpreter.evm.StateDB.RegisterCurrency(contract.Address(), coinName) {
-				log.Trace("issueToken error ", "contract", contract.Address(), "coinName", coinName, "total", total, "error", "coinName registed by other")
+				log.Trace("issueToken error ", "contract", contract.Address(), "coinName", coinName, "total", total, "error", "coinName registered by other")
 				memory.Set(mStart.Uint64()+end-32, 32, hashFalse)
 				return hashFalse, nil
 			}

@@ -21,11 +21,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/rpc"
 	"io"
 	"math/big"
 	"os"
 	"strings"
+
+	"github.com/sero-cash/go-sero/rpc"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"

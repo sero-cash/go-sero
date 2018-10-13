@@ -372,7 +372,6 @@ type threaded interface {
 	Threads() int
 }
 
-
 // signTransactions sets defaults and signs the given transaction
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool
@@ -401,8 +400,8 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 	}
 
 	if th, ok := s.b.GetEngin().(threaded); ok {
-		threads :=th.Threads()
-		if threads >=0 {
+		threads := th.Threads()
+		if threads >= 0 {
 			th.SetThreads(-1)
 			defer th.SetThreads(threads)
 		}
@@ -414,7 +413,6 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 	}
 	return wallet.EncryptTxWithPassphrase(account, passwd, tx, txt, state)
 }
-
 
 // SendTransaction will create a transaction from the given arguments and
 // tries to sign it with the key associated with args.To. If the given passwd isn't
@@ -1279,8 +1277,8 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 		return common.Hash{}, err
 	}
 	if th, ok := s.b.GetEngin().(threaded); ok {
-		threads :=th.Threads()
-		if threads >=0 {
+		threads := th.Threads()
+		if threads >= 0 {
 			th.SetThreads(-1)
 			defer th.SetThreads(threads)
 		}
@@ -1296,7 +1294,6 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	}
 	return submitTransaction(ctx, s.b, encrypted)
 }
-
 
 // EncryptTransactionResult represents a RLP encoded signed transaction.
 type EncryptTransactionResult struct {
@@ -1337,8 +1334,8 @@ func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args 
 		return nil, err
 	}
 	if th, ok := s.b.GetEngin().(threaded); ok {
-		threads :=th.Threads()
-		if threads >=0 {
+		threads := th.Threads()
+		if threads >= 0 {
 			th.SetThreads(-1)
 			defer th.SetThreads(threads)
 		}

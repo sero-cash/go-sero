@@ -19,8 +19,9 @@ package ethapi
 
 import (
 	"context"
-	"github.com/sero-cash/go-sero/miner"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/miner"
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
@@ -34,8 +35,6 @@ import (
 	"github.com/sero-cash/go-sero/rpc"
 	"github.com/sero-cash/go-sero/sero/downloader"
 	"github.com/sero-cash/go-sero/serodb"
-
-
 )
 
 // Backend interface provides the common API services (that are provided by

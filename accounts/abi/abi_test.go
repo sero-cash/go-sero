@@ -264,15 +264,6 @@ func TestTestNumbers(t *testing.T) {
 	}
 }
 
-func TestABI_Unpack(t *testing.T) {
-	abi, err := JSON(strings.NewReader(jsondata2))
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
-	code := abi.Pack("sliceMultiAddress",addressT)
-}
-
 func TestTestString(t *testing.T) {
 	abi, err := JSON(strings.NewReader(jsondata2))
 	if err != nil {

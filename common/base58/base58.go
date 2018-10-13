@@ -17,7 +17,6 @@ func (e InvalidByteError) Error() string {
 	return fmt.Sprintf("encoding/base58: invalid byte: %#U", rune(e))
 }
 
-
 func EncodeToString(input []byte) string {
 	return *cpt.Base58Encode(input)
 }

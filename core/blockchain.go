@@ -20,7 +20,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -29,6 +28,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/golang-lru"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
@@ -938,7 +938,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	return 0, nil
 }
 
-var lastWrite uint64
+//var lastWrite uint64
 
 // WriteBlockWithoutState writes only the block and its metadata to the database,
 // but does not write any state. This is used to construct competing side forks

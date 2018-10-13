@@ -16,24 +16,7 @@
 
 package txs
 
-import (
-	"fmt"
-	"testing"
-
-	"github.com/sero-cash/go-czero-import/cpt"
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/core/state"
-	"github.com/sero-cash/go-sero/rlp"
-	"github.com/sero-cash/go-sero/serodb"
-	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/txs/tx"
-	"github.com/sero-cash/go-sero/zero/txs/zstate"
-	"github.com/sero-cash/go-sero/zero/utils"
-	"github.com/sero-cash/go-sero/zero/witness/merkle"
-)
-
-type user struct {
+/*type user struct {
 	i      int
 	seed   keys.Uint256
 	addr   keys.Uint512
@@ -235,4 +218,4 @@ func TestLowrRLP(t *testing.T) {
 func TestMain(m *testing.M) {
 	cpt.ZeroInit()
 	m.Run()
-}
+}*/
