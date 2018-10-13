@@ -17,11 +17,6 @@ func (e InvalidByteError) Error() string {
 	return fmt.Sprintf("encoding/base58: invalid byte: %#U", rune(e))
 }
 
-func ReverseBytes(runes []byte) {
-	for from, to := 0, len(runes)-1; from < to; from, to = from+1, to-1 {
-		runes[from], runes[to] = runes[to], runes[from]
-	}
-}
 
 func EncodeToString(input []byte) string {
 	return *cpt.Base58Encode(input)
@@ -42,7 +37,7 @@ func DecodeString(s string, out []byte) error {
 
 func IsBase58Str(s string) bool {
 
-	pattern := "[" + string(b58Alphabet) + "]+"
+	pattern := "^[" + string(b58Alphabet) + "]+$"
 	match, err := regexp.MatchString(pattern, s)
 	if err != nil {
 		return false
