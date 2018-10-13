@@ -19,10 +19,12 @@ package ethapi
 
 import (
 	"context"
+	"github.com/sero-cash/go-sero/miner"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
@@ -32,6 +34,8 @@ import (
 	"github.com/sero-cash/go-sero/rpc"
 	"github.com/sero-cash/go-sero/sero/downloader"
 	"github.com/sero-cash/go-sero/serodb"
+
+
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -69,6 +73,8 @@ type Backend interface {
 
 	ChainConfig() *params.ChainConfig
 	CurrentBlock() *types.Block
+	GetEngin() consensus.Engine
+	GetMiner() *miner.Miner
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

@@ -139,6 +139,15 @@ func (self *Miner) Mining() bool {
 	return atomic.LoadInt32(&self.mining) > 0
 }
 
+func (self *Miner) CanStart() bool {
+	return atomic.LoadInt32(&self.canStart) > 0
+}
+
+func (self *Miner) SetCanStart(canstart int32) {
+	atomic.StoreInt32(&self.canStart, canstart)
+}
+
+
 func (self *Miner) HashRate() (tot int64) {
 	if pow, ok := self.engine.(consensus.PoW); ok {
 		tot += int64(pow.Hashrate())

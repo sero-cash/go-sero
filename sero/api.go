@@ -121,12 +121,12 @@ func (api *PublicMinerAPI) SubmitHashrate(hashrate hexutil.Uint64, id common.Has
 // PrivateMinerAPI provides private RPC methods to control the miner.
 // These methods can be abused by external users and must be considered insecure for use by untrusted users.
 type PrivateMinerAPI struct {
-	e *Sero
+	s *Sero
 }
 
 // NewPrivateMinerAPI create a new RPC service which controls the miner of this node.
 func NewPrivateMinerAPI(e *Sero) *PrivateMinerAPI {
-	return &PrivateMinerAPI{e: e}
+	return &PrivateMinerAPI{s: e}
 }
 
 // Start the miner with the given number of threads. If threads is nil the number
@@ -143,19 +143,19 @@ func (api *PrivateMinerAPI) Start(threads *int) error {
 	type threaded interface {
 		SetThreads(threads int)
 	}
-	if th, ok := api.e.engine.(threaded); ok {
+	if th, ok := api.s.engine.(threaded); ok {
 		log.Info("Updated mining threads", "threads", *threads)
 		th.SetThreads(*threads)
 	}
 	// Start the miner and return
-	if !api.e.IsMining() {
+	if !api.s.IsMining() {
 		// Propagate the initial price point to the transaction pool
-		api.e.lock.RLock()
-		price := api.e.gasPrice
-		api.e.lock.RUnlock()
+		api.s.lock.RLock()
+		price := api.s.gasPrice
+		api.s.lock.RUnlock()
 
-		api.e.txPool.SetGasPrice(price)
-		return api.e.StartMining(true)
+		api.s.txPool.SetGasPrice(price)
+		return api.s.StartMining(true)
 	}
 	return nil
 }
@@ -165,16 +165,16 @@ func (api *PrivateMinerAPI) Stop() bool {
 	type threaded interface {
 		SetThreads(threads int)
 	}
-	if th, ok := api.e.engine.(threaded); ok {
+	if th, ok := api.s.engine.(threaded); ok {
 		th.SetThreads(-1)
 	}
-	api.e.StopMining()
+	api.s.StopMining()
 	return true
 }
 
 // SetExtra sets the extra data string that is included when this miner mines a block.
 func (api *PrivateMinerAPI) SetExtra(extra string) (bool, error) {
-	if err := api.e.Miner().SetExtra([]byte(extra)); err != nil {
+	if err := api.s.Miner().SetExtra([]byte(extra)); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -182,23 +182,23 @@ func (api *PrivateMinerAPI) SetExtra(extra string) (bool, error) {
 
 // SetGasPrice sets the minimum accepted gas price for the miner.
 func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
-	api.e.lock.Lock()
-	api.e.gasPrice = (*big.Int)(&gasPrice)
-	api.e.lock.Unlock()
+	api.s.lock.Lock()
+	api.s.gasPrice = (*big.Int)(&gasPrice)
+	api.s.lock.Unlock()
 
-	api.e.txPool.SetGasPrice((*big.Int)(&gasPrice))
+	api.s.txPool.SetGasPrice((*big.Int)(&gasPrice))
 	return true
 }
 
 // SetSerobase sets the serobase of the miner
 func (api *PrivateMinerAPI) SetSerobase(serobase common.Address) bool {
-	api.e.SetSerobase(serobase)
+	api.s.SetSerobase(serobase)
 	return true
 }
 
 // GetHashrate returns the current hashrate of the miner.
 func (api *PrivateMinerAPI) GetHashrate() uint64 {
-	return uint64(api.e.miner.HashRate())
+	return uint64(api.s.miner.HashRate())
 }
 
 // PrivateAdminAPI is the collection of Sero full node-related APIs

@@ -367,6 +367,12 @@ func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
 	return fetchKeystore(s.am).Lock(addr) == nil
 }
 
+type threaded interface {
+	SetThreads(threads int)
+	Threads() int
+}
+
+
 // signTransactions sets defaults and signs the given transaction
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool
@@ -394,8 +400,21 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 		return nil, err
 	}
 
+	if th, ok := s.b.GetEngin().(threaded); ok {
+		threads :=th.Threads()
+		if threads >=0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
+		}
+		miner := s.b.GetMiner()
+		if miner.CanStart() {
+			miner.SetCanStart(0)
+			defer miner.SetCanStart(1)
+		}
+	}
 	return wallet.EncryptTxWithPassphrase(account, passwd, tx, txt, state)
 }
+
 
 // SendTransaction will create a transaction from the given arguments and
 // tries to sign it with the key associated with args.To. If the given passwd isn't
@@ -1259,12 +1278,23 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	if err != nil {
 		return common.Hash{}, err
 	}
-
-	signed, err := wallet.EncryptTx(account, tx, txt, state)
+	if th, ok := s.b.GetEngin().(threaded); ok {
+		threads :=th.Threads()
+		if threads >=0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
+		}
+		miner := s.b.GetMiner()
+		if miner.CanStart() {
+			miner.SetCanStart(0)
+			defer miner.SetCanStart(1)
+		}
+	}
+	encrypted, err := wallet.EncryptTx(account, tx, txt, state)
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return submitTransaction(ctx, s.b, signed)
+	return submitTransaction(ctx, s.b, encrypted)
 }
 
 
@@ -1305,6 +1335,18 @@ func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args 
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
 		return nil, err
+	}
+	if th, ok := s.b.GetEngin().(threaded); ok {
+		threads :=th.Threads()
+		if threads >=0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
+		}
+		miner := s.b.GetMiner()
+		if miner.CanStart() {
+			miner.SetCanStart(0)
+			defer miner.SetCanStart(1)
+		}
 	}
 	signed, err := wallet.EncryptTx(account, tx, txt, state)
 	if err != nil {

@@ -91,7 +91,7 @@ type Sero struct {
 	networkID     uint64
 	netRPCService *ethapi.PublicNetAPI
 
-	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and serobase)
+	lock sync.RWMutex // Protects the variadic fields (s.g. gas price and serobase)
 }
 
 func (s *Sero) AddLesServer(ls LesServer) {
