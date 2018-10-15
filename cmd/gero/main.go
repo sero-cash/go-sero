@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/sero-cash/go-czero-import/cpt"
 	"math"
 	"os"
 	"runtime"
@@ -27,13 +28,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/sero-cash/go-czero-import/cpt"
-	cli "gopkg.in/urfave/cli.v1"
-
+	
+	"gopkg.in/urfave/cli.v1"
+	
 	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/zero/zconfig"
-
+	
 	"github.com/elastic/gosigar"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/accounts/keystore"
@@ -189,6 +189,15 @@ func init() {
 	app.Flags = append(app.Flags, metricsFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
+		netType:=cpt.NET_Dev
+		switch {
+		case ctx.GlobalBool(utils.AlphanetFlag.Name):
+			netType=cpt.NET_Alpha
+		case ctx.GlobalBool(utils.DeveloperFlag.Name):
+			netType=cpt.NET_Beta
+		}
+		cpt.ZeroInit(netType)
+		
 		runtime.GOMAXPROCS(runtime.NumCPU())
 
 		logdir := ""
@@ -229,7 +238,6 @@ func init() {
 		console.Stdin.Close() // Resets terminal mode.
 		return nil
 	}
-	cpt.ZeroInit()
 }
 
 func main() {
