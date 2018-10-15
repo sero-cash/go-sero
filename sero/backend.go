@@ -18,8 +18,10 @@
 package sero
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-czero-import/keys"
 	"math/big"
 	"runtime"
 	"sync"
@@ -338,6 +340,18 @@ func (s *Sero) StartMining(local bool) error {
 	if err != nil {
 		log.Error("Cannot start mining without serobase", "err", err)
 		return fmt.Errorf("serobase missing: %v", err)
+	}
+	pkr, lic, ret := keys.Addr2PKrAndLICr(eb.ToUint512())
+	ret=keys.CheckLICr(&pkr,&lic)
+	if !ret {
+		lic_t:=keys.LICr{}
+		if bytes.Equal(lic[:32],lic_t[:32]) {
+			log.Error("Cannot start mining , miner license does not exists ", "", "")
+			return fmt.Errorf(" miner license does not exists")
+		}else {
+			log.Error("Cannot start mining ,invalid miner license", "", "")
+			return fmt.Errorf("invalid miner license: %v", common.Bytes2Hex(lic[:]))
+		}
 	}
 	if _, ok := s.engine.(*clique.Clique); ok {
 		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
