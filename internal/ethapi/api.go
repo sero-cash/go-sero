@@ -376,6 +376,8 @@ type threaded interface {
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool
 func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (*types.Transaction, error) {
+	s.nonceLock.mu.Lock()
+	defer s.nonceLock.mu.Unlock()
 	// Look up the wallet containing the requested abi
 	account := accounts.Account{Address: args.From}
 	wallet, err := s.am.Find(account)
@@ -400,15 +402,15 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 	}
 
 	if th, ok := s.b.GetEngin().(threaded); ok {
-		threads := th.Threads()
-		if threads >= 0 {
-			th.SetThreads(-1)
-			defer th.SetThreads(threads)
-		}
 		miner := s.b.GetMiner()
 		if miner.CanStart() {
 			miner.SetCanStart(0)
 			defer miner.SetCanStart(1)
+		}
+		threads := th.Threads()
+		if threads >= 0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
 		}
 	}
 	return wallet.EncryptTxWithPassphrase(account, passwd, tx, txt, state)
@@ -1244,7 +1246,8 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
-
+	s.nonceLock.mu.Lock()
+	defer s.nonceLock.mu.Unlock()
 	// Look up the wallet containing the requested abi
 	account := accounts.Account{Address: args.From}
 
@@ -1252,13 +1255,6 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	if err != nil {
 		return common.Hash{}, err
 	}
-
-	/*if args.Nonce == nil {
-		// Hold the addresse's mutex around signing to prevent concurrent assignment of
-		// the same nonce to multiple accounts.
-		s.nonceLock.LockAddr(args.From)
-		defer s.nonceLock.UnlockAddr(args.From)
-	}*/
 
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
@@ -1277,15 +1273,15 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 		return common.Hash{}, err
 	}
 	if th, ok := s.b.GetEngin().(threaded); ok {
-		threads := th.Threads()
-		if threads >= 0 {
-			th.SetThreads(-1)
-			defer th.SetThreads(threads)
-		}
 		miner := s.b.GetMiner()
 		if miner.CanStart() {
 			miner.SetCanStart(0)
 			defer miner.SetCanStart(1)
+		}
+		threads := th.Threads()
+		if threads >= 0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
 		}
 	}
 	encrypted, err := wallet.EncryptTx(account, tx, txt, state)
@@ -1305,6 +1301,8 @@ type EncryptTransactionResult struct {
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
 func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args SendTxArgs) (*EncryptTransactionResult, error) {
+	s.nonceLock.mu.Lock()
+	defer s.nonceLock.mu.Unlock()
 	if args.Gas == nil {
 		return nil, fmt.Errorf("gas not specified")
 	}
@@ -1334,15 +1332,15 @@ func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args 
 		return nil, err
 	}
 	if th, ok := s.b.GetEngin().(threaded); ok {
-		threads := th.Threads()
-		if threads >= 0 {
-			th.SetThreads(-1)
-			defer th.SetThreads(threads)
-		}
 		miner := s.b.GetMiner()
 		if miner.CanStart() {
 			miner.SetCanStart(0)
 			defer miner.SetCanStart(1)
+		}
+		threads := th.Threads()
+		if threads >= 0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
 		}
 	}
 	signed, err := wallet.EncryptTx(account, tx, txt, state)
