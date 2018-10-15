@@ -188,12 +188,12 @@ func init() {
 	app.Flags = append(app.Flags, metricsFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
-		netType:=cpt.NET_Dev
+		netType:=cpt.NET_Beta
 		switch {
 		case ctx.GlobalBool(utils.AlphanetFlag.Name):
 			netType=cpt.NET_Alpha
 		case ctx.GlobalBool(utils.DeveloperFlag.Name):
-			netType=cpt.NET_Beta
+			netType=cpt.NET_Dev
 		}
 		cpt.ZeroInit(netType)
 		
