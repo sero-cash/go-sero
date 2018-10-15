@@ -163,15 +163,6 @@ var (
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
 		Value: &defaultSyncMode,
 	}
-	//LightPeersFlag = cli.IntFlag{
-	//	Name:  "lightpeers",
-	//	Usage: "Maximum number of LES client peers",
-	//	Value: sero.DefaultConfig.LightPeers,
-	//}
-	LightKDFFlag = cli.BoolFlag{
-		Name:  "lightkdf",
-		Usage: "Reduce key-derivation RAM & CPU usage at some expense of KDF strength",
-	}
 	// Dashboard settings
 	DashboardEnabledFlag = cli.BoolFlag{
 		Name:  metrics.DashboardEnabledFlag,

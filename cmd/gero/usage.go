@@ -77,7 +77,6 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.SyncModeFlag,
 			utils.SeroStatsURLFlag,
 			utils.IdentityFlag,
-			utils.LightKDFFlag,
 		},
 	},
 	{
