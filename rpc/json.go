@@ -207,12 +207,17 @@ func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) {
 		return nil, false, &methodNotFoundError{in.Method, ""}
 	}
 
+	serviceName :=elems[0]
+
+	if elems[0] == "eth" {
+		serviceName = "sero"
+	}
 	// regular RPC call
 	if len(in.Payload) == 0 {
-		return []rpcRequest{{service: elems[0], method: elems[1], id: &in.Id}}, false, nil
+		return []rpcRequest{{service: serviceName, method: elems[1], id: &in.Id}}, false, nil
 	}
 
-	return []rpcRequest{{service: elems[0], method: elems[1], id: &in.Id, params: in.Payload}}, false, nil
+	return []rpcRequest{{service: serviceName, method: elems[1], id: &in.Id, params: in.Payload}}, false, nil
 }
 
 // parseBatchRequest will parse a batch request into a collection of requests from the given RawMessage, an indication
@@ -261,7 +266,11 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) 
 			requests[i] = rpcRequest{id: id, params: r.Payload}
 		}
 		if elem := strings.Split(r.Method, serviceMethodSeparator); len(elem) == 2 {
-			requests[i].service, requests[i].method = elem[0], elem[1]
+			serviceName :=elem[0]
+			if elem[0] == "eth" {
+				serviceName = "sero"
+			}
+			requests[i].service, requests[i].method = serviceName, elem[1]
 		} else {
 			requests[i].err = &methodNotFoundError{r.Method, ""}
 		}

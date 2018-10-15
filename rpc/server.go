@@ -399,7 +399,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			}
 			continue
 		}
-
+		
 		if svc, ok = s.services[r.service]; !ok { // rpc method isn't available
 			requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
 			continue
