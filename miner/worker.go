@@ -414,9 +414,15 @@ func (self *worker) commitNewWork() {
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
 	if atomic.LoadInt32(&self.mining) == 1 {
 		addr := common.Address{}
-		pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
+		//pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
+		pkr, licr, ret := keys.Addr2PKrAndLICr(self.coinbase.ToUint512())
+		if !ret {
+			log.Error("Failed to Addr2PKrAndLICr")
+			return
+		}
 		addr.SetBytes(pkr[:])
 		header.Coinbase = addr
+		header.Licr = licr
 	}
 	if err := self.engine.Prepare(self.chain, header); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)

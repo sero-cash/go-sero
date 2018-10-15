@@ -19,6 +19,7 @@ package types
 
 import (
 	"encoding/binary"
+	"github.com/sero-cash/go-czero-import/keys"
 	"io"
 	"math/big"
 	"sort"
@@ -69,6 +70,7 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 type Header struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
+	Licr        keys.LICr      `json:"licr"            	gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
