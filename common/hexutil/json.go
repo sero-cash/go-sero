@@ -327,8 +327,11 @@ func checkText(input []byte, wantPrefix bool) ([]byte, error) {
 }
 
 func checkBase58Text(input []byte) ([]byte, error) {
-	if len(input) == 0 {
-		return nil, nil // empty strings are allowed
+
+	if base58.IsBase58Str(string(input)) {
+		return input , nil
+	}else {
+		return nil ,ErrInvalidBase58
 	}
 	return input, nil
 }
