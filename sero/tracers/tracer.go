@@ -364,11 +364,11 @@ func New(code string) (*Tracer, error) {
 		//copy(makeSlice(ctx.PushFixedBuffer(20), 20), contract[:])
 		return 1
 	})
-	tracer.vm.PushGlobalGoFunction("isPrecompiled", func(ctx *duktape.Context) int {
-		_, ok := vm.PrecompiledContractsAutumnTwilight[common.BytesToAddress(popSlice(ctx))]
-		ctx.PushBoolean(ok)
-		return 1
-	})
+	//tracer.vm.PushGlobalGoFunction("isPrecompiled", func(ctx *duktape.Context) int {
+	//	_, ok := vm.PrecompiledContractsAutumnTwilight[common.BytesToAddress(popSlice(ctx))]
+	//	ctx.PushBoolean(ok)
+	//	return 1
+	//})
 	tracer.vm.PushGlobalGoFunction("slice", func(ctx *duktape.Context) int {
 		start, end := ctx.GetInt(-2), ctx.GetInt(-1)
 		ctx.Pop2()
