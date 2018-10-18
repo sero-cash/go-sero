@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"gopkg.in/check.v1"
 	"math"
 	"math/big"
 	"math/rand"
@@ -27,8 +28,6 @@ import (
 	"strings"
 	"testing"
 	"testing/quick"
-
-	"gopkg.in/check.v1"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"

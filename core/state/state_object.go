@@ -113,7 +113,7 @@ type Account struct {
 
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data Account) *stateObject {
-	account := Account{}
+	account := Account{Root: data.Root}
 	if data.CodeHash == nil {
 		account.CodeHash = emptyCodeHash
 	}
