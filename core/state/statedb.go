@@ -520,7 +520,6 @@ func (self *StateDB) Suicide(addr common.Address, toAddr common.Address) bool {
 		prev:      stateObject.suicided,
 		prevBooks: books,
 	})
-
 	if self.IsContract(toAddr) {
 		toStateObject := self.getStateObject(addr)
 		for _, book := range books {

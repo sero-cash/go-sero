@@ -153,6 +153,10 @@ func (ch suicideChange) revert(s *StateDB) {
 	if obj != nil {
 		obj.suicided = ch.prev
 		obj.data.Books = ch.prevBooks
+		obj.data.bookMap = map[string]*Book{}
+		for _, book := range ch.prevBooks {
+			obj.data.bookMap[book.Currency] = book
+		}
 	}
 }
 

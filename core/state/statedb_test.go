@@ -246,7 +246,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 		{
 			name: "Suicide",
 			fn: func(a testAction, s *StateDB) {
-				s.Suicide(addr, common.Address{})
+				s.Suicide(addr, common.Base58ToAddress("3HsKvhwuahH1hzh2UrQSRopnpEAjvQ4wUTqvAWbvb5zbNLRAhY1nd4f5dPk1xVeRQ4aJC8nzNwf3t5y12JSzoKSc"))
 			},
 		},
 		{
@@ -327,6 +327,7 @@ func (test *snapshotTest) run() bool {
 		snapshotRevs = make([]int, len(test.snapshots))
 		sindex       = 0
 	)
+	state.SetCode(common.Base58ToAddress("3HsKvhwuahH1hzh2UrQSRopnpEAjvQ4wUTqvAWbvb5zbNLRAhY1nd4f5dPk1xVeRQ4aJC8nzNwf3t5y12JSzoKSc"), []byte{0})
 	for i, action := range test.actions {
 		if len(test.snapshots) > sindex && i == test.snapshots[sindex] {
 			snapshotRevs[sindex] = state.Snapshot()
@@ -338,6 +339,7 @@ func (test *snapshotTest) run() bool {
 	// that is equivalent to fresh state with all actions up the snapshot applied.
 	for sindex--; sindex >= 0; sindex-- {
 		checkstate, _ := New(common.Hash{}, state.Database(), 0)
+		checkstate.SetCode(common.Base58ToAddress("3HsKvhwuahH1hzh2UrQSRopnpEAjvQ4wUTqvAWbvb5zbNLRAhY1nd4f5dPk1xVeRQ4aJC8nzNwf3t5y12JSzoKSc"), []byte{0})
 		for _, action := range test.actions[:test.snapshots[sindex]] {
 			action.fn(action, checkstate)
 		}

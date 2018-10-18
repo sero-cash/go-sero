@@ -113,24 +113,26 @@ type Account struct {
 
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data Account) *stateObject {
-	account := Account{Root: data.Root}
 	if data.CodeHash == nil {
-		account.CodeHash = emptyCodeHash
+		data.CodeHash = emptyCodeHash
 	}
 
-	account.bookMap = map[string]*Book{}
-	account.Books = []*Book{}
-	for _, book := range data.Books {
-		book := &Book{book.Balance, book.Currency}
-		account.Books = append(account.Books, book)
-		account.bookMap[book.Currency] = book
+	data.bookMap = map[string]*Book{}
+	if len(data.Books) > 0 {
+		books := []*Book{}
+		for _, book := range data.Books {
+			nb := &Book{book.Balance, book.Currency}
+			books = append(books, nb)
+			data.bookMap[book.Currency] = nb
+		}
+		data.Books = books
 	}
 
 	return &stateObject{
 		db:            db,
 		address:       address,
 		addrHash:      crypto.Keccak256Hash(address.Bytes()),
-		data:          account,
+		data:          data,
 		cachedStorage: make(Storage),
 		dirtyStorage:  make(Storage),
 	}
