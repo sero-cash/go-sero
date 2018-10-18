@@ -125,28 +125,28 @@ type worker struct {
 	atWork int32
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, sero Backend, mux *event.TypeMux) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
-		eth:         eth,
+		eth:         sero,
 		mux:         mux,
 		txsCh:       make(chan core.NewTxsEvent, txChanSize),
 		chainHeadCh: make(chan core.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh: make(chan core.ChainSideEvent, chainSideChanSize),
-		chainDb:     eth.ChainDb(),
+		chainDb:     sero.ChainDb(),
 		recv:        make(chan *Result, resultQueueSize),
-		chain:       eth.BlockChain(),
-		proc:        eth.BlockChain().Validator(),
+		chain:       sero.BlockChain(),
+		proc:        sero.BlockChain().Validator(),
 		coinbase:    coinbase,
 		agents:      make(map[Agent]struct{}),
-		unconfirmed: newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
+		unconfirmed: newUnconfirmedBlocks(sero.BlockChain(), miningLogAtDepth),
 	}
 	// Subscribe NewTxsEvent for tx pool
-	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
+	worker.txsSub = sero.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 	// Subscribe events for blockchain
-	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
-	worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
+	worker.chainHeadSub = sero.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
+	worker.chainSideSub = sero.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 	go worker.update()
 
 	go worker.wait()
@@ -424,6 +424,7 @@ func (self *worker) commitNewWork() {
 		header.Coinbase = addr
 		header.Licr = licr
 	}
+
 	if err := self.engine.Prepare(self.chain, header); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
