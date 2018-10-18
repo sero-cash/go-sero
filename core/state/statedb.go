@@ -510,28 +510,32 @@ func (self *StateDB) Suicide(addr common.Address, toAddr common.Address) bool {
 	if stateObject == nil {
 		return false
 	}
+
+	books := []*Book{}
+	for _, book := range stateObject.data.Books {
+		books = append(books, &Book{book.Balance, book.Currency})
+	}
+	self.journal.append(suicideChange{
+		account:   &addr,
+		prev:      stateObject.suicided,
+		prevBooks: books,
+	})
+
 	if self.IsContract(toAddr) {
 		toStateObject := self.getStateObject(addr)
-		for coinName, book := range stateObject.data.bookMap {
-			self.journal.append(suicideChange{
-				account:     &addr,
-				prev:        stateObject.suicided,
-				prevbalance: new(big.Int).Set(book.Balance),
-			})
-			toStateObject.AddBalance(coinName, book.Balance)
+		for _, book := range books {
+			toStateObject.AddBalance(book.Currency, book.Balance)
 		}
 	} else {
-		for coinName, book := range stateObject.data.bookMap {
-			self.journal.append(suicideChange{
-				account:     &addr,
-				prev:        stateObject.suicided,
-				prevbalance: new(big.Int).Set(book.Balance),
-			})
-			currency := common.BytesToHash(common.LeftPadBytes([]byte(coinName), 32))
+		for _, book := range books {
+			currency := common.BytesToHash(common.LeftPadBytes([]byte(book.Currency), 32))
 			self.GetZState().AddTxOut(toAddr, book.Balance, currency.HashToUint256())
 		}
 	}
+
 	stateObject.markSuicided()
+	stateObject.data.Books = []*Book{}
+	stateObject.data.bookMap = map[string]*Book{}
 	return true
 }
 

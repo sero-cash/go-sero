@@ -93,10 +93,9 @@ type (
 		prev *stateObject
 	}
 	suicideChange struct {
-		account     *common.Address
-		prev        bool // whether account had already suicided
-		currency    string
-		prevbalance *big.Int
+		account   *common.Address
+		prev      bool // whether account had already suicided
+		prevBooks []*Book
 	}
 
 	// Changes to individual accounts.
@@ -153,7 +152,7 @@ func (ch suicideChange) revert(s *StateDB) {
 	obj := s.getStateObject(*ch.account)
 	if obj != nil {
 		obj.suicided = ch.prev
-		obj.SetBalance(ch.currency, ch.prevbalance)
+		obj.data.Books = ch.prevBooks
 	}
 }
 

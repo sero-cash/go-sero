@@ -113,23 +113,24 @@ type Account struct {
 
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data Account) *stateObject {
-
+	account := Account{}
 	if data.CodeHash == nil {
-		data.CodeHash = emptyCodeHash
+		account.CodeHash = emptyCodeHash
 	}
 
-	if data.bookMap == nil {
-		data.bookMap = map[string]*Book{}
-	}
-
+	account.bookMap = map[string]*Book{}
+	account.Books = []*Book{}
 	for _, book := range data.Books {
-		data.bookMap[book.Currency] = book
+		book := &Book{book.Balance, book.Currency}
+		account.Books = append(account.Books, book)
+		account.bookMap[book.Currency] = book
 	}
+
 	return &stateObject{
 		db:            db,
 		address:       address,
 		addrHash:      crypto.Keccak256Hash(address.Bytes()),
-		data:          data,
+		data:          account,
 		cachedStorage: make(Storage),
 		dirtyStorage:  make(Storage),
 	}
@@ -145,10 +146,6 @@ func (self *stateObject) setError(err error) {
 	if self.dbErr == nil {
 		self.dbErr = err
 	}
-}
-
-func (self *stateObject) Suicided() {
-
 }
 
 func (self *stateObject) markSuicided() {
