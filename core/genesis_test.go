@@ -216,7 +216,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return g.Config
 	case ghash == params.MainnetGenesisHash:
 		return params.BetanetChainConfig
-	case ghash == params.AlphanetGenesisHash:
+	case ghash == params.TestnetGenesisHash:
 		return params.AlphanetChainConfig
 	default:
 		return params.AllEthashProtocolChanges

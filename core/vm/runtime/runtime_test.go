@@ -95,7 +95,7 @@ func TestExecute(t *testing.T) {
 
 func TestCall(t *testing.T) {
 	state, _ := state.New(common.Hash{}, state.NewDatabase(serodb.NewMemDatabase()), 0)
-	address := common.Base58ToAddress("0x0a")
+	address := common.Base58ToAddress("3HsKvhwuahH1hzh2UrQSRopnpEAjvQ4wUTqvAWbvb5zbNLRAhY1nd4f5dPk1xVeRQ4aJC8nzNwf3t5y12JSzoKSc")
 	state.SetCode(address, []byte{
 		byte(vm.PUSH1), 10,
 		byte(vm.PUSH1), 0,

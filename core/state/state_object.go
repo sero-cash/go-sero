@@ -118,15 +118,13 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 	}
 
 	data.bookMap = map[string]*Book{}
-	if len(data.Books) > 0 {
-		books := []*Book{}
-		for _, book := range data.Books {
-			nb := &Book{book.Balance, book.Currency}
-			books = append(books, nb)
-			data.bookMap[book.Currency] = nb
-		}
-		data.Books = books
+	books := []*Book{}
+	for _, book := range data.Books {
+		nb := &Book{book.Balance, book.Currency}
+		books = append(books, nb)
+		data.bookMap[book.Currency] = nb
 	}
+	data.Books = books
 
 	return &stateObject{
 		db:            db,
