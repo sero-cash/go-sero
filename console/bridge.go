@@ -192,6 +192,11 @@ func (b *bridge) SendTransaction(call otto.FunctionCall) (response otto.Value) {
 	progress.Stop()
 	finish <- struct{}{}
 
+	if fn := call.Argument(1); fn.Class() == "Function" {
+		fn.Call(otto.NullValue(), otto.NullValue(), val)
+		return otto.UndefinedValue()
+	}
+
 	return val
 }
 

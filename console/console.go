@@ -197,7 +197,7 @@ func (c *Console) init(preload []string) error {
 
 		if obj := sero.Object(); obj != nil {
 			if _, err = c.jsre.Run(`jeth.sendTransaction = sero.sendTransaction;`); err != nil {
-				return fmt.Errorf("personal.sign: %v", err)
+				return fmt.Errorf("sero.sendTransaction: %v", err)
 			}
 			obj.Set("sendTransaction", bridge.SendTransaction)
 		}
