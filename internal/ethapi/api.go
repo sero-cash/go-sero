@@ -1118,7 +1118,13 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			return err
 		}
 		args.GasPrice = (*hexutil.Big)(price)
+	}else {
+		if args.GasPrice.ToInt().Sign() == 0 {
+			return errors.New(`gasPrice can not be zero`)
+		}
 	}
+
+
 
 	if strings.TrimSpace(args.Currency) == "" {
 		args.Currency = "sero"
