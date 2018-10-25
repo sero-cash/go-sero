@@ -38,10 +38,6 @@ func verifyIn_O(d *keys.Uint256, sign *keys.Uint256, r *keys.Uint256) error {
 
 func Gen(seed *keys.Uint256, t *tx.T, state *zstate.State) (s stx.T, e error) {
 	if preTx, err := preGen(t, state); err == nil {
-		if len(preTx.desc_os) > 2 {
-			e = errors.New("pre tx currency size > 2!!!")
-			return
-		}
 		s.Ehash = t.Ehash
 		var type_o_addr *keys.Uint512
 		for _, desc_o := range preTx.desc_os {

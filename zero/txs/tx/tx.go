@@ -18,6 +18,7 @@ package tx
 
 import (
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
@@ -27,7 +28,7 @@ type In struct {
 
 type Out struct {
 	Addr  keys.Uint512
-	Value utils.U256
+	Pkg   assets.Package
 	Memo  keys.Uint512
 	Z     OutType
 }
@@ -40,18 +41,18 @@ const (
 	TYPE_Z = OutType(2)
 )
 
-type CTx struct {
-	Currency keys.Uint256
+type T struct {
+	Ehash keys.Uint256
 	Fee      utils.U256
 	Ins      []In
 	Outs     []Out
 }
 
-func (self *CTx) Cost() (ret utils.U256) {
+func (self *T) Cost() (ret utils.U256) {
 	if len(self.Outs) > 0 {
 		cost := utils.NewU256(0)
 		for _, out := range self.Outs {
-			cost.AddU(&out.Value)
+			cost.AddU(&out.Pkg.Tkn.Value)
 		}
 		cost.AddU(&self.Fee)
 		return cost
@@ -60,7 +61,3 @@ func (self *CTx) Cost() (ret utils.U256) {
 	}
 }
 
-type T struct {
-	Ehash keys.Uint256
-	CTxs  []CTx
-}

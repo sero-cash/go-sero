@@ -19,6 +19,8 @@ package stx
 import (
 	"encoding/hex"
 
+	"github.com/sero-cash/go-sero/zero/utils"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/crypto/sha3"
@@ -35,7 +37,7 @@ func (b Proof) MarshalText() ([]byte, error) {
 	return result, nil
 }
 
-func (self *Proof) ToHash_for_o() (ret keys.Uint256) {
+func (self *Proof) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.G[:])
 	copy(ret[:], d.Sum(nil))
@@ -46,72 +48,82 @@ type In_Z struct {
 	Anchor keys.Uint256
 	Nil    keys.Uint256
 	Trace  keys.Uint256
+	PkgCM  keys.Uint256
+	Proof  Proof
 }
 
-func (self *In_Z) ToHash_for_o() (ret keys.Uint256) {
+func (self *In_Z) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Anchor[:])
 	d.Write(self.Nil[:])
 	d.Write(self.Trace[:])
+	d.Write(self.PkgCM[:])
+	d.Write(self.Proof.ToHash()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
 
 type Out_Z struct {
-	Commitment keys.Uint256
-	EInfo      [cpt.ETEXT_WIDTH]byte `json:"-"`
+	PkgCM keys.Uint256
+	OutCM keys.Uint256
+	EInfo [cpt.ETEXT_WIDTH]byte `json:"-"`
+	PKr   keys.Uint512
+	Proof Proof
 }
 
 func (self *Out_Z) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
-	d.Write(self.Commitment[:])
+	d.Write(self.PkgCM[:])
+	d.Write(self.OutCM[:])
 	d.Write(self.EInfo[:])
+	d.Write(self.PKr[:])
+	d.Write(self.Proof.ToHash()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
 
 type Desc_Z struct {
-	In    In_Z
-	Out   Out_Z
-	R     keys.Uint256
-	S1    keys.Uint256
-	Proof Proof
+	Ins    []In_Z
+	Outs   []Out_Z
+	PkgRCM keys.Uint256
 }
 
 func (self *Desc_Z) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
-	d.Write(self.In.ToHash_for_o().NewRef()[:])
-	d.Write(self.Out.ToHash().NewRef()[:])
-	d.Write(self.R[:])
-	d.Write(self.S1[:])
-	d.Write(self.Proof.ToHash_for_o().NewRef()[:])
+	d.Write(self.PkgRCM[:])
+	for _, in := range self.Ins {
+		d.Write(in.ToHash()[:])
+	}
+	for _, out := range self.Outs {
+		d.Write(out.ToHash()[:])
+	}
 	copy(ret[:], d.Sum(nil))
 	return
 }
 
 type T struct {
-	Ehash   keys.Uint256
-	From    keys.Uint512
-	Desc_Zs []Desc_Z
-	Desc_Os []Desc_O
-}
-
-func (self *T) ToHash_for_o() (ret keys.Uint256) {
-	d := sha3.NewKeccak256()
-	for _, desc_z := range self.Desc_Zs {
-		d.Write(desc_z.ToHash().NewRef()[:])
-	}
-	copy(ret[:], d.Sum(nil))
-	return
+	Ehash  keys.Uint256
+	From   keys.Uint512
+	Fee    utils.U256
+	Sign   keys.Uint256
+	Desc_Z Desc_Z
+	Desc_O Desc_O
 }
 
 func (self *T) ToHash_for_z() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Ehash[:])
 	d.Write(self.From[:])
-	for _, desc := range self.Desc_Os {
-		d.Write(desc.ToHash_for_z().NewRef()[:])
-	}
+	d.Write(self.Fee.ToUint256()[:])
+	d.Write(self.Desc_O.ToHash_for_z()[:])
+	copy(ret[:], d.Sum(nil))
+	return
+}
+
+func (self *T) ToHash_for_o() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.ToHash_for_z()[:])
+	d.Write(self.Desc_Z.ToHash()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
@@ -119,12 +131,9 @@ func (self *T) ToHash_for_z() (ret keys.Uint256) {
 func (self *T) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.ToHash_for_o().NewRef()[:])
-	d.Write(self.ToHash_for_z().NewRef()[:])
-
-	for _, desc_o := range self.Desc_Os {
-		for _, in := range desc_o.Ins {
-			d.Write(in.Sign[:])
-		}
+	d.Write(self.Sign[:])
+	for _, in := range self.Desc_O.Ins {
+		d.Write(in.Sign[:])
 	}
 	copy(ret[:], d.Sum(nil))
 	return
