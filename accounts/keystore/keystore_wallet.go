@@ -18,7 +18,7 @@ package keystore
 
 import (
 	"github.com/sero-cash/go-czero-import/keys"
-	sero "github.com/sero-cash/go-sero"
+	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -28,6 +28,7 @@ import (
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txs"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
@@ -112,28 +113,34 @@ func (w *keystoreWallet) EncryptTx(account accounts.Account, tx *types.Transacti
 func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
 	w.keystore.mu.Lock()
 	defer w.keystore.mu.Unlock()
-	for i, ctx := range txt.CTxs {
+	ins := []tx.In{}
+	costTkn := txt.TokenCost()
+	for cy, cost := range costTkn {
 		tk := keys.Seed2Tk(seed.SeedToUint256())
-		outs, amount, err := txs.GetRoots(&tk, state.GetZState(), ctx.Cost().ToRef(), &ctx.Currency)
+		outs, amount, err := txs.GetRoots(&tk, state.GetZState(), cost.ToRef(), &cy)
 		if err != nil {
 			return nil, err
 		}
-		ins := []tx.In{}
+
 		for _, out := range outs {
 			ins = append(ins, tx.In{Root: out})
 		}
-		txt.CTxs[i].Ins = ins
-
 		balance := amount
-		balance.SubU(ctx.Cost().ToRef())
-
+		balance.SubU(cost.ToRef())
 		if balance.Cmp(&utils.U256_0) > 0 {
+			token :=&assets.Token{
+				Currency: cy,
+				Value:       balance,
+			}
+			pkg :=assets.Package{
+				Tkn: token,
+			}
 			selfOut := tx.Out{
 				Addr:  keys.Seed2Addr(seed.SeedToUint256()),
-				Value: balance,
+				Pkg:   pkg,
 				Z:     tx.TYPE_Z,
 			}
-			txt.CTxs[i].Outs = append(txt.CTxs[i].Outs, selfOut)
+			txt.Outs = append(txt.Outs, selfOut)
 		}
 	}
 
@@ -144,23 +151,23 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 	})
 	copy(txt.Ehash[:], Ehash[:])
 
-	log.Info("EncryptTxWithSeed : ", "ctx_num", len(txt.CTxs))
-	for _, ctx := range txt.CTxs {
-		for i, in := range ctx.Ins {
-			log.Info("    ctx_in : ", "index", i, "root", in.Root)
-		}
-		for i, out := range ctx.Outs {
-			log.Info("    ctx_out : ", "index", i, "to", hexutil.Encode(out.Addr[:]))
-		}
+	log.Info("EncryptTxWithSeed : ","in_num", len(txt.Ins), "out_num", len(txt.Outs))
+
+	for i, in := range txt.Ins {
+		log.Info("    ctx_in : ", "index", i, "root", in.Root)
 	}
+	for i, out := range txt.Outs {
+		log.Info("    ctx_out : ", "index", i, "to", hexutil.Encode(out.Addr[:]))
+	}
+
 
 	stx, err := txs.Gen(seed.SeedToUint256(), txt, state.GetZState())
 	if err != nil {
 		return nil, err
 	}
 
-	for i, desc_z := range stx.Desc_Zs {
-		log.Info("    desc_z : ", "index", i, "nil", hexutil.Encode(desc_z.In.Nil[:]), "trace", hexutil.Encode(desc_z.In.Trace[:]))
+	for i, in := range stx.Desc_Z.Ins {
+		log.Info("    desc_z : ", "index", i, "nil", hexutil.Encode(in.Nil[:]), "trace", hexutil.Encode(in.Trace[:]))
 	}
 
 	return btx.WithEncrypt(&stx)

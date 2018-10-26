@@ -17,6 +17,7 @@
 package types
 
 import (
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"math/big"
 	"sync/atomic"
 
@@ -64,40 +65,28 @@ func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z
 
 	outDatas := []ztx.Out{}
 	if to != nil {
+
+		token :=&assets.Token{
+			Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256()),
+			Value:       *utils.U256(*value).ToRef(),
+		}
+		pkg :=assets.Package{
+			Tkn: token,
+
+		}
 		outData := ztx.Out{
 			Addr:  *to.ToUint512(),
-			Value: *utils.U256(*value).ToRef(),
+			Pkg: pkg,
 			Z:     z,
 		}
 		outDatas = []ztx.Out{outData}
 	}
 	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
-
-	sero := common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32))
-	if currency == "sero" {
-		ctx := ztx.CTx{
-			Currency: *(sero.HashToUint256()),
-			Fee:      utils.U256(*fee),
-			Outs:     outDatas,
-		}
-		tx := &ztx.T{
-			CTxs: []ztx.CTx{ctx},
-		}
-		return tx
-	} else {
-		ctxFee := ztx.CTx{
-			Currency: *(sero.HashToUint256()),
-			Fee:      utils.U256(*fee),
-		}
-		ctxAmount := ztx.CTx{
-			Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256()),
-			Outs:     outDatas,
-		}
-		tx := &ztx.T{
-			CTxs: []ztx.CTx{ctxFee, ctxAmount},
-		}
-		return tx
+	tx := &ztx.T{
+		Fee : utils.U256(*fee),
+		Outs:outDatas,
 	}
+	return tx;
 
 }
 
@@ -118,10 +107,8 @@ func newTransaction(gasPrice *big.Int, data []byte, currency string) *Transactio
 }
 
 func (tx *Transaction) Value() *big.Int {
-	for _, desc_o := range tx.data.Stxt.Desc_Os {
-		for _, out := range desc_o.Outs {
-			return out.Value.ToIntRef()
-		}
+	for _, desc_o := range tx.data.Stxt.Desc_O.Outs {
+		return desc_o.Pkg.Tkn.Value.ToIntRef()
 	}
 	return big.NewInt(0)
 }
@@ -162,10 +149,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 
 func (tx *Transaction) Data() []byte { return common.CopyBytes(tx.data.Payload) }
 func (tx *Transaction) Gas() uint64 {
-	fee := utils.NewU256(0)
-	for _, desc_o := range tx.data.Stxt.Desc_Os {
-		fee.AddU(&desc_o.Fee)
-	}
+	fee := tx.data.Stxt.Fee
 	price := tx.data.Price
 	return new(big.Int).Div(fee.ToIntRef(), price).Uint64()
 }
@@ -176,11 +160,10 @@ func (tx *Transaction) GetZZSTX() *zstx.T {
 }
 
 func (tx *Transaction) To() *common.Address {
-	for _, desc_o := range tx.data.Stxt.Desc_Os {
-		for _, out := range desc_o.Outs {
-			addr := common.BytesToAddress(out.Addr[:])
-			return &addr
-		}
+	for _, out := range tx.data.Stxt.Desc_O.Outs {
+		addr := common.BytesToAddress(out.Addr[:])
+		return &addr
+
 	}
 	return nil
 }
