@@ -16,6 +16,13 @@
 
 package txs
 
+import (
+	"testing"
+)
+
+func none_param(v interface{}) {
+}
+
 /*type user struct {
 	i      int
 	seed   keys.Uint256
@@ -219,3 +226,11 @@ func TestMain(m *testing.M) {
 	cpt.ZeroInit()
 	m.Run()
 }*/
+
+func TestTxs(t *testing.T) {
+	//db := serodb.NewMemDatabase()
+	//ca := state.NewDatabase(db)
+	//st, _ := state.NewGenesis(common.Hash{}, ca)
+
+	//none_param(st)
+}

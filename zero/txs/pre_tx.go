@@ -81,21 +81,21 @@ func preGen(ts *tx.T, state *zstate.State) (p preTx, e error) {
 	for _, in := range ts.Ins {
 		if src, err := state1.GetOut(&in.Root); err == nil {
 			added := false
-			if src.Out_O.Out.Pkg.Tkn != nil {
-				cy_state_map.add(&src.Out_O.Out.Pkg.Tkn.Currency, &src.Out_O.Out.Pkg.Tkn.Value)
+			if src.Out_O.Pkg.Tkn != nil {
+				cy_state_map.add(&src.Out_O.Pkg.Tkn.Currency, &src.Out_O.Pkg.Tkn.Value)
 				added = true
 			}
-			if src.Out_O.Out.Pkg.Tkt != nil {
-				if _, ok := tk_map[src.Out_O.Out.Pkg.Tkt.Value]; !ok {
-					tk_map[src.Out_O.Out.Pkg.Tkt.Value] = 1
+			if src.Out_O.Pkg.Tkt != nil {
+				if _, ok := tk_map[src.Out_O.Pkg.Tkt.Value]; !ok {
+					tk_map[src.Out_O.Pkg.Tkt.Value] = 1
 				} else {
-					e = fmt.Errorf("in tkt duplicate: %v", src.Out_O.Out.Pkg.Tkt.Value)
+					e = fmt.Errorf("in tkt duplicate: %v", src.Out_O.Pkg.Tkt.Value)
 					return
 				}
 				added = true
 			}
 			if added {
-				if src.Desc_Z == nil {
+				if src.Out_Z == nil {
 					p.desc_o.ins = append(p.desc_o.ins, *src)
 				} else {
 					p.desc_z.ins = append(p.desc_o.ins, *src)

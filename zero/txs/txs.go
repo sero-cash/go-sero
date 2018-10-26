@@ -82,7 +82,7 @@ func Gen(seed *keys.Uint256, t *tx.T, state *zstate.State) (s stx.T, e error) {
 		}
 
 		for i, s_in_o := range preTx.desc_o.ins {
-			if sign, err := keys.SignOAddr(seed, &hash_z, &s_in_o.Out_O.Out.Addr); err != nil {
+			if sign, err := keys.SignOAddr(seed, &hash_z, &s_in_o.Out_O.Addr); err != nil {
 				e = err
 				return
 			} else {
@@ -130,7 +130,7 @@ func Verify(s *stx.T, state *zstate.State) (e error) {
 		}
 		if src, err := state.State0.GetOut(&in_o.Root); e == nil {
 			if src.IsO() {
-				if keys.VerifyOAddr(&hash_z, &in_o.Sign, &src.Out_O.Out.Addr) {
+				if keys.VerifyOAddr(&hash_z, &in_o.Sign, &src.Out_O.Addr) {
 				} else {
 					e = errors.New("txs.verify in_o failed")
 					return
@@ -213,16 +213,16 @@ func GetRoots(tk *keys.Uint512, state *zstate.State, v *utils.U256, currency *ke
 	} else {
 		for _, out := range outs {
 			root := out.Pg.Root.ToUint256()
-			if out.Out_O.Out.Pkg.Tkn != nil {
-				if out.Out_O.Out.Pkg.Tkn.Currency == *currency {
+			if out.Out_O.Pkg.Tkn != nil {
+				if out.Out_O.Pkg.Tkn.Currency == *currency {
 					roots = append(roots, *root)
-					amount.AddU(&out.Out_O.Out.Pkg.Tkn.Value)
+					amount.AddU(&out.Out_O.Pkg.Tkn.Value)
 					out_o := out.Out_O
-					if value.Cmp(out_o.Out.Pkg.Tkn.Value.ToI256().ToRef()) < 0 {
+					if value.Cmp(out_o.Pkg.Tkn.Value.ToI256().ToRef()) < 0 {
 						value = utils.NewI256(0)
 						break
 					} else {
-						value.SubU(&out_o.Out.Pkg.Tkn.Value)
+						value.SubU(&out_o.Pkg.Tkn.Value)
 					}
 				} else {
 				}
