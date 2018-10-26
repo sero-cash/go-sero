@@ -45,7 +45,9 @@ func (out *OutState0) IsO() bool {
 
 func (self *OutState0) ToCommitment() *keys.Uint256 {
 	if self.IsO() {
-		return cpt.GenCommitment(self.Out_O.ToHash().NewRef(), &self.Out_O.Addr, self.Out_O.ToHash().NewRef(), &self.Out_O.Memo).NewRef()
+		hs := self.Out_O.ToHash()
+		hs[31] = 0
+		return cpt.GenCommitment(self.Out_O.ToHash().NewRef(), &self.Out_O.Addr, &hs, &self.Out_O.Memo).NewRef()
 	} else {
 		return self.Out_Z.ToHash().NewRef()
 	}

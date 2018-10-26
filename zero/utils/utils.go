@@ -76,6 +76,20 @@ func NewI256(i int64) (ret I256) {
 	return
 }
 
+func (x *I256) GobEncode() ([]byte, error) {
+	b := big.Int(*x)
+	return b.GobEncode()
+}
+
+func (z *I256) GobDecode(buf []byte) error {
+	var a big.Int
+	if err := a.GobDecode(buf); err != nil {
+		return err
+	}
+	*z = I256(a)
+	return nil
+}
+
 func (b I256) EncodeRLP(w io.Writer) error {
 	i := big.Int(b)
 	if bytes, e := i.GobEncode(); e != nil {
@@ -222,6 +236,20 @@ var U256_0 U256 = U256(*big.NewInt(0))
 func NewU256(i uint64) (ret U256) {
 	ret = U256(*big.NewInt(int64(i)))
 	return
+}
+
+func (x *U256) GobEncode() ([]byte, error) {
+	b := big.Int(*x)
+	return b.GobEncode()
+}
+
+func (z *U256) GobDecode(buf []byte) error {
+	var a big.Int
+	if err := a.GobDecode(buf); err != nil {
+		return err
+	}
+	*z = U256(a)
+	return nil
 }
 
 func (b U256) EncodeRLP(w io.Writer) error {

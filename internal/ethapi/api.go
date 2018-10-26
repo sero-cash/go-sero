@@ -495,14 +495,14 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 		//}
 
 		for _, out := range outs {
-			cy := strings.Trim(string(out.Out_O.Currency[:]), zerobyte)
-			if result[cy] == nil {
-				result[cy] = (*hexutil.Big)(out.Out_O.Out.Value.ToIntRef())
-			} else {
-
-				result[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(result[cy]), (out.Out_O.Out.Value.ToIntRef())))
+			if out.Out_O.Pkg.Tkn != nil {
+				cy := strings.Trim(string(out.Out_O.Pkg.Tkn.Currency[:]), zerobyte)
+				if result[cy] == nil {
+					result[cy] = (*hexutil.Big)(out.Out_O.Pkg.Tkn.Value.ToIntRef())
+				} else {
+					result[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(result[cy]), (out.Out_O.Pkg.Tkn.Value.ToIntRef())))
+				}
 			}
-
 		}
 		return result, state.Error()
 	}
@@ -1118,13 +1118,11 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			return err
 		}
 		args.GasPrice = (*hexutil.Big)(price)
-	}else {
+	} else {
 		if args.GasPrice.ToInt().Sign() == 0 {
 			return errors.New(`gasPrice can not be zero`)
 		}
 	}
-
-
 
 	if strings.TrimSpace(args.Currency) == "" {
 		args.Currency = "sero"
