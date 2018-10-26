@@ -25,18 +25,17 @@ import (
 )
 
 type Out0 struct {
-	Currency keys.Uint256
-	Out      stx.Out_O
+	Out stx.Out_O
 }
 
 func (self *Out0) ToCommitment() (ret keys.Uint256) {
-	return cpt.GenCommitment(&self.Currency, &self.Out.Addr, self.Out.Value.ToUint256().NewRef(), &self.Out.Memo)
+	return cpt.GenCommitment(self.Out.ToHash().NewRef(), &self.Out.Addr, self.Out.ToHash().NewRef(), &self.Out.Memo)
 }
 
 type OutState0 struct {
-	Index  uint64
-	Out_O  *Out0       `rlp:"nil"`
-	Desc_Z *stx.Desc_Z `rlp:"nil"`
+	Index uint64
+	Out_O *Out0      `rlp:"nil"`
+	Out_Z *stx.Out_Z `rlp:"nil"`
 }
 
 func (self *OutState0) Clone() (ret OutState0) {
@@ -45,7 +44,7 @@ func (self *OutState0) Clone() (ret OutState0) {
 }
 
 func (out *OutState0) IsO() bool {
-	if out.Desc_Z == nil {
+	if out.Out_Z == nil {
 		return true
 	} else {
 		return false
@@ -56,7 +55,7 @@ func (self *OutState0) ToCommitment() *keys.Uint256 {
 	if self.IsO() {
 		return self.Out_O.ToCommitment().NewRef()
 	} else {
-		return self.Desc_Z.Out.Commitment.NewRef()
+		return self.Out_Z.ToHash().NewRef()
 	}
 }
 

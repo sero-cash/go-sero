@@ -19,6 +19,8 @@ package stx
 import (
 	"encoding/hex"
 
+	"github.com/sero-cash/go-sero/zero/txs/tx"
+
 	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -69,6 +71,18 @@ type Out_Z struct {
 	EInfo [cpt.ETEXT_WIDTH]byte `json:"-"`
 	PKr   keys.Uint512
 	Proof Proof
+	Temp  tx.Out
+}
+
+func (self *Out_Z) Clone() (ret Out_Z) {
+	utils.DeepCopy(&ret, self)
+	return
+}
+
+func (this Out_Z) ToRef() (ret *Out_Z) {
+	ret = &Out_Z{}
+	*ret = this
+	return
 }
 
 func (self *Out_Z) ToHash() (ret keys.Uint256) {

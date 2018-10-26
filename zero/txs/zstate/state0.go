@@ -200,7 +200,7 @@ func (self *State0) Revert() {
 	return
 }
 
-func (state *State0) AddOut(out_o *Out0, desc_z *stx.Desc_Z) (root keys.Uint256) {
+func (state *State0) AddOut(out_o *Out0, out_z *stx.Out_Z) (root keys.Uint256) {
 	os := OutState0{}
 	if out_o != nil {
 		o := *out_o
@@ -208,9 +208,9 @@ func (state *State0) AddOut(out_o *Out0, desc_z *stx.Desc_Z) (root keys.Uint256)
 		bytes_memo := []byte(fmt.Sprintf("Cur:%d", (state.Cur.Index + 1)))
 		copy(os.Out_O.Out.Memo[:], bytes_memo[:])
 	}
-	if desc_z != nil {
-		o := *desc_z
-		os.Desc_Z = &o
+	if out_z != nil {
+		o := out_z.Clone()
+		os.Out_Z = &o
 	}
 	commitment := os.ToCommitment()
 	state.append_commitment_dirty(commitment)
@@ -258,33 +258,35 @@ func (state *State0) addIn(root *keys.Uint256) (e error) {
 }
 
 func (state *State0) AddStx(st *stx.T) (e error) {
-	for _, desc_o := range st.Desc_Os {
-		for _, in := range desc_o.Ins {
-			if err := state.addIn(&in.Root); err != nil {
-				e = err
-				return
-			} else {
-				state.append_del_dirty(&in.Root)
-			}
-		}
-		for _, out := range desc_o.Outs {
-			out0 := Out0{
-				desc_o.Currency,
-				out,
-			}
-			state.AddOut(&out0, nil)
-		}
-	}
-	for _, desc_z := range st.Desc_Zs {
-		if err := state.addIn(&desc_z.In.Nil); err != nil {
+	for _, in := range st.Desc_O.Ins {
+		if err := state.addIn(&in.Root); err != nil {
 			e = err
 			return
 		} else {
-			state.append_del_dirty(&desc_z.In.Nil)
-			state.append_del_dirty(&desc_z.In.Trace)
+			state.append_del_dirty(&in.Root)
 		}
-		state.AddOut(nil, &desc_z)
 	}
+	for _, out := range st.Desc_O.Outs {
+		out0 := Out0{
+			out,
+		}
+		state.AddOut(&out0, nil)
+	}
+
+	for _, in := range st.Desc_Z.Ins {
+		if err := state.addIn(&in.Nil); err != nil {
+			e = err
+			return
+		} else {
+			state.append_del_dirty(&in.Nil)
+			state.append_del_dirty(&in.Trace)
+		}
+	}
+
+	for _, out := range st.Desc_Z.Outs {
+		state.AddOut(nil, &out)
+	}
+
 	return
 }
 

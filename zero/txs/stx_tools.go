@@ -17,14 +17,9 @@
 package txs
 
 import (
-	"sync"
-
-	"github.com/pkg/errors"
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type genParams struct {
@@ -39,9 +34,25 @@ type genParams struct {
 
 var gen_cache = make(chan int, 4)
 
-func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_zs []stx.Desc_Z, e error) {
+func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_z stx.Desc_Z, e error) {
+	for _, in := range ptx.desc_z.ins {
+		in_z := stx.In_Z{}
+		in_z.Anchor = *in.Pg.Anchor.ToUint256()
+		in_z.PkgCM = in.Out_O.ToCommitment()
+		in_z.Nil = in.Out_O.ToCommitment()
+		in_z.Trace = in.Out_O.Out.ToHash()
+	}
 
-	extras := []cpt.Extra{}
+	for _, out := range ptx.desc_z.outs {
+		out_z := stx.Out_Z{}
+		out_z.PkgCM = cpt.Random()
+		out_z.OutCM = cpt.Random()
+		out_z.PKr = keys.Seed2Tk(seed)
+		out_z.Temp = out
+	}
+	return
+
+	/*extras := []cpt.Extra{}
 
 	z := [2]utils.U256{}
 
@@ -162,7 +173,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_zs [
 	}
 
 	tr.Leave()
-	return
+	return*/
 }
 
 type verParams struct {
@@ -177,7 +188,8 @@ type verParams struct {
 var ver_cache = make(chan int, 4)
 
 func verifyDesc_Zs(tx *stx.T) (e error) {
-	tr := utils.TR_enter("Verify DescZs")
+	return
+	/*tr := utils.TR_enter("Verify DescZs")
 
 	var wg sync.WaitGroup
 	result := true
@@ -244,5 +256,5 @@ func verifyDesc_Zs(tx *stx.T) (e error) {
 	}
 
 	tr.Leave()
-	return
+	return*/
 }

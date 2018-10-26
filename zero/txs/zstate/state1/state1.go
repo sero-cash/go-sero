@@ -17,16 +17,15 @@
 package state1
 
 import (
-	"bytes"
 	"io/ioutil"
 	"os"
 	"sync"
 
+	"github.com/sero-cash/go-sero/zero/txs/stx"
+
 	"github.com/sero-cash/go-sero/zero/witness"
 
-	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/utils"
 	"github.com/sero-cash/go-sero/zero/witness/merkle"
@@ -220,13 +219,38 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 	for _, tk := range tks {
 		if os.IsO() {
 			out_o := os.Out_O
-			if out_o.Out.Value.Cmp(&utils.U256_0) <= 0 {
+			if out_o.Out.Pkg.Tkn == nil && out_o.Out.Pkg.Tkt == nil {
 				break
+			}
+			if out_o.Out.Pkg.Tkn != nil {
+				if out_o.Out.Pkg.Tkn.Value.Cmp(&utils.U256_0) <= 0 {
+					break
+				}
+			}
+			if out_o.Out.Pkg.Tkt != nil {
+				if out_o.Out.Pkg.Tkt.Value == keys.Empty_Uint256 {
+					break
+				}
 			}
 			if out_o.Out.Addr == (keys.Uint512{}) {
 				break
 			}
-			info := cpt.Info{}
+			if tk == out_o.Out.Addr {
+				root := pg.Root.ToUint256()
+				state.append_wout_dirty(root)
+				wos := OutState1{}
+				wos.Pg = *pg
+				wos.Tk = tk
+				wos.Out_O = *os.Out_O
+				wos.Index = os.Index
+				wos.Out_Z = &stx.Out_Z{}
+				wos.Z = false
+				wos.Num = state.State0.Num()
+				state.add_out_dirty(root, &wos)
+				state.add_out_dirty(&wos.Trace, &wos)
+				break
+			}
+			/*info := cpt.Info{}
 			info.Currency = out_o.Currency
 			info.V = out_o.Out.Value.ToUint256()
 			info.Text = out_o.Out.Memo
@@ -252,37 +276,55 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 					panic("add wouts but commitment not match!")
 				}
 			} else {
-			}
+			}*/
 		} else {
-			desc_z := os.Desc_Z
-			if info, e := cpt.DecodeEInfo(
-				&tk,
-				&desc_z.Out.EInfo,
-				&desc_z.S1,
-				&desc_z.Out.Commitment,
-			); e == nil {
-				if bytes.Compare(info.V[:], keys.Empty_Uint256[:]) > 0 {
-					root := pg.Root.ToUint256()
-					state.append_wout_dirty(root)
-					wos := OutState1{}
-					wos.Pg = *pg
-					wos.Out_O.Out.Memo = info.Text
-					wos.Out_O.Out.Value = utils.NewU256_ByKey(&info.V)
-					//wos.Out_O.Out.R = info.R
-					wos.Out_O.Currency = info.Currency
-					wos.Tk = tk
-					wos.Desc_Z = os.Desc_Z
-					wos.Index = os.Index
-					wos.Trace = info.Trace
-					wos.Z = true
-					wos.Num = state.State0.Num()
-					state.add_out_dirty(root, &wos)
-					state.add_out_dirty(&wos.Trace, &wos)
+			if tk == os.Out_Z.PKr {
+				root := pg.Root.ToUint256()
+				state.append_wout_dirty(root)
+				wos := OutState1{}
+				wos.Pg = *pg
+				wos.Out_O.Out.Addr = os.Out_Z.PKr
+				wos.Out_O.Out.Pkg = os.Out_Z.Temp.Pkg.Clone()
+				wos.Out_O.Out.Memo = os.Out_Z.Temp.Memo
+				wos.Out_Z = os.Out_Z.Clone().ToRef()
+				wos.Tk = tk
+				wos.Index = os.Index
+				wos.Z = true
+				wos.Num = state.State0.Num()
+				state.add_out_dirty(root, &wos)
+				state.add_out_dirty(&wos.Trace, &wos)
+			}
+			/*
+				desc_z := os.Desc_Z
+				if info, e := cpt.DecodeEInfo(
+					&tk,
+					&desc_z.Out.EInfo,
+					&desc_z.S1,
+					&desc_z.Out.Commitment,
+				); e == nil {
+					if bytes.Compare(info.V[:], keys.Empty_Uint256[:]) > 0 {
+						root := pg.Root.ToUint256()
+						state.append_wout_dirty(root)
+						wos := OutState1{}
+						wos.Pg = *pg
+						wos.Out_O.Out.Memo = info.Text
+						wos.Out_O.Out.Value = utils.NewU256_ByKey(&info.V)
+						//wos.Out_O.Out.R = info.R
+						wos.Out_O.Currency = info.Currency
+						wos.Tk = tk
+						wos.Desc_Z = os.Desc_Z
+						wos.Index = os.Index
+						wos.Trace = info.Trace
+						wos.Z = true
+						wos.Num = state.State0.Num()
+						state.add_out_dirty(root, &wos)
+						state.add_out_dirty(&wos.Trace, &wos)
+					} else {
+					}
+					break
 				} else {
 				}
-				break
-			} else {
-			}
+			*/
 		}
 	}
 }

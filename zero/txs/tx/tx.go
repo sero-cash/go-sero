@@ -27,10 +27,10 @@ type In struct {
 }
 
 type Out struct {
-	Addr  keys.Uint512
-	Pkg   assets.Package
-	Memo  keys.Uint512
-	Z     OutType
+	Addr keys.Uint512
+	Pkg  assets.Package
+	Memo keys.Uint512
+	Z    OutType
 }
 
 type OutType int
@@ -43,9 +43,9 @@ const (
 
 type T struct {
 	Ehash keys.Uint256
-	Fee      utils.U256
-	Ins      []In
-	Outs     []Out
+	Fee   utils.U256
+	Ins   []In
+	Outs  []Out
 }
 
 func (self *T) Cost() (ret utils.U256) {
@@ -60,4 +60,3 @@ func (self *T) Cost() (ret utils.U256) {
 		return self.Fee
 	}
 }
-
