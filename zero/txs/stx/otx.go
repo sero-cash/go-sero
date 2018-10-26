@@ -35,7 +35,7 @@ type Out_O struct {
 func (self *Out_O) ToHash() (ret keys.Uint256) {
 	hash := crypto.Keccak256(
 		self.Addr[:],
-		self.Pkg.ToHash()[:],
+		self.Pkg.ToHash().NewRef()[:],
 		self.Memo[:],
 	)
 	copy(ret[:], hash)

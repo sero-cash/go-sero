@@ -17,7 +17,7 @@ func (self *Token) ToHash() (ret keys.Uint256) {
 	} else {
 		hash := crypto.Keccak256(
 			self.Currency[:],
-			self.Value.ToUint256()[:],
+			self.Value.ToUint256().NewRef()[:],
 		)
 		copy(ret[:], hash)
 		return
@@ -47,8 +47,8 @@ type Package struct {
 
 func (self *Package) ToHash() (ret keys.Uint256) {
 	hash := crypto.Keccak256(
-		self.Tkn.ToHash()[:],
-		self.Tkt.ToHash()[:],
+		self.Tkn.ToHash().NewRef()[:],
+		self.Tkt.ToHash().NewRef()[:],
 	)
 	copy(ret[:], hash)
 	return ret

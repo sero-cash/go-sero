@@ -60,7 +60,7 @@ func (self *In_Z) ToHash() (ret keys.Uint256) {
 	d.Write(self.Nil[:])
 	d.Write(self.Trace[:])
 	d.Write(self.PkgCM[:])
-	d.Write(self.Proof.ToHash()[:])
+	d.Write(self.Proof.ToHash().NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
@@ -91,7 +91,7 @@ func (self *Out_Z) ToHash() (ret keys.Uint256) {
 	d.Write(self.OutCM[:])
 	d.Write(self.EInfo[:])
 	d.Write(self.PKr[:])
-	d.Write(self.Proof.ToHash()[:])
+	d.Write(self.Proof.ToHash().NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
@@ -106,10 +106,10 @@ func (self *Desc_Z) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.PkgRCM[:])
 	for _, in := range self.Ins {
-		d.Write(in.ToHash()[:])
+		d.Write(in.ToHash().NewRef()[:])
 	}
 	for _, out := range self.Outs {
-		d.Write(out.ToHash()[:])
+		d.Write(out.ToHash().NewRef()[:])
 	}
 	copy(ret[:], d.Sum(nil))
 	return
@@ -128,16 +128,16 @@ func (self *T) ToHash_for_z() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Ehash[:])
 	d.Write(self.From[:])
-	d.Write(self.Fee.ToUint256()[:])
-	d.Write(self.Desc_O.ToHash_for_z()[:])
+	d.Write(self.Fee.ToUint256().NewRef()[:])
+	d.Write(self.Desc_O.ToHash_for_z().NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
 
 func (self *T) ToHash_for_o() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
-	d.Write(self.ToHash_for_z()[:])
-	d.Write(self.Desc_Z.ToHash()[:])
+	d.Write(self.ToHash_for_z().NewRef()[:])
+	d.Write(self.Desc_Z.ToHash().NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
