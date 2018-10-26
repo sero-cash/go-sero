@@ -42,13 +42,13 @@ type cyState struct {
 	balance utils.U256
 }
 
-type cyStateMap map[keys.Uint256]cyState
+type cyStateMap map[keys.Uint256]*cyState
 
 func (self cyStateMap) add(key *keys.Uint256, value *utils.U256) {
 	if _, ok := self[*key]; ok {
 		self[*key].balance.AddU(value)
 	} else {
-		self[*key] = cyState{
+		self[*key] = &cyState{
 			*value.ToRef(),
 		}
 	}
@@ -57,17 +57,17 @@ func (self cyStateMap) sub(key *keys.Uint256, value *utils.U256) {
 	if _, ok := self[*key]; ok {
 		self[*key].balance.SubU(value)
 	} else {
-		self[*key] = cyState{
+		self[*key] = &cyState{
 			*value.ToRef(),
 		}
 	}
 }
 
 func newcyStateMap(fee *utils.U256) (ret cyStateMap) {
-	ret = make(map[keys.Uint256]cyState)
+	ret = make(map[keys.Uint256]*cyState)
 	sero_currency := keys.Uint256{}
 	copy(sero_currency[:], []byte("SERO"))
-	ret[sero_currency] = cyState{
+	ret[sero_currency] = &cyState{
 		balance: *fee.ToRef(),
 	}
 	return
