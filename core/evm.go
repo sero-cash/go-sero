@@ -17,7 +17,9 @@
 package core
 
 import (
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"math/big"
+	"strings"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
@@ -86,23 +88,34 @@ func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash
 
 // CanTransfer checks whether there are enough funds in the address' account to make a transfer.
 // This does not take the necessary gas in to account to make the transfer valid.
-func CanTransfer(db vm.StateDB, addr common.Address, currency string, amount *big.Int) bool {
-	return db.GetBalance(addr, currency).Cmp(amount) >= 0
+func CanTransfer(db vm.StateDB, addr common.Address, pkg assets.Package) bool {
+	if pkg.Tkn != nil {
+		amount := big.Int(pkg.Tkn.Value)
+		return db.GetBalance(addr, strings.TrimSpace(string(pkg.Tkn.Currency[:]))).Cmp(&amount) >= 0
+	}
+	return true
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
-func Transfer(db vm.StateDB, sender, recipient common.Address, currency string, amount *big.Int) {
-	if amount == nil || amount.Sign() <= 0 {
-		return
-	}
-	if db.IsContract(sender) {
-		db.SubBalance(sender, currency, amount)
-		if db.IsContract(recipient) {
-			db.AddBalance(recipient, currency, amount)
-		} else {
-			db.GetZState().AddTxOut(recipient, amount, common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256())
+func Transfer(db vm.StateDB, sender, recipient common.Address, pkg assets.Package) {
+	if pkg.Tkn != nil {
+		amount := big.Int(pkg.Tkn.Value)
+		if amount.Sign() <= 0 {
+			return
 		}
-	} else if recipient != (common.Address{}) {
-		db.AddBalance(recipient, currency, amount)
+		currency := strings.TrimSpace(string(pkg.Tkn.Currency[:]))
+		if db.IsContract(sender) {
+			db.SubBalance(sender, currency, &amount)
+			if db.IsContract(recipient) {
+				db.AddBalance(recipient, currency, &amount)
+			} else {
+				db.GetZState().AddTxOut(recipient, pkg)
+			}
+		} else if recipient != (common.Address{}) {
+			db.AddBalance(recipient, currency, &amount)
+		}
+	} else if pkg.Tkt != nil {
+		db.GetZState().AddTxOut(recipient, pkg)
 	}
+
 }

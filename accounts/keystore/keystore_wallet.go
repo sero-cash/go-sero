@@ -117,7 +117,7 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 	costTkn := txt.TokenCost()
 	for cy, cost := range costTkn {
 		tk := keys.Seed2Tk(seed.SeedToUint256())
-		outs, amount, err := txs.GetRoots(&tk, state.GetZState(), cost.ToRef(), &cy)
+		outs, amount, err := txs.GetRoots(&tk, cost.ToRef(), &cy)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 	}
 
 
-	stx, err := txs.Gen(seed.SeedToUint256(), txt, state.GetZState())
+	stx, err := txs.Gen(seed.SeedToUint256(), txt)
 	if err != nil {
 		return nil, err
 	}

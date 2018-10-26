@@ -1196,7 +1196,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		}
 
 		for _, tx := range block.Transactions() {
-			err := stx.Verify(tx.GetZZSTX(), state.GetZState())
+			err := stx.Verify(tx.GetZZSTX())
 			if err != nil {
 				return i, events, coalescedLogs, err
 			}

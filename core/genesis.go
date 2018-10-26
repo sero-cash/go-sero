@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 	"sort"
 	"strings"
@@ -230,7 +232,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 		db = serodb.NewMemDatabase()
 	}
 	statedb, _ := state.NewGenesis(common.Hash{}, state.NewDatabase(db))
-	statedb.RegisterCurrency(common.BytesToAddress(crypto.Keccak512(nil)), "sero")
+	statedb.RegisterToken(common.BytesToAddress(crypto.Keccak512(nil)), "sero")
 	statedb.AddBalance(state.EmptyAddress, "sero", new(big.Int).SetUint64(50000000))
 
 	sero := common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32))
@@ -245,7 +247,12 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 			statedb.AddBalance(addr, "sero", account.Balance)
 			statedb.SetCode(addr, account.Code)
 		} else {
-			statedb.GetZState().AddTxOut(addr, account.Balance, sero.HashToUint256())
+			pkg := assets.Package{Tkn: &assets.Token{
+				Currency: *sero.HashToUint256(),
+				Value:    utils.U256(*account.Balance),
+			},
+			}
+			statedb.GetZState().AddTxOut(addr, pkg)
 		}
 		for key, value := range account.Storage {
 			statedb.SetState(addr, key, value)

@@ -17,6 +17,8 @@
 package runtime
 
 import (
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"math"
 	"math/big"
 	"time"
@@ -105,13 +107,17 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	// set the receiver's (the executing contract) code for execution.
 	cfg.State.SetCode(address, code)
 	// Call the code with the given configuration.
+	pkg := assets.Package{Tkn: &assets.Token{
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Value:    utils.U256(*cfg.Value),
+	},
+	}
 	ret, _, err := vmenv.Call(
 		sender,
 		common.BytesToAddress([]byte("contract")),
 		input,
 		cfg.GasLimit,
-		"sero",
-		cfg.Value,
+		pkg,
 	)
 
 	return ret, cfg.State, err
@@ -134,13 +140,18 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 
 	address := common.BytesToAddress(crypto.Keccak512([]byte{0xff}, sender.Address().Bytes(), []byte{}, input))
 	// Call the code with the given configuration.
+
+	pkg := assets.Package{Tkn: &assets.Token{
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Value:    utils.U256(*cfg.Value),
+	},
+	}
 	code, leftOverGas, err := vmenv.Create(
 		sender,
 		address,
 		input,
 		cfg.GasLimit,
-		"sero",
-		cfg.Value,
+		pkg,
 	)
 	return code, address, leftOverGas, err
 }
@@ -157,13 +168,17 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 
 	sender := cfg.State.GetOrNewStateObject(cfg.Origin)
 	// Call the code with the given configuration.
+	pkg := assets.Package{Tkn: &assets.Token{
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Value:    utils.U256(*cfg.Value),
+	},
+	}
 	ret, leftOverGas, err := vmenv.Call(
 		sender,
 		address,
 		input,
 		cfg.GasLimit,
-		"sero",
-		cfg.Value,
+		pkg,
 	)
 
 	return ret, leftOverGas, err

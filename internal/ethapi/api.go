@@ -488,7 +488,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 
 		seed := wallet.Accounts()[0].Tk
 
-		outs, err := txs.GetOuts(seed.ToUint512(), state.GetZState())
+		outs, err := txs.GetOuts(seed.ToUint512())
 
 		//if currencyHash == (common.Hash{}){
 		//	return (*hexutil.Big)(common.Big0), nil

@@ -21,6 +21,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 	"runtime"
 	"time"
@@ -422,6 +424,10 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 
 	statedb.SetAvgUsedGas(header.Number.Uint64(), avgGas)
 
-	sero := common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32))
-	statedb.GetZState().AddTxOut(header.Coinbase, reward, sero.HashToUint256())
+	pkg := assets.Package{Tkn: &assets.Token{
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Value:    utils.U256(*reward),
+	},
+	}
+	statedb.GetZState().AddTxOut(header.Coinbase, pkg)
 }

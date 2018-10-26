@@ -17,15 +17,12 @@
 package zstate
 
 import (
-	"math/big"
-
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
-	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type State struct {
@@ -52,7 +49,7 @@ func (self *State) Revert() {
 	return
 }
 
-func (state *State) AddOut_O(out *stx.Out_O, currency *keys.Uint256) {
+func (state *State) AddOut_O(out *stx.Out_O) {
 	state.State0.AddOut(out.Clone().ToRef(), nil)
 }
 
@@ -65,14 +62,7 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	return
 }
 
-func (state *State) AddTxOut(addr common.Address, value *big.Int, currency *keys.Uint256) {
-	pkg := assets.Package{
-		&assets.Token{
-			*currency,
-			utils.U256(*value),
-		},
-		nil,
-	}
+func (state *State) AddTxOut(addr common.Address, pkg assets.Package) {
 	o := stx.Out_O{*addr.ToUint512(), pkg, keys.Uint512{}}
-	state.AddOut_O(&o, currency)
+	state.AddOut_O(&o)
 }

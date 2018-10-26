@@ -19,6 +19,8 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/log"
@@ -47,6 +49,7 @@ var (
 	topic_issueToken    = common.HexToHash("0x25d7b0676eb16f8e7d1160b577510f33f54887867efcbc6ec3c712354706b6b0")
 	topic_sendAnonymous = common.HexToHash("0x2da7d636de04e3fdf864ae424b77b7c8ca8561cafd21f3317d8e131b96a22b02")
 	topic_selfBalance   = common.HexToHash("0x5c8c6e4c5998a1ee83ab3aa45fa23ca7c8ed4a75c654632eb22adcc5e1e6fb37")
+	topic_issueTicket   = common.HexToHash("0x25d7b0676eb16f8e7d1160b577510f33f54887867efcbc6ec3c712354706b6b0")
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -695,7 +698,13 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	if value.Sign() != 0 {
 		gas += params.CallStipend
 	}
-	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, "sero", value)
+
+	pkg := assets.Package{Tkn: &assets.Token{
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Value:    utils.U256(*value),
+	},
+	}
+	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, pkg)
 	if err != nil {
 		stack.push(interpreter.intPool.getZero())
 	} else {
@@ -728,7 +737,13 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	if value.Sign() != 0 {
 		gas += params.CallStipend
 	}
-	ret, returnGas, err := interpreter.evm.CallCode(contract, toAddr, args, gas, "sero", value)
+
+	pkg := assets.Package{Tkn: &assets.Token{
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Value:    utils.U256(*value),
+	},
+	}
+	ret, returnGas, err := interpreter.evm.CallCode(contract, toAddr, args, gas, pkg)
 	if err != nil {
 		stack.push(interpreter.intPool.getZero())
 	} else {
@@ -838,7 +853,30 @@ func makeLog(size int) executionFunc {
 		d := memory.Get(mStart.Int64(), mSize.Int64())
 
 		end := mSize.Uint64()
-		if topics[0] == topic_issueToken {
+		if topics[0] == topic_issueTicket {
+			nameLen := new(big.Int).SetBytes(d[end-32:]).Uint64()
+			categoryName := string(d[:new(big.Int).SetBytes(d[end-32:]).Uint64()])
+			match, err := regexp.Match("^[A-Za-z]{2,16}$", d[0:nameLen])
+			if err != nil || !match {
+				log.Trace("issueToken error ", "contract", contract.Address(), "categoryName", categoryName, "error", "illegal categoryName")
+				memory.Set(mStart.Uint64()+end-32, 32, hashFalse)
+				return hashFalse, nil
+			}
+
+			if !interpreter.evm.StateDB.RegisterTicket(contract.Address(), categoryName) {
+				log.Trace("issueToken error ", "contract", contract.Address(), "categoryName", categoryName, "error", "categoryName registered by other")
+				memory.Set(mStart.Uint64()+end-32, 32, hashFalse)
+				return hashFalse, nil
+			}
+
+			pkg := assets.Package{Tkt: &assets.Ticket{
+				Category: *common.BytesToHash(common.LeftPadBytes([]byte(categoryName), 32)).HashToUint256(),
+				Value:    *crypto.Keccak256Hash(append([]byte(categoryName), []byte{}...)).HashToUint256(),
+			},
+			}
+			interpreter.evm.StateDB.GetZState().AddTxOut(contract.CallerAddress, pkg)
+			memory.Set(mStart.Uint64()+end-32, 32, hashTrue)
+		} else if topics[0] == topic_issueToken {
 			total := new(big.Int).SetBytes(d[end-32:])
 			nameLen := new(big.Int).SetBytes(d[end-64 : end-32]).Uint64()
 
@@ -850,7 +888,7 @@ func makeLog(size int) executionFunc {
 				return hashFalse, nil
 			}
 
-			if !interpreter.evm.StateDB.RegisterCurrency(contract.Address(), coinName) {
+			if !interpreter.evm.StateDB.RegisterToken(contract.Address(), coinName) {
 				log.Trace("issueToken error ", "contract", contract.Address(), "coinName", coinName, "total", total, "error", "coinName registered by other")
 				memory.Set(mStart.Uint64()+end-32, 32, hashFalse)
 				return hashFalse, nil
@@ -859,11 +897,6 @@ func makeLog(size int) executionFunc {
 			memory.Set(mStart.Uint64()+end-32, 32, hashTrue)
 		} else if topics[0] == topic_selfBalance {
 			coinName := string(d[:new(big.Int).SetBytes(d[end-32:]).Uint64()])
-			if !interpreter.evm.StateDB.ExistsCurrency(coinName) {
-				log.Trace("selfBalance error ", "contract", contract.Address(), "coinName", coinName, "error", "coinName not exists")
-				memory.Set(mStart.Uint64()+end-32, 32, hashZero)
-				return hashZero, nil
-			}
 			balance := interpreter.evm.StateDB.GetBalance(contract.Address(), coinName)
 			memory.Set(mStart.Uint64()+end-32, 32, common.LeftPadBytes(balance.Bytes(), 32))
 			return balance.Bytes(), nil
@@ -883,12 +916,6 @@ func makeLog(size int) executionFunc {
 			if len == 0 {
 				currency = "sero"
 			} else {
-				coinName := string(d[:len])
-				if !interpreter.evm.StateDB.ExistsCurrency(coinName) {
-					log.Trace("sendAnonymous error ", "contract", contract.Address(), "coinName", coinName, "error", "coinName not exists")
-					memory.Set(mStart.Uint64()+end-32, 32, hashFalse)
-					return hashFalse, nil
-				}
 				currency = string(d[:len])
 			}
 
@@ -899,7 +926,13 @@ func makeLog(size int) executionFunc {
 				return hashFalse, nil
 			}
 			gas := interpreter.evm.callGasTemp + params.CallStipend
-			ret, returnGas, err := interpreter.evm.Call(contract, toAddr, nil, gas, currency, value)
+
+			pkg := assets.Package{Tkn: &assets.Token{
+				Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
+				Value:    utils.U256(*value),
+			},
+			}
+			ret, returnGas, err := interpreter.evm.Call(contract, toAddr, nil, gas, pkg)
 
 			if err != nil {
 				log.Trace("sendAnonymous error ", "contract", contract.Address(), "error", err)

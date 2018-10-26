@@ -33,8 +33,10 @@ type StateDB interface {
 	GetBalance(common.Address, string) *big.Int
 	Balances(addr common.Address) map[string]*big.Int
 
-	RegisterCurrency(common.Address, string) bool
-	ExistsCurrency(string) bool
+	RegisterTicket(common.Address, string) bool
+	GetContrctAddressByTicket(key string) common.Address
+	RegisterToken(common.Address, string) bool
+	GetContrctAddressByToken(key string) common.Address
 
 	AddNonceAddress([]byte, common.Address)
 	GetNonceAddress([]byte) common.Address

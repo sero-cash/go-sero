@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/common"
@@ -59,7 +60,8 @@ type Contract struct {
 	Input    []byte
 
 	Gas uint64
-	//Currency common.Hash
+
+	pkg *assets.Package
 	value *big.Int
 
 	Args []byte
@@ -70,7 +72,7 @@ type Contract struct {
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uint64) *Contract {
+func NewContract(caller ContractRef, object ContractRef, pkg *assets.Package, gas uint64) *Contract {
 	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil}
 
 	c.addrs = map[common.ContractAddress]common.Address{}
@@ -88,7 +90,7 @@ func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uin
 	// This pointer will be off the state transition
 	c.Gas = gas
 	// ensures a value is set
-	c.value = value
+	c.pkg = pkg
 
 	return c
 }

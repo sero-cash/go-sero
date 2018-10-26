@@ -19,6 +19,7 @@ package backends
 import (
 	"context"
 	"errors"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"math/big"
 	"sync"
 	"time"
@@ -389,6 +390,7 @@ func (m callmsg) Data() []byte                   { return m.CallMsg.Data }
 func (m callmsg) Currency() string {
 	return "sero"
 }
+func (m callmsg) Pkg() assets.Package { return assets.Package{} }
 
 // filterBackend implements filters.Backend to support filtering for logs without
 // taking bloom-bits acceleration structures into account.

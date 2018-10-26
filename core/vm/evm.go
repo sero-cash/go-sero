@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"math/big"
 	"time"
 
@@ -31,9 +32,9 @@ var emptyCodeHash = crypto.Keccak256Hash(nil)
 
 type (
 	// CanTransferFunc is the signature of a transfer guard function
-	CanTransferFunc func(StateDB, common.Address, string, *big.Int) bool
+	CanTransferFunc func(StateDB, common.Address, assets.Package) bool
 	// TransferFunc is the signature of a transfer function
-	TransferFunc func(StateDB, common.Address, common.Address, string, *big.Int)
+	TransferFunc func(StateDB, common.Address, common.Address, assets.Package)
 	// GetHashFunc returns the nth block hash in the blockchain
 	// and is used by the BLOCKHASH EVM op code.
 	GetHashFunc func(uint64) common.Hash
@@ -150,7 +151,7 @@ func (evm *EVM) Interpreter() Interpreter {
 // parameters. It also handles any necessary value transfer required and takes
 // the necessary steps to create accounts and reverses the state in case of an
 // execution error or failed value transfer.
-func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, currency string, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, pkg assets.Package) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
@@ -160,7 +161,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		return nil, gas, ErrDepth
 	}
 
-	if evm.StateDB.IsContract(caller.Address()) && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), currency, value) {
+	if evm.StateDB.IsContract(caller.Address()) && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), pkg) {
 		return nil, gas, ErrInsufficientBalance
 	}
 
@@ -169,11 +170,11 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		snapshot = evm.StateDB.Snapshot()
 	)
 
-	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), currency, value)
+	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), pkg)
 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
-	contract := NewContract(caller, to, value, gas)
+	contract := NewContract(caller, to, &pkg, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 	input = loadAddress(evm, caller, input, contract, false)
 
@@ -181,7 +182,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 
 	// Capture the tracer start/end events in debug mode
 	if evm.vmConfig.Debug && evm.depth == 0 {
-		evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
+		evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, pkg)
 
 		defer func() { // Lazy evaluation of the parameters
 			evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
@@ -208,7 +209,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 //
 // CallCode differs from Call in the sense that it executes the given address'
 // code with the caller as context.
-func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, gas uint64, currency string, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, gas uint64, pkg assets.Package) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
@@ -218,7 +219,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 		return nil, gas, ErrDepth
 	}
 	// Fail if we're trying to transfer more than the available balance
-	if evm.StateDB.IsContract(caller.Address()) && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), currency, value) {
+	if evm.StateDB.IsContract(caller.Address()) && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), pkg) {
 		return nil, gas, ErrInsufficientBalance
 	}
 
@@ -229,7 +230,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	contract := NewContract(caller, to, value, gas)
+	contract := NewContract(caller, to, &pkg, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 	input = loadAddress(evm, caller, input, contract, false)
 
@@ -304,7 +305,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	// Initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	contract := NewContract(caller, to, new(big.Int), gas)
+	contract := NewContract(caller, to, nil, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 	input = loadAddress(evm, caller, input, contract, false)
 
@@ -338,7 +339,7 @@ func loadAddress(evm *EVM, caller ContractRef, input []byte, contract *Contract,
 }
 
 // create creates a new contract using code as deployment code.
-func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, currency string, value *big.Int, address common.Address) ([]byte, uint64, error) {
+func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, pkg assets.Package, address common.Address) ([]byte, uint64, error) {
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if evm.depth > int(params.CallCreateDepth) {
@@ -354,12 +355,12 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, currency str
 	snapshot := evm.StateDB.Snapshot()
 	evm.StateDB.CreateAccount(address)
 
-	evm.Transfer(evm.StateDB, caller.Address(), address, currency, value)
+	evm.Transfer(evm.StateDB, caller.Address(), address, pkg)
 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	contract := NewContract(caller, AccountRef(address), value, gas)
+	contract := NewContract(caller, AccountRef(address), &pkg, gas)
 	code = loadAddress(evm, caller, code, contract, true)
 	contract.SetCallCode(&address, crypto.Keccak256Hash(code), code)
 
@@ -368,7 +369,7 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, currency str
 	}
 
 	if evm.vmConfig.Debug && evm.depth == 0 {
-		evm.vmConfig.Tracer.CaptureStart(caller.Address(), address, true, code, gas, value)
+		evm.vmConfig.Tracer.CaptureStart(caller.Address(), address, true, code, gas, pkg)
 	}
 	start := time.Now()
 
@@ -410,8 +411,8 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, currency str
 }
 
 // Create creates a new contract using code as deployment code.
-func (evm *EVM) Create(caller ContractRef, contractAddr common.Address, code []byte, gas uint64, currency string, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
-	return evm.create(caller, code, gas, currency, value, contractAddr)
+func (evm *EVM) Create(caller ContractRef, contractAddr common.Address, code []byte, gas uint64, pkg assets.Package) (ret []byte, leftOverGas uint64, err error) {
+	return evm.create(caller, code, gas, pkg, contractAddr)
 }
 
 // ChainConfig returns the environment's chain configuration
