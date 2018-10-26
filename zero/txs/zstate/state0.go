@@ -200,13 +200,13 @@ func (self *State0) Revert() {
 	return
 }
 
-func (state *State0) AddOut(out_o *Out0, out_z *stx.Out_Z) (root keys.Uint256) {
+func (state *State0) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
 	os := OutState0{}
 	if out_o != nil {
 		o := *out_o
 		os.Out_O = &o
 		bytes_memo := []byte(fmt.Sprintf("Cur:%d", (state.Cur.Index + 1)))
-		copy(os.Out_O.Out.Memo[:], bytes_memo[:])
+		copy(os.Out_O.Memo[:], bytes_memo[:])
 	}
 	if out_z != nil {
 		o := out_z.Clone()
@@ -267,10 +267,7 @@ func (state *State0) AddStx(st *stx.T) (e error) {
 		}
 	}
 	for _, out := range st.Desc_O.Outs {
-		out0 := Out0{
-			out,
-		}
-		state.AddOut(&out0, nil)
+		state.AddOut(out.Clone().ToRef(), nil)
 	}
 
 	for _, in := range st.Desc_Z.Ins {

@@ -219,23 +219,23 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 	for _, tk := range tks {
 		if os.IsO() {
 			out_o := os.Out_O
-			if out_o.Out.Pkg.Tkn == nil && out_o.Out.Pkg.Tkt == nil {
+			if out_o.Pkg.Tkn == nil && out_o.Pkg.Tkt == nil {
 				break
 			}
-			if out_o.Out.Pkg.Tkn != nil {
-				if out_o.Out.Pkg.Tkn.Value.Cmp(&utils.U256_0) <= 0 {
+			if out_o.Pkg.Tkn != nil {
+				if out_o.Pkg.Tkn.Value.Cmp(&utils.U256_0) <= 0 {
 					break
 				}
 			}
-			if out_o.Out.Pkg.Tkt != nil {
-				if out_o.Out.Pkg.Tkt.Value == keys.Empty_Uint256 {
+			if out_o.Pkg.Tkt != nil {
+				if out_o.Pkg.Tkt.Value == keys.Empty_Uint256 {
 					break
 				}
 			}
-			if out_o.Out.Addr == (keys.Uint512{}) {
+			if out_o.Addr == (keys.Uint512{}) {
 				break
 			}
-			if tk == out_o.Out.Addr {
+			if tk == out_o.Addr {
 				root := pg.Root.ToUint256()
 				state.append_wout_dirty(root)
 				wos := OutState1{}
@@ -283,9 +283,9 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 				state.append_wout_dirty(root)
 				wos := OutState1{}
 				wos.Pg = *pg
-				wos.Out_O.Out.Addr = os.Out_Z.PKr
-				wos.Out_O.Out.Pkg = os.Out_Z.Temp.Pkg.Clone()
-				wos.Out_O.Out.Memo = os.Out_Z.Temp.Memo
+				wos.Out_O.Addr = os.Out_Z.PKr
+				wos.Out_O.Pkg = os.Out_Z.Temp.Pkg.Clone()
+				wos.Out_O.Memo = os.Out_Z.Temp.Memo
 				wos.Out_Z = os.Out_Z.Clone().ToRef()
 				wos.Tk = tk
 				wos.Index = os.Index

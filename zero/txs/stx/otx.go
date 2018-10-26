@@ -19,6 +19,8 @@ package stx
 import (
 	"encoding/hex"
 
+	"github.com/sero-cash/go-sero/zero/utils"
+
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -30,6 +32,15 @@ type Out_O struct {
 	Addr keys.Uint512
 	Pkg  assets.Package
 	Memo keys.Uint512
+}
+
+func (self *Out_O) Clone() (ret Out_O) {
+	utils.DeepCopy(&ret, self)
+	return
+}
+func (this Out_O) ToRef() (ret *Out_O) {
+	ret = &this
+	return
 }
 
 func (self *Out_O) ToHash() (ret keys.Uint256) {

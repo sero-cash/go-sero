@@ -25,7 +25,8 @@ func (self *Token) ToHash() (ret keys.Uint256) {
 }
 
 type Ticket struct {
-	Value keys.Uint256
+	Category keys.Uint256
+	Value    keys.Uint256
 }
 
 func (self *Ticket) ToHash() (ret keys.Uint256) {
@@ -33,6 +34,7 @@ func (self *Ticket) ToHash() (ret keys.Uint256) {
 		return
 	} else {
 		hash := crypto.Keccak256(
+			self.Category[:],
 			self.Value[:],
 		)
 		copy(ret[:], hash)

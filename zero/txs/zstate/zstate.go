@@ -53,10 +53,7 @@ func (self *State) Revert() {
 }
 
 func (state *State) AddOut_O(out *stx.Out_O, currency *keys.Uint256) {
-	out0 := Out0{
-		*out,
-	}
-	state.State0.AddOut(&out0, nil)
+	state.State0.AddOut(out.Clone().ToRef(), nil)
 }
 
 func (state *State) AddStx(st *stx.T) (e error) {

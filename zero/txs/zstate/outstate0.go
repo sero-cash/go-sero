@@ -24,17 +24,9 @@ import (
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-type Out0 struct {
-	Out stx.Out_O
-}
-
-func (self *Out0) ToCommitment() (ret keys.Uint256) {
-	return cpt.GenCommitment(self.Out.ToHash().NewRef(), &self.Out.Addr, self.Out.ToHash().NewRef(), &self.Out.Memo)
-}
-
 type OutState0 struct {
 	Index uint64
-	Out_O *Out0      `rlp:"nil"`
+	Out_O *stx.Out_O `rlp:"nil"`
 	Out_Z *stx.Out_Z `rlp:"nil"`
 }
 
@@ -53,7 +45,7 @@ func (out *OutState0) IsO() bool {
 
 func (self *OutState0) ToCommitment() *keys.Uint256 {
 	if self.IsO() {
-		return self.Out_O.ToCommitment().NewRef()
+		return cpt.GenCommitment(self.Out_O.ToHash().NewRef(), &self.Out_O.Addr, self.Out_O.ToHash().NewRef(), &self.Out_O.Memo).NewRef()
 	} else {
 		return self.Out_Z.ToHash().NewRef()
 	}

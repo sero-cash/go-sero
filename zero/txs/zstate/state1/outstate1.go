@@ -21,7 +21,6 @@ import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/witness"
 )
 
@@ -30,7 +29,7 @@ type OutState1 struct {
 	Index uint64
 	Num   uint64
 	Tk    keys.Uint512
-	Out_O zstate.Out0
+	Out_O stx.Out_O
 	Out_Z *stx.Out_Z `rlp:"nil"`
 	Trace keys.Uint256
 	Z     bool
