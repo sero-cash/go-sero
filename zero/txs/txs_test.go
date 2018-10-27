@@ -113,6 +113,7 @@ func (self *user) addOut(v int) {
 	})
 	g_blocks.st.AddOut_O(&out, &keys.Uint256{})
 	g_blocks.st.Update()
+	EndBlock()
 }
 
 func (self *user) GetOuts() (outs []*state1.OutState1) {
@@ -133,18 +134,20 @@ func (self *user) Verify(t *stx.T) (e error) {
 	return Verify_state1(t, g_blocks.st1)
 }
 
-func (self *user) Logout() {
+func (self *user) Logout() (ret uint64) {
 	fmt.Printf("\n\n===========user(%v)============\n", self.i)
 	outs := self.GetOuts()
 	for _, out := range outs {
 		if out.Out_O.Pkg.Tkn != nil {
 			fmt.Printf("TKN: (%v:%v)---%v-----%v\n", out.Pg.Anchor[1], out.Pg.Index, out.Out_O.Pkg.Tkn.Currency[0], out.Out_O.Pkg.Tkn.Value.ToIntRef().Int64())
+			ret += out.Out_O.Pkg.Tkn.Value.ToIntRef().Uint64()
 		}
 		if out.Out_O.Pkg.Tkt != nil {
 			fmt.Printf("TKT: (%v:%v)---%v-----%v\n", out.Pg.Anchor[1], out.Pg.Index, out.Out_O.Pkg.Tkt.Category[0], out.Out_O.Pkg.Tkt.Value)
 		}
 	}
 	fmt.Printf("===========user(%v)============\n\n", self.i)
+	return
 }
 
 func (self *user) Send(v int, fee int, u user, z bool) {
@@ -196,10 +199,12 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 
 	g_blocks.st.AddStx(&s)
 	g_blocks.st.Update()
+	EndBlock()
 }
 
 func TestMain(m *testing.M) {
 	cpt.ZeroInit(cpt.NET_Dev)
+	NewBlock()
 	m.Run()
 }
 
@@ -209,36 +214,48 @@ func TestTxs(t *testing.T) {
 	user_b := newUser(3)
 	user_c := newUser(4)
 
-	NewBlock()
 	user_m.addOut(100)
 	user_m.addOut(100)
 	user_m.addOut(100)
 	user_m.addOut(100)
 
-	EndBlock()
-	user_m.Logout()
+	if user_m.Logout() != 400 {
+		t.Fail()
+	}
 
 	user_m.Send(50, 10, user_a, false)
 
-	EndBlock()
-	user_m.Logout()
-	user_a.Logout()
+	if user_m.Logout() != 350 {
+		t.Fail()
+	}
+	if user_a.Logout() != 50 {
+		t.Fail()
+	}
 
 	user_m.addOut(100)
 
-	EndBlock()
-	user_m.Logout()
-	user_a.Logout()
+	if user_m.Logout() != 440 {
+		t.Fail()
+	}
+	if user_a.Logout() != 50 {
+		t.Fail()
+	}
 
 	user_a.Send(20, 5, user_b, true)
 
-	EndBlock()
-	user_a.Logout()
-	user_b.Logout()
+	if user_a.Logout() != 25 {
+		t.Fail()
+	}
+	if user_b.Logout() != 20 {
+		t.Fail()
+	}
 
 	user_b.Send(10, 5, user_c, true)
 
-	EndBlock()
-	user_b.Logout()
-	user_c.Logout()
+	if user_b.Logout() != 5 {
+		t.Fail()
+	}
+	if user_c.Logout() != 10 {
+		t.Fail()
+	}
 }
