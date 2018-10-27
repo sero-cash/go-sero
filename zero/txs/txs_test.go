@@ -17,10 +17,69 @@
 package txs
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
+
+	"github.com/sero-cash/go-czero-import/cpt"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/zero/txs/stx"
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
+	"github.com/sero-cash/go-sero/zero/utils"
+
+	"github.com/sero-cash/go-sero/core/state"
+
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 func none_param(v interface{}) {
+}
+
+type user struct {
+	i      int
+	seed   keys.Uint256
+	addr   keys.Uint512
+	zstate *zstate.State
+}
+
+var seeds = []keys.Uint256{}
+
+func newUser(i int, zstate *zstate.State) (ret user) {
+	fmt.Printf("\n\n===========new user(%v)============\n", i)
+	ret = user{}
+	ret.i = i
+	ret.seed = keys.Uint256{byte(i)}
+	ret.addr = keys.Seed2Addr(&ret.seed)
+	ret.zstate = zstate
+	seeds = append(seeds, ret.seed)
+	fmt.Printf("\nseed: ")
+	ret.seed.LogOut()
+	fmt.Printf("\naddr: ")
+	ret.addr.LogOut()
+	return
+}
+
+func (self *user) getAR() (pkr keys.Uint512) {
+	pkr = keys.Addr2PKr(&self.addr, nil)
+	fmt.Printf("\nuser(%v):get pkr: ", self.i)
+	pkr.LogOut()
+	return
+}
+
+func (self *user) addOut(v int) {
+	out := stx.Out_O{}
+	out.Addr = self.getAR()
+	out.Pkg = assets.NewPackageByToken(&assets.Token{
+		keys.Str2Uint256("sero"),
+		utils.NewU256(uint64(v)),
+	})
+	self.zstate.AddOut_O(&out, &keys.Uint256{})
+	self.zstate.Update()
 }
 
 /*type user struct {
@@ -228,9 +287,21 @@ func TestMain(m *testing.M) {
 }*/
 
 func TestTxs(t *testing.T) {
-	//db := serodb.NewMemDatabase()
-	//ca := state.NewDatabase(db)
-	//st, _ := state.NewGenesis(common.Hash{}, ca)
+	cpt.ZeroInit(cpt.NET_Dev)
+	db := serodb.NewMemDatabase()
+	ca := state.NewDatabase(db)
+	st, _ := state.NewGenesis(common.Hash{}, ca)
+	user_m := newUser(1, st.GetZState())
+	user_a := newUser(2, st.GetZState())
+	user_b := newUser(3, st.GetZState())
+	user_c := newUser(4, st.GetZState())
 
-	//none_param(st)
+	user_m.addOut(100)
+	st1 := state1.LoadState1(&st.GetZState().State0, "")
+	st1.UpdateWitness(keys.Seeds2Tks(seeds))
+
+	none_param(user_m)
+	none_param(user_a)
+	none_param(user_b)
+	none_param(user_c)
 }
