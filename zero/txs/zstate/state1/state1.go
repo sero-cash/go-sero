@@ -17,6 +17,7 @@
 package state1
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -244,6 +245,10 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 				wos.Out_O = *os.Out_O
 				wos.Index = os.Index
 				wos.Out_Z = &stx.Out_Z{}
+				wos.Out_Z.PkgCM = keys.RandUint256()
+				wos.Out_Z.OutCM = keys.RandUint256()
+				wos.Out_Z.PKr = os.Out_O.Addr
+				wos.Trace = keys.RandUint256()
 				wos.Z = false
 				wos.Num = state.State0.Num()
 				state.add_out_dirty(root, &wos)
@@ -290,6 +295,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 				wos.Tk = tk
 				wos.Index = os.Index
 				wos.Z = true
+				wos.Trace = keys.RandUint256()
 				wos.Num = state.State0.Num()
 				state.add_out_dirty(root, &wos)
 				state.add_out_dirty(&wos.Trace, &wos)
@@ -376,5 +382,30 @@ func (state *State1) UpdateWitness(tks []keys.Uint512) {
 			t.Leave()
 		}
 	}
+	return
+}
+
+func (self *State1) GetOuts(tk *keys.Uint512) (outs []*OutState1, e error) {
+	for _, root := range self.G2wouts {
+		if src, err := self.GetOut(&root); err != nil {
+			e = err
+			return
+		} else {
+			if src != nil {
+				if src.IsMine(tk) {
+					if self.State0.HasIn(&src.Trace) {
+						panic("get outs src.nil in state0")
+					}
+					if root != *src.Pg.Root.ToUint256() {
+						panic("get outs wout.root!=src.Root")
+					}
+					outs = append(outs, src)
+				}
+			} else {
+				e = errors.New("get outs can not find src by root")
+			}
+		}
+	}
+	SortOutStats(self.State0, outs)
 	return
 }

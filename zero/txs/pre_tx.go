@@ -21,7 +21,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
-	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
@@ -39,7 +38,7 @@ type preTx struct {
 }
 
 type cyState struct {
-	balance utils.U256
+	balance utils.I256
 }
 
 type cyStateMap map[keys.Uint256]*cyState
@@ -49,7 +48,7 @@ func (self cyStateMap) add(key *keys.Uint256, value *utils.U256) {
 		self[*key].balance.AddU(value)
 	} else {
 		self[*key] = &cyState{
-			*value.ToRef(),
+			*value.ToI256().ToRef(),
 		}
 	}
 }
@@ -58,7 +57,7 @@ func (self cyStateMap) sub(key *keys.Uint256, value *utils.U256) {
 		self[*key].balance.SubU(value)
 	} else {
 		self[*key] = &cyState{
-			*value.ToRef(),
+			*value.ToI256().ToRef(),
 		}
 	}
 }
@@ -66,16 +65,17 @@ func (self cyStateMap) sub(key *keys.Uint256, value *utils.U256) {
 func newcyStateMap(fee *utils.U256) (ret cyStateMap) {
 	ret = make(map[keys.Uint256]*cyState)
 	sero_currency := keys.Uint256{}
-	copy(sero_currency[:], []byte("SERO"))
+	copy(sero_currency[:], []byte("sero"))
+	b := utils.NewI256(0)
+	b.SubU(fee)
 	ret[sero_currency] = &cyState{
-		balance: *fee.ToRef(),
+		balance: b,
 	}
 	return
 }
 
-func preGen(ts *tx.T, state *zstate.State) (p preTx, e error) {
-	state1 := state1.CurrentState1()
-	p.last_anchor = state.State0.Cur.Tree.RootKey()
+func preGen(ts *tx.T, state1 *state1.State1) (p preTx, e error) {
+	p.last_anchor = state1.State0.Cur.Tree.RootKey()
 	cy_state_map := newcyStateMap(&ts.Fee)
 	tk_map := make(map[keys.Uint256]int)
 	for _, in := range ts.Ins {
@@ -140,7 +140,7 @@ func preGen(ts *tx.T, state *zstate.State) (p preTx, e error) {
 	}
 
 	for currency, state := range cy_state_map {
-		if state.balance.Cmp(&utils.U256_0) != 0 {
+		if state.balance.Cmp(&utils.I256_0) != 0 {
 			e = fmt.Errorf("currency %v banlance != 0", currency)
 			return
 		} else {

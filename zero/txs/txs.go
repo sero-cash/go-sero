@@ -22,13 +22,16 @@ import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
-	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-func Gen(seed *keys.Uint256, t *tx.T, state *zstate.State) (s stx.T, e error) {
-	if preTx, err := preGen(t, state); err == nil {
+func Gen(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
+	st1 := state1.CurrentState1()
+	return Gen_state1(seed, t, st1)
+}
+func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e error) {
+	if preTx, err := preGen(t, st1); err == nil {
 		s.Ehash = t.Ehash
 		s.Fee = t.Fee
 		var type_o_addr *keys.Uint512
@@ -43,11 +46,10 @@ func Gen(seed *keys.Uint256, t *tx.T, state *zstate.State) (s stx.T, e error) {
 			s_out_o.Memo = out_o.Memo
 			switch out_o.Z {
 			case tx.TYPE_O:
-				//pkr := keys.Addr2PKr(&out_o.Addr, keys.RandUint256().NewRef())
-				pkr := keys.Seed2Tk(seed)
-				out_o.Addr = pkr
+				pkr := keys.Addr2PKr(&out_o.Addr, keys.RandUint256().NewRef())
+				s_out_o.Addr = pkr
 			case tx.TYPE_N:
-				out_o.Addr = out_o.Addr
+				s_out_o.Addr = out_o.Addr
 				type_o_addr = &out_o.Addr
 			default:
 				panic("Gen desc_o out but z is type_z")
@@ -55,15 +57,14 @@ func Gen(seed *keys.Uint256, t *tx.T, state *zstate.State) (s stx.T, e error) {
 			s.Desc_O.Outs = append(s.Desc_O.Outs, s_out_o)
 		}
 
-		//addr := keys.Seed2Addr(seed)
+		addr := keys.Seed2Addr(seed)
 		var from_r *keys.Uint256
 		if type_o_addr != nil {
 			from_r = new(keys.Uint256)
 			copy(from_r[:], type_o_addr[:16])
 		} else {
 		}
-		//s.From = keys.Addr2PKr(&addr, from_r)
-		s.From = keys.Seed2Tk(seed)
+		s.From = keys.Addr2PKr(&addr, from_r)
 
 		hash_o := s.ToHash_for_z()
 		if desc_z, err := genDesc_Zs(seed, &preTx, &hash_o); err != nil {
@@ -91,7 +92,7 @@ func Gen(seed *keys.Uint256, t *tx.T, state *zstate.State) (s stx.T, e error) {
 		}
 
 		for _, used_out := range preTx.uouts {
-			state1.UpdateOutStat(&state.State0, &used_out)
+			state1.UpdateOutStat(st1.State0, &used_out)
 		}
 
 		return
@@ -116,7 +117,11 @@ func CheckInt(i *utils.I256) bool {
 	return CheckUint(&abs)
 }
 
-func Verify(s *stx.T, state *zstate.State) (e error) {
+func Verify(s *stx.T) (e error) {
+	st1 := state1.CurrentState1()
+	return Verify_state1(s, st1)
+}
+func Verify_state1(s *stx.T, state *state1.State1) (e error) {
 	hash_z := s.ToHash_for_o()
 	if !CheckUint(&s.Fee) {
 		e = errors.New("verify check fee too big")
@@ -179,35 +184,14 @@ func Verify(s *stx.T, state *zstate.State) (e error) {
 	return
 }
 
-func GetOuts(tk *keys.Uint512, state *zstate.State) (outs []*state1.OutState1, e error) {
+func GetOuts(tk *keys.Uint512) (outs []*state1.OutState1, e error) {
 	st1 := state1.CurrentState1()
-	for _, root := range st1.G2wouts {
-		if src, err := st1.GetOut(&root); err != nil {
-			e = err
-			return
-		} else {
-			if src != nil {
-				if src.IsMine(tk) {
-					if state.State0.HasIn(&src.Trace) {
-						panic("get outs src.nil in state0")
-					}
-					if root != *src.Pg.Root.ToUint256() {
-						panic("get outs wout.root!=src.Root")
-					}
-					outs = append(outs, src)
-				}
-			} else {
-				e = errors.New("get outs can not find src by root")
-			}
-		}
-	}
-	state1.SortOutStats(&state.State0, outs)
-	return
+	return st1.GetOuts(tk)
 }
 
-func GetRoots(tk *keys.Uint512, state *zstate.State, v *utils.U256, currency *keys.Uint256) (roots []keys.Uint256, amount utils.U256, e error) {
+func GetRoots(tk *keys.Uint512, v *utils.U256, currency *keys.Uint256) (roots []keys.Uint256, amount utils.U256, e error) {
 	value := v.ToI256()
-	if outs, err := GetOuts(tk, state); err != nil {
+	if outs, err := GetOuts(tk); err != nil {
 		e = err
 		return
 	} else {
