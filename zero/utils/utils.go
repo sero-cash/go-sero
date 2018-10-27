@@ -389,3 +389,14 @@ func TR_enter(name string) (tr TimeRecord) {
 func (tr *TimeRecord) Leave() {
 	//fmt.Printf("End ("+tr.name+")     s=%v  <<<<<<<\n}}\n", time.Since(tr.start))
 }
+
+func StringToUint256(str string) keys.Uint256 {
+	var ret keys.Uint256
+	b := []byte(str)
+	if len(b) > len(ret) {
+		b = b[len(b)-len(ret):]
+	}
+	copy(ret[len(ret)-len(b):], b)
+	return ret
+
+}

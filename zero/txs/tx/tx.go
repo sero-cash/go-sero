@@ -48,20 +48,9 @@ type T struct {
 	Outs  []Out
 }
 
-func stringToUint256(str string) keys.Uint256 {
-	var ret keys.Uint256
-	b := []byte(str)
-	if len(b) > len(ret) {
-		b = b[len(b)-len(ret):]
-	}
-	copy(ret[len(ret)-len(b):], b)
-	return ret
-
-}
-
 func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
 	ret = make(map[keys.Uint256]utils.U256)
-	seroCy := stringToUint256("sero")
+	seroCy := utils.StringToUint256("sero")
 	ret[seroCy] = self.Fee
 	if len(self.Outs) > 0 {
 		for _, out := range self.Outs {
