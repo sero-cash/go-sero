@@ -111,7 +111,7 @@ func (self *user) addOut(v int) {
 		keys.Str2Uint256("sero"),
 		utils.NewU256(uint64(v)),
 	})
-	g_blocks.st.AddOut_O(&out, &keys.Uint256{})
+	g_blocks.st.AddOut_O(&out)
 	g_blocks.st.Update()
 	EndBlock()
 }
