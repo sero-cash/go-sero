@@ -64,11 +64,9 @@ func (self cyStateMap) sub(key *keys.Uint256, value *utils.U256) {
 
 func newcyStateMap(fee *utils.U256) (ret cyStateMap) {
 	ret = make(map[keys.Uint256]*cyState)
-	sero_currency := keys.Uint256{}
-	copy(sero_currency[:], []byte("sero"))
 	b := utils.NewI256(0)
 	b.SubU(fee)
-	ret[sero_currency] = &cyState{
+	ret[utils.StringToUint256("sero")] = &cyState{
 		balance: b,
 	}
 	return

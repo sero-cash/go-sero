@@ -155,6 +155,8 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 		}
 	}
 
+	txt.Ins = ins
+
 	Ehash := rlpHash([]interface{}{
 		btx.GasPrice(),
 		btx.Data(),
