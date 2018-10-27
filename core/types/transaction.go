@@ -61,25 +61,45 @@ func NewTransaction(gasPrice *big.Int, data []byte, currency string) *Transactio
 	return newTransaction(gasPrice, data, currency)
 }
 
-func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z ztx.OutType, currency string) *ztx.T {
+func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z ztx.OutType, currency string,catg string,tkts []*common.Hash) *ztx.T {
 
 	outDatas := []ztx.Out{}
 	if to != nil {
 
-		token :=&assets.Token{
-			Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256()),
-			Value:       *utils.U256(*value).ToRef(),
-		}
-		pkg :=assets.Package{
-			Tkn: token,
+		if value !=nil{
+			token :=&assets.Token{
+				Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256()),
+				Value:       *utils.U256(*value).ToRef(),
+			}
+			pkg :=assets.Package{
+				Tkn: token,
 
+			}
+			outData := ztx.Out{
+				Addr:  *to.ToUint512(),
+				Pkg: pkg,
+				Z:     z,
+			}
+			outDatas =append(outDatas,outData)
 		}
-		outData := ztx.Out{
-			Addr:  *to.ToUint512(),
-			Pkg: pkg,
-			Z:     z,
+		if len(tkts) >0 {
+			for _,tkt :=range tkts {
+				ticket := &assets.Ticket{
+					Category: *(common.BytesToHash(common.LeftPadBytes([]byte(catg), 32)).HashToUint256()),
+					Value: *tkt.HashToUint256(),
+				}
+				pkg :=assets.Package{
+					Tkt: ticket,
+				}
+				outData := ztx.Out{
+					Addr:  *to.ToUint512(),
+					Pkg: pkg,
+					Z:     z,
+				}
+				outDatas =append(outDatas,outData)
+			}
 		}
-		outDatas = []ztx.Out{outData}
+
 	}
 	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
 	tx := &ztx.T{

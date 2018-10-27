@@ -570,6 +570,8 @@ type CallArgs struct {
 	ABI      *abi.ABI        `json:abi`
 	Currency string          `json:cy`
 	Dynamic  bool            `json:dy` //contract address parameters are dynamically generated.
+	Category string          `json:catg`
+	Tickets  []*common.Hash  `json:tkts`
 }
 
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, bool, error) {
@@ -1104,6 +1106,8 @@ type SendTxArgs struct {
 	ABI      *abi.ABI        `json:"abi"`
 	Currency string          `json:"cy"`
 	Dynamic  bool            `json:"dy"` //contract address parameters are dynamically generated.
+	Category string          `json:catg`
+	Tickets  []*common.Hash  `json:tkts`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
@@ -1216,14 +1220,14 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), input, args.Currency)
 
 	if createContract {
-		txt := types.NewTxt(&to, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), ztx.TYPE_N, args.Currency)
+		txt := types.NewTxt(&to, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), ztx.TYPE_N, args.Currency, args.Category, args.Tickets)
 		return tx, txt, nil
 	} else {
 		z := ztx.TYPE_Z
 		if invokeContract {
 			z = ztx.TYPE_N
 		}
-		txt := types.NewTxt(args.To, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, args.Currency)
+		txt := types.NewTxt(args.To, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, args.Currency, args.Category, args.Tickets)
 		return tx, txt, nil
 	}
 }

@@ -48,29 +48,28 @@ type T struct {
 	Outs  []Out
 }
 
-func stringToUint256(str string) keys.Uint256{
+func stringToUint256(str string) keys.Uint256 {
 	var ret keys.Uint256
-	b :=[]byte(str)
+	b := []byte(str)
 	if len(b) > len(ret) {
 		b = b[len(b)-len(ret):]
 	}
 	copy(ret[len(ret)-len(b):], b)
 	return ret
 
-
 }
 
-func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256){
+func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
 	ret = make(map[keys.Uint256]utils.U256)
 	seroCy := stringToUint256("sero")
 	ret[seroCy] = self.Fee
 	if len(self.Outs) > 0 {
 		for _, out := range self.Outs {
 			if out.Pkg.Tkn != nil {
-				if cost,ok:=ret[out.Pkg.Tkn.Currency];ok {
+				if cost, ok := ret[out.Pkg.Tkn.Currency]; ok {
 					cost.AddU(&out.Pkg.Tkn.Value)
 					ret[out.Pkg.Tkn.Currency] = cost
-				}else {
+				} else {
 					ret[out.Pkg.Tkn.Currency] = out.Pkg.Tkn.Value
 				}
 			}
@@ -79,15 +78,19 @@ func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256){
 	return
 }
 
-func (self *T) Cost() (ret utils.U256) {
+func (self *T) TikectCost() (ret map[keys.Uint256][]keys.Uint256) {
+	ret = make(map[keys.Uint256][]keys.Uint256)
 	if len(self.Outs) > 0 {
-		cost := utils.NewU256(0)
 		for _, out := range self.Outs {
-			cost.AddU(&out.Pkg.Tkn.Value)
+			if out.Pkg.Tkt != nil {
+				if tkts, ok := ret[out.Pkg.Tkt.Category]; ok {
+					tkts = append(tkts, out.Pkg.Tkt.Value)
+					ret[out.Pkg.Tkt.Category] = tkts
+				} else {
+					ret[out.Pkg.Tkt.Category] = []keys.Uint256{out.Pkg.Tkt.Value}
+				}
+			}
 		}
-		cost.AddU(&self.Fee)
-		return cost
-	} else {
-		return self.Fee
 	}
+	return
 }

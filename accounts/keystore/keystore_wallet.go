@@ -117,30 +117,41 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 	costTkn := txt.TokenCost()
 	for cy, cost := range costTkn {
 		tk := keys.Seed2Tk(seed.SeedToUint256())
-		outs, amount, err := txs.GetRoots(&tk, cost.ToRef(), &cy)
+		outs, amount, err := txs.GetRoots(&tk, cost.ToRef(), &cy, nil, nil)
 		if err != nil {
 			return nil, err
 		}
-
 		for _, out := range outs {
 			ins = append(ins, tx.In{Root: out})
 		}
 		balance := amount
 		balance.SubU(cost.ToRef())
 		if balance.Cmp(&utils.U256_0) > 0 {
-			token :=&assets.Token{
+			token := &assets.Token{
 				Currency: cy,
-				Value:       balance,
+				Value:    balance,
 			}
-			pkg :=assets.Package{
+			pkg := assets.Package{
 				Tkn: token,
 			}
 			selfOut := tx.Out{
-				Addr:  keys.Seed2Addr(seed.SeedToUint256()),
-				Pkg:   pkg,
-				Z:     tx.TYPE_Z,
+				Addr: keys.Seed2Addr(seed.SeedToUint256()),
+				Pkg:  pkg,
+				Z:    tx.TYPE_Z,
 			}
 			txt.Outs = append(txt.Outs, selfOut)
+		}
+	}
+	costTkt := txt.TikectCost()
+
+	for catg, tkts := range costTkt {
+		tk := keys.Seed2Tk(seed.SeedToUint256())
+		outs, _, err := txs.GetRoots(&tk, nil, nil, &catg, tkts)
+		if err != nil {
+			return nil, err
+		}
+		for _, out := range outs {
+			ins = append(ins, tx.In{Root: out})
 		}
 	}
 
@@ -151,7 +162,7 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 	})
 	copy(txt.Ehash[:], Ehash[:])
 
-	log.Info("EncryptTxWithSeed : ","in_num", len(txt.Ins), "out_num", len(txt.Outs))
+	log.Info("EncryptTxWithSeed : ", "in_num", len(txt.Ins), "out_num", len(txt.Outs))
 
 	for i, in := range txt.Ins {
 		log.Info("    ctx_in : ", "index", i, "root", in.Root)
@@ -159,7 +170,6 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 	for i, out := range txt.Outs {
 		log.Info("    ctx_out : ", "index", i, "to", hexutil.Encode(out.Addr[:]))
 	}
-
 
 	stx, err := txs.Gen(seed.SeedToUint256(), txt)
 	if err != nil {

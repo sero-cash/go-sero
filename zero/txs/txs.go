@@ -189,34 +189,70 @@ func GetOuts(tk *keys.Uint512) (outs []*state1.OutState1, e error) {
 	return st1.GetOuts(tk)
 }
 
-func GetRoots(tk *keys.Uint512, v *utils.U256, currency *keys.Uint256) (roots []keys.Uint256, amount utils.U256, e error) {
+func GetRoots(tk *keys.Uint512, v *utils.U256, currency *keys.Uint256, categroy *keys.Uint256, tkts []keys.Uint256) (roots []keys.Uint256, amount utils.U256, e error) {
 	value := v.ToI256()
+	tktSize := len(tkts)
 	if outs, err := GetOuts(tk); err != nil {
 		e = err
 		return
 	} else {
 		for _, out := range outs {
 			root := out.Pg.Root.ToUint256()
-			if out.Out_O.Pkg.Tkn != nil {
-				if out.Out_O.Pkg.Tkn.Currency == *currency {
-					roots = append(roots, *root)
-					amount.AddU(&out.Out_O.Pkg.Tkn.Value)
-					out_o := out.Out_O
-					if value.Cmp(out_o.Pkg.Tkn.Value.ToI256().ToRef()) < 0 {
-						value = utils.NewI256(0)
-						break
+			if currency != nil && value.Cmp(&utils.I256_0) > 0 {
+				if out.Out_O.Pkg.Tkn != nil {
+					if out.Out_O.Pkg.Tkn.Currency == *currency {
+						roots = append(roots, *root)
+						amount.AddU(&out.Out_O.Pkg.Tkn.Value)
+						out_o := out.Out_O
+						if value.Cmp(out_o.Pkg.Tkn.Value.ToI256().ToRef()) < 0 {
+							value = utils.NewI256(0)
+						} else {
+							value.SubU(&out_o.Pkg.Tkn.Value)
+						}
 					} else {
-						value.SubU(&out_o.Pkg.Tkn.Value)
 					}
-				} else {
 				}
 			}
+			if categroy != nil && tktSize > 0 {
+				if out.Out_O.Pkg.Tkt != nil {
+					if out.Out_O.Pkg.Tkt.Category == *categroy {
+						if uint256Contains(tkts, out.Out_O.Pkg.Tkt.Value) {
+							roots = append(roots, *root)
+							tktSize--
+						}
+					} else {
+
+					}
+				}
+			}
+			if value.Cmp(&utils.I256_0) == 0 && tktSize == 0 {
+				break
+			}
 		}
-		if value.Cmp(&utils.I256_0) == 0 {
+		if value.Cmp(&utils.I256_0) == 0 && tktSize == 0 {
 			return
 		} else {
-			e = errors.New("can not find enough outs")
-			return
+			if value.Cmp(&utils.I256_0) != 0 {
+				e = errors.New("can not find enough token outs")
+				return
+			}
+			if tktSize != 0 {
+				e = errors.New("can not find enough ticket outs")
+				return
+			}
+
+		}
+
+	}
+	return
+}
+
+func uint256Contains(arrs []keys.Uint256, item keys.Uint256) bool {
+	for _, a := range arrs {
+		if a == item {
+			return true
 		}
 	}
+	return false
+
 }
