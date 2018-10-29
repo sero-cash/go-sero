@@ -456,24 +456,37 @@ func (s *PublicBlockChainAPI) BlockNumber() hexutil.Uint64 {
 	return hexutil.Uint64(header.Number.Uint64())
 }
 
+type Balance struct {
+	Tkn map[string]*hexutil.Big   `json:"tkn"`
+	Tkt map[string][]*common.Hash `json:"tkt"`
+}
+
 // GetBalance returns the amount of wei for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
-func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (map[string]*hexutil.Big, error) {
+func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (Balance, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 
 	if state == nil || err != nil {
-		return nil, err
+		return Balance{}, err
 	}
 
 	//currencyHash := common.BytesToHash(common.LeftPadBytes([]byte(currency), 32))
 
-	result := map[string]*hexutil.Big{}
-
+	tkn := map[string]*hexutil.Big{}
+	tkt := map[string][]*common.Hash{}
+	result := Balance{}
+	//t := common.Hash{}
+	//copy(t[:], keys.RandUint256().NewRef()[:])
+	//tkt["tktTest"] = append(tkt["tktTest"], &t)
+	//tkt["tktTest"] = append(tkt["tktTest"], &t)
 	if size := state.GetCodeSize(address); size > 0 {
 		balances := state.Balances(address)
 		for key, value := range balances {
-			result[key] = (*hexutil.Big)(value)
+			tkn[key] = (*hexutil.Big)(value)
+		}
+		if len(tkn) > 0 {
+			result.Tkn = tkn
 		}
 		//result[currency] = (*hexutil.Big)(state.GetBalance(address, currencyHash))
 		return result, state.Error()
@@ -483,26 +496,33 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 
 		wallet, err := s.b.AccountManager().Find(account)
 		if err != nil {
-			return nil, err
+			return Balance{}, err
 		}
 
 		seed := wallet.Accounts()[0].Tk
 
 		outs, err := txs.GetOuts(seed.ToUint512())
-
-		//if currencyHash == (common.Hash{}){
-		//	return (*hexutil.Big)(common.Big0), nil
-		//}
-
 		for _, out := range outs {
 			if out.Out_O.Pkg.Tkn != nil {
 				cy := strings.Trim(string(out.Out_O.Pkg.Tkn.Currency[:]), zerobyte)
-				if result[cy] == nil {
-					result[cy] = (*hexutil.Big)(out.Out_O.Pkg.Tkn.Value.ToIntRef())
+				if tkn[cy] == nil {
+					tkn[cy] = (*hexutil.Big)(out.Out_O.Pkg.Tkn.Value.ToIntRef())
 				} else {
-					result[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(result[cy]), (out.Out_O.Pkg.Tkn.Value.ToIntRef())))
+					tkn[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(tkn[cy]), (out.Out_O.Pkg.Tkn.Value.ToIntRef())))
 				}
 			}
+			if out.Out_O.Pkg.Tkt != nil {
+				catg := strings.Trim(string(out.Out_O.Pkg.Tkt.Category[:]), zerobyte)
+				t := common.Hash{}
+				copy(t[:], out.Out_O.Pkg.Tkt.Value[:])
+				tkt[catg] = append(tkt[catg], &t)
+			}
+		}
+		if len(tkn) > 0 {
+			result.Tkn = tkn
+		}
+		if len(tkt) > 0 {
+			result.Tkt = tkt
 		}
 		return result, state.Error()
 	}
@@ -1135,7 +1155,15 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	if args.Value == nil {
 		args.Value = new(hexutil.Big)
 	}
-
+	if strings.TrimSpace(args.Category) != "" {
+		if args.Tkt == nil {
+			return errors.New(fmt.Sprintf("tx without %s tkt", args.Category))
+		}
+	} else {
+		if args.Tkt != nil {
+			return errors.New(fmt.Sprintf("tx without tkt:%s catg", args.Tkt))
+		}
+	}
 	//if args.Nonce == nil {
 	//	nonce, err := b.GetPoolNonce(ctx, args.From)
 	//	if err != nil {

@@ -3095,8 +3095,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             // wait for receipt
             var filter = contract._sero.filter('latest', function(e){
                 if (!e && !callbackFired) {
-                    count++;
 
+                    count++;
+                    console.log("checkForContractAddress ccount =" + count)
                     // stop watching after 50 blocks (timeout)
                     if (count > 50) {
 
@@ -3147,6 +3148,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                             }
                         });
                     }
+                }else {
+                    console.log("erro filter " + e)
                 }
             });
         };
@@ -4185,12 +4188,22 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         var outputBalanceFormatter = function(result) {
             if (!result) {
-                return result;
+                return ;
             }
-            for (var key in result){
-                result[key] = utils.toBigNumber(result[key]);
+            if (result.hasOwnProperty("tkn")){
+                if (result["tkn"]) {
+                    for (var key in result["tkn"]){
+                        result['tkn'][key] = utils.toBigNumber(result['tkn'][key]);
+                    }
+                }else {
+                    delete result.tkn
+                }
             }
-
+            if (result.hasOwnProperty('tkt')){
+                if (!result['tkt']){
+                    delete result.tkt
+                }
+            }
             return result;
         };
 
