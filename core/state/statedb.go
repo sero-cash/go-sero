@@ -227,8 +227,8 @@ func (self *StateDB) RegisterTicket(contractAddr common.Address, categoryName st
 	return self.registerAddressByState("Ticket", contractAddr, strings.ToLower(categoryName))
 }
 
-func (self *StateDB) GetContrctAddressByTicket(key string) common.Address {
-	return self.getContrctAddress("Ticket", key)
+func (self *StateDB) GetContrctAddressByTicket(categoryName string) common.Address {
+	return self.getContrctAddress("Ticket", strings.ToLower(categoryName))
 }
 
 //register
@@ -236,8 +236,8 @@ func (self *StateDB) RegisterToken(contractAddr common.Address, coinName string)
 	return self.registerAddressByState("Token", contractAddr, strings.ToLower(coinName))
 }
 
-func (self *StateDB) GetContrctAddressByToken(key string) common.Address {
-	return self.getContrctAddress("Token", key)
+func (self *StateDB) GetContrctAddressByToken(coinName string) common.Address {
+	return self.getContrctAddress("Token", strings.ToLower(coinName))
 }
 
 

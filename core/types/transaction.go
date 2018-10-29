@@ -229,7 +229,6 @@ func (tx *Transaction) AsMessage() (Message, error) {
 		to:         tx.To(),
 		data:       tx.data.Payload,
 		checkNonce: true,
-		currency:   tx.Currency(),
 		pkg:        tx.Pkg(),
 	}
 
@@ -372,8 +371,6 @@ type Message struct {
 	from       common.Address
 	nonce      uint64
 	pkg        assets.Package
-	currency   string
-	amount     *big.Int
 	gasLimit   uint64
 	gasPrice   *big.Int
 	data       []byte
@@ -381,17 +378,24 @@ type Message struct {
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, currency string, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
-	return Message{
+	var token *assets.Token
+	if amount.Cmp(new(big.Int)) > 0 {
+		token = &assets.Token{
+			Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
+			Value:    utils.U256(*amount),
+		}
+	}
+	message := Message{
 		from:       from,
 		to:         to,
 		nonce:      nonce,
-		currency:   currency,
-		amount:     amount,
 		gasLimit:   gasLimit,
 		gasPrice:   gasPrice,
 		data:       data,
 		checkNonce: checkNonce,
+		pkg:        assets.Package{Tkn: token},
 	}
+	return message
 }
 
 func (m Message) From() common.Address { return m.from }
@@ -401,4 +405,6 @@ func (m Message) Gas() uint64          { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
-func (m Message) Pkg() assets.Package  { return m.pkg }
+func (m Message) Pkg() assets.Package {
+	return m.pkg
+}

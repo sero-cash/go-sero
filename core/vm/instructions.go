@@ -22,6 +22,7 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
+	"strings"
 
 	"github.com/sero-cash/go-sero/log"
 
@@ -49,7 +50,8 @@ var (
 	topic_issueToken    = common.HexToHash("0x25d7b0676eb16f8e7d1160b577510f33f54887867efcbc6ec3c712354706b6b0")
 	topic_sendAnonymous = common.HexToHash("0x2da7d636de04e3fdf864ae424b77b7c8ca8561cafd21f3317d8e131b96a22b02")
 	topic_selfBalance   = common.HexToHash("0x5c8c6e4c5998a1ee83ab3aa45fa23ca7c8ed4a75c654632eb22adcc5e1e6fb37")
-	topic_issueTicket   = common.HexToHash("0x25d7b0676eb16f8e7d1160b577510f33f54887867efcbc6ec3c712354706b6b0")
+	topic_issueTicket   = common.HexToHash("0xa6a77d98ff69ab4b74330af67416ef5d357dfb5c0048677a7f1675bf4f67076b")
+	topic_getCurrency   = common.HexToHash("0x71b861b13fc896f3c531ebd724c652505e48aa8fbbba3a50f6d6804aa791a22f")
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -422,7 +424,8 @@ func opCaller(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 }
 
 func opCallValue(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(interpreter.intPool.get().Set(contract.value))
+	stack.push(interpreter.intPool.get().Set(contract.Value()))
+
 	return nil, nil
 }
 
@@ -942,6 +945,15 @@ func makeLog(size int) executionFunc {
 			contract.Gas += returnGas
 			memory.Set(mStart.Uint64()+end-32, 32, hashTrue)
 			return ret, nil
+		} else if topics[0] == topic_getCurrency{
+			if contract.pkg.Tkn != nil {
+				currency := strings.Trim(string(contract.pkg.Tkn.Currency[:]), string([]byte{0}))
+				memory.Set(mStart.Uint64(), 32, common.BigToHash(big.NewInt(int64(len(currency)))).Bytes())
+				memory.Set(mStart.Uint64()+32, 32, []byte(currency))
+			} else {
+				memory.Set(mStart.Uint64(), 32, big.NewInt(0).Bytes())
+				memory.Set(mStart.Uint64(), 32, []byte{})
+			}
 		} else {
 			interpreter.evm.StateDB.AddLog(&types.Log{
 				Address: contract.Address(),

@@ -17,10 +17,10 @@
 package vm
 
 import (
+	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"math/big"
-
-	"github.com/sero-cash/go-sero/common"
+	"strings"
 )
 
 // ContractRef is a reference to the contract's backing object
@@ -62,7 +62,6 @@ type Contract struct {
 	Gas uint64
 
 	pkg *assets.Package
-	value *big.Int
 
 	Args []byte
 
@@ -117,7 +116,7 @@ func (c *Contract) AsDelegate() *Contract {
 	// that caller is something other than a Contract.
 	parent := c.caller.(*Contract)
 	c.CallerAddress = parent.CallerAddress
-	c.value = parent.value
+	c.pkg = parent.pkg
 
 	return c
 }
@@ -160,8 +159,22 @@ func (c *Contract) Address() common.Address {
 
 // Value returns the contracts value (sent to it from it's caller)
 func (c *Contract) Value() *big.Int {
-	return c.value
+	if c.pkg.Tkn != nil {
+		value := big.Int(c.pkg.Tkn.Value)
+		return &value
+	} else {
+		return new(big.Int)
+	}
 }
+
+func (c *Contract) Currency() string {
+	if c.pkg.Tkn != nil {
+		return strings.TrimSpace(string(c.pkg.Tkn.Currency[:]))
+	} else {
+		return "sero"
+	}
+}
+
 
 // SetCode sets the code to the contract
 func (c *Contract) SetCode(hash common.Hash, code []byte) {

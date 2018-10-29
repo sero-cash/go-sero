@@ -91,7 +91,7 @@ func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash
 func CanTransfer(db vm.StateDB, addr common.Address, pkg assets.Package) bool {
 	if pkg.Tkn != nil {
 		amount := big.Int(pkg.Tkn.Value)
-		return db.GetBalance(addr, strings.TrimSpace(string(pkg.Tkn.Currency[:]))).Cmp(&amount) >= 0
+		return db.GetBalance(addr, strings.Trim(string(pkg.Tkn.Currency[:]), string([]byte{0}))).Cmp(&amount) >= 0
 	}
 	return true
 }
@@ -103,7 +103,7 @@ func Transfer(db vm.StateDB, sender, recipient common.Address, pkg assets.Packag
 		if amount.Sign() <= 0 {
 			return
 		}
-		currency := strings.TrimSpace(string(pkg.Tkn.Currency[:]))
+		currency := strings.Trim(string(pkg.Tkn.Currency[:]), string([]byte{0}))
 		if db.IsContract(sender) {
 			db.SubBalance(sender, currency, &amount)
 			if db.IsContract(recipient) {
