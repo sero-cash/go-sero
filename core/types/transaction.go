@@ -17,9 +17,10 @@
 package types
 
 import (
-	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"math/big"
 	"sync/atomic"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"container/heap"
 	"io"
@@ -61,52 +62,42 @@ func NewTransaction(gasPrice *big.Int, data []byte, currency string) *Transactio
 	return newTransaction(gasPrice, data, currency)
 }
 
-func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z ztx.OutType, currency string,catg string,tkts []*common.Hash) *ztx.T {
+func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z ztx.OutType, currency string, catg string, tkt *common.Hash) *ztx.T {
 
 	outDatas := []ztx.Out{}
 	if to != nil {
-
-		if value !=nil{
-			token :=&assets.Token{
+		var token *assets.Token
+		var ticket *assets.Ticket
+		if value != nil {
+			token = &assets.Token{
 				Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256()),
-				Value:       *utils.U256(*value).ToRef(),
-			}
-			pkg :=assets.Package{
-				Tkn: token,
-
-			}
-			outData := ztx.Out{
-				Addr:  *to.ToUint512(),
-				Pkg: pkg,
-				Z:     z,
-			}
-			outDatas =append(outDatas,outData)
-		}
-		if len(tkts) >0 {
-			for _,tkt :=range tkts {
-				ticket := &assets.Ticket{
-					Category: *(common.BytesToHash(common.LeftPadBytes([]byte(catg), 32)).HashToUint256()),
-					Value: *tkt.HashToUint256(),
-				}
-				pkg :=assets.Package{
-					Tkt: ticket,
-				}
-				outData := ztx.Out{
-					Addr:  *to.ToUint512(),
-					Pkg: pkg,
-					Z:     z,
-				}
-				outDatas =append(outDatas,outData)
+				Value:    *utils.U256(*value).ToRef(),
 			}
 		}
+		if tkt != nil {
+			ticket = &assets.Ticket{
+				Category: *(common.BytesToHash(common.LeftPadBytes([]byte(catg), 32)).HashToUint256()),
+				Value:    *tkt.HashToUint256(),
+			}
 
+		}
+		pkg := assets.Package{
+			Tkn: token,
+			Tkt: ticket,
+		}
+		outData := ztx.Out{
+			Addr: *to.ToUint512(),
+			Pkg:  pkg,
+			Z:    z,
+		}
+		outDatas = append(outDatas, outData)
 	}
 	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
 	tx := &ztx.T{
-		Fee : utils.U256(*fee),
-		Outs:outDatas,
+		Fee:  utils.U256(*fee),
+		Outs: outDatas,
 	}
-	return tx;
+	return tx
 
 }
 
@@ -126,11 +117,11 @@ func newTransaction(gasPrice *big.Int, data []byte, currency string) *Transactio
 	return &Transaction{data: d}
 }
 
-func (tx *Transaction) Value() *big.Int {
+func (tx *Transaction) Pkg() assets.Package {
 	for _, desc_o := range tx.data.Stxt.Desc_O.Outs {
-		return desc_o.Pkg.Tkn.Value.ToIntRef()
+		return desc_o.Pkg
 	}
-	return big.NewInt(0)
+	return assets.Package{}
 }
 
 // EncodeRLP implements rlp.Encoder
@@ -239,7 +230,7 @@ func (tx *Transaction) AsMessage() (Message, error) {
 		data:       tx.data.Payload,
 		checkNonce: true,
 		currency:   tx.Currency(),
-		amount:     tx.Value(),
+		pkg:        tx.Pkg(),
 	}
 
 	return msg, nil

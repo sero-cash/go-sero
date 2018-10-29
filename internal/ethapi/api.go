@@ -571,7 +571,7 @@ type CallArgs struct {
 	Currency string          `json:cy`
 	Dynamic  bool            `json:dy` //contract address parameters are dynamically generated.
 	Category string          `json:catg`
-	Tickets  []*common.Hash  `json:tkts`
+	Tkt      *common.Hash    `json:tkt`
 }
 
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, bool, error) {
@@ -1107,7 +1107,7 @@ type SendTxArgs struct {
 	Currency string          `json:"cy"`
 	Dynamic  bool            `json:"dy"` //contract address parameters are dynamically generated.
 	Category string          `json:catg`
-	Tickets  []*common.Hash  `json:tkts`
+	Tkt      *common.Hash    `json:tkt`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
@@ -1219,17 +1219,18 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	}
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), input, args.Currency)
 
+	var z ztx.OutType
+
 	if createContract {
-		txt := types.NewTxt(&to, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), ztx.TYPE_N, args.Currency, args.Category, args.Tickets)
-		return tx, txt, nil
+		z = ztx.TYPE_N
 	} else {
-		z := ztx.TYPE_Z
+		z = ztx.TYPE_Z
 		if invokeContract {
 			z = ztx.TYPE_N
 		}
-		txt := types.NewTxt(args.To, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, args.Currency, args.Category, args.Tickets)
-		return tx, txt, nil
 	}
+	txt := types.NewTxt(args.To, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, args.Currency, args.Category, args.Tkt)
+	return tx, txt, nil
 }
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
