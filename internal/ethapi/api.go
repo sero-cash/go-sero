@@ -1173,21 +1173,17 @@ func getContractSeed(addr common.Address) keys.Uint128 {
 func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
 	var input []byte
 	var err error
-	var to common.Address
-
-	//currencyHash := common.BytesToHash(common.LeftPadBytes([]byte(args.Currency), 32))
-
-	//if  currencyHash == (common.Hash{}) {
-	//	return nil,nil,errors.New("currency not exists")
-	//}
-
 	var createContract, invokeContract bool
-	if args.To == nil {
 
-		to = genContractAddr()
+	to := args.To
+
+	if to == nil {
+
+		contractAddr := genContractAddr()
+		to = &contractAddr
 
 		if args.ABI != nil && args.Data != nil {
-			r := getContractSeed(to)
+			r := getContractSeed(*to)
 			if args.Dynamic {
 				r = keys.RandUint128()
 			}
@@ -1229,7 +1225,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 			z = ztx.TYPE_N
 		}
 	}
-	txt := types.NewTxt(args.To, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, args.Currency, args.Category, args.Tkt)
+	txt := types.NewTxt(to, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, args.Currency, args.Category, args.Tkt)
 	return tx, txt, nil
 }
 

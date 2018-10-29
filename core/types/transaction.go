@@ -174,7 +174,6 @@ func (tx *Transaction) To() *common.Address {
 	for _, out := range tx.data.Stxt.Desc_O.Outs {
 		addr := common.BytesToAddress(out.Addr[:])
 		return &addr
-
 	}
 	return nil
 }
