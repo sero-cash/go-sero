@@ -455,9 +455,34 @@ func (self *StateDB) HasSuicided(addr common.Address) bool {
 	return false
 }
 
+func (self *StateDB) GetTicketNonce(addr common.Address) uint64 {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.TicketNonce()
+	}
+
+	return 0
+}
+
+
 /*
  * SETTERS
  */
+
+func (self *StateDB) AddTicket(addr common.Address, category string, value common.Hash) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		//stateObject.AddBalance(coinName, amount)
+	}
+}
+
+func (self *StateDB) SetTicketNonce(addr common.Address, nonce uint64) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetTicketNonce(nonce)
+	}
+}
+
 
 // AddBalance adds amount to the account associated with addr.
 func (self *StateDB) AddBalance(addr common.Address, coinName string, amount *big.Int) {

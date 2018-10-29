@@ -103,7 +103,7 @@ type Book struct {
 // Account is the Ethereum consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account struct {
-	Nonce uint64
+	TicketNonce uint64
 	//Balance   *big.Int
 	Root     common.Hash // merkle root of the storage trie
 	CodeHash []byte
@@ -134,6 +134,22 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 		cachedStorage: make(Storage),
 		dirtyStorage:  make(Storage),
 	}
+}
+
+func (self *stateObject) TicketNonce() uint64 {
+	return self.data.TicketNonce
+}
+
+func (self *stateObject) SetTicketNonce(nonce uint64) {
+	self.db.journal.append(ticketNonceChange{
+		account: &self.address,
+		prev:    self.data.TicketNonce,
+	})
+	self.setTicketNonce(nonce)
+}
+
+func (self *stateObject) setTicketNonce(nonce uint64) {
+	self.data.TicketNonce = nonce
 }
 
 // EncodeRLP implements rlp.Encoder.

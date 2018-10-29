@@ -38,6 +38,9 @@ type StateDB interface {
 	RegisterToken(common.Address, string) bool
 	GetContrctAddressByToken(key string) common.Address
 
+	SetTicketNonce(common.Address, uint64)
+	GetTicketNonce(common.Address) uint64
+
 	AddNonceAddress([]byte, common.Address)
 	GetNonceAddress([]byte) common.Address
 	//
