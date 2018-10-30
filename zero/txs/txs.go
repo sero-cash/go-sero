@@ -293,7 +293,7 @@ func GetTknRoots(outs []*state1.OutState1, v *utils.U256, currency *keys.Uint256
 }
 
 func GeTktRoots(outs []*state1.OutState1, categroy *keys.Uint256, tkts []keys.Uint256, exits []keys.Uint256) (roots []keys.Uint256, tkns map[keys.Uint256]utils.U256, e error) {
-	tkns = make(map[keys.Uint256]utils.U256)
+	tkns = map[keys.Uint256]utils.U256{}
 	tktSize := len(tkts)
 	for _, out := range outs {
 		root := out.Pg.Root.ToUint256()
@@ -302,7 +302,7 @@ func GeTktRoots(outs []*state1.OutState1, categroy *keys.Uint256, tkts []keys.Ui
 				if out.Out_O.Pkg.Tkt.Category == *categroy {
 					if uint256Contains(tkts, out.Out_O.Pkg.Tkt.Value) {
 						if !uint256Contains(exits, *root) {
-							if &out.Out_O.Pkg.Tkn != nil {
+							if out.Out_O.Pkg.Tkn != nil {
 								if tkn, ok := tkns[out.Out_O.Pkg.Tkn.Currency]; ok {
 									tkn.AddU(&out.Out_O.Pkg.Tkn.Value)
 									tkns[out.Out_O.Pkg.Tkn.Currency] = tkn
