@@ -210,13 +210,13 @@ func GetRoots(tk *keys.Uint512, costTkns map[keys.Uint256]utils.U256, costTkts m
 			}
 		}
 
-		for catg, value := range tktMap {
-			if _, ok := costTkts[catg]; ok {
+		for catg, value := range costTkts {
+			if _, ok := tktMap[catg]; ok {
 				for _, v := range value {
-					costTkts[catg] = uint256Remove(costTkts[catg], v)
+					tktMap[catg] = uint256Remove(tktMap[catg], v)
 				}
-				if len(costTkts[catg]) == 0 {
-					delete(costTkts, catg)
+				if len(tktMap[catg]) == 0 {
+					delete(tktMap, catg)
 				}
 			}
 		}
