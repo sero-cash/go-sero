@@ -480,8 +480,8 @@ func opReturnDataCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contrac
 
 func opExtCodeSize(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	slot := stack.peek()
-	slot.SetUint64(uint64(interpreter.evm.StateDB.GetCodeSize(common.BigToAddress(slot))))
-
+	address := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(slot))
+	slot.SetUint64(uint64(interpreter.evm.StateDB.GetCodeSize(address)))
 	return nil, nil
 }
 
@@ -849,13 +849,6 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	return nil, nil
 }
 
-type EventValue struct {
-	Arg0 string //address
-	Arg1 *big.Int       // value
-	Arg2 string         //methodName
-	Arg3 string         //paramJson
-}
-
 func handleAllotTicket(d []byte, db StateDB, contract *Contract) (bool, error) {
 	nameLen := new(big.Int).SetBytes(d[0:32]).Uint64()
 	if nameLen == 0 {
@@ -878,8 +871,8 @@ func handleAllotTicket(d []byte, db StateDB, contract *Contract) (bool, error) {
 		db.SetTicketNonce(contract.Address(), nonce+1)
 		value = *crypto.Keccak256Hash(append([]byte(categoryName), new(big.Int).SetUint64(nonce).Bytes()...)).HashToUint256()
 	} else {
-		if !db.OwnTicket(contract.Address(), categoryName, common.BytesToHash(value[:])) {
-			return false, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "categoryName registered by other")
+		if !db.RemoveTicket(contract.Address(), categoryName, common.BytesToHash(value[:])) {
+			return false, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "The ticket does not belong to you.")
 		}
 	}
 	pkg := assets.Package{Tkt: &assets.Ticket{
@@ -1001,12 +994,12 @@ func makeLog(size int) executionFunc {
 			}
 		} else if topics[0] == topic_ticket {
 			if contract.pkg.Tkt != nil {
-				memory.Set(mStart.Uint64()+32, 32, contract.pkg.Tkt.Value[:])
+				memory.Set(mStart.Uint64(), 32, contract.pkg.Tkt.Value[:])
 			} else {
 				memory.Set(mStart.Uint64(), 32, []byte{})
 			}
 		} else if topics[0] == topic_setCurrency {
-
+			contract.SetCurrency(string(d[32 : 32+new(big.Int).SetBytes(d[0:32]).Uint64()]))
 		} else {
 			interpreter.evm.StateDB.AddLog(&types.Log{
 				Address: contract.Address(),

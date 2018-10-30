@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 	"strings"
 	"time"
@@ -653,7 +655,28 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		addr = onceAddr
 	}
 
-	msg := types.NewMessage(addr, args.To, 0, args.Currency, args.Value.ToInt(), gas, gasPrice, input, false)
+
+	var token *assets.Token
+	var ticket *assets.Ticket
+	if args.Value.ToInt() != nil {
+		token = &assets.Token{
+			Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(args.Currency), 32)).HashToUint256()),
+			Value:    *utils.U256(*args.Value.ToInt()).ToRef(),
+		}
+	}
+	if args.Tkt != nil {
+		ticket = &assets.Ticket{
+			Category: *(common.BytesToHash(common.LeftPadBytes([]byte(args.Category), 32)).HashToUint256()),
+			Value:    *args.Tkt.HashToUint256(),
+		}
+
+	}
+	pkg := assets.Package{
+		Tkn: token,
+		Tkt: ticket,
+	}
+
+	msg := types.NewMessage(addr, args.To, 0, pkg, gas, gasPrice, input, false)
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.

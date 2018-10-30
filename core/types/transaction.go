@@ -376,14 +376,7 @@ type Message struct {
 	checkNonce bool
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, currency string, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
-	var token *assets.Token
-	if amount.Cmp(new(big.Int)) > 0 {
-		token = &assets.Token{
-			Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
-			Value:    utils.U256(*amount),
-		}
-	}
+func NewMessage(from common.Address, to *common.Address, nonce uint64, pkg assets.Package, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
 	message := Message{
 		from:       from,
 		to:         to,
@@ -392,7 +385,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, currency 
 		gasPrice:   gasPrice,
 		data:       data,
 		checkNonce: checkNonce,
-		pkg:        assets.Package{Tkn: token},
+		pkg:        pkg,
 	}
 	return message
 }

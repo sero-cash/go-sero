@@ -50,7 +50,8 @@ var (
 
 	EmptyAddress = common.BytesToAddress(crypto.Keccak512(nil))
 
-	TrueHash = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000001")
+	TrueHash  = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000001")
+	FalseHash = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000")
 )
 
 // StateDBs within the ethereum protocol are used to store anything
@@ -223,15 +224,15 @@ func (self *StateDB) registerAddressByState(name string, contractAddr common.Add
 	return false
 }
 
-func (self *StateDB) OwnTicket(contractAddr common.Address, categoryName string, value common.Hash) bool {
-	stateObject := self.GetOrNewStateObject(EmptyAddress)
-	if stateObject != nil {
-		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, categoryName, value})
-		value := stateObject.GetState(self.db, crypto.Keccak256Hash(bytes))
-		return value == TrueHash
-	}
-	return false
-}
+//func (self *StateDB) OwnTicket(contractAddr common.Address, categoryName string, value common.Hash) bool {
+//	stateObject := self.GetOrNewStateObject(EmptyAddress)
+//	if stateObject != nil {
+//		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, categoryName, value})
+//		value := stateObject.GetState(self.db, crypto.Keccak256Hash(bytes))
+//		return value == TrueHash
+//	}
+//	return false
+//}
 
 func (self *StateDB) AddTicket(contractAddr common.Address, categoryName string, value common.Hash) {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
@@ -239,6 +240,18 @@ func (self *StateDB) AddTicket(contractAddr common.Address, categoryName string,
 		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, categoryName, value})
 		stateObject.SetState(self.db, crypto.Keccak256Hash(bytes), TrueHash)
 	}
+}
+
+func (self *StateDB) RemoveTicket(contractAddr common.Address, categoryName string, value common.Hash) bool {
+	stateObject := self.getStateObject(EmptyAddress)
+	if stateObject != nil {
+		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, categoryName, value})
+		if value == TrueHash {
+			stateObject.SetState(self.db, crypto.Keccak256Hash(bytes), FalseHash)
+			return true
+		}
+	}
+	return false
 }
 
 func (self *StateDB) RegisterTicket(contractAddr common.Address, categoryName string) bool {
