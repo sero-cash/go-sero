@@ -50,7 +50,7 @@ var (
 
 	EmptyAddress = common.BytesToAddress(crypto.Keccak512(nil))
 
-	currency_value = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000001")
+	TrueHash = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000001")
 )
 
 // StateDBs within the ethereum protocol are used to store anything
@@ -221,6 +221,24 @@ func (self *StateDB) registerAddressByState(name string, contractAddr common.Add
 		return address.Data == contractAddr.Data
 	}
 	return false
+}
+
+func (self *StateDB) OwnTicket(contractAddr common.Address, categoryName string, value common.Hash) bool {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, categoryName, value})
+		value := stateObject.GetState(self.db, crypto.Keccak256Hash(bytes))
+		return value == TrueHash
+	}
+	return false
+}
+
+func (self *StateDB) AddTicket(contractAddr common.Address, categoryName string, value common.Hash) {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, categoryName, value})
+		stateObject.SetState(self.db, crypto.Keccak256Hash(bytes), TrueHash)
+	}
 }
 
 func (self *StateDB) RegisterTicket(contractAddr common.Address, categoryName string) bool {
@@ -469,12 +487,6 @@ func (self *StateDB) GetTicketNonce(addr common.Address) uint64 {
  * SETTERS
  */
 
-func (self *StateDB) AddTicket(addr common.Address, category string, value common.Hash) {
-	stateObject := self.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		//stateObject.AddBalance(coinName, amount)
-	}
-}
 
 func (self *StateDB) SetTicketNonce(addr common.Address, nonce uint64) {
 	stateObject := self.GetOrNewStateObject(addr)

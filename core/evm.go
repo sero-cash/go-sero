@@ -118,8 +118,14 @@ func Transfer(db vm.StateDB, sender, recipient common.Address, pkg assets.Packag
 		} else if recipient != (common.Address{}) {
 			db.AddBalance(recipient, currency, &amount)
 		}
-	} else if pkg.Tkt != nil {
-		db.GetZState().AddTxOut(recipient, pkg)
 	}
 
+	if pkg.Tkt != nil {
+		if db.IsContract(recipient) {
+			category := strings.Trim(string(pkg.Tkt.Category[:]), string([]byte{0}))
+			db.AddTicket(recipient, category, common.BytesToHash(pkg.Tkt.Value[:]))
+		} else {
+			db.GetZState().AddTxOut(recipient, pkg)
+		}
+	}
 }

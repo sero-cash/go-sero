@@ -40,6 +40,8 @@ type StateDB interface {
 
 	SetTicketNonce(common.Address, uint64)
 	GetTicketNonce(common.Address) uint64
+	OwnTicket(common.Address, string, common.Hash) bool
+	AddTicket(common.Address, string, common.Hash)
 
 	AddNonceAddress([]byte, common.Address)
 	GetNonceAddress([]byte) common.Address
