@@ -30,7 +30,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
-	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original
@@ -115,24 +114,38 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 	defer w.keystore.mu.Unlock()
 	ins := []tx.In{}
 	costTkn := txt.TokenCost()
-	for cy, cost := range costTkn {
-		tk := keys.Seed2Tk(seed.SeedToUint256())
-		outs, amount, err := txs.GetRoots(&tk, cost.ToRef(), &cy, nil, nil)
-		if err != nil {
-			return nil, err
+	costTkt := txt.TikectCost()
+	tk := keys.Seed2Tk(seed.SeedToUint256())
+	outs, tknMap, tktMap, err := txs.GetRoots(&tk, costTkn, costTkt)
+	if err != nil {
+		return nil, err
+	}
+	for _, out := range outs {
+		ins = append(ins, tx.In{Root: out})
+	}
+	for cy, value := range tknMap {
+		token := &assets.Token{
+			Currency: cy,
+			Value:    value,
 		}
-		for _, out := range outs {
-			ins = append(ins, tx.In{Root: out})
+		pkg := assets.Package{
+			Tkn: token,
 		}
-		balance := amount
-		balance.SubU(cost.ToRef())
-		if balance.Cmp(&utils.U256_0) > 0 {
-			token := &assets.Token{
-				Currency: cy,
-				Value:    balance,
+		selfOut := tx.Out{
+			Addr: keys.Seed2Addr(seed.SeedToUint256()),
+			Pkg:  pkg,
+			Z:    tx.TYPE_Z,
+		}
+		txt.Outs = append(txt.Outs, selfOut)
+	}
+	for catg, value := range tktMap {
+		for _, v := range value {
+			ticket := &assets.Ticket{
+				Category: catg,
+				Value:    v,
 			}
 			pkg := assets.Package{
-				Tkn: token,
+				Tkt: ticket,
 			}
 			selfOut := tx.Out{
 				Addr: keys.Seed2Addr(seed.SeedToUint256()),
@@ -141,18 +154,7 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 			}
 			txt.Outs = append(txt.Outs, selfOut)
 		}
-	}
-	costTkt := txt.TikectCost()
 
-	for catg, tkts := range costTkt {
-		tk := keys.Seed2Tk(seed.SeedToUint256())
-		outs, _, err := txs.GetRoots(&tk, nil, nil, &catg, tkts)
-		if err != nil {
-			return nil, err
-		}
-		for _, out := range outs {
-			ins = append(ins, tx.In{Root: out})
-		}
 	}
 
 	txt.Ins = ins

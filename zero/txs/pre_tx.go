@@ -96,7 +96,7 @@ func preGen(ts *tx.T, state1 *state1.State1) (p preTx, e error) {
 				if src.Out_Z == nil {
 					p.desc_o.ins = append(p.desc_o.ins, *src)
 				} else {
-					p.desc_z.ins = append(p.desc_o.ins, *src)
+					p.desc_z.ins = append(p.desc_z.ins, *src)
 				}
 			}
 			p.uouts = append(p.uouts, *src)

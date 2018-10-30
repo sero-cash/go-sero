@@ -586,12 +586,12 @@ type CallArgs struct {
 	GasPrice hexutil.Big     `json:"gasPrice"`
 	Value    hexutil.Big     `json:"value"`
 	Data     hexutil.Bytes   `json:"data"`
-	Pairs    []string        `json:pairs`
-	ABI      *abi.ABI        `json:abi`
-	Currency string          `json:cy`
-	Dynamic  bool            `json:dy` //contract address parameters are dynamically generated.
-	Category string          `json:catg`
-	Tkt      *common.Hash    `json:tkt`
+	Pairs    []string        `json:"pairs"`
+	ABI      *abi.ABI        `json:"abi"`
+	Currency string          `json:"cy"`
+	Dynamic  bool            `json:"dy"` //contract address parameters are dynamically generated.
+	Category string          `json:"catg"`
+	Tkt      *common.Hash    `json:"tkt"`
 }
 
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, bool, error) {
@@ -1126,8 +1126,8 @@ type SendTxArgs struct {
 	ABI      *abi.ABI        `json:"abi"`
 	Currency string          `json:"cy"`
 	Dynamic  bool            `json:"dy"` //contract address parameters are dynamically generated.
-	Category string          `json:catg`
-	Tkt      *common.Hash    `json:tkt`
+	Category string          `json:"catg"`
+	Tkt      *common.Hash    `json:"tkt"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
