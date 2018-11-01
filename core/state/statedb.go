@@ -246,7 +246,8 @@ func (self *StateDB) RemoveTicket(contractAddr common.Address, categoryName stri
 	stateObject := self.getStateObject(EmptyAddress)
 	if stateObject != nil {
 		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, categoryName, value})
-		if value == TrueHash {
+		hash := stateObject.GetState(self.db, crypto.Keccak256Hash(bytes))
+		if hash == TrueHash {
 			stateObject.SetState(self.db, crypto.Keccak256Hash(bytes), FalseHash)
 			return true
 		}

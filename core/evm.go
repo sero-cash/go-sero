@@ -104,19 +104,18 @@ func CanTransfer(db vm.StateDB, addr common.Address, pkg assets.Package) bool {
 func Transfer(db vm.StateDB, sender, recipient common.Address, pkg assets.Package) {
 	if pkg.Tkn != nil {
 		amount := big.Int(pkg.Tkn.Value)
-		if amount.Sign() <= 0 {
-			return
-		}
-		currency := strings.Trim(string(pkg.Tkn.Currency[:]), string([]byte{0}))
-		if db.IsContract(sender) {
-			db.SubBalance(sender, currency, &amount)
-			if db.IsContract(recipient) {
+		if amount.Sign() > 0 {
+			currency := strings.Trim(string(pkg.Tkn.Currency[:]), string([]byte{0}))
+			if db.IsContract(sender) {
+				db.SubBalance(sender, currency, &amount)
+				if db.IsContract(recipient) {
+					db.AddBalance(recipient, currency, &amount)
+				} else {
+					db.GetZState().AddTxOut(recipient, pkg)
+				}
+			} else if recipient != (common.Address{}) {
 				db.AddBalance(recipient, currency, &amount)
-			} else {
-				db.GetZState().AddTxOut(recipient, pkg)
 			}
-		} else if recipient != (common.Address{}) {
-			db.AddBalance(recipient, currency, &amount)
 		}
 	}
 
