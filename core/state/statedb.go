@@ -553,20 +553,20 @@ func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
 // The account's state object is still available until the state is committed,
 // getStateObject will return a non-nil account after Suicide.
 func (self *StateDB) Suicide(addr common.Address, toAddr common.Address) bool {
-	//stateObject := self.getStateObject(addr)
-	//if stateObject == nil {
-	//	return false
-	//}
-	//
-	//books := []*Book{}
-	//for _, book := range stateObject.data.Books {
-	//	books = append(books, &Book{book.Balance, book.Currency})
-	//}
-	//self.journal.append(suicideChange{
-	//	account:   &addr,
-	//	prev:      stateObject.suicided,
-	//	prevBooks: books,
-	//})
+	stateObject := self.getStateObject(addr)
+	if stateObject == nil {
+		return false
+	}
+
+	books := []*Book{}
+	for _, book := range stateObject.data.Books {
+		books = append(books, &Book{book.Balance, book.Currency})
+	}
+	self.journal.append(suicideChange{
+		account:   &addr,
+		prev:      stateObject.suicided,
+		prevBooks: books,
+	})
 	//if self.IsContract(toAddr) {
 	//	toStateObject := self.getStateObject(addr)
 	//	for _, book := range books {
@@ -578,10 +578,10 @@ func (self *StateDB) Suicide(addr common.Address, toAddr common.Address) bool {
 	//		self.GetZState().AddTxOut(toAddr, book.Balance, currency.HashToUint256())
 	//	}
 	//}
-	//
-	//stateObject.markSuicided()
-	//stateObject.data.Books = []*Book{}
-	//stateObject.data.bookMap = map[string]*Book{}
+
+	stateObject.markSuicided()
+	stateObject.data.Books = []*Book{}
+	stateObject.data.bookMap = map[string]*Book{}
 	return true
 }
 
