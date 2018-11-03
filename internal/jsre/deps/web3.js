@@ -881,7 +881,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var offsets = this.getOffsets(types, solidityTypes);
 
             return solidityTypes.map(function (solidityType, index) {
-                return solidityType.decode(bytes, offsets[index],  types[index], index,sero);
+                return solidityType.decode(bytes, offsets[index],  types[index],sero);
             });
         };
 
@@ -1485,6 +1485,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         var f = require('./formatters');
         var SolidityParam = require('./param');
         var SolidityTypeAddress = require('./address');
+        var utils = require('../utils/utils')
 
         /**
          * SolidityType prototype is used to encode/decode solidity params of certain type
@@ -1818,7 +1819,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var length = this.staticPartLength(name);
 
             if (this._outSeroAddressFormatter) {
-                var fullAddress = sero.getFullAddress(utils.bytesToHex(bytes.slice(12)));
+                var fullAddress = sero.getFullAddress("0x"+bytes.substr(24));
                 return fullAddress;
             }else{
                 var param = new SolidityParam(bytes.substr(offset * 2, length * 2));
@@ -1829,7 +1830,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         module.exports = SolidityType;
 
-    },{"./address":4,"./formatters":9,"./param":11}],15:[function(require,module,exports){
+    },{"../utils/utils":21,"./address":4,"./formatters":9,"./param":11}],15:[function(require,module,exports){
         var f = require('./formatters');
         var SolidityType = require('./type');
         var utils = require('../utils/utils');
