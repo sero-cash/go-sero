@@ -6,6 +6,7 @@
 %define        __spec_install_post %{nil}
 %define          debug_package %{nil}
 %define        __os_install_post %{_dbpath}/brp-compress
+%define     RPM_OS %{_os}
 
 Summary: A very simple toy bin rpm package
 Name: gero

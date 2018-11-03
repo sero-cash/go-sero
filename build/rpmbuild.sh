@@ -61,4 +61,4 @@ cd ${START_PATH}/package
 cp ${START_PATH}/tmp/${NAME}-${VERSION}.tar.gz SOURCES/
 
 cd ${START_PATH}/package
-rpmbuild -ba SPEC/gero.spec
+rpmbuild -ba SPECS/gero.spec
