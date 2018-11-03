@@ -2749,9 +2749,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return String.fromCharCode.apply(String, array);
         }
         function randomHex (s) {
-            var r = (Math.random()*(new Date().getTime())).toString(16).substr(2)
+            var r = Math.random().toString(16).substr(2)+fromDecimal(new Date().getTime()).substr(2)
             while (r.length<(s)){
-                r +=Math.random().toString(16).substr(2);
+                r +=fromDecimal(new Date().getTime()).substr(2)+Math.random().toString(16).substr(2);
             }
             return '0x'+r.substr(0,s);
         }

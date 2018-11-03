@@ -1227,30 +1227,17 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 
 func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
 	var input []byte
-	var createContract, invokeContract bool
-
 	to := args.To
-
-	if to == nil {
-		createContract = true
+	var z ztx.OutType
+	if to == nil || state.IsContract(*to) {
+		z = ztx.TYPE_N
 	} else {
-		invokeContract = true
+		z = ztx.TYPE_Z
 	}
 	if args.Data != nil {
 		input = *args.Data
 	}
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), input, args.Currency)
-
-	var z ztx.OutType
-
-	if createContract {
-		z = ztx.TYPE_N
-	} else {
-		z = ztx.TYPE_Z
-		if invokeContract {
-			z = ztx.TYPE_N
-		}
-	}
 	txt := types.NewTxt(to, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, args.Currency, args.Category, args.Tkt)
 	return tx, txt, nil
 }
