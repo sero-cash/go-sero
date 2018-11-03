@@ -59,3 +59,6 @@ cd ${START_PATH}/tmp
 tar -czvf ${NAME}-${VERSION}.tar.gz ./${NAME}-${VERSION}
 cd ${START_PATH}/package
 cp ${START_PATH}/tmp/${NAME}-${VERSION}.tar.gz SOURCES/
+
+cd ${START_PATH}/package
+rpmbuild -ba SPEC/gero.spec
