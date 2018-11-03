@@ -195,7 +195,7 @@ func (a Address) ToCaddr() ContractAddress {
 		return sc.(ContractAddress)
 	}
 	var addr ContractAddress
-	addr.SetBytes(keccak512(a.Bytes()))
+	addr.SetBytes(LeftPadBytes(a.Data[0:20], 32))
 	a.caddr.Store(addr)
 	return addr
 }
