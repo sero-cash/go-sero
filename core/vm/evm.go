@@ -326,7 +326,6 @@ func loadAddress(evm *EVM, caller ContractRef, input []byte, contract *Contract,
 	contract.PutNonceAddress(evm.StateDB, caller.Address())
 	if !evm.StateDB.IsContract(caller.Address()) {
 		if len(input) != 0 && (contractCreation || len(contract.Code) > 0) {
-			//contract.PutNonceAddress(evm.StateDB, evm.Context.Coinbase)
 			n := int(input[0])<<8 + int(input[1])
 			for i := 0; i < n; i++ {
 				addr := common.BytesToAddress(input[i*64+2 : i*64+66])
