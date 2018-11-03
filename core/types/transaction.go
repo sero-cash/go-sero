@@ -65,30 +65,36 @@ func NewTransaction(gasPrice *big.Int, data []byte, currency string) *Transactio
 func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z ztx.OutType, currency string, catg string, tkt *common.Hash) *ztx.T {
 
 	outDatas := []ztx.Out{}
-	if to != nil {
-		var token *assets.Token
-		var ticket *assets.Ticket
-		if value != nil {
-			token = &assets.Token{
-				Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256()),
-				Value:    *utils.U256(*value).ToRef(),
-			}
+	var token *assets.Token
+	var ticket *assets.Ticket
+	if value != nil {
+		token = &assets.Token{
+			Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256()),
+			Value:    *utils.U256(*value).ToRef(),
 		}
-		if tkt != nil {
-			ticket = &assets.Ticket{
-				Category: *(common.BytesToHash(common.LeftPadBytes([]byte(catg), 32)).HashToUint256()),
-				Value:    *tkt.HashToUint256(),
-			}
+	}
+	if tkt != nil {
+		ticket = &assets.Ticket{
+			Category: *(common.BytesToHash(common.LeftPadBytes([]byte(catg), 32)).HashToUint256()),
+			Value:    *tkt.HashToUint256(),
+		}
 
-		}
-		pkg := assets.Package{
-			Tkn: token,
-			Tkt: ticket,
-		}
+	}
+	pkg := assets.Package{
+		Tkn: token,
+		Tkt: ticket,
+	}
+	if to != nil {
 		outData := ztx.Out{
 			Addr: *to.ToUint512(),
 			Pkg:  pkg,
 			Z:    z,
+		}
+		outDatas = append(outDatas, outData)
+	} else {
+		outData := ztx.Out{
+			Pkg: pkg,
+			Z:   z,
 		}
 		outDatas = append(outDatas, outData)
 	}
