@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/sero-cash/go-sero/common/hexutil"
+
 	"github.com/pkg/errors"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -251,6 +253,8 @@ func (abi ABI) Transfer(input []byte, output []byte, state *state.StateDB, contr
 	}
 
 	sigdata := input[:4]
+	resstr, _ := hexutil.Bytes(sigdata[:]).MarshalText()
+	fmt.Printf("method hex = %s", resstr)
 	method, err := abi.MethodById(sigdata)
 	if err != nil {
 		return output, nil

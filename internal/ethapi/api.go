@@ -20,11 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/sero-cash/go-czero-import/keys"
@@ -458,6 +459,57 @@ func (s *PublicBlockChainAPI) BlockNumber() hexutil.Uint64 {
 	return hexutil.Uint64(header.Number.Uint64())
 }
 
+func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *keys.Uint128, addresses []common.Address, dy bool) (map[common.Address]common.Address, error) {
+	if rand == nil {
+		return nil, errors.New(`rand can not be null`)
+	}
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return nil, err
+	}
+	result := map[common.Address]common.Address{}
+
+	randSeed := rand.ToUint256()
+
+	if dy {
+		randUint128 := keys.RandUint128()
+		randSeed = (&randUint128).ToUint256()
+	}
+	for _, addr := range addresses {
+		if state.IsContract(addr) {
+			result[addr] = addr
+		} else {
+			pkr := keys.Addr2PKr(addr.ToUint512(), randSeed.NewRef())
+			onceAddr := common.Address{}
+			onceAddr.SetBytes(pkr[:])
+			result[addr] = onceAddr
+		}
+	}
+	return result, nil
+}
+
+func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, short common.ContractAddress) (*common.Address, error) {
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return nil, err
+	}
+
+	full := state.GetNonceAddress(short[:])
+
+	wallets := s.b.AccountManager().Wallets()
+
+	if len(wallets) > 0 {
+		for _, wallet := range wallets {
+			if wallet.IsMine(full) {
+				full = wallet.Accounts()[0].Address
+				break
+			}
+		}
+	}
+	return &full, nil
+}
+
 type Balance struct {
 	Tkn map[string]*hexutil.Big   `json:"tkn"`
 	Tkt map[string][]*common.Hash `json:"tkt"`
@@ -621,40 +673,11 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
 
-	input := args.Data
-	if args.ABI != nil {
-		if args.To == nil {
-			r := getContractSeed(genContractAddr())
-			input, err = args.ABI.PrefixCreatePack(args.Data, args.Pairs, &r, state)
-			if err != nil {
-				return nil, 0, false, err
-			}
-		} else {
-			r := getContractSeed(*args.To)
-			if args.Dynamic {
-				r = (keys.RandUint128())
-			}
-			input, err = args.ABI.PrefixPack(args.Data, args.Pairs, &r, state)
-			if err != nil {
-				return nil, 0, false, err
-			}
-		}
-	}
-
 	// Create new call message
 	//args.Data = args.Data[2:]
 	if strings.TrimSpace(args.Currency) == "" {
 		args.Currency = "sero"
 	}
-
-	if args.To != nil && state.IsContract(*args.To) {
-		r := getContractSeed(*args.To)
-		pkr := keys.Addr2PKr(addr.ToUint512(), r.ToUint256().NewRef())
-		onceAddr := common.Address{}
-		onceAddr.SetBytes(pkr[:])
-		addr = onceAddr
-	}
-
 
 	var token *assets.Token
 	var ticket *assets.Ticket
@@ -676,7 +699,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		Tkt: ticket,
 	}
 
-	msg := types.NewMessage(addr, args.To, 0, pkg, gas, gasPrice, input, false)
+	msg := types.NewMessage(addr, args.To, 0, pkg, gas, gasPrice, args.Data, false)
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.
@@ -710,6 +733,9 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	if err := vmError(); err != nil {
 		return nil, 0, false, err
 	}
+	resstr, _ := hexutil.Bytes(res[:]).MarshalText()
+	fmt.Printf("res = %s", resstr)
+	//return res, gas, failed, err
 	wallets := s.b.AccountManager().Wallets()
 	if args.ABI != nil && args.To != nil {
 		out, err := args.ABI.Transfer(args.Data, res, state, *args.To, wallets)
@@ -1145,8 +1171,6 @@ type SendTxArgs struct {
 	GasPrice *hexutil.Big    `json:"gasPrice"`
 	Value    *hexutil.Big    `json:"value"`
 	Data     *hexutil.Bytes  `json:"data"`
-	Pairs    []string        `json:"pairs"`
-	ABI      *abi.ABI        `json:"abi"`
 	Currency string          `json:"cy"`
 	Dynamic  bool            `json:"dy"` //contract address parameters are dynamically generated.
 	Category string          `json:"catg"`
@@ -1187,13 +1211,6 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			return errors.New(fmt.Sprintf("tx without tkt:%s catg", args.Tkt))
 		}
 	}
-	//if args.Nonce == nil {
-	//	nonce, err := b.GetPoolNonce(ctx, args.From)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	args.Nonce = (*hexutil.Uint64)(&nonce)
-	//}
 	if args.To == nil {
 		// Contract creation
 		var input []byte
@@ -1208,61 +1225,19 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
-func genContractAddr() common.Address {
-	random := keys.RandUint512()
-	var to = common.Address{}
-	to.SetBytes(random[:])
-	return to
-}
-
-func getContractSeed(addr common.Address) keys.Uint128 {
-	s := keys.Uint128{}
-	copy(s[:], addr.Bytes()[:16])
-	return s
-}
-
 func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
 	var input []byte
-	var err error
 	var createContract, invokeContract bool
 
 	to := args.To
 
 	if to == nil {
-
-		contractAddr := genContractAddr()
-		to = &contractAddr
-
-		if args.ABI != nil && args.Data != nil {
-			r := getContractSeed(*to)
-			if args.Dynamic {
-				r = keys.RandUint128()
-			}
-			input, err = args.ABI.PrefixCreatePack(*args.Data, args.Pairs, &r, state)
-		}
 		createContract = true
-
-		if err != nil {
-			return nil, nil, err
-		}
 	} else {
-		if size := state.GetCodeSize(*args.To); size > 0 {
-			if args.ABI != nil && args.Data != nil {
-				r := getContractSeed(*args.To)
-				if args.Dynamic {
-					r = keys.RandUint128()
-				}
-				input, err = args.ABI.PrefixPack(*args.Data, args.Pairs, &r, state)
-			}
-			invokeContract = true
-			if err != nil {
-				return nil, nil, err
-			}
-		} else {
-			if args.Data != nil {
-				input = *args.Data
-			}
-		}
+		invokeContract = true
+	}
+	if args.Data != nil {
+		input = *args.Data
 	}
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), input, args.Currency)
 

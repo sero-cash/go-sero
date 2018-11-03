@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/common/math"
@@ -219,20 +221,20 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 	valueHex := tx.Value[ps.Indexes.Value]
 	gasLimit := tx.GasLimit[ps.Indexes.Gas]
 	// Value, Data hex encoding is messy: https://github.com/ethereum/tests/issues/203
-	value := new(big.Int)
+	//value := new(big.Int)
 	if valueHex != "0x" {
-		v, ok := math.ParseBig256(valueHex)
+		_, ok := math.ParseBig256(valueHex)
 		if !ok {
 			return nil, fmt.Errorf("invalid tx value %q", valueHex)
 		}
-		value = v
+		//value = v
 	}
 	data, err := hex.DecodeString(strings.TrimPrefix(dataHex, "0x"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid tx data %q", dataHex)
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, "sero", value, gasLimit, tx.GasPrice, data, true)
+	msg := types.NewMessage(from, to, tx.Nonce, assets.Package{}, gasLimit, tx.GasPrice, data, true)
 	return msg, nil
 }
 
