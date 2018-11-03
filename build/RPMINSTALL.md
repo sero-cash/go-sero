@@ -4,6 +4,36 @@
 
 from the cloned resource github/sero-cash/go-sero
 goto build directory
-run ./rpmbuild
-it will generate centos
+run 
+```
+./rpmbuild.sh
+```
 
+it will generate rpm package in github/sero-cash/go-sero/build/package/RPMS
+
+## install with rpm
+```
+rpm -ivh ${rpmfile} --nodeps
+```
+
+
+## check install and env
+exec following command in console
+```
+gero
+```
+it it complains with missing libboost_system ... etc.
+please ref [installation guide](https://github.com/sero-cash/go-sero/wiki/Building-Sero)
+
+for centos
+```
+sudo yum --setopt=group_package_types=mandatory,default,optional group install "Development Tools"
+sudo yum install boost boost-devel boost-system boost-filesystem boost-thread
+```
+for ubuntu
+```
+sudo apt-get install -y build-essential golang
+sudo apt-get install libboost-all-dev
+```
+
+##

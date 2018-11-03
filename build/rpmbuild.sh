@@ -21,8 +21,8 @@ else
     mkdir ./package
 fi
 
-if [ ! -d ${SOURCE_PATH}/go-sero ]; then
-    echo "there is no project available:${SOURCE_PATH}/go-sero for package"
+if [ ! -d ${SOURCE_PATH}/go-szero ]; then
+    echo "there is no project available:${SOURCE_PATH}/go-szero for package"
     exit 1
 fi
 if [ ! -d ${SOURCE_PATH}/go-czero-import ]; then
