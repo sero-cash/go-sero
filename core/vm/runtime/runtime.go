@@ -138,17 +138,13 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 		sender = vm.AccountRef(cfg.Origin)
 	)
 
-	address := common.BytesToAddress(crypto.Keccak512([]byte{0xff}, sender.Address().Bytes(), []byte{}, input))
-	// Call the code with the given configuration.
-
 	pkg := assets.Package{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
 		Value:    utils.U256(*cfg.Value),
 	},
 	}
-	code, leftOverGas, err := vmenv.Create(
+	code, address, leftOverGas, err := vmenv.Create(
 		sender,
-		address,
 		input,
 		cfg.GasLimit,
 		pkg,

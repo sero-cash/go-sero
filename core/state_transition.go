@@ -149,7 +149,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	msg := st.msg
 	sender := vm.AccountRef(msg.From())
 
-	contractCreation := st.to() != (common.Address{}) && len(msg.Data()) != 0 && !st.state.IsContract(st.to())
+	contractCreation := msg.To() == nil
 
 	// Pay intrinsic gas
 	gas, err := IntrinsicGas(st.data, contractCreation)
@@ -169,7 +169,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	)
 
 	if contractCreation {
-		ret, st.gas, vmerr = evm.Create(sender, st.to(), st.data, st.gas, msg.Pkg())
+		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, msg.Pkg())
 	} else {
 		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, msg.Pkg())
 	}

@@ -20,10 +20,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 	"strings"
-
-	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -220,8 +220,9 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 	dataHex := tx.Data[ps.Indexes.Data]
 	valueHex := tx.Value[ps.Indexes.Value]
 	gasLimit := tx.GasLimit[ps.Indexes.Gas]
-	// Value, Data hex encoding is messy: https://github.com/ethereum/tests/issues/203
-	//value := new(big.Int)
+
+	//Value, Data hex encoding is messy: https://github.com/ethereum/tests/issues/203
+	value := new(big.Int)
 	if valueHex != "0x" {
 		_, ok := math.ParseBig256(valueHex)
 		if !ok {
@@ -234,7 +235,12 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 		return nil, fmt.Errorf("invalid tx data %q", dataHex)
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, assets.Package{}, gasLimit, tx.GasPrice, data, true)
+	pkg := assets.Package{Tkn: &assets.Token{
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Value:    utils.U256(*value),
+	},
+	}
+	msg := types.NewMessage(from, to, tx.Nonce, pkg, gasLimit, tx.GasPrice, data, true)
 	return msg, nil
 }
 

@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/rlp"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -68,6 +69,13 @@ func Keccak512(data ...[]byte) []byte {
 		d.Write(b)
 	}
 	return d.Sum(nil)
+}
+
+func CreateAddress(b common.Address, nonce uint64, prefix []byte) common.Address {
+	data, _ := rlp.EncodeToBytes([]interface{}{b, nonce})
+	data = Keccak512(data)
+	copy(data[:], prefix)
+	return common.BytesToAddress(data)
 }
 
 // ToECDSA creates a private key with the given D value.

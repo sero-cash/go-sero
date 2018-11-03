@@ -17,6 +17,7 @@
 package types
 
 import (
+	"github.com/sero-cash/go-czero-import/keys"
 	"math/big"
 	"sync/atomic"
 
@@ -177,10 +178,18 @@ func (tx *Transaction) GetZZSTX() *zstx.T {
 }
 
 func (tx *Transaction) To() *common.Address {
-	for _, out := range tx.data.Stxt.Desc_O.Outs {
-		addr := common.BytesToAddress(out.Addr[:])
-		return &addr
+
+	if len(tx.data.Stxt.Desc_O.Ins) == 0 && len(tx.data.Stxt.Desc_O.Outs) == 0 {
+		return &common.Address{}
 	}
+
+	for _, out := range tx.data.Stxt.Desc_O.Outs {
+		if out.Addr != (keys.Uint512{}) {
+			addr := common.BytesToAddress(out.Addr[:])
+			return &addr
+		}
+	}
+
 	return nil
 }
 

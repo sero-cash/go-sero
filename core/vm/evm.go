@@ -339,17 +339,17 @@ func loadAddress(evm *EVM, caller ContractRef, input []byte, contract *Contract,
 }
 
 // create creates a new contract using code as deployment code.
-func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, pkg assets.Package, address common.Address) ([]byte, uint64, error) {
+func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, pkg assets.Package, address common.Address) ([]byte, common.Address, uint64, error) {
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth
+		return nil, common.Address{}, gas, ErrDepth
 	}
 
 	// Ensure there's no existing contract already at the designated address
 	contractHash := evm.StateDB.GetCodeHash(address)
 	if contractHash != (common.Hash{}) && contractHash != emptyCodeHash {
-		return nil, 0, ErrContractAddressCollision
+		return nil, common.Address{}, 0, ErrContractAddressCollision
 	}
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
@@ -365,7 +365,7 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, pkg assets.P
 	contract.SetCallCode(&address, crypto.Keccak256Hash(code), code)
 
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
-		return nil, gas, nil
+		return nil, common.Address{}, gas, nil
 	}
 
 	if evm.vmConfig.Debug && evm.depth == 0 {
@@ -406,13 +406,14 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, pkg assets.P
 	if evm.vmConfig.Debug && evm.depth == 0 {
 		evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
 	}
-	return ret, contract.Gas, err
+	return ret, address, contract.Gas, err
 
 }
 
 // Create creates a new contract using code as deployment code.
-func (evm *EVM) Create(caller ContractRef, contractAddr common.Address, code []byte, gas uint64, pkg assets.Package) (ret []byte, leftOverGas uint64, err error) {
-	return evm.create(caller, code, gas, pkg, contractAddr)
+func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, pkg assets.Package) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+	contractAddr = crypto.CreateAddress(caller.Address(), evm.StateDB.IncAndGetContrctNonce(), code[0:16])
+	return evm.create(caller, code[16:], gas, pkg, contractAddr)
 }
 
 // ChainConfig returns the environment's chain configuration

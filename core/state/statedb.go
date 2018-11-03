@@ -52,6 +52,8 @@ var (
 
 	TrueHash  = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000001")
 	FalseHash = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000")
+
+	contrctNonceKey = crypto.Keccak256Hash([]byte("contractNonce"))
 )
 
 // StateDBs within the ethereum protocol are used to store anything
@@ -382,6 +384,26 @@ func (self *StateDB) AddPreimage(hash common.Hash, preimage []byte) {
 		copy(pi, preimage)
 		self.preimages[hash] = pi
 	}
+}
+
+func (self *StateDB) GetContrctNonce() (uint64) {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		value := stateObject.GetState(self.db, contrctNonceKey)
+		return new(big.Int).SetBytes(value[:]).Uint64()
+	}
+	return 0;
+}
+
+func (self *StateDB) IncAndGetContrctNonce() (uint64) {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		value := stateObject.GetState(self.db, contrctNonceKey)
+		nonce := new(big.Int).Add(new(big.Int).SetBytes(value[:]), common.Big1)
+		stateObject.SetState(self.db, contrctNonceKey, common.BigToHash(nonce))
+		return nonce.Uint64();
+	}
+	return 0;
 }
 
 // Preimages returns a list of SHA3 preimages that have been submitted.

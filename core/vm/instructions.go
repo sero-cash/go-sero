@@ -46,7 +46,6 @@ var (
 	ErrToAddressError        = errors.New("evm: toAddr error")
 	hashTrue                 = common.LeftPadBytes([]byte{1}, 32)
 	hashFalse                = common.LeftPadBytes([]byte{0}, 32)
-	hashZero                 = common.LeftPadBytes([]byte{0}, 32)
 
 	topic_issueToken  = common.HexToHash("0x9320811d9313524221768f9849e3dd0797b44f6947ba7e0b7ef92773d63f38f6")
 	topic_sendToken   = common.HexToHash("0x7b3ec2ce4a9fe17ec098b5386d2196852dfe337b3c0e831839ff1c0714980e92")

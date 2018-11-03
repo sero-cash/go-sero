@@ -18,6 +18,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/sero-cash/go-sero/crypto"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
@@ -114,8 +115,8 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = gas
 	// if the transaction created a contract, store the creation address in the receipt.
-	if msg.To() != nil && !failed {
-		receipt.ContractAddress = *msg.To()
+	if msg.To() == nil {
+		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, statedb.GetContrctNonce(), msg.Data()[0:16])
 	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
