@@ -28,10 +28,7 @@ if [ ! -f ${START_PATH}/bin/gero ]; then
     make all
 fi
 
-if [ ! -d ${SOURCE_PATH}/go-sero ]; then
-    echo "there is no project available:${SOURCE_PATH}/go-szero for package"
-    exit 1
-fi
+
 if [ ! -d ${SOURCE_PATH}/go-czero-import ]; then
     echo "there is no project available for package"
     exit 1
@@ -52,7 +49,7 @@ cd ${START_PATH}/tmp/${NAME}-${VERSION}
 mkdir -p etc/gero
 mkdir -p usr/local/bin
 mkdir -p usr/lib64
-cp -rf ${SOURCE_PATH}/go-sero/build/bin/* usr/local/bin
+cp -rf ${START_PATH}/bin/* usr/local/bin
 mv  usr/local/bin/gero usr/local/bin/_gero
 cp -rf ${SOURCE_PATH}/go-czero-import/czero* usr/lib64
 cat > usr/local/bin/gero << EOL
