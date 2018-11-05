@@ -37,7 +37,16 @@ sudo apt-get install libboost-all-dev
 ```
 
 ## uninstall
+if you met following error:
 
-```cgo
+  install of gero-1.0-1.x86_64 conflicts with file from package gero-1.0-1.x86_64
+or  you want to upgrade gero
+you need to uninstall previous gero package
+
+```
 sudo dpkg --purge ${packagename}
+```
+or 
+```
+sudo rpm -e ${packagename}
 ```
