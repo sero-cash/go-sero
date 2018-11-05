@@ -42,10 +42,11 @@ const (
 )
 
 type T struct {
-	Ehash keys.Uint256
-	Fee   utils.U256
-	Ins   []In
-	Outs  []Out
+	FromRnd *keys.Uint256
+	Ehash   keys.Uint256
+	Fee     utils.U256
+	Ins     []In
+	Outs    []Out
 }
 
 func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {

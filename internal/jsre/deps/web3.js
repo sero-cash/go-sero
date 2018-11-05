@@ -678,7 +678,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {Object} plain param
          * @return {String} encoded plain param
          */
-        SolidityCoder.prototype.encodeParam = function (type, param) {
+        SolidityCoder.prototype.encodeParam = function (type, param,rand,sero) {
             return this.encodeParams([type], [param]);
         };
 
@@ -1819,7 +1819,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var length = this.staticPartLength(name);
 
             if (this._outSeroAddressFormatter) {
-                var fullAddress = sero.getFullAddress("0x"+bytes.substr(24));
+                var fullAddress = sero.getFullAddress("0x"+bytes.substr(offset * 2, length * 2).substr(24));
                 return fullAddress;
             }else{
                 var param = new SolidityParam(bytes.substr(offset * 2, length * 2));
@@ -2981,10 +2981,11 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         var Filter = require('./filter');
         var watches = require('./methods/watches');
 
-        var AllSolidityEvents = function (requestManager, json, address) {
-            this._requestManager = requestManager;
+        var AllSolidityEvents = function (sero, json, address) {
+            this._requestManager = sero.__requestManager;
             this._json = json;
             this._address = address;
+            this._sero =sero;
         };
 
         AllSolidityEvents.prototype.encode = function (options) {
@@ -3211,11 +3212,11 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 return json.type === 'event';
             });
 
-            var All = new AllEvents(contract._sero._requestManager, events, contract.address);
+            var All = new AllEvents(contract._sero, events, contract.address);
             All.attachToContract(contract);
 
             events.map(function (json) {
-                return new SolidityEvent(contract._sero._requestManager, json, contract.address);
+                return new SolidityEvent(contract._sero, json, contract.address);
             }).forEach(function (e) {
                 e.attachToContract(contract);
             });
@@ -3538,12 +3539,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         /**
          * This prototype should be used to create event filters
          */
-        var SolidityEvent = function (requestManager, json, address) {
-            this._requestManager = requestManager;
+        var SolidityEvent = function (sero, json, address) {
+            this._requestManager = sero._requestManager;
             this._params = json.inputs;
             this._name = utils.transformToFullName(json);
             this._address = address;
             this._anonymous = json.anonymous;
+            this._sero = sero;
         };
 
         /**
@@ -3624,7 +3626,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 if (value === undefined || value === null) {
                     return null;
                 }
-
+                var rand = utils.bytesToHex(utils.base58ToBytes(this._address).slice(0,16));
+                value = coder.opParams([i.type],[value],rand,this._sero,false)[0]
                 if (utils.isArray(value)) {
                     return value.map(function (v) {
                         return '0x' + coder.encodeParam(i.type, v);
@@ -3653,10 +3656,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
             var argTopics = this._anonymous ? data.topics : data.topics.slice(1);
             var indexedData = argTopics.map(function (topics) { return topics.slice(2); }).join("");
-            var indexedParams = coder.decodeParams(this.types(true), indexedData);
+            var indexedParams = coder.decodeParams(this.types(true), indexedData,this._sero);
 
             var notIndexedData = data.data.slice(2);
-            var notIndexedParams = coder.decodeParams(this.types(false), notIndexedData);
+            var notIndexedParams = coder.decodeParams(this.types(false), notIndexedData,this._sero);
 
             var result = formatters.outputLogFormatter(data);
             result.event = this.displayName();

@@ -1211,14 +1211,19 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			return errors.New(fmt.Sprintf("tx without tkt:%s catg", args.Tkt))
 		}
 	}
-	if args.To == nil {
+	state, _, err := b.StateAndHeaderByNumber(ctx, -1)
+
+	if err != nil {
+		return err
+	}
+	if args.To == nil || state.IsContract(*args.To) {
 		// Contract creation
 		var input []byte
 		if args.Data != nil {
 			input = *args.Data
 		}
 
-		if len(input) == 0 {
+		if len(input) < 18 {
 			return errors.New(`contract creation without any data provided`)
 		}
 	}
@@ -1228,9 +1233,15 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
 	var input []byte
 	to := args.To
+	rand := keys.RandUint128()
 	var z ztx.OutType
-	if to == nil || state.IsContract(*to) {
+	if to == nil {
+		copy(rand[:], *args.Data)
 		z = ztx.TYPE_N
+	} else if state.IsContract(*to) {
+		if !args.Dynamic {
+			copy(rand[:], args.To.Data[:16])
+		}
 	} else {
 		z = ztx.TYPE_Z
 	}
@@ -1239,6 +1250,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	}
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), input, args.Currency)
 	txt := types.NewTxt(to, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, args.Currency, args.Category, args.Tkt)
+	txt.FromRnd = rand.ToUint256().NewRef()
 	return tx, txt, nil
 }
 

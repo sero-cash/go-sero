@@ -34,7 +34,6 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 	if preTx, err := preGen(t, st1); err == nil {
 		s.Ehash = t.Ehash
 		s.Fee = t.Fee
-		var type_o_addr *keys.Uint512
 		for _, in_o := range preTx.desc_o.ins {
 			s_in_o := stx.In_O{}
 			s_in_o.Root = *in_o.Pg.Root.ToUint256()
@@ -50,7 +49,6 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 				s_out_o.Addr = pkr
 			case tx.TYPE_N:
 				s_out_o.Addr = out_o.Addr
-				type_o_addr = &out_o.Addr
 			default:
 				panic("Gen desc_o out but z is type_z")
 			}
@@ -58,13 +56,13 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 		}
 
 		addr := keys.Seed2Addr(seed)
-		var from_r *keys.Uint256
-		if type_o_addr != nil {
-			from_r = new(keys.Uint256)
-			copy(from_r[:], type_o_addr[:16])
+		var from_r keys.Uint256
+		if t.FromRnd != nil {
+			copy(from_r[:], t.FromRnd[:])
 		} else {
+			from_r = keys.RandUint256()
 		}
-		s.From = keys.Addr2PKr(&addr, from_r)
+		s.From = keys.Addr2PKr(&addr, &from_r)
 
 		hash_o := s.ToHash_for_z()
 		if desc_z, err := genDesc_Zs(seed, &preTx, &hash_o); err != nil {
