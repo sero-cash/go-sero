@@ -14,6 +14,7 @@ while read line; do
         echo "VERSION:${VERSION}"
     fi
 done <${START_PATH}/gero.spec
+
 if [ ! -d ./package ]; then
     mkdir ./package
 else
@@ -21,7 +22,13 @@ else
     mkdir ./package
 fi
 
-if [ ! -d ${SOURCE_PATH}/go-szero ]; then
+if [ ! -f ${START_PATH}/bin/gero ]; then
+    cd ${START_PATH}/../
+    make clean 
+    make all
+fi
+
+if [ ! -d ${SOURCE_PATH}/go-sero ]; then
     echo "there is no project available:${SOURCE_PATH}/go-szero for package"
     exit 1
 fi

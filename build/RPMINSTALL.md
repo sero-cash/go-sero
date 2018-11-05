@@ -36,4 +36,8 @@ sudo apt-get install -y build-essential golang
 sudo apt-get install libboost-all-dev
 ```
 
-##
+## uninstall
+
+```cgo
+sudo dpkg --purge ${packagename}
+```
