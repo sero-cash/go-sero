@@ -1235,6 +1235,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 		copy(rand[:], *args.Data)
 		z = ztx.TYPE_N
 	} else if state.IsContract(*to) {
+		z = ztx.TYPE_N
 		if !args.Dynamic {
 			copy(rand[:], args.To.Data[:16])
 		}
