@@ -236,7 +236,8 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 			if out_o.Addr == (keys.Uint512{}) {
 				break
 			}
-			if tk == out_o.Addr {
+
+			if keys.IsMyPKr(&tk, &out_o.Addr) {
 				root := pg.Root.ToUint256()
 				state.append_wout_dirty(root)
 				wos := OutState1{}
@@ -283,7 +284,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 			} else {
 			}*/
 		} else {
-			if tk == os.Out_Z.PKr {
+			if keys.IsMyPKr(&tk, &os.Out_Z.PKr) {
 				root := pg.Root.ToUint256()
 				state.append_wout_dirty(root)
 				wos := OutState1{}

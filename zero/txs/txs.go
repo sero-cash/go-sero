@@ -73,7 +73,7 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 
 		hash_z := s.ToHash_for_o()
 
-		if sign, err := keys.SignOAddr(seed, &hash_z, &s.From); err != nil {
+		if sign, err := keys.SignPKr(seed, &hash_z, &s.From); err != nil {
 			e = err
 			return
 		} else {
@@ -81,7 +81,7 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 		}
 
 		for i, s_in_o := range preTx.desc_o.ins {
-			if sign, err := keys.SignOAddr(seed, &hash_z, &s_in_o.Out_O.Addr); err != nil {
+			if sign, err := keys.SignPKr(seed, &hash_z, &s_in_o.Out_O.Addr); err != nil {
 				e = err
 				return
 			} else {
@@ -122,20 +122,25 @@ func Verify(s *stx.T) (e error) {
 func Verify_state1(s *stx.T, state *state1.State1) (e error) {
 	hash_z := s.ToHash_for_o()
 	if !CheckUint(&s.Fee) {
-		e = errors.New("verify check fee too big")
+		e = errors.New("txs.verify check fee too big")
+		return
+	}
+
+	if !keys.VerifyPKr(&hash_z, &s.Sign, &s.From) {
+		e = errors.New("txs.verify from verify failed")
 		return
 	}
 	for _, in_o := range s.Desc_O.Ins {
 		if ok := state.State0.HasIn(&in_o.Root); ok {
-			e = errors.New("in already in nils")
+			e = errors.New("txs.verify in already in nils")
 			return
 		} else {
 		}
 		if src, err := state.State0.GetOut(&in_o.Root); e == nil {
 			if src.IsO() {
-				if keys.VerifyOAddr(&hash_z, &in_o.Sign, &src.Out_O.Addr) {
+				if keys.VerifyPKr(&hash_z, &in_o.Sign, &src.Out_O.Addr) {
 				} else {
-					e = errors.New("txs.verify in_o failed")
+					e = errors.New("txs.verify in_o verify failed")
 					return
 				}
 			} else {
@@ -150,7 +155,7 @@ func Verify_state1(s *stx.T, state *state1.State1) (e error) {
 	for _, out_o := range s.Desc_O.Outs {
 		if out_o.Pkg.Tkn != nil {
 			if !CheckUint(&out_o.Pkg.Tkn.Value) {
-				e = errors.New("verify check balance too big")
+				e = errors.New("txs.verify check balance too big")
 				return
 			}
 		}
@@ -158,7 +163,7 @@ func Verify_state1(s *stx.T, state *state1.State1) (e error) {
 
 	for _, in_z := range s.Desc_Z.Ins {
 		if ok := state.State0.HasIn(&in_z.Nil); ok {
-			e = errors.New("Verify in already in nils")
+			e = errors.New("txs.verify in already in nils")
 			return
 		} else {
 		}
@@ -167,7 +172,7 @@ func Verify_state1(s *stx.T, state *state1.State1) (e error) {
 			return
 		} else {
 			if out == nil {
-				e = errors.New("Verify can not find out for anchor")
+				e = errors.New("txs.verify can not find out for anchor")
 			} else {
 			}
 		}

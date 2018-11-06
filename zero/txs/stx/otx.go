@@ -55,7 +55,7 @@ func (self *Out_O) ToHash() (ret keys.Uint256) {
 
 type In_O struct {
 	Root keys.Uint256
-	Sign keys.Uint256
+	Sign keys.Uint512
 }
 
 func (ino In_O) MarshalText() ([]byte, error) {

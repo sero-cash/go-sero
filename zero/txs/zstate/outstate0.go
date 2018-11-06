@@ -17,7 +17,6 @@
 package zstate
 
 import (
-	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -46,8 +45,10 @@ func (out *OutState0) IsO() bool {
 func (self *OutState0) ToCommitment() *keys.Uint256 {
 	if self.IsO() {
 		hs := self.Out_O.ToHash()
-		hs[31] = 0
+		return &hs
+		/*hs[31] = 0
 		return cpt.GenCommitment(self.Out_O.ToHash().NewRef(), &self.Out_O.Addr, &hs, &self.Out_O.Memo).NewRef()
+		*/
 	} else {
 		return self.Out_Z.ToHash().NewRef()
 	}

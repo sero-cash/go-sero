@@ -119,7 +119,7 @@ type T struct {
 	Ehash  keys.Uint256
 	From   keys.Uint512
 	Fee    utils.U256
-	Sign   keys.Uint256
+	Sign   keys.Uint512
 	Desc_Z Desc_Z
 	Desc_O Desc_O
 }
