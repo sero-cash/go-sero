@@ -1211,12 +1211,8 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			return errors.New(fmt.Sprintf("tx without tkt:%s catg", args.Tkt))
 		}
 	}
-	state, _, err := b.StateAndHeaderByNumber(ctx, -1)
 
-	if err != nil {
-		return err
-	}
-	if args.To == nil || state.IsContract(*args.To) {
+	if args.To == nil {
 		// Contract creation
 		var input []byte
 		if args.Data != nil {
