@@ -188,12 +188,12 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	}
 
 	st.refundGas()
-	pkg := assets.Asset{Tkn: &assets.Token{
+	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
 		Value:    utils.U256(*new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)),
 	},
 	}
-	st.state.GetZState().AddTxOut(st.evm.Coinbase, pkg)
+	st.state.GetZState().AddTxOut(st.evm.Coinbase, asset)
 
 	return ret, st.gasUsed(), vmerr != nil, err
 }
@@ -208,12 +208,12 @@ func (st *StateTransition) refundGas() {
 
 	// Return ETH for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	pkg := assets.Asset{Tkn: &assets.Token{
+	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
 		Value:    utils.U256(*remaining),
 	},
 	}
-	st.state.GetZState().AddTxOut(st.msg.From(), pkg)
+	st.state.GetZState().AddTxOut(st.msg.From(), asset)
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.

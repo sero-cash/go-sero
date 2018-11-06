@@ -102,17 +102,17 @@ func CanTransfer(db vm.StateDB, addr common.Address, pkg assets.Asset) bool {
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
-func Transfer(db vm.StateDB, sender, recipient common.Address, pkg assets.Asset) {
-	if pkg.Tkn != nil {
-		amount := big.Int(pkg.Tkn.Value)
+func Transfer(db vm.StateDB, sender, recipient common.Address, asset assets.Asset) {
+	if asset.Tkn != nil {
+		amount := big.Int(asset.Tkn.Value)
 		if amount.Sign() > 0 {
-			currency := strings.Trim(string(pkg.Tkn.Currency[:]), string([]byte{0}))
+			currency := strings.Trim(string(asset.Tkn.Currency[:]), string([]byte{0}))
 			if db.IsContract(sender) {
 				db.SubBalance(sender, currency, &amount)
 				if db.IsContract(recipient) {
 					db.AddBalance(recipient, currency, &amount)
 				} else {
-					db.GetZState().AddTxOut(recipient, pkg)
+					db.GetZState().AddTxOut(recipient, asset)
 				}
 			} else if recipient != (common.Address{}) {
 				db.AddBalance(recipient, currency, &amount)
@@ -120,12 +120,12 @@ func Transfer(db vm.StateDB, sender, recipient common.Address, pkg assets.Asset)
 		}
 	}
 
-	if pkg.Tkt != nil {
+	if asset.Tkt != nil {
 		if db.IsContract(recipient) {
-			category := strings.Trim(string(pkg.Tkt.Category[:]), string([]byte{0}))
-			db.AddTicket(recipient, category, common.BytesToHash(pkg.Tkt.Value[:]))
+			category := strings.Trim(string(asset.Tkt.Category[:]), string([]byte{0}))
+			db.AddTicket(recipient, category, common.BytesToHash(asset.Tkt.Value[:]))
 		} else {
-			db.GetZState().AddTxOut(recipient, pkg)
+			db.GetZState().AddTxOut(recipient, asset)
 		}
 	}
 }
