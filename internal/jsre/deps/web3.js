@@ -3166,7 +3166,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 });
             }).map(function (types) {
                 return coder.addressPrefix(types, params,rand);
-            })[0] || '';
+            })[0] || coder.addressPrefix([], [],rand);
         };
 
         var opArgs = function (abi, params,rand,sero,dy) {
@@ -3347,13 +3347,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 }
                 options.abi =this.abi;
 
-                var dy =false;
-
-                if (options.hasOwnProperty("dy")){
-                    dy = options.dy;
-                }
                 var rand =utils.randomHex(32);
-                args = opArgs(this.abi,args,rand,this.sero,dy);
+                args = opArgs(this.abi,args,rand,this.sero,false);
                 var bytes = encodeConstructorParams(this.abi, args);
                 options.data += bytes;
                 var prefix = encodeConstructorPrefix(this.abi,args,rand);
@@ -3438,9 +3433,12 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 options = args.pop();
             }
 
+            var rand =utils.randomHex(32);
+            args = opArgs(this.abi,args,rand,this.sero,false);
             var bytes = encodeConstructorParams(this.abi, args);
             options.data += bytes;
-            options.data = encodeConstructorPrefix(this.abi,args) +options.data;
+            var prefix = encodeConstructorPrefix(this.abi,args,rand);
+            options.data = prefix +options.data.substr(2);
 
             return options.data;
         };
