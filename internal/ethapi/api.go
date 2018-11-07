@@ -699,6 +699,16 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		Tkt: ticket,
 	}
 
+	rand := keys.RandUint128()
+	if args.To == nil {
+		copy(rand[:], args.Data)
+	} else if state.IsContract(*args.To) {
+		if !args.Dynamic {
+			copy(rand[:], args.To.Data[:16])
+		}
+	}
+	pkr := keys.Addr2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
+	addr.SetBytes(pkr[:])
 	msg := types.NewMessage(addr, args.To, 0, pkg, gas, gasPrice, args.Data, false)
 
 	// Setup context so it may be cancelled the call has completed
