@@ -36,11 +36,24 @@ var gen_cache = make(chan int, 4)
 
 func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_z stx.Desc_Z, e error) {
 	for _, in := range ptx.desc_z.ins {
+		desc := cpt.InputDesc{}
+		desc.Seed = *seed
+		desc.Pkr = in.Out_Z.PKr
+		desc.Einfo = in.Out_Z.EInfo
+		//--
+		desc.Index = in.Index
+		_, desc.Position, desc.Path, desc.Anchor = in.ToWitness()
+
+		if err := cpt.GenInputProof(&desc); err != nil {
+			e = err
+			return
+		}
+
 		in_z := stx.In_Z{}
-		in_z.Anchor = *in.Pg.Anchor.ToUint256()
-		in_z.AssetCM = in.Out_Z.AssetCM
-		in_z.Nil = in.Trace
-		in_z.Trace = in.Trace
+		in_z.Anchor = desc.Anchor
+		in_z.AssetCM = desc.Asset_cm_ret
+		in_z.Nil = desc.Nil_ret
+		in_z.Trace = desc.Til_ret
 		desc_z.Ins = append(desc_z.Ins, in_z)
 	}
 

@@ -269,7 +269,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 				wos.Index = os.Index
 				wos.Out_Z = out_z
 				wos.Z = false
-				if pg.Leaf.ToUint256() != os.ToRootCM() {
+				if *pg.Leaf.ToUint256() != *os.ToRootCM() {
 					panic("add wouts but RootCM not match!")
 				}
 				wos.Trace = cpt.GenTil(&tk, pg.Leaf.ToUint256())
@@ -331,7 +331,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 					wos.Tk = tk
 					wos.Index = os.Index
 					wos.Z = true
-					if pg.Leaf.ToUint256() != os.ToRootCM() {
+					if *pg.Leaf.ToUint256() != *os.ToRootCM() {
 						panic("add wouts but RootCM not match!")
 					}
 					wos.Trace = cpt.GenTil(&tk, pg.Leaf.ToUint256())
