@@ -20,10 +20,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 	"strings"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -235,7 +236,7 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 		return nil, fmt.Errorf("invalid tx data %q", dataHex)
 	}
 
-	pkg := assets.Package{Tkn: &assets.Token{
+	pkg := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
 		Value:    utils.U256(*value),
 	},

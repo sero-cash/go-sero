@@ -17,9 +17,10 @@
 package types
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
 	"math/big"
 	"sync/atomic"
+
+	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
@@ -81,21 +82,21 @@ func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z
 		}
 
 	}
-	pkg := assets.Package{
+	pkg := assets.Asset{
 		Tkn: token,
 		Tkt: ticket,
 	}
 	if to != nil {
 		outData := ztx.Out{
-			Addr: *to.ToUint512(),
-			Pkg:  pkg,
-			Z:    z,
+			Addr:  *to.ToUint512(),
+			Asset: pkg,
+			Z:     z,
 		}
 		outDatas = append(outDatas, outData)
 	} else {
 		outData := ztx.Out{
-			Pkg: pkg,
-			Z:   z,
+			Asset: pkg,
+			Z:     z,
 		}
 		outDatas = append(outDatas, outData)
 	}
@@ -124,11 +125,11 @@ func newTransaction(gasPrice *big.Int, data []byte, currency string) *Transactio
 	return &Transaction{data: d}
 }
 
-func (tx *Transaction) Pkg() assets.Package {
+func (tx *Transaction) Pkg() assets.Asset {
 	for _, desc_o := range tx.data.Stxt.Desc_O.Outs {
-		return desc_o.Pkg
+		return desc_o.Asset
 	}
-	return assets.Package{}
+	return assets.Asset{}
 }
 
 // EncodeRLP implements rlp.Encoder
@@ -384,14 +385,14 @@ type Message struct {
 	to         *common.Address
 	from       common.Address
 	nonce      uint64
-	pkg        assets.Package
+	pkg        assets.Asset
 	gasLimit   uint64
 	gasPrice   *big.Int
 	data       []byte
 	checkNonce bool
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, pkg assets.Package, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, pkg assets.Asset, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
 	message := Message{
 		from:       from,
 		to:         to,
@@ -412,6 +413,6 @@ func (m Message) Gas() uint64          { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
-func (m Message) Pkg() assets.Package {
+func (m Message) Pkg() assets.Asset {
 	return m.pkg
 }

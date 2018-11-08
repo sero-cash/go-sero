@@ -17,10 +17,11 @@
 package core
 
 import (
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/utils"
 	"math"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/vm"
@@ -34,7 +35,7 @@ type StateTransition struct {
 	gas        uint64
 	gasPrice   *big.Int
 	initialGas uint64
-	pkg        assets.Package
+	pkg        assets.Asset
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
@@ -48,8 +49,7 @@ type Message interface {
 
 	GasPrice() *big.Int
 	Gas() uint64
-	Pkg() assets.Package
-
+	Pkg() assets.Asset
 
 	Nonce() uint64
 	CheckNonce() bool
@@ -188,10 +188,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	}
 
 	st.refundGas()
-	pkg := assets.Package{Tkn: &assets.Token{
-			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
-			Value:    utils.U256(*new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)),
-		},
+	pkg := assets.Asset{Tkn: &assets.Token{
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Value:    utils.U256(*new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)),
+	},
 	}
 	st.state.GetZState().AddTxOut(st.evm.Coinbase, pkg)
 
@@ -208,10 +208,10 @@ func (st *StateTransition) refundGas() {
 
 	// Return ETH for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	pkg := assets.Package{Tkn: &assets.Token{
-			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
-			Value:    utils.U256(*remaining),
-		},
+	pkg := assets.Asset{Tkn: &assets.Token{
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Value:    utils.U256(*remaining),
+	},
 	}
 	st.state.GetZState().AddTxOut(st.msg.From(), pkg)
 

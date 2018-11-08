@@ -17,6 +17,7 @@
 package zstate
 
 import (
+	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -42,17 +43,41 @@ func (out *OutState0) IsO() bool {
 	}
 }
 
+func (self *OutState0) ToOutCM() *keys.Uint256 {
+	if self.IsO() {
+		asset := self.Out_O.Asset.ToCompleteAsset()
+		cm := cpt.GenOutCM(
+			asset.Tkn.Currency.NewRef(),
+			asset.Tkn.Value.ToUint256().NewRef(),
+			asset.Tkt.Category.NewRef(),
+			asset.Tkt.Value.NewRef(),
+			&self.Out_O.Memo,
+			&self.Out_O.Addr,
+			utils.NewU256(self.Index).ToRef().ToUint256().NewRef(),
+		)
+		return &cm
+	} else {
+		return self.Out_Z.OutCM.NewRef()
+	}
+}
+
+func (self *OutState0) ToRootCM() *keys.Uint256 {
+	out_cm := self.ToOutCM()
+	cm := cpt.GenRootCM(self.Index, out_cm)
+	return &cm
+}
+
+/*
 func (self *OutState0) ToCommitment() *keys.Uint256 {
 	if self.IsO() {
 		hs := self.Out_O.ToHash()
 		return &hs
-		/*hs[31] = 0
+		hs[31] = 0
 		return cpt.GenCommitment(self.Out_O.ToHash().NewRef(), &self.Out_O.Addr, &hs, &self.Out_O.Memo).NewRef()
-		*/
 	} else {
 		return self.Out_Z.ToHash().NewRef()
 	}
-}
+}*/
 
 func (self *OutState0) Serial() (ret []byte, e error) {
 	if self != nil {

@@ -17,10 +17,11 @@
 package vm
 
 import (
-	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"math/big"
 	"strings"
+
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 )
 
 // ContractRef is a reference to the contract's backing object
@@ -61,18 +62,18 @@ type Contract struct {
 
 	Gas uint64
 
-	pkg *assets.Package
+	pkg *assets.Asset
 
 	Args []byte
 
 	DelegateCall bool
 
-	addrs map[common.ContractAddress]common.Address
+	addrs    map[common.ContractAddress]common.Address
 	currency string
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller ContractRef, object ContractRef, pkg *assets.Package, gas uint64) *Contract {
+func NewContract(caller ContractRef, object ContractRef, pkg *assets.Asset, gas uint64) *Contract {
 	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil}
 
 	c.addrs = map[common.ContractAddress]common.Address{}
@@ -186,7 +187,6 @@ func (c *Contract) Currency() string {
 		return "sero"
 	}
 }
-
 
 // SetCode sets the code to the contract
 func (c *Contract) SetCode(hash common.Hash, code []byte) {

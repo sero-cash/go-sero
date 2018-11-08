@@ -22,11 +22,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 	"sort"
 	"strings"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/crypto"
 
@@ -247,7 +248,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 			statedb.AddBalance(addr, "sero", account.Balance)
 			statedb.SetCode(addr, account.Code)
 		} else {
-			pkg := assets.Package{Tkn: &assets.Token{
+			pkg := assets.Asset{Tkn: &assets.Token{
 				Currency: *sero.HashToUint256(),
 				Value:    utils.U256(*account.Balance),
 			},

@@ -107,7 +107,7 @@ func (self *user) getAR() (pkr keys.Uint512) {
 func (self *user) addOut(v int) {
 	out := stx.Out_O{}
 	out.Addr = self.getAR()
-	out.Pkg = assets.NewPackageByToken(&assets.Token{
+	out.Asset = assets.NewPackageByToken(&assets.Token{
 		utils.StringToUint256("sero"),
 		utils.NewU256(uint64(v)),
 	})
@@ -138,12 +138,12 @@ func (self *user) Logout() (ret uint64) {
 	fmt.Printf("\n\n===========user(%v)============\n", self.i)
 	outs := self.GetOuts()
 	for _, out := range outs {
-		if out.Out_O.Pkg.Tkn != nil {
-			fmt.Printf("TKN: (%v:%v)---%v-----%v\n", out.Pg.Anchor[1], out.Pg.Index, out.Out_O.Pkg.Tkn.Currency[0], out.Out_O.Pkg.Tkn.Value.ToIntRef().Int64())
-			ret += out.Out_O.Pkg.Tkn.Value.ToIntRef().Uint64()
+		if out.Out_O.Asset.Tkn != nil {
+			fmt.Printf("TKN: (%v:%v)---%v-----%v\n", out.Pg.Anchor[1], out.Pg.Index, out.Out_O.Asset.Tkn.Currency[0], out.Out_O.Asset.Tkn.Value.ToIntRef().Int64())
+			ret += out.Out_O.Asset.Tkn.Value.ToIntRef().Uint64()
 		}
-		if out.Out_O.Pkg.Tkt != nil {
-			fmt.Printf("TKT: (%v:%v)---%v-----%v\n", out.Pg.Anchor[1], out.Pg.Index, out.Out_O.Pkg.Tkt.Category[0], out.Out_O.Pkg.Tkt.Value)
+		if out.Out_O.Asset.Tkt != nil {
+			fmt.Printf("TKT: (%v:%v)---%v-----%v\n", out.Pg.Anchor[1], out.Pg.Index, out.Out_O.Asset.Tkt.Category[0], out.Out_O.Asset.Tkt.Value)
 		}
 	}
 	fmt.Printf("===========user(%v)============\n\n", self.i)
@@ -157,7 +157,7 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 	in.Root = *outs[0].Pg.Root.ToUint256()
 	out0 := tx.Out{}
 	out0.Addr = u.addr
-	out0.Pkg = assets.Package{
+	out0.Asset = assets.Asset{
 		&assets.Token{
 			utils.StringToUint256("sero"),
 			utils.NewU256(uint64(v)),
@@ -172,9 +172,9 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 
 	out1 := tx.Out{}
 	out1.Addr = self.addr
-	out1.Pkg = outs[0].Out_O.Pkg.Clone()
-	out1.Pkg.Tkn.Value.SubU(utils.NewU256(uint64(v)).ToRef())
-	out1.Pkg.Tkn.Value.SubU(utils.NewU256(uint64(fee)).ToRef())
+	out1.Asset = outs[0].Out_O.Asset.Clone()
+	out1.Asset.Tkn.Value.SubU(utils.NewU256(uint64(v)).ToRef())
+	out1.Asset.Tkn.Value.SubU(utils.NewU256(uint64(fee)).ToRef())
 
 	if z {
 		out1.Z = tx.TYPE_Z

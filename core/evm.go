@@ -17,9 +17,10 @@
 package core
 
 import (
-	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"math/big"
 	"strings"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
@@ -88,7 +89,7 @@ func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash
 
 // CanTransfer checks whether there are enough funds in the address' account to make a transfer.
 // This does not take the necessary gas in to account to make the transfer valid.
-func CanTransfer(db vm.StateDB, addr common.Address, pkg assets.Package) bool {
+func CanTransfer(db vm.StateDB, addr common.Address, pkg assets.Asset) bool {
 	flag := true
 	if pkg.Tkn != nil {
 		amount := big.Int(pkg.Tkn.Value)
@@ -101,7 +102,7 @@ func CanTransfer(db vm.StateDB, addr common.Address, pkg assets.Package) bool {
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
-func Transfer(db vm.StateDB, sender, recipient common.Address, pkg assets.Package) {
+func Transfer(db vm.StateDB, sender, recipient common.Address, pkg assets.Asset) {
 	if pkg.Tkn != nil {
 		amount := big.Int(pkg.Tkn.Value)
 		if amount.Sign() > 0 {

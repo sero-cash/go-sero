@@ -38,20 +38,35 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_z st
 	for _, in := range ptx.desc_z.ins {
 		in_z := stx.In_Z{}
 		in_z.Anchor = *in.Pg.Anchor.ToUint256()
-		in_z.PkgCM = in.Out_Z.PkgCM
+		in_z.PkgCM = in.Out_Z.AssetCM
 		in_z.Nil = in.Trace
 		in_z.Trace = in.Trace
 		desc_z.Ins = append(desc_z.Ins, in_z)
 	}
 
 	for _, out := range ptx.desc_z.outs {
-		out_z := stx.Out_Z{}
-		out_z.PkgCM = cpt.Random()
-		out_z.OutCM = cpt.Random()
-		out_z.PKr = keys.Addr2PKr(&out.Addr, cpt.Random().NewRef())
-		out_z.Temp = out
-		desc_z.Outs = append(desc_z.Outs, out_z)
+		desc := cpt.OutputDesc{}
+		desc.Seed = *seed
+		asset := out.Asset.ToCompleteAsset()
+		desc.Tkn_currency = asset.Tkn.Currency
+		desc.Tkn_value = asset.Tkn.Value.ToUint256()
+		desc.Tkt_category = asset.Tkt.Category
+		desc.Tkt_value = asset.Tkt.Value
+		desc.Memo = out.Memo
+		desc.Pk = out.Addr
+		if err := cpt.GenOutputProof(&desc); err != nil {
+			e = err
+			return
+		} else {
+			out_z := stx.Out_Z{}
+			out_z.AssetCM = desc.Asset_cm_ret
+			out_z.OutCM = desc.Out_cm_ret
+			out_z.PKr = desc.Pkr_ret
+			out_z.Temp = out
+			desc_z.Outs = append(desc_z.Outs, out_z)
+		}
 	}
+
 	return
 
 	/*extras := []cpt.Extra{}

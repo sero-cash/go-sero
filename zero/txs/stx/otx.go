@@ -29,9 +29,9 @@ import (
 )
 
 type Out_O struct {
-	Addr keys.Uint512
-	Pkg  assets.Package
-	Memo keys.Uint512
+	Addr  keys.Uint512
+	Asset assets.Asset
+	Memo  keys.Uint512
 }
 
 func (self *Out_O) Clone() (ret Out_O) {
@@ -46,7 +46,7 @@ func (this Out_O) ToRef() (ret *Out_O) {
 func (self *Out_O) ToHash() (ret keys.Uint256) {
 	hash := crypto.Keccak256(
 		self.Addr[:],
-		self.Pkg.ToHash().NewRef()[:],
+		self.Asset.ToHash().NewRef()[:],
 		self.Memo[:],
 	)
 	copy(ret[:], hash)

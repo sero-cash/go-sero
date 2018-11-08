@@ -66,12 +66,12 @@ func (self *In_Z) ToHash() (ret keys.Uint256) {
 }
 
 type Out_Z struct {
-	PkgCM keys.Uint256
-	OutCM keys.Uint256
-	EInfo [cpt.ETEXT_WIDTH]byte `json:"-"`
-	PKr   keys.Uint512
-	Proof Proof
-	Temp  tx.Out
+	AssetCM keys.Uint256
+	OutCM   keys.Uint256
+	EInfo   [cpt.ETEXT_WIDTH]byte `json:"-"`
+	PKr     keys.Uint512
+	Proof   Proof
+	Temp    tx.Out
 }
 
 func (self *Out_Z) Clone() (ret Out_Z) {
@@ -87,7 +87,7 @@ func (this Out_Z) ToRef() (ret *Out_Z) {
 
 func (self *Out_Z) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
-	d.Write(self.PkgCM[:])
+	d.Write(self.AssetCM[:])
 	d.Write(self.OutCM[:])
 	d.Write(self.EInfo[:])
 	d.Write(self.PKr[:])

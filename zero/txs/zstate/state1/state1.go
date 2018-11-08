@@ -141,7 +141,7 @@ func (state *State1) GetOut(root *keys.Uint256) (src *OutState1, e error) {
 }
 
 func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *merkle.Tree) {
-	out_hash := os.ToCommitment()
+	out_hash := os.ToRootCM()
 	out_leaf := merkle.Leaf{}
 	copy(out_leaf[:], out_hash[:])
 
@@ -220,16 +220,16 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 	for _, tk := range tks {
 		if os.IsO() {
 			out_o := os.Out_O
-			if out_o.Pkg.Tkn == nil && out_o.Pkg.Tkt == nil {
+			if out_o.Asset.Tkn == nil && out_o.Asset.Tkt == nil {
 				break
 			}
-			if out_o.Pkg.Tkn != nil {
-				if out_o.Pkg.Tkn.Value.Cmp(&utils.U256_0) <= 0 {
+			if out_o.Asset.Tkn != nil {
+				if out_o.Asset.Tkn.Value.Cmp(&utils.U256_0) <= 0 {
 					break
 				}
 			}
-			if out_o.Pkg.Tkt != nil {
-				if out_o.Pkg.Tkt.Value == keys.Empty_Uint256 {
+			if out_o.Asset.Tkt != nil {
+				if out_o.Asset.Tkt.Value == keys.Empty_Uint256 {
 					break
 				}
 			}
@@ -246,7 +246,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 				wos.Out_O = *os.Out_O
 				wos.Index = os.Index
 				wos.Out_Z = &stx.Out_Z{}
-				wos.Out_Z.PkgCM = keys.RandUint256()
+				wos.Out_Z.AssetCM = keys.RandUint256()
 				wos.Out_Z.OutCM = keys.RandUint256()
 				wos.Out_Z.PKr = os.Out_O.Addr
 				wos.Trace = keys.RandUint256()
@@ -290,7 +290,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 				wos := OutState1{}
 				wos.Pg = *pg
 				wos.Out_O.Addr = os.Out_Z.PKr
-				wos.Out_O.Pkg = os.Out_Z.Temp.Pkg.Clone()
+				wos.Out_O.Asset = os.Out_Z.Temp.Asset.Clone()
 				wos.Out_O.Memo = os.Out_Z.Temp.Memo
 				wos.Out_Z = os.Out_Z.Clone().ToRef()
 				wos.Tk = tk
@@ -373,7 +373,7 @@ func (state *State1) UpdateWitness(tks []keys.Uint512) {
 				panic("gen witness out from B2outs can not find in G2outs")
 			} else {
 			}
-			os_commitment := os.ToCommitment()
+			os_commitment := os.ToRootCM()
 			if commitment != *os_commitment {
 				panic("gen witness out!=os.Root()")
 			} else {

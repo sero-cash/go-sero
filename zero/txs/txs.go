@@ -41,7 +41,7 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 		}
 		for _, out_o := range preTx.desc_o.outs {
 			s_out_o := stx.Out_O{}
-			s_out_o.Pkg = out_o.Pkg.Clone()
+			s_out_o.Asset = out_o.Asset.Clone()
 			s_out_o.Memo = out_o.Memo
 			switch out_o.Z {
 			case tx.TYPE_O:
@@ -153,8 +153,8 @@ func Verify_state1(s *stx.T, state *state1.State1) (e error) {
 		}
 	}
 	for _, out_o := range s.Desc_O.Outs {
-		if out_o.Pkg.Tkn != nil {
-			if !CheckUint(&out_o.Pkg.Tkn.Value) {
+		if out_o.Asset.Tkn != nil {
+			if !CheckUint(&out_o.Asset.Tkn.Value) {
 				e = errors.New("txs.verify check balance too big")
 				return
 			}
@@ -263,24 +263,24 @@ func GetTknRoots(outs []*state1.OutState1, v *utils.U256, currency *keys.Uint256
 	value := v.ToI256()
 	for _, out := range outs {
 		root := out.Pg.Root.ToUint256()
-		if out.Out_O.Pkg.Tkn != nil {
-			if out.Out_O.Pkg.Tkn.Currency == *currency {
+		if out.Out_O.Asset.Tkn != nil {
+			if out.Out_O.Asset.Tkn.Currency == *currency {
 				roots = append(roots, *root)
-				amount.AddU(&out.Out_O.Pkg.Tkn.Value)
+				amount.AddU(&out.Out_O.Asset.Tkn.Value)
 				out_o := out.Out_O
-				if out_o.Pkg.Tkt != nil {
-					if ts, ok := tkts[out_o.Pkg.Tkt.Category]; ok {
-						ts = append(ts, out_o.Pkg.Tkt.Value)
-						tkts[out_o.Pkg.Tkt.Category] = ts
+				if out_o.Asset.Tkt != nil {
+					if ts, ok := tkts[out_o.Asset.Tkt.Category]; ok {
+						ts = append(ts, out_o.Asset.Tkt.Value)
+						tkts[out_o.Asset.Tkt.Category] = ts
 					} else {
-						tkts[out_o.Pkg.Tkt.Category] = []keys.Uint256{out_o.Pkg.Tkt.Value}
+						tkts[out_o.Asset.Tkt.Category] = []keys.Uint256{out_o.Asset.Tkt.Value}
 					}
 				}
-				if value.Cmp(out_o.Pkg.Tkn.Value.ToI256().ToRef()) < 0 {
+				if value.Cmp(out_o.Asset.Tkn.Value.ToI256().ToRef()) < 0 {
 					value = utils.NewI256(0)
 					break
 				} else {
-					value.SubU(&out_o.Pkg.Tkn.Value)
+					value.SubU(&out_o.Asset.Tkn.Value)
 				}
 			} else {
 			}
@@ -301,16 +301,16 @@ func GeTktRoots(outs []*state1.OutState1, categroy *keys.Uint256, tkts []keys.Ui
 	for _, out := range outs {
 		root := out.Pg.Root.ToUint256()
 		if categroy != nil && tktSize > 0 {
-			if out.Out_O.Pkg.Tkt != nil {
-				if out.Out_O.Pkg.Tkt.Category == *categroy {
-					if uint256Contains(tkts, out.Out_O.Pkg.Tkt.Value) {
+			if out.Out_O.Asset.Tkt != nil {
+				if out.Out_O.Asset.Tkt.Category == *categroy {
+					if uint256Contains(tkts, out.Out_O.Asset.Tkt.Value) {
 						if !uint256Contains(exits, *root) {
-							if out.Out_O.Pkg.Tkn != nil {
-								if tkn, ok := tkns[out.Out_O.Pkg.Tkn.Currency]; ok {
-									tkn.AddU(&out.Out_O.Pkg.Tkn.Value)
-									tkns[out.Out_O.Pkg.Tkn.Currency] = tkn
+							if out.Out_O.Asset.Tkn != nil {
+								if tkn, ok := tkns[out.Out_O.Asset.Tkn.Currency]; ok {
+									tkn.AddU(&out.Out_O.Asset.Tkn.Value)
+									tkns[out.Out_O.Asset.Tkn.Currency] = tkn
 								} else {
-									tkns[out.Out_O.Pkg.Tkn.Currency] = out.Out_O.Pkg.Tkn.Value
+									tkns[out.Out_O.Asset.Tkn.Currency] = out.Out_O.Asset.Tkn.Value
 								}
 
 							}

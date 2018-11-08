@@ -42,12 +42,47 @@ func (self *Ticket) ToHash() (ret keys.Uint256) {
 	}
 }
 
-type Package struct {
+type Asset struct {
 	Tkn *Token  `rlp:"nil"`
 	Tkt *Ticket `rlp:"nil"`
 }
 
-func (self *Package) ToHash() (ret keys.Uint256) {
+type CompleteAsset struct {
+	Tkn Token
+	Tkt Ticket
+}
+
+func (self *Asset) ToCompleteAsset() (ret CompleteAsset) {
+	if self.Tkt != nil {
+		ret.Tkt = *self.Tkt
+		return
+	}
+	if self.Tkn != nil {
+		ret.Tkn = *self.Tkn
+		return
+	}
+	return
+}
+
+func (self *Asset) GetToken() (ret Token) {
+	if self.Tkn != nil {
+		ret = *self.Tkn
+		return
+	} else {
+		return
+	}
+}
+
+func (self *Asset) GetTicket() (ret Ticket) {
+	if self.Tkt != nil {
+		ret = *self.Tkt
+		return
+	} else {
+		return
+	}
+}
+
+func (self *Asset) ToHash() (ret keys.Uint256) {
 	hash := crypto.Keccak256(
 		self.Tkn.ToHash().NewRef()[:],
 		self.Tkt.ToHash().NewRef()[:],
@@ -56,17 +91,17 @@ func (self *Package) ToHash() (ret keys.Uint256) {
 	return ret
 }
 
-func (self *Package) Clone() (ret Package) {
+func (self *Asset) Clone() (ret Asset) {
 	utils.DeepCopy(&ret, self)
 	return
 }
 
-func (this Package) ToRef() (ret *Package) {
-	ret = &Package{Tkn: this.Tkn, Tkt: this.Tkt}
+func (this Asset) ToRef() (ret *Asset) {
+	ret = &Asset{Tkn: this.Tkn, Tkt: this.Tkt}
 	return
 }
 
-func NewPackageByToken(tkn *Token) (ret Package) {
+func NewPackageByToken(tkn *Token) (ret Asset) {
 	ret.Tkn = tkn
 	ret.Tkt = nil
 	return

@@ -212,17 +212,23 @@ func (state *State0) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint2
 		o := out_z.Clone()
 		os.Out_Z = &o
 	}
-	commitment := os.ToCommitment()
+
+	os.Index = uint64(state.Cur.Index + 1)
+
+	commitment := os.ToRootCM()
 	state.append_commitment_dirty(commitment)
+
+	if state.Cur.Index != int64(os.Index) {
+		panic("add out but cur.index != current_index")
+	}
 
 	if state.Cur.Index < 0 {
 		panic("add out but cur.index < 0")
 	}
-	root = state.Cur.Tree.RootKey()
-	os.Index = uint64(state.Cur.Index)
 
 	Debug_State0_addout_assert(state, &os)
 
+	root = state.Cur.Tree.RootKey()
 	state.add_out_dirty(&root, &os)
 	return
 }
@@ -266,9 +272,9 @@ func (state *State0) AddStx(st *stx.T) (e error) {
 			state.append_del_dirty(&in.Root)
 		}
 	}
-	for _, out := range st.Desc_O.Outs {
-		state.AddOut(out.Clone().ToRef(), nil)
-	}
+	//for _, out := range st.Desc_O.Outs {
+	//	state.AddOut(out.Clone().ToRef(), nil)
+	//}
 
 	for _, in := range st.Desc_Z.Ins {
 		if err := state.addIn(&in.Nil); err != nil {

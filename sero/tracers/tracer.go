@@ -20,11 +20,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"math/big"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -490,7 +491,7 @@ func wrapError(context string, err error) error {
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
-func (jst *Tracer) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, pkg assets.Package) error {
+func (jst *Tracer) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, pkg assets.Asset) error {
 	jst.ctx["type"] = "CALL"
 	if create {
 		jst.ctx["type"] = "CREATE"

@@ -79,15 +79,15 @@ func preGen(ts *tx.T, state1 *state1.State1) (p preTx, e error) {
 	for _, in := range ts.Ins {
 		if src, err := state1.GetOut(&in.Root); err == nil {
 			added := false
-			if src.Out_O.Pkg.Tkn != nil {
-				cy_state_map.add(&src.Out_O.Pkg.Tkn.Currency, &src.Out_O.Pkg.Tkn.Value)
+			if src.Out_O.Asset.Tkn != nil {
+				cy_state_map.add(&src.Out_O.Asset.Tkn.Currency, &src.Out_O.Asset.Tkn.Value)
 				added = true
 			}
-			if src.Out_O.Pkg.Tkt != nil {
-				if _, ok := tk_map[src.Out_O.Pkg.Tkt.Value]; !ok {
-					tk_map[src.Out_O.Pkg.Tkt.Value] = 1
+			if src.Out_O.Asset.Tkt != nil {
+				if _, ok := tk_map[src.Out_O.Asset.Tkt.Value]; !ok {
+					tk_map[src.Out_O.Asset.Tkt.Value] = 1
 				} else {
-					e = fmt.Errorf("in tkt duplicate: %v", src.Out_O.Pkg.Tkt.Value)
+					e = fmt.Errorf("in tkt duplicate: %v", src.Out_O.Asset.Tkt.Value)
 					return
 				}
 				added = true
@@ -107,20 +107,20 @@ func preGen(ts *tx.T, state1 *state1.State1) (p preTx, e error) {
 	}
 	for _, out := range ts.Outs {
 		added := false
-		if out.Pkg.Tkn != nil {
-			cy_state_map.sub(&out.Pkg.Tkn.Currency, &out.Pkg.Tkn.Value)
+		if out.Asset.Tkn != nil {
+			cy_state_map.sub(&out.Asset.Tkn.Currency, &out.Asset.Tkn.Value)
 			added = true
 		}
-		if out.Pkg.Tkt != nil {
-			if c, ok := tk_map[out.Pkg.Tkt.Value]; ok {
+		if out.Asset.Tkt != nil {
+			if c, ok := tk_map[out.Asset.Tkt.Value]; ok {
 				if c > 0 {
-					tk_map[out.Pkg.Tkt.Value] = c - 1
+					tk_map[out.Asset.Tkt.Value] = c - 1
 				} else {
-					e = fmt.Errorf("out tkt duplicate: %v", out.Pkg.Tkt.Value)
+					e = fmt.Errorf("out tkt duplicate: %v", out.Asset.Tkt.Value)
 					return
 				}
 			} else {
-				e = fmt.Errorf("out tkt not in ins: %v", out.Pkg.Tkt.Value)
+				e = fmt.Errorf("out tkt not in ins: %v", out.Asset.Tkt.Value)
 				return
 			}
 			added = true

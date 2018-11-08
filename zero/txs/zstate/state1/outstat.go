@@ -100,8 +100,8 @@ func outStatName(root *keys.Uint256) (ret []byte) {
 func UpdateOutStat(st *zstate.State0, out *OutState1) {
 	os := OutStat{}
 	os.Z = out.Z
-	if out.Out_O.Pkg.Tkn != nil {
-		os.Value = out.Out_O.Pkg.Tkn.Value
+	if out.Out_O.Asset.Tkn != nil {
+		os.Value = out.Out_O.Asset.Tkn.Value
 	} else {
 		os.Value = utils.U256_0
 	}
@@ -126,8 +126,8 @@ func SortOutStats(st *zstate.State0, outs []*OutState1) {
 		} else {
 			os := OutStat{}
 			os.Z = out.Z
-			if out.Out_O.Pkg.Tkn != nil {
-				os.Value = out.Out_O.Pkg.Tkn.Value
+			if out.Out_O.Asset.Tkn != nil {
+				os.Value = out.Out_O.Asset.Tkn.Value
 			} else {
 				os.Value = utils.U256_0
 			}

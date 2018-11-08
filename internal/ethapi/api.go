@@ -557,18 +557,18 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 
 		outs, err := txs.GetOuts(seed.ToUint512())
 		for _, out := range outs {
-			if out.Out_O.Pkg.Tkn != nil {
-				cy := strings.Trim(string(out.Out_O.Pkg.Tkn.Currency[:]), zerobyte)
+			if out.Out_O.Asset.Tkn != nil {
+				cy := strings.Trim(string(out.Out_O.Asset.Tkn.Currency[:]), zerobyte)
 				if tkn[cy] == nil {
-					tkn[cy] = (*hexutil.Big)(out.Out_O.Pkg.Tkn.Value.ToIntRef())
+					tkn[cy] = (*hexutil.Big)(out.Out_O.Asset.Tkn.Value.ToIntRef())
 				} else {
-					tkn[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(tkn[cy]), (out.Out_O.Pkg.Tkn.Value.ToIntRef())))
+					tkn[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(tkn[cy]), (out.Out_O.Asset.Tkn.Value.ToIntRef())))
 				}
 			}
-			if out.Out_O.Pkg.Tkt != nil {
-				catg := strings.Trim(string(out.Out_O.Pkg.Tkt.Category[:]), zerobyte)
+			if out.Out_O.Asset.Tkt != nil {
+				catg := strings.Trim(string(out.Out_O.Asset.Tkt.Category[:]), zerobyte)
 				t := common.Hash{}
-				copy(t[:], out.Out_O.Pkg.Tkt.Value[:])
+				copy(t[:], out.Out_O.Asset.Tkt.Value[:])
 				tkt[catg] = append(tkt[catg], &t)
 			}
 		}
@@ -694,7 +694,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		}
 
 	}
-	pkg := assets.Package{
+	pkg := assets.Asset{
 		Tkn: token,
 		Tkt: ticket,
 	}

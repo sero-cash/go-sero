@@ -27,10 +27,10 @@ type In struct {
 }
 
 type Out struct {
-	Addr keys.Uint512
-	Pkg  assets.Package
-	Memo keys.Uint512
-	Z    OutType
+	Addr  keys.Uint512
+	Asset assets.Asset
+	Memo  keys.Uint512
+	Z     OutType
 }
 
 type OutType int
@@ -55,12 +55,12 @@ func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
 	ret[seroCy] = self.Fee
 	if len(self.Outs) > 0 {
 		for _, out := range self.Outs {
-			if out.Pkg.Tkn != nil {
-				if cost, ok := ret[out.Pkg.Tkn.Currency]; ok {
-					cost.AddU(&out.Pkg.Tkn.Value)
-					ret[out.Pkg.Tkn.Currency] = cost
+			if out.Asset.Tkn != nil {
+				if cost, ok := ret[out.Asset.Tkn.Currency]; ok {
+					cost.AddU(&out.Asset.Tkn.Value)
+					ret[out.Asset.Tkn.Currency] = cost
 				} else {
-					ret[out.Pkg.Tkn.Currency] = out.Pkg.Tkn.Value
+					ret[out.Asset.Tkn.Currency] = out.Asset.Tkn.Value
 				}
 			}
 		}
@@ -72,12 +72,12 @@ func (self *T) TikectCost() (ret map[keys.Uint256][]keys.Uint256) {
 	ret = make(map[keys.Uint256][]keys.Uint256)
 	if len(self.Outs) > 0 {
 		for _, out := range self.Outs {
-			if out.Pkg.Tkt != nil {
-				if tkts, ok := ret[out.Pkg.Tkt.Category]; ok {
-					tkts = append(tkts, out.Pkg.Tkt.Value)
-					ret[out.Pkg.Tkt.Category] = tkts
+			if out.Asset.Tkt != nil {
+				if tkts, ok := ret[out.Asset.Tkt.Category]; ok {
+					tkts = append(tkts, out.Asset.Tkt.Value)
+					ret[out.Asset.Tkt.Category] = tkts
 				} else {
-					ret[out.Pkg.Tkt.Category] = []keys.Uint256{out.Pkg.Tkt.Value}
+					ret[out.Asset.Tkt.Category] = []keys.Uint256{out.Asset.Tkt.Value}
 				}
 			}
 		}

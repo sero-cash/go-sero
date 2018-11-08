@@ -19,11 +19,12 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"math/big"
-	"strings"
 
 	"github.com/sero-cash/go-sero/log"
 
@@ -705,7 +706,7 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 		gas += params.CallStipend
 	}
 
-	pkg := assets.Package{Tkn: &assets.Token{
+	pkg := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte(contract.GetCurrency()), 32)).HashToUint256(),
 		Value:    utils.U256(*value),
 	},
@@ -744,7 +745,7 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 		gas += params.CallStipend
 	}
 
-	pkg := assets.Package{Tkn: &assets.Token{
+	pkg := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte(contract.GetCurrency()), 32)).HashToUint256(),
 		Value:    utils.U256(*value),
 	},
@@ -874,7 +875,7 @@ func handleAllotTicket(d []byte, db StateDB, contract *Contract) (bool, error) {
 			return false, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "The ticket does not belong to you.")
 		}
 	}
-	pkg := assets.Package{Tkt: &assets.Ticket{
+	pkg := assets.Asset{Tkt: &assets.Ticket{
 		Category: *common.BytesToHash(common.LeftPadBytes([]byte(categoryName), 32)).HashToUint256(),
 		Value:    value,
 	},
@@ -924,14 +925,13 @@ func handleSendToken(d []byte, evm *EVM, contract *Contract) ([]byte, uint64, er
 	}
 	gas := evm.callGasTemp + params.CallStipend
 
-	pkg := assets.Package{Tkn: &assets.Token{
+	pkg := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
 		Value:    utils.U256(*value),
 	},
 	}
 	return evm.Call(contract, toAddr, nil, gas, pkg)
 }
-
 
 func makeLog(size int) executionFunc {
 	return func(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -971,8 +971,8 @@ func makeLog(size int) executionFunc {
 				contract.Gas += returnGas
 				memory.Set(mStart.Uint64()+end-32, 32, hashTrue)
 			}
-		} else if topics[0] == topic_currency{
-			memory.Set32(0x40,big.NewInt(0xc0))
+		} else if topics[0] == topic_currency {
+			memory.Set32(0x40, big.NewInt(0xc0))
 			if contract.pkg.Tkn != nil {
 				currency := strings.Trim(string(contract.pkg.Tkn.Currency[:]), string([]byte{0}))
 				memory.Set(mStart.Uint64(), 32, common.BigToHash(big.NewInt(int64(len(currency)))).Bytes())
@@ -981,8 +981,8 @@ func makeLog(size int) executionFunc {
 				memory.Set(mStart.Uint64(), 32, big.NewInt(0).Bytes())
 				memory.Set(mStart.Uint64(), 32, []byte{})
 			}
-		} else if topics[0] ==topic_category {
-			memory.Set32(0x40,big.NewInt(0xc0))
+		} else if topics[0] == topic_category {
+			memory.Set32(0x40, big.NewInt(0xc0))
 			if contract.pkg.Tkt != nil {
 				category := strings.Trim(string(contract.pkg.Tkt.Category[:]), string([]byte{0}))
 				memory.Set(mStart.Uint64(), 32, common.BigToHash(big.NewInt(int64(len(category)))).Bytes())

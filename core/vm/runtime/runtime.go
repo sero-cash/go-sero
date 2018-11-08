@@ -17,11 +17,12 @@
 package runtime
 
 import (
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/utils"
 	"math"
 	"math/big"
 	"time"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
@@ -107,7 +108,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	// set the receiver's (the executing contract) code for execution.
 	cfg.State.SetCode(address, code)
 	// Call the code with the given configuration.
-	pkg := assets.Package{Tkn: &assets.Token{
+	pkg := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
 		Value:    utils.U256(*cfg.Value),
 	},
@@ -138,7 +139,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 		sender = vm.AccountRef(cfg.Origin)
 	)
 
-	pkg := assets.Package{Tkn: &assets.Token{
+	pkg := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
 		Value:    utils.U256(*cfg.Value),
 	},
@@ -164,7 +165,7 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 
 	sender := cfg.State.GetOrNewStateObject(cfg.Origin)
 	// Call the code with the given configuration.
-	pkg := assets.Package{Tkn: &assets.Token{
+	pkg := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
 		Value:    utils.U256(*cfg.Value),
 	},
