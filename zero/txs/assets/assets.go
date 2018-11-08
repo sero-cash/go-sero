@@ -11,6 +11,16 @@ type Token struct {
 	Value    utils.U256
 }
 
+func (self *Token) Clone() (ret Token) {
+	utils.DeepCopy(&ret, self)
+	return
+}
+
+func (this Token) ToRef() (ret *Token) {
+	ret = &this
+	return
+}
+
 func (self *Token) ToHash() (ret keys.Uint256) {
 	if self == nil {
 		return
@@ -27,6 +37,16 @@ func (self *Token) ToHash() (ret keys.Uint256) {
 type Ticket struct {
 	Category keys.Uint256
 	Value    keys.Uint256
+}
+
+func (self *Ticket) Clone() (ret Ticket) {
+	utils.DeepCopy(&ret, self)
+	return
+}
+
+func (this Ticket) ToRef() (ret *Ticket) {
+	ret = &this
+	return
 }
 
 func (self *Ticket) ToHash() (ret keys.Uint256) {
@@ -104,5 +124,19 @@ func (this Asset) ToRef() (ret *Asset) {
 func NewPackageByToken(tkn *Token) (ret Asset) {
 	ret.Tkn = tkn
 	ret.Tkt = nil
+	return
+}
+
+func NewAsset(tkn *Token, tkt *Ticket) (ret Asset) {
+	if tkn != nil {
+		if tkn.Value.Cmp(&utils.U256_0) > 0 {
+			ret.Tkn = tkn.Clone().ToRef()
+		}
+	}
+	if tkt != nil {
+		if tkt.Value != keys.Empty_Uint256 {
+			ret.Tkt = tkt.Clone().ToRef()
+		}
+	}
 	return
 }

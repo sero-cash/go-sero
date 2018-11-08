@@ -19,8 +19,6 @@ package stx
 import (
 	"encoding/hex"
 
-	"github.com/sero-cash/go-sero/zero/txs/tx"
-
 	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -47,11 +45,11 @@ func (self *Proof) ToHash() (ret keys.Uint256) {
 }
 
 type In_Z struct {
-	Anchor keys.Uint256
-	Nil    keys.Uint256
-	Trace  keys.Uint256
-	PkgCM  keys.Uint256
-	Proof  Proof
+	Anchor  keys.Uint256
+	Nil     keys.Uint256
+	Trace   keys.Uint256
+	AssetCM keys.Uint256
+	Proof   Proof
 }
 
 func (self *In_Z) ToHash() (ret keys.Uint256) {
@@ -59,7 +57,7 @@ func (self *In_Z) ToHash() (ret keys.Uint256) {
 	d.Write(self.Anchor[:])
 	d.Write(self.Nil[:])
 	d.Write(self.Trace[:])
-	d.Write(self.PkgCM[:])
+	d.Write(self.AssetCM[:])
 	d.Write(self.Proof.ToHash().NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return
@@ -68,10 +66,9 @@ func (self *In_Z) ToHash() (ret keys.Uint256) {
 type Out_Z struct {
 	AssetCM keys.Uint256
 	OutCM   keys.Uint256
-	EInfo   [cpt.ETEXT_WIDTH]byte `json:"-"`
+	EInfo   [cpt.INFO_WIDTH]byte `json:"-"`
 	PKr     keys.Uint512
 	Proof   Proof
-	Temp    tx.Out
 }
 
 func (self *Out_Z) Clone() (ret Out_Z) {

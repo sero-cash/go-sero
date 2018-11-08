@@ -38,7 +38,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_z st
 	for _, in := range ptx.desc_z.ins {
 		in_z := stx.In_Z{}
 		in_z.Anchor = *in.Pg.Anchor.ToUint256()
-		in_z.PkgCM = in.Out_Z.AssetCM
+		in_z.AssetCM = in.Out_Z.AssetCM
 		in_z.Nil = in.Trace
 		in_z.Trace = in.Trace
 		desc_z.Ins = append(desc_z.Ins, in_z)
@@ -62,7 +62,8 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_z st
 			out_z.AssetCM = desc.Asset_cm_ret
 			out_z.OutCM = desc.Out_cm_ret
 			out_z.PKr = desc.Pkr_ret
-			out_z.Temp = out
+			out_z.EInfo = desc.Einfo_ret
+			out_z.Proof.G = desc.Proof_ret.G
 			desc_z.Outs = append(desc_z.Outs, out_z)
 		}
 	}

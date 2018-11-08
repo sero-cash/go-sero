@@ -217,6 +217,6 @@ func (w *keystoreWallet) EncryptTxWithPassphrase(account accounts.Account, passp
 
 func (w *keystoreWallet) IsMine(onceAddress common.Address) bool {
 	tk := w.account.Tk.ToUint512()
-	return keys.IsMyPKr(tk, onceAddress.ToUint512())
-
+	succ, _ := keys.IsMyPKr(tk, onceAddress.ToUint512())
+	return succ
 }
