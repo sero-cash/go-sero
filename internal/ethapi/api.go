@@ -558,7 +558,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 		outs, err := txs.GetOuts(seed.ToUint512())
 		for _, out := range outs {
 			if out.Out_O.Asset.Tkn != nil {
-				cy := strings.Trim(strings.ToUpper(string(out.Out_O.Asset.Tkn.Currency[:])), zerobyte)
+				cy := strings.Trim(string(out.Out_O.Asset.Tkn.Currency[:]), zerobyte)
 				if tkn[cy] == nil {
 					tkn[cy] = (*hexutil.Big)(out.Out_O.Asset.Tkn.Value.ToIntRef())
 				} else {
@@ -566,7 +566,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 				}
 			}
 			if out.Out_O.Asset.Tkt != nil {
-				catg := strings.Trim(strings.ToUpper(string(out.Out_O.Asset.Tkt.Category[:])), zerobyte)
+				catg := strings.Trim(string(out.Out_O.Asset.Tkt.Category[:]), zerobyte)
 				t := common.Hash{}
 				copy(t[:], out.Out_O.Asset.Tkt.Value[:])
 				tkt[catg] = append(tkt[catg], &t)
