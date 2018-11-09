@@ -189,7 +189,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 
 	st.refundGas()
 	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 		Value:    utils.U256(*new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)),
 	},
 	}
@@ -209,7 +209,7 @@ func (st *StateTransition) refundGas() {
 	// Return ETH for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
 	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 		Value:    utils.U256(*remaining),
 	},
 	}

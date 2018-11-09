@@ -407,9 +407,9 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 
 	if header.GasUsed >= avgGas.Uint64() {
 		otherRawrd := new(big.Int).Div(reward, big.NewInt(5))
-		if statedb.GetBalance(state.EmptyAddress, "sero").Cmp(otherRawrd) >= 0 {
+		if statedb.GetBalance(state.EmptyAddress, "SERO").Cmp(otherRawrd) >= 0 {
 			reward = reward.Add(reward, otherRawrd)
-			statedb.SubBalance(state.EmptyAddress, "sero", otherRawrd)
+			statedb.SubBalance(state.EmptyAddress, "SERO", otherRawrd)
 		}
 	} else {
 		reward = reward.Mul(reward, big.NewInt(4)).Div(reward, big.NewInt(5))
@@ -426,7 +426,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 	statedb.SetAvgUsedGas(header.Number.Uint64(), avgGas)
 
 	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 		Value:    utils.U256(*reward),
 	},
 	}
