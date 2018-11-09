@@ -205,8 +205,6 @@ func (state *State0) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint2
 	if out_o != nil {
 		o := *out_o
 		os.Out_O = &o
-		bytes_memo := []byte(fmt.Sprintf("Cur:%d", (state.Cur.Index + 1)))
-		copy(os.Out_O.Memo[:], bytes_memo[:])
 	}
 	if out_z != nil {
 		o := out_z.Clone()

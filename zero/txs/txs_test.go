@@ -223,9 +223,9 @@ func TestTxs(t *testing.T) {
 		t.Fail()
 	}
 
-	user_m.Send(50, 10, user_a, false)
+	user_m.Send(50, 10, user_a, true)
 
-	if user_m.Logout() != 350 {
+	if user_m.Logout() != 340 {
 		t.Fail()
 	}
 	if user_a.Logout() != 50 {

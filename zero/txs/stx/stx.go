@@ -94,14 +94,12 @@ func (self *Out_Z) ToHash() (ret keys.Uint256) {
 }
 
 type Desc_Z struct {
-	Ins    []In_Z
-	Outs   []Out_Z
-	PkgRCM keys.Uint256
+	Ins  []In_Z
+	Outs []Out_Z
 }
 
 func (self *Desc_Z) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
-	d.Write(self.PkgRCM[:])
 	for _, in := range self.Ins {
 		d.Write(in.ToHash().NewRef()[:])
 	}
@@ -117,6 +115,8 @@ type T struct {
 	From   keys.Uint512
 	Fee    utils.U256
 	Sign   keys.Uint512
+	Bcr    keys.Uint256
+	Bsign  keys.Uint512
 	Desc_Z Desc_Z
 	Desc_O Desc_O
 }

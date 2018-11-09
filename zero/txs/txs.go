@@ -19,6 +19,8 @@ package txs
 import (
 	"errors"
 
+	"github.com/sero-cash/go-czero-import/cpt"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
@@ -32,16 +34,52 @@ func Gen(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
 }
 func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e error) {
 	if preTx, err := preGen(t, st1); err == nil {
+
+		balance_desc := cpt.BalanceDesc{}
 		s.Ehash = t.Ehash
 		s.Fee = t.Fee
+
+		{
+			asset_desc := cpt.AssetDesc{
+				Tkn_currency: utils.StringToUint256("sero"),
+				Tkn_value:    t.Fee.ToUint256(),
+				Tkt_category: keys.Empty_Uint256,
+				Tkt_value:    keys.Empty_Uint256,
+			}
+			cpt.GenAssetCC(&asset_desc)
+			balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+		}
+
 		for _, in_o := range preTx.desc_o.ins {
 			s_in_o := stx.In_O{}
 			s_in_o.Root = *in_o.Pg.Root.ToUint256()
 			s.Desc_O.Ins = append(s.Desc_O.Ins, s_in_o)
+			{
+				asset := in_o.Out_O.Asset.ToCompleteAsset()
+				asset_desc := cpt.AssetDesc{
+					Tkn_currency: asset.Tkn.Currency,
+					Tkn_value:    asset.Tkn.Value.ToUint256(),
+					Tkt_category: asset.Tkt.Category,
+					Tkt_value:    asset.Tkt.Value,
+				}
+				cpt.GenAssetCC(&asset_desc)
+				balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
+			}
 		}
 		for _, out_o := range preTx.desc_o.outs {
 			s_out_o := stx.Out_O{}
 			s_out_o.Asset = out_o.Asset.Clone()
+			{
+				asset := s_out_o.Asset.ToCompleteAsset()
+				asset_desc := cpt.AssetDesc{
+					Tkn_currency: asset.Tkn.Currency,
+					Tkn_value:    asset.Tkn.Value.ToUint256(),
+					Tkt_category: asset.Tkt.Category,
+					Tkt_value:    asset.Tkt.Value,
+				}
+				cpt.GenAssetCC(&asset_desc)
+				balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+			}
 			s_out_o.Memo = out_o.Memo
 			switch out_o.Z {
 			case tx.TYPE_O:
@@ -65,28 +103,35 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 		s.From = keys.Addr2PKr(&addr, &from_r)
 
 		hash_o := s.ToHash_for_z()
-		if desc_z, err := genDesc_Zs(seed, &preTx, &hash_o); err != nil {
+		if desc_z, err := genDesc_Zs(seed, &preTx, &hash_o, &balance_desc); err != nil {
 			e = err
 		} else {
 			s.Desc_Z = desc_z
 		}
 
-		hash_z := s.ToHash_for_o()
+		{
+			hash_z := s.ToHash_for_o()
+			balance_desc.Hash = hash_z
 
-		if sign, err := keys.SignPKr(seed, &hash_z, &s.From); err != nil {
-			e = err
-			return
-		} else {
-			s.Sign = sign
-		}
-
-		for i, s_in_o := range preTx.desc_o.ins {
-			if sign, err := keys.SignPKr(seed, &hash_z, &s_in_o.Out_O.Addr); err != nil {
+			if sign, err := keys.SignPKr(seed, &hash_z, &s.From); err != nil {
 				e = err
 				return
 			} else {
-				s.Desc_O.Ins[i].Sign = sign
+				s.Sign = sign
 			}
+
+			for i, s_in_o := range preTx.desc_o.ins {
+				if sign, err := keys.SignPKr(seed, &hash_z, &s_in_o.Out_O.Addr); err != nil {
+					e = err
+					return
+				} else {
+					s.Desc_O.Ins[i].Sign = sign
+				}
+			}
+
+			cpt.SignBalance(&balance_desc)
+			s.Bcr = balance_desc.Bcr
+			s.Bsign = balance_desc.Bsign
 		}
 
 		for _, used_out := range preTx.uouts {
@@ -120,16 +165,32 @@ func Verify(s *stx.T) (e error) {
 	return Verify_state1(s, st1)
 }
 func Verify_state1(s *stx.T, state *state1.State1) (e error) {
+	balance_desc := cpt.BalanceDesc{}
+
 	hash_z := s.ToHash_for_o()
+	balance_desc.Hash = hash_z
+
 	if !CheckUint(&s.Fee) {
 		e = errors.New("txs.verify check fee too big")
 		return
+	}
+
+	{
+		asset_desc := cpt.AssetDesc{
+			Tkn_currency: utils.StringToUint256("sero"),
+			Tkn_value:    s.Fee.ToUint256(),
+			Tkt_category: keys.Empty_Uint256,
+			Tkt_value:    keys.Empty_Uint256,
+		}
+		cpt.GenAssetCC(&asset_desc)
+		balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
 	}
 
 	if !keys.VerifyPKr(&hash_z, &s.Sign, &s.From) {
 		e = errors.New("txs.verify from verify failed")
 		return
 	}
+
 	for _, in_o := range s.Desc_O.Ins {
 		if ok := state.State0.HasIn(&in_o.Root); ok {
 			e = errors.New("txs.verify in already in nils")
@@ -139,6 +200,17 @@ func Verify_state1(s *stx.T, state *state1.State1) (e error) {
 		if src, err := state.State0.GetOut(&in_o.Root); e == nil {
 			if src.IsO() {
 				if keys.VerifyPKr(&hash_z, &in_o.Sign, &src.Out_O.Addr) {
+					{
+						asset := src.Out_O.Asset.ToCompleteAsset()
+						asset_desc := cpt.AssetDesc{
+							Tkn_currency: asset.Tkn.Currency,
+							Tkn_value:    asset.Tkn.Value.ToUint256(),
+							Tkt_category: asset.Tkt.Category,
+							Tkt_value:    asset.Tkt.Value,
+						}
+						cpt.GenAssetCC(&asset_desc)
+						balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
+					}
 				} else {
 					e = errors.New("txs.verify in_o verify failed")
 					return
@@ -157,6 +229,18 @@ func Verify_state1(s *stx.T, state *state1.State1) (e error) {
 			if !CheckUint(&out_o.Asset.Tkn.Value) {
 				e = errors.New("txs.verify check balance too big")
 				return
+			} else {
+				{
+					asset := out_o.Asset.ToCompleteAsset()
+					asset_desc := cpt.AssetDesc{
+						Tkn_currency: asset.Tkn.Currency,
+						Tkn_value:    asset.Tkn.Value.ToUint256(),
+						Tkt_category: asset.Tkt.Category,
+						Tkt_value:    asset.Tkt.Value,
+					}
+					cpt.GenAssetCC(&asset_desc)
+					balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+				}
 			}
 		}
 	}
@@ -178,10 +262,17 @@ func Verify_state1(s *stx.T, state *state1.State1) (e error) {
 		}
 	}
 
-	if err := verifyDesc_Zs(s); err != nil {
+	if err := verifyDesc_Zs(s, &balance_desc); err != nil {
 		e = err
 		return
 	} else {
+	}
+
+	balance_desc.Bcr = s.Bcr
+	balance_desc.Bsign = s.Bsign
+	if err := cpt.VerifyBalance(&balance_desc); err != nil {
+		e = err
+		return
 	}
 
 	return

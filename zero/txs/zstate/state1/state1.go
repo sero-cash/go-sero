@@ -195,7 +195,7 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 					temp_pg := &src.Pg
 					witness.NextPathGen(&index_cur, temp_pg, &roots)
 					root := temp_pg.Anchor.ToUint256()
-					if src.Index+1 != os.Index {
+					if src.WitnessIndex+1 != os.Index {
 						panic("gen witness src.index+1!=os.Index")
 					} else {
 					}
@@ -206,7 +206,7 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 					//src.Pg = temp_pg
 				} else {
 				}
-				src.Index++
+				src.WitnessIndex++
 				self.add_out_dirty(&wout, src)
 			}
 		}
@@ -266,7 +266,8 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 				wos.Pg = *pg
 				wos.Tk = tk
 				wos.Out_O = *os.Out_O
-				wos.Index = os.Index
+				wos.WitnessIndex = os.Index
+				wos.OutIndex = os.Index
 				wos.Out_Z = out_z
 				wos.Z = false
 				if *pg.Leaf.ToUint256() != *os.ToRootCM() {
@@ -329,7 +330,8 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 					wos.Out_O.Memo = info_desc.Memo
 					wos.Out_Z = os.Out_Z.Clone().ToRef()
 					wos.Tk = tk
-					wos.Index = os.Index
+					wos.WitnessIndex = os.Index
+					wos.OutIndex = os.Index
 					wos.Z = true
 					if *pg.Leaf.ToUint256() != *os.ToRootCM() {
 						panic("add wouts but RootCM not match!")

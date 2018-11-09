@@ -25,14 +25,15 @@ import (
 )
 
 type OutState1 struct {
-	Pg    witness.PathGen
-	Index uint64
-	Num   uint64
-	Tk    keys.Uint512
-	Out_O stx.Out_O
-	Out_Z *stx.Out_Z `rlp:"nil"`
-	Trace keys.Uint256
-	Z     bool
+	Pg           witness.PathGen
+	WitnessIndex uint64
+	OutIndex     uint64
+	Num          uint64
+	Tk           keys.Uint512
+	Out_O        stx.Out_O
+	Out_Z        *stx.Out_Z `rlp:"nil"`
+	Trace        keys.Uint256
+	Z            bool
 }
 
 func (self *OutState1) IsMine(tk *keys.Uint512) bool {

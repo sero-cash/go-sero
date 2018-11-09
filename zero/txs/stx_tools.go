@@ -34,14 +34,14 @@ type genParams struct {
 
 var gen_cache = make(chan int, 4)
 
-func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_z stx.Desc_Z, e error) {
+func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256, balance_desc *cpt.BalanceDesc) (desc_z stx.Desc_Z, e error) {
 	for _, in := range ptx.desc_z.ins {
 		desc := cpt.InputDesc{}
 		desc.Seed = *seed
 		desc.Pkr = in.Out_Z.PKr
 		desc.Einfo = in.Out_Z.EInfo
 		//--
-		desc.Index = in.Index
+		desc.Index = in.OutIndex
 		_, desc.Position, desc.Path, desc.Anchor = in.ToWitness()
 
 		if err := cpt.GenInputProof(&desc); err != nil {
@@ -55,6 +55,8 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_z st
 		in_z.Nil = desc.Nil_ret
 		in_z.Trace = desc.Til_ret
 		desc_z.Ins = append(desc_z.Ins, in_z)
+		balance_desc.Zin_acms = append(balance_desc.Zin_acms, desc.Asset_cm_ret[:]...)
+		balance_desc.Zin_ars = append(balance_desc.Zin_ars, desc.Ar_ret[:]...)
 	}
 
 	for _, out := range ptx.desc_z.outs {
@@ -78,6 +80,8 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_z st
 			out_z.EInfo = desc.Einfo_ret
 			out_z.Proof.G = desc.Proof_ret.G
 			desc_z.Outs = append(desc_z.Outs, out_z)
+			balance_desc.Zout_acms = append(balance_desc.Zout_acms, desc.Asset_cm_ret[:]...)
+			balance_desc.Zout_ars = append(balance_desc.Zout_ars, desc.Ar_ret[:]...)
 		}
 	}
 
@@ -207,18 +211,15 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256) (desc_z st
 	return*/
 }
 
-type verParams struct {
-	hash_o keys.Uint256
-	pre    cpt.PreV
-	extra  cpt.ExtraV
-	out    cpt.OutV
-	in     cpt.InV
-	proof  cpt.Proof
-}
-
 var ver_cache = make(chan int, 4)
 
-func verifyDesc_Zs(tx *stx.T) (e error) {
+func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc) (e error) {
+	for _, in_z := range tx.Desc_Z.Ins {
+		balance_desc.Zin_acms = append(balance_desc.Zin_acms, in_z.AssetCM[:]...)
+	}
+	for _, out_z := range tx.Desc_Z.Outs {
+		balance_desc.Zout_acms = append(balance_desc.Zout_acms, out_z.AssetCM[:]...)
+	}
 	return
 	/*tr := utils.TR_enter("Verify DescZs")
 
