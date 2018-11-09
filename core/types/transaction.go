@@ -82,20 +82,20 @@ func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z
 		}
 
 	}
-	pkg := assets.Asset{
+	asset := assets.Asset{
 		Tkn: token,
 		Tkt: ticket,
 	}
 	if to != nil {
 		outData := ztx.Out{
 			Addr:  *to.ToUint512(),
-			Asset: pkg,
+			Asset: asset,
 			Z:     z,
 		}
 		outDatas = append(outDatas, outData)
 	} else {
 		outData := ztx.Out{
-			Asset: pkg,
+			Asset: asset,
 			Z:     z,
 		}
 		outDatas = append(outDatas, outData)
@@ -244,7 +244,7 @@ func (tx *Transaction) AsMessage() (Message, error) {
 		to:         tx.To(),
 		data:       tx.data.Payload,
 		checkNonce: true,
-		pkg:        tx.Pkg(),
+		asset:        tx.Pkg(),
 	}
 
 	return msg, nil
@@ -385,14 +385,14 @@ type Message struct {
 	to         *common.Address
 	from       common.Address
 	nonce      uint64
-	pkg        assets.Asset
+	asset        assets.Asset
 	gasLimit   uint64
 	gasPrice   *big.Int
 	data       []byte
 	checkNonce bool
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, pkg assets.Asset, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, asset assets.Asset, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
 	message := Message{
 		from:       from,
 		to:         to,
@@ -401,7 +401,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, pkg asset
 		gasPrice:   gasPrice,
 		data:       data,
 		checkNonce: checkNonce,
-		pkg:        pkg,
+		asset:        asset,
 	}
 	return message
 }
@@ -413,6 +413,6 @@ func (m Message) Gas() uint64          { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
-func (m Message) Pkg() assets.Asset {
-	return m.pkg
+func (m Message) Asset() assets.Asset {
+	return m.asset
 }

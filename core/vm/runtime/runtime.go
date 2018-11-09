@@ -108,7 +108,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	// set the receiver's (the executing contract) code for execution.
 	cfg.State.SetCode(address, code)
 	// Call the code with the given configuration.
-	pkg := assets.Asset{Tkn: &assets.Token{
+	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
 		Value:    utils.U256(*cfg.Value),
 	},
@@ -118,7 +118,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 		common.BytesToAddress([]byte("contract")),
 		input,
 		cfg.GasLimit,
-		pkg,
+		asset,
 	)
 
 	return ret, cfg.State, err
@@ -139,7 +139,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 		sender = vm.AccountRef(cfg.Origin)
 	)
 
-	pkg := assets.Asset{Tkn: &assets.Token{
+	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
 		Value:    utils.U256(*cfg.Value),
 	},
@@ -148,7 +148,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 		sender,
 		input,
 		cfg.GasLimit,
-		pkg,
+		asset,
 	)
 	return code, address, leftOverGas, err
 }
@@ -165,7 +165,7 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 
 	sender := cfg.State.GetOrNewStateObject(cfg.Origin)
 	// Call the code with the given configuration.
-	pkg := assets.Asset{Tkn: &assets.Token{
+	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
 		Value:    utils.U256(*cfg.Value),
 	},
@@ -175,7 +175,7 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 		address,
 		input,
 		cfg.GasLimit,
-		pkg,
+		asset,
 	)
 
 	return ret, leftOverGas, err

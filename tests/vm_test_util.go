@@ -120,12 +120,12 @@ func (t *VMTest) Run(vmconfig vm.Config) error {
 func (t *VMTest) exec(statedb *state.StateDB, vmconfig vm.Config) ([]byte, uint64, error) {
 	evm := t.newEVM(statedb, vmconfig)
 	e := t.json.Exec
-	pkg := assets.Asset{Tkn: &assets.Token{
+	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
 		Value:    utils.U256(*e.Value),
 	},
 	}
-	return evm.Call(vm.AccountRef(e.Caller), e.Address, e.Data, e.GasLimit, pkg)
+	return evm.Call(vm.AccountRef(e.Caller), e.Address, e.Data, e.GasLimit, asset)
 }
 
 func (t *VMTest) newEVM(statedb *state.StateDB, vmconfig vm.Config) *vm.EVM {

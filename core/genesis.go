@@ -248,12 +248,12 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 			statedb.AddBalance(addr, "sero", account.Balance)
 			statedb.SetCode(addr, account.Code)
 		} else {
-			pkg := assets.Asset{Tkn: &assets.Token{
+			asset := assets.Asset{Tkn: &assets.Token{
 				Currency: *sero.HashToUint256(),
 				Value:    utils.U256(*account.Balance),
 			},
 			}
-			statedb.GetZState().AddTxOut(addr, pkg)
+			statedb.GetZState().AddTxOut(addr, asset)
 		}
 		for key, value := range account.Storage {
 			statedb.SetState(addr, key, value)

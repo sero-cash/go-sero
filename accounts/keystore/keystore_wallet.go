@@ -128,12 +128,12 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 			Currency: cy,
 			Value:    value,
 		}
-		pkg := assets.Asset{
+		asset := assets.Asset{
 			Tkn: token,
 		}
 		selfOut := tx.Out{
 			Addr:  keys.Seed2Addr(seed.SeedToUint256()),
-			Asset: pkg,
+			Asset: asset,
 			Z:     tx.TYPE_Z,
 		}
 		txt.Outs = append(txt.Outs, selfOut)
@@ -144,12 +144,12 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 				Category: catg,
 				Value:    v,
 			}
-			pkg := assets.Asset{
+			asset := assets.Asset{
 				Tkt: ticket,
 			}
 			selfOut := tx.Out{
 				Addr:  keys.Seed2Addr(seed.SeedToUint256()),
-				Asset: pkg,
+				Asset: asset,
 				Z:     tx.TYPE_Z,
 			}
 			txt.Outs = append(txt.Outs, selfOut)

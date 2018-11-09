@@ -975,8 +975,8 @@ func makeLog(size int) executionFunc {
 			}
 		} else if topics[0] == topic_currency {
 			memory.Set32(0x40, big.NewInt(0xc0))
-			if contract.pkg.Tkn != nil {
-				currency := strings.Trim(string(contract.pkg.Tkn.Currency[:]), string([]byte{0}))
+			if contract.asset.Tkn != nil {
+				currency := strings.Trim(string(contract.asset.Tkn.Currency[:]), string([]byte{0}))
 				memory.Set(mStart.Uint64(), 32, common.BigToHash(big.NewInt(int64(len(currency)))).Bytes())
 				memory.Set(mStart.Uint64()+32, 32, []byte(currency))
 			} else {
@@ -985,8 +985,8 @@ func makeLog(size int) executionFunc {
 			}
 		} else if topics[0] == topic_category {
 			memory.Set32(0x40, big.NewInt(0xc0))
-			if contract.pkg.Tkt != nil {
-				category := strings.Trim(string(contract.pkg.Tkt.Category[:]), string([]byte{0}))
+			if contract.asset.Tkt != nil {
+				category := strings.Trim(string(contract.asset.Tkt.Category[:]), string([]byte{0}))
 				memory.Set(mStart.Uint64(), 32, common.BigToHash(big.NewInt(int64(len(category)))).Bytes())
 				memory.Set(mStart.Uint64()+32, 32, []byte(category))
 			} else {
@@ -994,8 +994,8 @@ func makeLog(size int) executionFunc {
 				memory.Set(mStart.Uint64(), 32, []byte{})
 			}
 		} else if topics[0] == topic_ticket {
-			if contract.pkg.Tkt != nil {
-				memory.Set(mStart.Uint64(), 32, contract.pkg.Tkt.Value[:])
+			if contract.asset.Tkt != nil {
+				memory.Set(mStart.Uint64(), 32, contract.asset.Tkt.Value[:])
 			} else {
 				memory.Set(mStart.Uint64(), 32, []byte{})
 			}

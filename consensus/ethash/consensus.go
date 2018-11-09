@@ -425,10 +425,10 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 
 	statedb.SetAvgUsedGas(header.Number.Uint64(), avgGas)
 
-	pkg := assets.Asset{Tkn: &assets.Token{
+	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
 		Value:    utils.U256(*reward),
 	},
 	}
-	statedb.GetZState().AddTxOut(header.Coinbase, pkg)
+	statedb.GetZState().AddTxOut(header.Coinbase, asset)
 }

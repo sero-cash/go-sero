@@ -152,7 +152,7 @@ func (evm *EVM) Interpreter() Interpreter {
 // parameters. It also handles any necessary value transfer required and takes
 // the necessary steps to create accounts and reverses the state in case of an
 // execution error or failed value transfer.
-func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, pkg assets.Asset) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, asset assets.Asset) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
@@ -162,7 +162,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		return nil, gas, ErrDepth
 	}
 
-	if evm.StateDB.IsContract(caller.Address()) && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), pkg) {
+	if evm.StateDB.IsContract(caller.Address()) && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), asset) {
 		return nil, gas, ErrInsufficientBalance
 	}
 
@@ -171,11 +171,11 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		snapshot = evm.StateDB.Snapshot()
 	)
 
-	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), pkg)
+	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), asset)
 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
-	contract := NewContract(caller, to, &pkg, gas)
+	contract := NewContract(caller, to, &asset, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 	input = loadAddress(evm, caller, input, contract, false)
 
@@ -183,7 +183,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 
 	// Capture the tracer start/end events in debug mode
 	if evm.vmConfig.Debug && evm.depth == 0 {
-		evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, pkg)
+		evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, asset)
 
 		defer func() { // Lazy evaluation of the parameters
 			evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
@@ -210,7 +210,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 //
 // CallCode differs from Call in the sense that it executes the given address'
 // code with the caller as context.
-func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, gas uint64, pkg assets.Asset) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, gas uint64, asset assets.Asset) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
@@ -220,7 +220,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 		return nil, gas, ErrDepth
 	}
 	// Fail if we're trying to transfer more than the available balance
-	if evm.StateDB.IsContract(caller.Address()) && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), pkg) {
+	if evm.StateDB.IsContract(caller.Address()) && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), asset) {
 		return nil, gas, ErrInsufficientBalance
 	}
 
@@ -231,7 +231,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	contract := NewContract(caller, to, &pkg, gas)
+	contract := NewContract(caller, to, &asset, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 	input = loadAddress(evm, caller, input, contract, false)
 
@@ -339,7 +339,7 @@ func loadAddress(evm *EVM, caller ContractRef, input []byte, contract *Contract,
 }
 
 // create creates a new contract using code as deployment code.
-func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, pkg assets.Asset, address common.Address) ([]byte, common.Address, uint64, error) {
+func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, asset assets.Asset, address common.Address) ([]byte, common.Address, uint64, error) {
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if evm.depth > int(params.CallCreateDepth) {
@@ -355,12 +355,12 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, pkg assets.A
 	snapshot := evm.StateDB.Snapshot()
 	evm.StateDB.CreateAccount(address)
 
-	evm.Transfer(evm.StateDB, caller.Address(), address, pkg)
+	evm.Transfer(evm.StateDB, caller.Address(), address, asset)
 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	contract := NewContract(caller, AccountRef(address), &pkg, gas)
+	contract := NewContract(caller, AccountRef(address), &asset, gas)
 	code = loadAddress(evm, caller, code, contract, true)
 	contract.SetCallCode(&address, crypto.Keccak256Hash(code), code)
 
@@ -369,7 +369,7 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, pkg assets.A
 	}
 
 	if evm.vmConfig.Debug && evm.depth == 0 {
-		evm.vmConfig.Tracer.CaptureStart(caller.Address(), address, true, code, gas, pkg)
+		evm.vmConfig.Tracer.CaptureStart(caller.Address(), address, true, code, gas, asset)
 	}
 	start := time.Now()
 
@@ -411,9 +411,9 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, pkg assets.A
 }
 
 // Create creates a new contract using code as deployment code.
-func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, pkg assets.Asset) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, asset assets.Asset) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
 	contractAddr = crypto.CreateAddress(caller.Address(), evm.StateDB.IncAndGetContrctNonce(), code[0:16])
-	return evm.create(caller, code[16:], gas, pkg, contractAddr)
+	return evm.create(caller, code[16:], gas, asset, contractAddr)
 }
 
 // ChainConfig returns the environment's chain configuration

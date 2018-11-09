@@ -62,7 +62,7 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	return
 }
 
-func (state *State) AddTxOut(addr common.Address, pkg assets.Asset) {
-	o := stx.Out_O{*addr.ToUint512(), pkg, keys.Uint512{}}
+func (state *State) AddTxOut(addr common.Address, asset assets.Asset) {
+	o := stx.Out_O{*addr.ToUint512(), asset, keys.Uint512{}}
 	state.AddOut_O(&o)
 }

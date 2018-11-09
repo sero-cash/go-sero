@@ -62,7 +62,7 @@ type Contract struct {
 
 	Gas uint64
 
-	pkg *assets.Asset
+	asset *assets.Asset
 
 	Args []byte
 
@@ -73,7 +73,7 @@ type Contract struct {
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller ContractRef, object ContractRef, pkg *assets.Asset, gas uint64) *Contract {
+func NewContract(caller ContractRef, object ContractRef, asset *assets.Asset, gas uint64) *Contract {
 	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil}
 
 	c.addrs = map[common.ContractAddress]common.Address{}
@@ -91,7 +91,7 @@ func NewContract(caller ContractRef, object ContractRef, pkg *assets.Asset, gas 
 	// This pointer will be off the state transition
 	c.Gas = gas
 	// ensures a value is set
-	c.pkg = pkg
+	c.asset = asset
 
 	return c
 }
@@ -129,7 +129,7 @@ func (c *Contract) AsDelegate() *Contract {
 	// that caller is something other than a Contract.
 	parent := c.caller.(*Contract)
 	c.CallerAddress = parent.CallerAddress
-	c.pkg = parent.pkg
+	c.asset = parent.asset
 
 	return c
 }
@@ -172,8 +172,8 @@ func (c *Contract) Address() common.Address {
 
 // Value returns the contracts value (sent to it from it's caller)
 func (c *Contract) Value() *big.Int {
-	if c.pkg.Tkn != nil {
-		value := big.Int(c.pkg.Tkn.Value)
+	if c.asset.Tkn != nil {
+		value := big.Int(c.asset.Tkn.Value)
 		return &value
 	} else {
 		return new(big.Int)
@@ -181,8 +181,8 @@ func (c *Contract) Value() *big.Int {
 }
 
 func (c *Contract) Currency() string {
-	if c.pkg.Tkn != nil {
-		return strings.TrimSpace(string(c.pkg.Tkn.Currency[:]))
+	if c.asset.Tkn != nil {
+		return strings.TrimSpace(string(c.asset.Tkn.Currency[:]))
 	} else {
 		return "sero"
 	}

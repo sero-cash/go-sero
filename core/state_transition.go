@@ -35,7 +35,7 @@ type StateTransition struct {
 	gas        uint64
 	gasPrice   *big.Int
 	initialGas uint64
-	pkg        assets.Asset
+	asset      assets.Asset
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
@@ -49,7 +49,7 @@ type Message interface {
 
 	GasPrice() *big.Int
 	Gas() uint64
-	Pkg() assets.Asset
+	Asset() assets.Asset
 
 	Nonce() uint64
 	CheckNonce() bool
@@ -96,7 +96,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		evm:      evm,
 		msg:      msg,
 		gasPrice: msg.GasPrice(),
-		pkg:      msg.Pkg(),
+		asset:    msg.Asset(),
 		data:     msg.Data(),
 		state:    evm.StateDB,
 	}
@@ -169,12 +169,12 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	)
 
 	if contractCreation {
-		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, msg.Pkg())
+		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, msg.Asset())
 	} else {
 		if len(st.data) > 0 {
 			st.data = st.data[16:]
 		}
-		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, msg.Pkg())
+		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, msg.Asset())
 	}
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
@@ -184,7 +184,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		if vmerr == vm.ErrInsufficientBalance {
 			return nil, 0, false, vmerr
 		}
-		st.state.GetZState().AddTxOut(msg.From(), msg.Pkg())
+		st.state.GetZState().AddTxOut(msg.From(), msg.Asset())
 	}
 
 	st.refundGas()
