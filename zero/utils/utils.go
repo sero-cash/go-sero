@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -392,7 +393,7 @@ func (tr *TimeRecord) Leave() {
 
 func StringToUint256(str string) keys.Uint256 {
 	var ret keys.Uint256
-	b := []byte(str)
+	b := []byte(strings.ToUpper(str))
 	if len(b) > len(ret) {
 		b = b[len(b)-len(ret):]
 	}

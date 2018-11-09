@@ -41,7 +41,7 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 
 		{
 			asset_desc := cpt.AssetDesc{
-				Tkn_currency: utils.StringToUint256("sero"),
+				Tkn_currency: utils.StringToUint256("SERO"),
 				Tkn_value:    t.Fee.ToUint256(),
 				Tkt_category: keys.Empty_Uint256,
 				Tkt_value:    keys.Empty_Uint256,
@@ -177,7 +177,7 @@ func Verify_state1(s *stx.T, state *state1.State1) (e error) {
 
 	{
 		asset_desc := cpt.AssetDesc{
-			Tkn_currency: utils.StringToUint256("sero"),
+			Tkn_currency: utils.StringToUint256("SERO"),
 			Tkn_value:    s.Fee.ToUint256(),
 			Tkt_category: keys.Empty_Uint256,
 			Tkt_value:    keys.Empty_Uint256,

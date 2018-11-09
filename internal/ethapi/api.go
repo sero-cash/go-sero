@@ -558,7 +558,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 		outs, err := txs.GetOuts(seed.ToUint512())
 		for _, out := range outs {
 			if out.Out_O.Asset.Tkn != nil {
-				cy := strings.Trim(string(out.Out_O.Asset.Tkn.Currency[:]), zerobyte)
+				cy := strings.Trim(strings.ToUpper(string(out.Out_O.Asset.Tkn.Currency[:])), zerobyte)
 				if tkn[cy] == nil {
 					tkn[cy] = (*hexutil.Big)(out.Out_O.Asset.Tkn.Value.ToIntRef())
 				} else {
@@ -566,7 +566,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 				}
 			}
 			if out.Out_O.Asset.Tkt != nil {
-				catg := strings.Trim(string(out.Out_O.Asset.Tkt.Category[:]), zerobyte)
+				catg := strings.Trim(strings.ToUpper(string(out.Out_O.Asset.Tkt.Category[:])), zerobyte)
 				t := common.Hash{}
 				copy(t[:], out.Out_O.Asset.Tkt.Value[:])
 				tkt[catg] = append(tkt[catg], &t)
@@ -632,6 +632,23 @@ func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.A
 	return res[:], state.Error()
 }
 
+type Smbol string
+
+// MarshalText implements encoding.TextMarshaler.
+func (s Smbol) MarshalText() ([]byte, error) {
+	return []byte(strings.ToUpper(string(s))), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler
+func (s *Smbol) UnmarshalText(input []byte) error {
+	*s = Smbol(strings.ToUpper(string(input)))
+	return nil
+}
+
+func (s *Smbol) IsEmpty() bool {
+	return (strings.TrimSpace(string(*s)) == "")
+}
+
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
 	From     common.Address  `json:"from"`
@@ -642,9 +659,9 @@ type CallArgs struct {
 	Data     hexutil.Bytes   `json:"data"`
 	Pairs    []string        `json:"pairs"`
 	ABI      *abi.ABI        `json:"abi"`
-	Currency string          `json:"cy"`
+	Currency Smbol           `json:"cy"`
 	Dynamic  bool            `json:"dy"` //contract address parameters are dynamically generated.
-	Category string          `json:"catg"`
+	Category Smbol           `json:"catg"`
 	Tkt      *common.Hash    `json:"tkt"`
 }
 
@@ -675,8 +692,8 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 
 	// Create new call message
 	//args.Data = args.Data[2:]
-	if strings.TrimSpace(args.Currency) == "" {
-		args.Currency = "sero"
+	if args.Currency.IsEmpty() {
+		args.Currency = Smbol(params.DefaultCurrency)
 	}
 
 	var token *assets.Token
@@ -1181,9 +1198,9 @@ type SendTxArgs struct {
 	GasPrice *hexutil.Big    `json:"gasPrice"`
 	Value    *hexutil.Big    `json:"value"`
 	Data     *hexutil.Bytes  `json:"data"`
-	Currency string          `json:"cy"`
+	Currency Smbol           `json:"cy"`
 	Dynamic  bool            `json:"dy"` //contract address parameters are dynamically generated.
-	Category string          `json:"catg"`
+	Category Smbol           `json:"catg"`
 	Tkt      *common.Hash    `json:"tkt"`
 }
 
@@ -1205,23 +1222,22 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		}
 	}
 
-	if strings.TrimSpace(args.Currency) == "" {
-		args.Currency = "sero"
+	if args.Currency.IsEmpty() {
+		args.Currency = Smbol(params.DefaultCurrency)
 	}
 
 	if args.Value == nil {
 		args.Value = new(hexutil.Big)
 	}
-	if strings.TrimSpace(args.Category) != "" {
-		if args.Tkt == nil {
-			return errors.New(fmt.Sprintf("tx without %s tkt", args.Category))
-		}
-	} else {
+	if args.Category.IsEmpty() {
 		if args.Tkt != nil {
 			return errors.New(fmt.Sprintf("tx without tkt:%s catg", args.Tkt))
 		}
+	} else {
+		if args.Tkt == nil {
+			return errors.New(fmt.Sprintf("tx without %s tkt", args.Category))
+		}
 	}
-
 	if args.To == nil {
 		// Contract creation
 		var input []byte
@@ -1255,8 +1271,8 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	if args.Data != nil {
 		input = *args.Data
 	}
-	tx := types.NewTransaction((*big.Int)(args.GasPrice), input, args.Currency)
-	txt := types.NewTxt(to, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, args.Currency, args.Category, args.Tkt)
+	tx := types.NewTransaction((*big.Int)(args.GasPrice), input, string(args.Currency))
+	txt := types.NewTxt(to, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, string(args.Currency), string(args.Category), args.Tkt)
 	txt.FromRnd = rand.ToUint256().NewRef()
 	return tx, txt, nil
 }

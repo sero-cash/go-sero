@@ -51,7 +51,7 @@ type T struct {
 
 func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
 	ret = make(map[keys.Uint256]utils.U256)
-	seroCy := utils.StringToUint256("sero")
+	seroCy := utils.StringToUint256("SERO")
 	ret[seroCy] = self.Fee
 	if len(self.Outs) > 0 {
 		for _, out := range self.Outs {

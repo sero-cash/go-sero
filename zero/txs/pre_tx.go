@@ -66,7 +66,7 @@ func newcyStateMap(fee *utils.U256) (ret cyStateMap) {
 	ret = make(map[keys.Uint256]*cyState)
 	b := utils.NewI256(0)
 	b.SubU(fee)
-	ret[utils.StringToUint256("sero")] = &cyState{
+	ret[utils.StringToUint256("SERO")] = &cyState{
 		balance: b,
 	}
 	return

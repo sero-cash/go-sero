@@ -9,7 +9,7 @@ import (
 )
 
 func TestT_TokenCost(t *testing.T) {
-	seroCy := utils.StringToUint256("sero")
+	seroCy := utils.StringToUint256("SERO")
 	fmt.Printf("%t\n", seroCy)
 	cy := utils.StringToUint256("d")
 	ret := make(map[keys.Uint256]utils.U256)

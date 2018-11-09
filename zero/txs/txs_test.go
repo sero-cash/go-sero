@@ -108,7 +108,7 @@ func (self *user) addOut(v int) {
 	out := stx.Out_O{}
 	out.Addr = self.getAR()
 	out.Asset = assets.NewPackageByToken(&assets.Token{
-		utils.StringToUint256("sero"),
+		utils.StringToUint256("SERO"),
 		utils.NewU256(uint64(v)),
 	})
 	g_blocks.st.AddOut_O(&out)
@@ -159,7 +159,7 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 	out0.Addr = u.addr
 	out0.Asset = assets.Asset{
 		&assets.Token{
-			utils.StringToUint256("sero"),
+			utils.StringToUint256("SERO"),
 			utils.NewU256(uint64(v)),
 		},
 		nil,
