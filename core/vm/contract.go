@@ -102,7 +102,7 @@ func (c *Contract) SetCurrency(currency string) {
 
 func (c *Contract) GetCurrency() string {
 	if c.currency == "" {
-		return "sero"
+		return "SERO"
 	}
 	return c.currency
 }

@@ -287,7 +287,7 @@ func (self *stateObject) SetBalance(coinName string, amount *big.Int) {
 		prev:     new(big.Int).Set(self.Balance(coinName)),
 	})
 
-	coinName = strings.ToLower(coinName)
+	coinName = strings.ToUpper(coinName)
 	if book, ok := self.data.bookMap[coinName]; ok {
 		book.Balance = amount
 	} else {
@@ -360,7 +360,7 @@ func (self *stateObject) CodeHash() []byte {
 }
 
 func (self *stateObject) Balance(coinName string) *big.Int {
-	coinName = strings.ToLower(coinName)
+	coinName = strings.ToUpper(coinName)
 	if book, ok := self.data.bookMap[coinName]; ok {
 		return book.Balance
 	}

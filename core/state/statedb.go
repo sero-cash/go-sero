@@ -258,20 +258,20 @@ func (self *StateDB) RemoveTicket(contractAddr common.Address, categoryName stri
 }
 
 func (self *StateDB) RegisterTicket(contractAddr common.Address, categoryName string) bool {
-	return self.registerAddressByState("Ticket", contractAddr, strings.ToLower(categoryName))
+	return self.registerAddressByState("Ticket", contractAddr, strings.ToUpper(categoryName))
 }
 
 func (self *StateDB) GetContrctAddressByTicket(categoryName string) common.Address {
-	return self.getContrctAddress("Ticket", strings.ToLower(categoryName))
+	return self.getContrctAddress("Ticket", strings.ToUpper(categoryName))
 }
 
 //register
 func (self *StateDB) RegisterToken(contractAddr common.Address, coinName string) bool {
-	return self.registerAddressByState("Token", contractAddr, strings.ToLower(coinName))
+	return self.registerAddressByState("Token", contractAddr, strings.ToUpper(coinName))
 }
 
 func (self *StateDB) GetContrctAddressByToken(coinName string) common.Address {
-	return self.getContrctAddress("Token", strings.ToLower(coinName))
+	return self.getContrctAddress("Token", strings.ToUpper(coinName))
 }
 
 

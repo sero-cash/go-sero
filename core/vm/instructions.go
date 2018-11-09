@@ -860,6 +860,7 @@ func handleAllotTicket(d []byte, db StateDB, contract *Contract) (common.Hash, e
 		return common.Hash{}, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "illegal categoryName")
 	}
 
+	categoryName = strings.ToUpper(categoryName)
 	value := common.BytesToHash(d[64:96]);
 	if value == (common.Hash{}) {
 		if !db.RegisterTicket(contract.Address(), categoryName) {
@@ -902,6 +903,7 @@ func handleIssueToken(d []byte, db StateDB, contractAddr common.Address) (bool, 
 		return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contractAddr, "illegal coinName")
 	}
 
+	coinName = strings.ToUpper(coinName)
 	if !db.RegisterToken(contractAddr, coinName) {
 		return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contractAddr, "coinName registered by other")
 	}
@@ -924,6 +926,7 @@ func handleSendToken(d []byte, evm *EVM, contract *Contract) ([]byte, uint64, er
 		currency = string(d[32 : 32+len])
 	}
 
+	currency = strings.ToUpper(currency)
 	balance := evm.StateDB.GetBalance(contract.Address(), currency)
 	value := new(big.Int).SetBytes(d[96:])
 	if balance.Cmp(value) < 0 {
