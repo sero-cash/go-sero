@@ -78,7 +78,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256, balance_de
 			out_z.OutCM = desc.Out_cm_ret
 			out_z.PKr = desc.Pkr_ret
 			out_z.EInfo = desc.Einfo_ret
-			out_z.Proof.G = desc.Proof_ret.G
+			out_z.Proof = desc.Proof_ret
 			desc_z.Outs = append(desc_z.Outs, out_z)
 			balance_desc.Zout_acms = append(balance_desc.Zout_acms, desc.Asset_cm_ret[:]...)
 			balance_desc.Zout_ars = append(balance_desc.Zout_ars, desc.Ar_ret[:]...)
@@ -216,9 +216,31 @@ var ver_cache = make(chan int, 4)
 func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc) (e error) {
 	for _, in_z := range tx.Desc_Z.Ins {
 		balance_desc.Zin_acms = append(balance_desc.Zin_acms, in_z.AssetCM[:]...)
+
+		desc := cpt.InputVerifyDesc{}
+		desc.Nil = in_z.Nil
+		desc.Anchor = in_z.Anchor
+		desc.AssetCM = in_z.AssetCM
+		desc.Proof = in_z.Proof
+
+		if err := cpt.VerifyInput(&desc); err != nil {
+			e = err
+			return
+		}
 	}
 	for _, out_z := range tx.Desc_Z.Outs {
 		balance_desc.Zout_acms = append(balance_desc.Zout_acms, out_z.AssetCM[:]...)
+
+		desc := cpt.OutputVerifyDesc{}
+		desc.AssetCM = out_z.AssetCM
+		desc.Pkr = out_z.PKr
+		desc.OutCM = out_z.OutCM
+		desc.Proof = out_z.Proof
+
+		if err := cpt.VerifyOutput(&desc); err != nil {
+			e = err
+			return
+		}
 	}
 	return
 	/*tr := utils.TR_enter("Verify DescZs")

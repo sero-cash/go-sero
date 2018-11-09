@@ -26,20 +26,18 @@ import (
 	"github.com/sero-cash/go-sero/crypto/sha3"
 )
 
-type Proof struct {
-	G [cpt.PROOF_WIDTH]byte
-}
+type Proof [cpt.PROOF_WIDTH]byte
 
 func (b Proof) MarshalText() ([]byte, error) {
-	result := make([]byte, len(b.G)*2+2)
+	result := make([]byte, len(b)*2+2)
 	copy(result, `0x`)
-	hex.Encode(result[2:], b.G[:])
+	hex.Encode(result[2:], b[:])
 	return result, nil
 }
 
 func (self *Proof) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
-	d.Write(self.G[:])
+	d.Write(self[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
@@ -49,7 +47,7 @@ type In_Z struct {
 	Nil     keys.Uint256
 	Trace   keys.Uint256
 	AssetCM keys.Uint256
-	Proof   Proof
+	Proof   cpt.Proof
 }
 
 func (self *In_Z) ToHash() (ret keys.Uint256) {
@@ -68,7 +66,7 @@ type Out_Z struct {
 	OutCM   keys.Uint256
 	EInfo   [cpt.INFO_WIDTH]byte `json:"-"`
 	PKr     keys.Uint512
-	Proof   Proof
+	Proof   cpt.Proof
 }
 
 func (self *Out_Z) Clone() (ret Out_Z) {
