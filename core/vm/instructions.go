@@ -47,14 +47,14 @@ var (
 	hashTrue                 = common.LeftPadBytes([]byte{1}, 32)
 	hashFalse                = common.LeftPadBytes([]byte{0}, 32)
 
-	topic_issueToken  = common.HexToHash("0x9320811d9313524221768f9849e3dd0797b44f6947ba7e0b7ef92773d63f38f6")
-	topic_sendToken   = common.HexToHash("0x7b3ec2ce4a9fe17ec098b5386d2196852dfe337b3c0e831839ff1c0714980e92")
-	topic_balanceOf   = common.HexToHash("0x0e5f0478abd739d6711fcb7e4a1c40466a92f2e2822d26b15105d726d05c1acf")
-	topic_allotTicket = common.HexToHash("0x5e4d6bef095a26cb74c8fea1cb715cc5aa2a13ed774d2f0c99a6d316bdcffaf5")
-	topic_currency    = common.HexToHash("0x061875c141e218c8b26beabe41857c50d29de0ddec1211793e558c9160cdb634")
-	topic_category    = common.HexToHash("0x3292e82c5e52a4e2989c12cbb38e3834acd39c8a7f0565c2e95a37a2bffed573")
-	topic_ticket      = common.HexToHash("0x3ec5a2cefed15bd3b91fb4dff8287400560ed8995734b8b72a35f49579eaf8a4")
-	topic_setCurrency = common.HexToHash("0x4a0e6f6c4c86b700b0d632371d2c270dabca931f7291059bcd2ccd00f4aaadb6")
+	topic_issueToken  = common.HexToHash("0x3be6bf24d822bcd6f6348f6f5a5c2d3108f04991ee63e80cde49a8c4746a0ef3")
+	topic_send        = common.HexToHash("0x868bd6629e7c2e3d2ccf7b9968fad79b448e7a2bfb3ee20ed1acbc695c3c8b23")
+	topic_balanceOf   = common.HexToHash("0xcf19eb4256453a4e30b6a06d651f1970c223fb6bd1826a28ed861f0e602db9b8")
+	topic_allotTicket = common.HexToHash("0xa6a366f1a72e1aef5d8d52ee240a476f619d15be7bc62d3df37496025b83459f")
+	topic_currency    = common.HexToHash("0x7c98e64bd943448b4e24ef8c2cdec7b8b1275970cfe10daf2a9bfa4b04dce905")
+	topic_category    = common.HexToHash("0xf1964f6690a0536daa42e5c575091297d2479edcc96f721ad85b95358644d276")
+	topic_ticket      = common.HexToHash("0x9ab0d7c07029f006485cf3468ce7811aa8743b5a108599f6bec9367c50ac6aad")
+	topic_setCurrency = common.HexToHash("0x0d3419022a97c2b5b03008b32a2cb33ab9f9b6721ce570c5031e04b6eadeb630")
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -911,34 +911,63 @@ func handleIssueToken(d []byte, db StateDB, contractAddr common.Address) (bool, 
 	return true, nil
 }
 
-func handleSendToken(d []byte, evm *EVM, contract *Contract) ([]byte, uint64, error) {
-	addr := common.BytesToContractAddress(d[76:96])
+func handleSend(d []byte, evm *EVM, contract *Contract) ([]byte, uint64, error) {
+	addr := common.BytesToContractAddress(d[140:160])
 	toAddr := evm.StateDB.GetNonceAddress(addr[:])
 	if toAddr == (common.Address{}) {
-		return nil, 0, fmt.Errorf("sendAnonymous error , contract : %s, toAddr : %s, error : %s", contract.Address(), toAddr, "not load toAddrss")
+		return nil, 0, fmt.Errorf("handleSend error , contract : %s, toAddr : %s, error : %s", contract.Address(), toAddr, "not load toAddrss")
 	}
 
-	len := new(big.Int).SetBytes(d[0:32]).Uint64()
+	length := new(big.Int).SetBytes(d[0:32]).Uint64()
 	var currency string
-	if len == 0 {
+	var category string
+	if length == 0 {
 		currency = "sero"
+		length = new(big.Int).SetBytes(d[32:64]).Uint64()
+		if(length == 0) {
+			return nil, 0, fmt.Errorf("handleSend error , contract : %s, toAddr : %s, error : %s", contract.Address(), toAddr, "params error")
+		} else {
+			category = string(d[64 : 64+length])
+		}
 	} else {
-		currency = string(d[32 : 32+len])
+		currency = string(d[32 : 32+length])
+		length = new(big.Int).SetBytes(d[64:96]).Uint64()
+		if(length != 0) {
+			category = string(d[96 : 96+length])
+		}
 	}
 
 	currency = strings.ToUpper(currency)
-	balance := evm.StateDB.GetBalance(contract.Address(), currency)
-	value := new(big.Int).SetBytes(d[96:])
-	if balance.Cmp(value) < 0 {
-		return nil, 0, fmt.Errorf("sendAnonymous error , contract : %s, toAddr : %s, error : %s", contract.Address(), toAddr, "balance not enough")
-	}
-	gas := evm.callGasTemp + params.CallStipend
+	category = strings.ToUpper(category)
 
-	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
-		Value:    utils.U256(*value),
-	},
+	amount := new(big.Int).SetBytes(d[160:192])
+	ticketHash := common.BytesToHash(d[192:224]);
+
+	var token *assets.Token
+	if len(currency) != 0 && amount.Sign() != 0 {
+		balance := evm.StateDB.GetBalance(contract.Address(), currency)
+		if balance.Cmp(amount) < 0 {
+			return nil, 0, fmt.Errorf("handleSend error , contract : %s, toAddr : %s, error : %s", contract.Address(), toAddr, "balance not enough")
+		}
+		token = &assets.Token{
+			Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
+			Value:    utils.U256(*amount),
+		}
 	}
+
+	var ticket *assets.Ticket
+	if len(category) != 0 && ticketHash != (common.Hash{}) {
+		if !evm.StateDB.OwnTicket(contract.Address(), category, ticketHash) {
+			return nil, 0, fmt.Errorf("handleSend error , contract : %s, toAddr : %s, error : %s", contract.Address(), toAddr, "ticket not own")
+		}
+		ticket = &assets.Ticket{
+			Category: *common.BytesToHash(common.LeftPadBytes([]byte(category), 32)).HashToUint256(),
+			Value:    *ticketHash.HashToUint256(),
+		}
+	}
+
+	asset := assets.Asset{Tkn: token,Tkt:ticket,}
+	gas := evm.callGasTemp + params.CallStipend
 	return evm.Call(contract, toAddr, nil, gas, asset)
 }
 
@@ -954,10 +983,14 @@ func makeLog(size int) executionFunc {
 
 		end := mSize.Uint64()
 		if topics[0] == topic_allotTicket {
-			hash, _ := handleAllotTicket(d, interpreter.evm.StateDB, contract)
+			hash, err := handleAllotTicket(d, interpreter.evm.StateDB, contract)
+			if err != nil {
+				log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
+			}
 			memory.Set(mStart.Uint64()+end-32, 32, hash[:]);
 		} else if topics[0] == topic_issueToken {
 			if ok, err := handleIssueToken(d, interpreter.evm.StateDB, contract.Address()); ok {
+				log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
 				memory.Set(mStart.Uint64()+end-32, 32, hashTrue)
 			} else {
 				log.Trace(err.Error())
@@ -967,10 +1000,10 @@ func makeLog(size int) executionFunc {
 			coinName := string(d[32 : 32+new(big.Int).SetBytes(d[0:32]).Uint64()])
 			balance := interpreter.evm.StateDB.GetBalance(contract.Address(), coinName)
 			memory.Set(mStart.Uint64()+end-32, 32, common.LeftPadBytes(balance.Bytes(), 32))
-		} else if topics[0] == topic_sendToken {
-			_, returnGas, err := handleSendToken(d, interpreter.evm, contract)
+		} else if topics[0] == topic_send {
+			_, returnGas, err := handleSend(d, interpreter.evm, contract)
 			if err != nil {
-				log.Trace("sendAnonymous error ", "contract", contract.Address(), "error", err)
+				log.Trace("send error ", "contract", contract.Address(), "error", err)
 				memory.Set(mStart.Uint64()+end-32, 32, hashFalse)
 			} else {
 				contract.Gas += returnGas

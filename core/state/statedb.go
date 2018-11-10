@@ -226,20 +226,22 @@ func (self *StateDB) registerAddressByState(name string, contractAddr common.Add
 	return false
 }
 
-//func (self *StateDB) OwnTicket(contractAddr common.Address, categoryName string, value common.Hash) bool {
-//	stateObject := self.GetOrNewStateObject(EmptyAddress)
-//	if stateObject != nil {
-//		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, categoryName, value})
-//		value := stateObject.GetState(self.db, crypto.Keccak256Hash(bytes))
-//		return value == TrueHash
-//	}
-//	return false
-//}
+func (self *StateDB) OwnTicket(contractAddr common.Address, categoryName string, value common.Hash) bool {
+	stateObject := self.getStateObject(EmptyAddress)
+	if stateObject != nil {
+		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, strings.ToUpper(categoryName), value})
+		hash := stateObject.GetState(self.db, crypto.Keccak256Hash(bytes))
+		if hash == TrueHash {
+			return true
+		}
+	}
+	return false
+}
 
 func (self *StateDB) AddTicket(contractAddr common.Address, categoryName string, value common.Hash) {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
-		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, categoryName, value})
+		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, strings.ToUpper(categoryName), value})
 		stateObject.SetState(self.db, crypto.Keccak256Hash(bytes), TrueHash)
 	}
 }
@@ -247,7 +249,7 @@ func (self *StateDB) AddTicket(contractAddr common.Address, categoryName string,
 func (self *StateDB) RemoveTicket(contractAddr common.Address, categoryName string, value common.Hash) bool {
 	stateObject := self.getStateObject(EmptyAddress)
 	if stateObject != nil {
-		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, categoryName, value})
+		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, strings.ToUpper(categoryName), value})
 		hash := stateObject.GetState(self.db, crypto.Keccak256Hash(bytes))
 		if hash == TrueHash {
 			stateObject.SetState(self.db, crypto.Keccak256Hash(bytes), FalseHash)

@@ -96,36 +96,41 @@ func CanTransfer(db vm.StateDB, addr common.Address, asset assets.Asset) bool {
 		flag = db.GetBalance(addr, strings.Trim(string(asset.Tkn.Currency[:]), string([]byte{0}))).Cmp(&amount) >= 0
 	}
 	if asset.Tkt != nil {
-
+		category := strings.Trim(string(asset.Tkt.Category[:]), string([]byte{0}))
+		return db.OwnTicket(addr, category, common.BytesToHash(asset.Tkt.Value[:]))
 	}
 	return flag
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
 func Transfer(db vm.StateDB, sender, recipient common.Address, asset assets.Asset) {
-	if asset.Tkn != nil {
-		amount := big.Int(asset.Tkn.Value)
-		if amount.Sign() > 0 {
-			currency := strings.Trim(string(asset.Tkn.Currency[:]), string([]byte{0}))
-			if db.IsContract(sender) {
+	if db.IsContract(sender) {
+		if asset.Tkn != nil {
+			amount := big.Int(asset.Tkn.Value)
+			if amount.Sign() > 0 {
+				currency := strings.Trim(string(asset.Tkn.Currency[:]), string([]byte{0}))
 				db.SubBalance(sender, currency, &amount)
-				if db.IsContract(recipient) {
-					db.AddBalance(recipient, currency, &amount)
-				} else {
-					db.GetZState().AddTxOut(recipient, asset)
-				}
-			} else if recipient != (common.Address{}) {
-				db.AddBalance(recipient, currency, &amount)
 			}
+		}
+		if asset.Tkt != nil {
+			category := strings.Trim(string(asset.Tkt.Category[:]), string([]byte{0}))
+			db.RemoveTicket(sender, category, common.BytesToHash(asset.Tkt.Value[:]))
 		}
 	}
 
-	if asset.Tkt != nil {
-		if db.IsContract(recipient) {
+	if db.IsContract(recipient) {
+		if asset.Tkn != nil {
+			amount := big.Int(asset.Tkn.Value)
+			if amount.Sign() > 0 {
+				currency := strings.Trim(string(asset.Tkn.Currency[:]), string([]byte{0}))
+				db.AddBalance(recipient, currency, &amount)
+			}
+		}
+		if asset.Tkt != nil {
 			category := strings.Trim(string(asset.Tkt.Category[:]), string([]byte{0}))
 			db.AddTicket(recipient, category, common.BytesToHash(asset.Tkt.Value[:]))
-		} else {
-			db.GetZState().AddTxOut(recipient, asset)
 		}
+	} else if db.IsContract(sender) {
+		db.GetZState().AddTxOut(recipient, asset)
 	}
 }
