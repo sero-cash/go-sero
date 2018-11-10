@@ -1068,7 +1068,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @returns {SolidityParam}
          */
         var formatInputAddress = function (value) {
-            var bytes = base58.decode(value).slice(0,20);
+            var bytes = base58.decode(value).slice(44);
             var result = utils.bytesToHex(bytes).substr(2);
             result = utils.padLeft(result, 64);
             return new SolidityParam(result);

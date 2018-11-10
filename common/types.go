@@ -195,7 +195,7 @@ func (a Address) ToCaddr() ContractAddress {
 		return sc.(ContractAddress)
 	}
 	var addr ContractAddress
-	addr.SetBytes(LeftPadBytes(a.Data[0:20], 32))
+	addr.SetBytes(LeftPadBytes(a.Data[len(a.Data)-20:], 32))
 	a.caddr.Store(addr)
 	return addr
 }
