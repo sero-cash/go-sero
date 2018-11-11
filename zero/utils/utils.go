@@ -23,7 +23,10 @@ import (
 	"io"
 	"math/big"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/sero-cash/go-czero-import/cpt"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
@@ -400,4 +403,57 @@ func StringToUint256(str string) keys.Uint256 {
 	copy(ret[len(ret)-len(b):], b)
 	return ret
 
+}
+
+type Proc interface {
+	Run() bool
+}
+
+type Procs struct {
+	ch   chan int
+	wait sync.WaitGroup
+	Runs []Proc
+	succ bool
+}
+
+func NewProcs(num int) (ret Procs) {
+	ret = Procs{
+		make(chan int, num),
+		sync.WaitGroup{},
+		nil,
+		true,
+	}
+	return
+}
+
+func (self *Procs) StartProc(run Proc) {
+	self.Runs = append(self.Runs, run)
+	if cpt.Is_czero_debug() {
+		if !run.Run() {
+			self.succ = false
+		}
+	} else {
+		self.wait.Add(1)
+		go func(run Proc) {
+			self.ch <- 0
+			defer func() {
+				<-self.ch
+				self.wait.Done()
+			}()
+			if !run.Run() {
+				self.succ = false
+			}
+		}(run)
+	}
+}
+
+func (self *Procs) Wait() []Proc {
+	self.wait.Wait()
+	if self.succ {
+		p := self.Runs
+		self.Runs = nil
+		return p
+	} else {
+		return nil
+	}
 }
