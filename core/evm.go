@@ -95,7 +95,7 @@ func CanTransfer(db vm.StateDB, addr common.Address, asset assets.Asset) bool {
 		amount := big.Int(asset.Tkn.Value)
 		flag = db.GetBalance(addr, strings.Trim(string(asset.Tkn.Currency[:]), string([]byte{0}))).Cmp(&amount) >= 0
 	}
-	if asset.Tkt != nil {
+	if flag && asset.Tkt != nil {
 		category := strings.Trim(string(asset.Tkt.Category[:]), string([]byte{0}))
 		return db.OwnTicket(addr, category, common.BytesToHash(asset.Tkt.Value[:]))
 	}

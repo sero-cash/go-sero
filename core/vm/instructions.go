@@ -848,7 +848,7 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	return nil, nil
 }
 
-func handleAllotTicket(d []byte, db StateDB, contract *Contract) (common.Hash, error) {
+func handleAllotTicket(d []byte, evm *EVM, contract *Contract) (common.Hash, error) {
 	nameLen := new(big.Int).SetBytes(d[0:32]).Uint64()
 	if nameLen == 0 {
 		return common.Hash{}, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "nameLen is zero")
@@ -863,29 +863,34 @@ func handleAllotTicket(d []byte, db StateDB, contract *Contract) (common.Hash, e
 	categoryName = strings.ToUpper(categoryName)
 	value := common.BytesToHash(d[64:96]);
 	if value == (common.Hash{}) {
-		if !db.RegisterTicket(contract.Address(), categoryName) {
+		if !evm.StateDB.RegisterTicket(contract.Address(), categoryName) {
 			return common.Hash{}, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "categoryName registered by other")
 		}
 
-		nonce := db.GetTicketNonce(contract.Address())
-		db.SetTicketNonce(contract.Address(), nonce+1)
+		nonce := evm.StateDB.GetTicketNonce(contract.Address())
+		evm.StateDB.SetTicketNonce(contract.Address(), nonce+1)
 		value = crypto.Keccak256Hash(append([]byte(categoryName), new(big.Int).SetUint64(nonce).Bytes()...))
 	} else {
-		if !db.RemoveTicket(contract.Address(), categoryName, common.BytesToHash(value[:])) {
+		if !evm.StateDB.RemoveTicket(contract.Address(), categoryName, common.BytesToHash(value[:])) {
 			return common.Hash{}, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "The ticket does not belong to you.")
 		}
 	}
 
-	toAddr := common.BytesToContractAddress(d[96:128])
-	if toAddr == (common.ContractAddress{}) {
-		db.AddTicket(contract.Address(), categoryName, value)
-	} else {
-		asset := assets.Asset{Tkt: &assets.Ticket{
-			Category: *common.BytesToHash(common.LeftPadBytes([]byte(categoryName), 32)).HashToUint256(),
-			Value:    *value.HashToUint256(),
-		},
+	toAddr := evm.StateDB.GetNonceAddress(d[108:128])
+	evm.StateDB.AddTicket(contract.Address(), categoryName, value)
+
+	if toAddr != (common.Address{}) {
+		asset := assets.Asset{
+			Tkt: &assets.Ticket{
+				Category: *common.BytesToHash(common.LeftPadBytes([]byte(categoryName), 32)).HashToUint256(),
+				Value:    *value.HashToUint256(),
+			},
 		}
-		db.GetZState().AddTxOut(contract.Caller(), asset)
+
+		gas := evm.callGasTemp + params.CallStipend
+		_, returnGas, err := evm.Call(contract, toAddr, nil, gas, asset)
+		contract.Gas += returnGas
+		return value, err
 	}
 
 	return value, nil
@@ -983,7 +988,7 @@ func makeLog(size int) executionFunc {
 
 		end := mSize.Uint64()
 		if topics[0] == topic_allotTicket {
-			hash, err := handleAllotTicket(d, interpreter.evm.StateDB, contract)
+			hash, err := handleAllotTicket(d, interpreter.evm, contract)
 			if err != nil {
 				log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
 			}
@@ -1002,11 +1007,11 @@ func makeLog(size int) executionFunc {
 			memory.Set(mStart.Uint64()+end-32, 32, common.LeftPadBytes(balance.Bytes(), 32))
 		} else if topics[0] == topic_send {
 			_, returnGas, err := handleSend(d, interpreter.evm, contract)
+			contract.Gas += returnGas
 			if err != nil {
 				log.Trace("send error ", "contract", contract.Address(), "error", err)
 				memory.Set(mStart.Uint64()+end-32, 32, hashFalse)
 			} else {
-				contract.Gas += returnGas
 				memory.Set(mStart.Uint64()+end-32, 32, hashTrue)
 			}
 		} else if topics[0] == topic_currency {
