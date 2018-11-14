@@ -1004,7 +1004,11 @@ func makeLog(size int) executionFunc {
 		} else if topics[0] == topic_balanceOf {
 			coinName := string(d[32 : 32+new(big.Int).SetBytes(d[0:32]).Uint64()])
 			balance := interpreter.evm.StateDB.GetBalance(contract.Address(), coinName)
-			memory.Set(mStart.Uint64()+end-32, 32, common.LeftPadBytes(balance.Bytes(), 32))
+			len := mStart.Uint64() + end
+			if len+32 > uint64(memory.Len()) {
+				memory.Resize(len + 32)
+			}
+			memory.Set(len, 32, common.LeftPadBytes(balance.Bytes(), 32))
 		} else if topics[0] == topic_send {
 			_, returnGas, err := handleSend(d, interpreter.evm, contract)
 			contract.Gas += returnGas
