@@ -17,6 +17,7 @@
 package ethapi
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -462,15 +463,23 @@ func (s *PublicBlockChainAPI) BlockNumber() hexutil.Uint64 {
 	return hexutil.Uint64(header.Number.Uint64())
 }
 
-func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *keys.Uint128, addresses []common.Address, dy bool) (map[common.Address]common.Address, error) {
-	if rand == nil {
-		return nil, errors.New(`rand can not be null`)
+type ConvertAddress struct {
+	Addr map[common.Address]common.Address `json:"addr"`
+	Rand *keys.Uint128                     `json:"rand"`
+}
+
+func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *keys.Uint128, addresses []common.Address, dy bool) (*ConvertAddress, error) {
+	empty := &keys.Uint128{}
+	if bytes.Equal(rand[:], empty[:]) {
+		randKey := keys.RandUint128()
+		rand = &randKey
 	}
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
 		return nil, err
 	}
-	result := map[common.Address]common.Address{}
+
+	addrMap := map[common.Address]common.Address{}
 
 	randSeed := rand.ToUint256()
 
@@ -480,15 +489,15 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *ke
 	}
 	for _, addr := range addresses {
 		if state.IsContract(addr) {
-			result[addr] = addr
+			addrMap[addr] = addr
 		} else {
 			pkr := keys.Addr2PKr(addr.ToUint512(), randSeed.NewRef())
 			onceAddr := common.Address{}
 			onceAddr.SetBytes(pkr[:])
-			result[addr] = onceAddr
+			addrMap[addr] = onceAddr
 		}
 	}
-	return result, nil
+	return &ConvertAddress{addrMap, rand}, nil
 }
 
 func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, short common.ContractAddress) (*common.Address, error) {
@@ -763,8 +772,6 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	if err := vmError(); err != nil {
 		return nil, 0, false, err
 	}
-	resstr, _ := hexutil.Bytes(res[:]).MarshalText()
-	fmt.Printf("res = %s", resstr)
 	//return res, gas, failed, err
 	wallets := s.b.AccountManager().Wallets()
 	if args.ABI != nil && args.To != nil {

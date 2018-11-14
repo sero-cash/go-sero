@@ -744,18 +744,25 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             if (addressParams){
                 if (utils.isArray(addressParams)){
                 }else{
-                    addressParams = [addressParams]
+                    addressParams = [addressParams];
                 }
             }else {
                 addressParams = [];
             }
+
             if (addressParams.length >0 ){
-                var addrMap =  sero.convertAddressParams(rand,addressParams,dy)
-                return  solidityTypes.map(function (solidityType, index) {
+                var convertResult =  sero.convertAddressParams(rand,addressParams,dy);
+                var addrMap = convertResult.addr;
+                rand = convertResult.rand;
+                var convertParams =  solidityTypes.map(function (solidityType, index) {
                     return  solidityType.convertAddress(params[index], types[index],addrMap)
                 });
+                params = convertParams;
             }
-            return params
+            var result ={};
+            result.params = params;
+            result.rand = rand;
+            return result;
 
         };
 
@@ -2749,13 +2756,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         function bytesToString(array) {
             return String.fromCharCode.apply(String, array);
         }
-        function randomHex (s) {
-            var r = Math.random().toString(16).substr(2)+fromDecimal(new Date().getTime()).substr(2)
-            while (r.length<(s)){
-                r +=fromDecimal(new Date().getTime()).substr(2)+Math.random().toString(16).substr(2);
-            }
-            return '0x'+r.substr(0,s);
-        }
 
         module.exports = {
             padLeft: padLeft,
@@ -2794,7 +2794,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             bytesToBase58: bytesToBase58,
             base58ToBytes: base58ToBytes,
             bytesToString: bytesToString,
-            randomHex:randomHex,
         };
 
     },{"./base58":17,"./sha3.js":20,"bignumber.js":"bignumber.js","utf8":85}],22:[function(require,module,exports){
@@ -3347,8 +3346,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 }
                 options.abi =this.abi;
 
-                var rand =utils.randomHex(32);
-                args = opArgs(this.abi,args,rand,this.sero,false);
+                var rand ="0x";
+                var argsResult = opArgs(this.abi,args,rand,this.sero,false);
+                args = argsResult.params;
+                rand = argsResult.rand;
                 var bytes = encodeConstructorParams(this.abi, args);
                 options.data += bytes;
                 var prefix = encodeConstructorPrefix(this.abi,args,rand);
@@ -3433,8 +3434,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 options = args.pop();
             }
 
-            var rand =utils.randomHex(32);
-            args = opArgs(this.abi,args,rand,this.sero,false);
+            var rand ="0x";
+            argsResult = opArgs(this.abi,args,rand,this.sero,false);
+            args = argsResult.params;
+            rand = argsResult.rand;
             var bytes = encodeConstructorParams(this.abi, args);
             options.data += bytes;
             var prefix = encodeConstructorPrefix(this.abi,args,rand);
