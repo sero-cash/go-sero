@@ -19,23 +19,35 @@ package stx
 import (
 	"encoding/hex"
 
+	"github.com/sero-cash/go-sero/zero/utils"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/crypto/sha3"
-	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type Out_O struct {
 	Addr  keys.Uint512
-	Value utils.U256
+	Asset assets.Asset
 	Memo  keys.Uint512
+}
+
+func (self *Out_O) Clone() (ret Out_O) {
+	utils.DeepCopy(&ret, self)
+	return
+}
+func (this Out_O) ToRef() (ret *Out_O) {
+	ret = &this
+	return
 }
 
 func (self *Out_O) ToHash() (ret keys.Uint256) {
 	hash := crypto.Keccak256(
 		self.Addr[:],
+		self.Asset.ToHash().NewRef()[:],
 		self.Memo[:],
-		self.Value.ToUint256().NewRef()[:],
 	)
 	copy(ret[:], hash)
 	return ret
@@ -43,7 +55,7 @@ func (self *Out_O) ToHash() (ret keys.Uint256) {
 
 type In_O struct {
 	Root keys.Uint256
-	Sign keys.Uint256
+	Sign keys.Uint512
 }
 
 func (ino In_O) MarshalText() ([]byte, error) {
@@ -62,20 +74,12 @@ func (self *In_O) ToHash_for_z() (ret keys.Uint256) {
 }
 
 type Desc_O struct {
-	Currency keys.Uint256
-	Z2O      utils.I256
-	Z2OIndex uint64
-	Fee      utils.U256
-	Ins      []In_O
-	Outs     []Out_O
+	Ins  []In_O
+	Outs []Out_O
 }
 
 func (self *Desc_O) ToHash_for_z() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
-	d.Write(self.Currency[:])
-	d.Write(self.Z2O.ToUint256().NewRef()[:])
-	d.Write(utils.Uint64ToBytes(self.Z2OIndex))
-	d.Write(self.Fee.ToUint256().NewRef()[:])
 	for _, in := range self.Ins {
 		d.Write(in.ToHash_for_z().NewRef()[:])
 	}

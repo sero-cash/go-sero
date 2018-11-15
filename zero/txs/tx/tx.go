@@ -18,6 +18,7 @@ package tx
 
 import (
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
@@ -27,7 +28,7 @@ type In struct {
 
 type Out struct {
 	Addr  keys.Uint512
-	Value utils.U256
+	Asset assets.Asset
 	Memo  keys.Uint512
 	Z     OutType
 }
@@ -40,27 +41,46 @@ const (
 	TYPE_Z = OutType(2)
 )
 
-type CTx struct {
-	Currency keys.Uint256
-	Fee      utils.U256
-	Ins      []In
-	Outs     []Out
-}
-
-func (self *CTx) Cost() (ret utils.U256) {
-	if len(self.Outs) > 0 {
-		cost := utils.NewU256(0)
-		for _, out := range self.Outs {
-			cost.AddU(&out.Value)
-		}
-		cost.AddU(&self.Fee)
-		return cost
-	} else {
-		return self.Fee
-	}
-}
-
 type T struct {
-	Ehash keys.Uint256
-	CTxs  []CTx
+	FromRnd *keys.Uint256
+	Ehash   keys.Uint256
+	Fee     utils.U256
+	Ins     []In
+	Outs    []Out
+}
+
+func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
+	ret = make(map[keys.Uint256]utils.U256)
+	seroCy := utils.StringToUint256("SERO")
+	ret[seroCy] = self.Fee
+	if len(self.Outs) > 0 {
+		for _, out := range self.Outs {
+			if out.Asset.Tkn != nil {
+				if cost, ok := ret[out.Asset.Tkn.Currency]; ok {
+					cost.AddU(&out.Asset.Tkn.Value)
+					ret[out.Asset.Tkn.Currency] = cost
+				} else {
+					ret[out.Asset.Tkn.Currency] = out.Asset.Tkn.Value
+				}
+			}
+		}
+	}
+	return
+}
+
+func (self *T) TikectCost() (ret map[keys.Uint256][]keys.Uint256) {
+	ret = make(map[keys.Uint256][]keys.Uint256)
+	if len(self.Outs) > 0 {
+		for _, out := range self.Outs {
+			if out.Asset.Tkt != nil {
+				if tkts, ok := ret[out.Asset.Tkt.Category]; ok {
+					tkts = append(tkts, out.Asset.Tkt.Value)
+					ret[out.Asset.Tkt.Category] = tkts
+				} else {
+					ret[out.Asset.Tkt.Category] = []keys.Uint256{out.Asset.Tkt.Value}
+				}
+			}
+		}
+	}
+	return
 }

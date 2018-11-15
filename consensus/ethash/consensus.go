@@ -20,10 +20,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-czero-import/keys"
 	"math/big"
 	"runtime"
 	"time"
+
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/log"
 
@@ -404,9 +407,9 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 
 	if header.GasUsed >= avgGas.Uint64() {
 		otherRawrd := new(big.Int).Div(reward, big.NewInt(5))
-		if statedb.GetBalance(state.EmptyAddress, "sero").Cmp(otherRawrd) >= 0 {
+		if statedb.GetBalance(state.EmptyAddress, "SERO").Cmp(otherRawrd) >= 0 {
 			reward = reward.Add(reward, otherRawrd)
-			statedb.SubBalance(state.EmptyAddress, "sero", otherRawrd)
+			statedb.SubBalance(state.EmptyAddress, "SERO", otherRawrd)
 		}
 	} else {
 		reward = reward.Mul(reward, big.NewInt(4)).Div(reward, big.NewInt(5))
@@ -422,6 +425,10 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 
 	statedb.SetAvgUsedGas(header.Number.Uint64(), avgGas)
 
-	sero := common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32))
-	statedb.GetZState().AddTxOut(header.Coinbase, reward, sero.HashToUint256())
+	asset := assets.Asset{Tkn: &assets.Token{
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+		Value:    utils.U256(*reward),
+	},
+	}
+	statedb.GetZState().AddTxOut(header.Coinbase, asset)
 }

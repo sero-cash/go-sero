@@ -26,6 +26,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
+
 	"github.com/sero-cash/go-sero/crypto"
 
 	"github.com/sero-cash/go-sero/common"
@@ -164,7 +167,7 @@ func SetupGenesisBlock(db serodb.Database, genesis *Genesis) (*params.ChainConfi
 	stored := rawdb.ReadCanonicalHash(db, 0)
 	if (stored == common.Hash{}) {
 		if genesis == nil {
-			log.Info("Writing default main-net genesis block")
+			log.Info("Writing default beta-net genesis block")
 			genesis = DefaultGenesisBlock()
 		} else {
 			log.Info("Writing custom genesis block")
@@ -230,7 +233,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 		db = serodb.NewMemDatabase()
 	}
 	statedb, _ := state.NewGenesis(common.Hash{}, state.NewDatabase(db))
-	statedb.RegisterCurrency(common.BytesToAddress(crypto.Keccak512(nil)), "sero")
+	statedb.RegisterToken(common.BytesToAddress(crypto.Keccak512(nil)), "sero")
 	statedb.AddBalance(state.EmptyAddress, "sero", new(big.Int).SetUint64(50000000))
 
 	sero := common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32))
@@ -245,7 +248,12 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 			statedb.AddBalance(addr, "sero", account.Balance)
 			statedb.SetCode(addr, account.Code)
 		} else {
-			statedb.GetZState().AddTxOut(addr, account.Balance, sero.HashToUint256())
+			asset := assets.Asset{Tkn: &assets.Token{
+				Currency: *sero.HashToUint256(),
+				Value:    utils.U256(*account.Balance),
+			},
+			}
+			statedb.GetZState().AddTxOut(addr, asset)
 		}
 		for key, value := range account.Storage {
 			statedb.SetState(addr, key, value)

@@ -20,7 +20,8 @@ import (
 	"math"
 	"math/big"
 
-	"fmt"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/vm"
@@ -34,8 +35,7 @@ type StateTransition struct {
 	gas        uint64
 	gasPrice   *big.Int
 	initialGas uint64
-	currency   common.Hash
-	value      *big.Int
+	asset      assets.Asset
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
@@ -45,13 +45,11 @@ type StateTransition struct {
 type Message interface {
 	From() common.Address
 
-	//FromFrontier() (common.Data, error)
 	To() *common.Address
 
 	GasPrice() *big.Int
 	Gas() uint64
-	Currency() string
-	Value() *big.Int
+	Asset() assets.Asset
 
 	Nonce() uint64
 	CheckNonce() bool
@@ -98,7 +96,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		evm:      evm,
 		msg:      msg,
 		gasPrice: msg.GasPrice(),
-		value:    msg.Value(),
+		asset:    msg.Asset(),
 		data:     msg.Data(),
 		state:    evm.StateDB,
 	}
@@ -151,7 +149,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	msg := st.msg
 	sender := vm.AccountRef(msg.From())
 
-	contractCreation := st.to() != (common.Address{}) && len(msg.Data()) != 0 && !st.state.IsContract(st.to())
+	contractCreation := msg.To() == nil
 
 	// Pay intrinsic gas
 	gas, err := IntrinsicGas(st.data, contractCreation)
@@ -170,15 +168,13 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		vmerr error
 	)
 
-	if st.value != nil && st.value.Sign() > 0 && !st.evm.StateDB.ExistsCurrency(msg.Currency()) {
-		return nil, 0, false, fmt.Errorf("currency %s not exists", msg.Currency())
-	}
-
-	currency := common.BytesToHash(common.LeftPadBytes([]byte(msg.Currency()), 32))
 	if contractCreation {
-		ret, st.gas, vmerr = evm.Create(sender, st.to(), st.data, st.gas, msg.Currency(), st.value)
+		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, msg.Asset())
 	} else {
-		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, msg.Currency(), st.value)
+		if len(st.data) > 0 {
+			st.data = st.data[16:]
+		}
+		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, msg.Asset())
 	}
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
@@ -188,11 +184,16 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		if vmerr == vm.ErrInsufficientBalance {
 			return nil, 0, false, vmerr
 		}
-		st.state.GetZState().AddTxOut(msg.From(), st.value, currency.HashToUint256())
+		st.state.GetZState().AddTxOut(msg.From(), msg.Asset())
 	}
 
 	st.refundGas()
-	st.state.GetZState().AddTxOut(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice), common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256())
+	asset := assets.Asset{Tkn: &assets.Token{
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+		Value:    utils.U256(*new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)),
+	},
+	}
+	st.state.GetZState().AddTxOut(st.evm.Coinbase, asset)
 
 	return ret, st.gasUsed(), vmerr != nil, err
 }
@@ -207,7 +208,12 @@ func (st *StateTransition) refundGas() {
 
 	// Return ETH for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	st.state.GetZState().AddTxOut(st.msg.From(), remaining, common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256())
+	asset := assets.Asset{Tkn: &assets.Token{
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+		Value:    utils.U256(*remaining),
+	},
+	}
+	st.state.GetZState().AddTxOut(st.msg.From(), asset)
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.

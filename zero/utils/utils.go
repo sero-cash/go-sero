@@ -22,7 +22,11 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"strings"
+	"sync"
 	"time"
+
+	"github.com/sero-cash/go-czero-import/cpt"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
@@ -74,6 +78,20 @@ var I256_0 I256 = I256(*big.NewInt(0))
 func NewI256(i int64) (ret I256) {
 	ret = I256(*big.NewInt(i))
 	return
+}
+
+func (x *I256) GobEncode() ([]byte, error) {
+	b := big.Int(*x)
+	return b.GobEncode()
+}
+
+func (z *I256) GobDecode(buf []byte) error {
+	var a big.Int
+	if err := a.GobDecode(buf); err != nil {
+		return err
+	}
+	*z = I256(a)
+	return nil
 }
 
 func (b I256) EncodeRLP(w io.Writer) error {
@@ -224,6 +242,20 @@ func NewU256(i uint64) (ret U256) {
 	return
 }
 
+func (x *U256) GobEncode() ([]byte, error) {
+	b := big.Int(*x)
+	return b.GobEncode()
+}
+
+func (z *U256) GobDecode(buf []byte) error {
+	var a big.Int
+	if err := a.GobDecode(buf); err != nil {
+		return err
+	}
+	*z = U256(a)
+	return nil
+}
+
 func (b U256) EncodeRLP(w io.Writer) error {
 	i := big.Int(b)
 	if bytes, e := i.GobEncode(); e != nil {
@@ -360,4 +392,68 @@ func TR_enter(name string) (tr TimeRecord) {
 
 func (tr *TimeRecord) Leave() {
 	//fmt.Printf("End ("+tr.name+")     s=%v  <<<<<<<\n}}\n", time.Since(tr.start))
+}
+
+func StringToUint256(str string) keys.Uint256 {
+	var ret keys.Uint256
+	b := []byte(strings.ToUpper(str))
+	if len(b) > len(ret) {
+		b = b[len(b)-len(ret):]
+	}
+	copy(ret[len(ret)-len(b):], b)
+	return ret
+
+}
+
+type Proc interface {
+	Run() bool
+}
+
+type Procs struct {
+	ch   chan int
+	wait sync.WaitGroup
+	Runs []Proc
+	succ bool
+}
+
+func NewProcs(num int) (ret Procs) {
+	ret = Procs{
+		make(chan int, num),
+		sync.WaitGroup{},
+		nil,
+		true,
+	}
+	return
+}
+
+func (self *Procs) StartProc(run Proc) {
+	self.Runs = append(self.Runs, run)
+	if cpt.Is_czero_debug() {
+		if !run.Run() {
+			self.succ = false
+		}
+	} else {
+		self.wait.Add(1)
+		go func(run Proc) {
+			self.ch <- 0
+			defer func() {
+				<-self.ch
+				self.wait.Done()
+			}()
+			if !run.Run() {
+				self.succ = false
+			}
+		}(run)
+	}
+}
+
+func (self *Procs) Wait() []Proc {
+	self.wait.Wait()
+	if self.succ {
+		p := self.Runs
+		self.Runs = nil
+		return p
+	} else {
+		return nil
+	}
 }

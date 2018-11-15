@@ -33,8 +33,16 @@ type StateDB interface {
 	GetBalance(common.Address, string) *big.Int
 	Balances(addr common.Address) map[string]*big.Int
 
-	RegisterCurrency(common.Address, string) bool
-	ExistsCurrency(string) bool
+	RegisterTicket(common.Address, string) bool
+	GetContrctAddressByTicket(key string) common.Address
+	RegisterToken(common.Address, string) bool
+	GetContrctAddressByToken(key string) common.Address
+
+	SetTicketNonce(common.Address, uint64)
+	GetTicketNonce(common.Address) uint64
+	RemoveTicket(common.Address, string, common.Hash) bool
+	AddTicket(common.Address, string, common.Hash)
+	OwnTicket(common.Address, string, common.Hash) bool
 
 	AddNonceAddress([]byte, common.Address)
 	GetNonceAddress([]byte) common.Address
@@ -68,6 +76,9 @@ type StateDB interface {
 	AddPreimage(common.Hash, []byte)
 
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool)
+
+	GetContrctNonce() (uint64)
+	IncAndGetContrctNonce() (uint64)
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM EVM

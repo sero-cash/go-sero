@@ -3,16 +3,23 @@ LOCAL_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}"  )" >/dev/null && pwd  )"
 echo $LOCAL_PATH
 GERO_BASE=${LOCAL_PATH}/../../
 #CZERO_PATH=${LOCAL_PATH}/../../../czero
-#if [ ! -d ${CZERO_PATH} ]; then
-#    echo "the path ${CZERO_PATH} should be available for build czero"
-#    echo "please cd ${CZERO_PATH}\n git clone https://gitee.com/hyperspace/czero.git"
-#    exit
+#compileCZero() {
+#    if [ ! -d ${CZERO_PATH} ]; then
+#        echo "the path ${CZERO_PATH} should be available for build czero"
+#        echo "please cd ${CZERO_PATH}\n git clone https://gitee.com/hyperspace/czero.git"
+#        exit
+#    fi
+#    cd ${CZERO_PATH}/build
+#    ./depends.sh
+#    cmake ..
+#    make clean
+#    make czero
+#}
+#if [ -z "$1" ]; then
+#    echo "No argument supplied"
+#elif [ "x$1" == "xcompile" ]; then
+#    compileCZero
 #fi
-#cd ${CZERO_PATH}/build
-#./depends.sh
-#cmake ..
-#make clean
-#make czero
 CZERO_IMPT_PATH=${LOCAL_PATH}/../../../go-czero-import
 if [ ! -d ${CZERO_IMPT_PATH} ]; then
     echo "the path ${CZERO_IMPT_PATH} should be available for build czero"

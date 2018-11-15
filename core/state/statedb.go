@@ -50,7 +50,10 @@ var (
 
 	EmptyAddress = common.BytesToAddress(crypto.Keccak512(nil))
 
-	currency_value = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000001")
+	TrueHash  = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000001")
+	FalseHash = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000")
+
+	contrctNonceKey = crypto.Keccak256Hash([]byte("contractNonce"))
 )
 
 // StateDBs within the ethereum protocol are used to store anything
@@ -207,78 +210,87 @@ func (self *StateDB) usedGasKey(number uint64) common.Hash {
 	return key
 }
 
-//register
-func (self *StateDB) RegisterCurrency(contractAddr common.Address, coinName string) bool {
-	coinName = strings.ToLower(coinName)
-	stateObject := self.GetOrNewStateObject(EmptyAddress)
-	if stateObject != nil {
-		key := crypto.Keccak256Hash([]byte(coinName))
-		value := stateObject.GetState(self.db, key)
-		hash := crypto.Keccak256Hash(contractAddr.Bytes())
-		if value == (common.Hash{}) {
-			stateObject.SetState(self.db, key, hash)
-			return true
-		} else {
-			return value == hash
-		}
+func (self *StateDB) registerAddressByState(name string, contractAddr common.Address, key string) bool {
+	key0, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{0}})
+	key1, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{1}})
+
+	hashKey0 := crypto.Keccak256Hash(key0)
+	hashKey1 := crypto.Keccak256Hash(key1)
+	address := self.getAddressByState(hashKey0, hashKey1)
+	if address.Data == ([64]byte{}) {
+		self.setAddressByState(hashKey0, hashKey1, contractAddr)
+		return true
+	} else {
+		return address.Data == contractAddr.Data
 	}
 	return false
 }
 
-func (self *StateDB) ExistsCurrency(coinName string) bool {
-	coinName = strings.ToLower(coinName)
-	stateObject := self.GetOrNewStateObject(EmptyAddress)
-	if stateObject != nil {
-		value := stateObject.GetState(self.db, crypto.Keccak256Hash([]byte(coinName)))
-		if value != (common.Hash{}) {
-			return true
-		}
-	}
-	return false
-}
-
-func (self *StateDB) setCurrency(contractAddr common.Address, coinName string) common.Hash {
-	coinName = strings.ToLower(coinName)
-	stateObject := self.GetOrNewStateObject(EmptyAddress)
-	if stateObject != nil {
-		//bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, coinName})
-		//hash := crypto.Keccak256Hash(bytes)
-		stateObject.SetState(self.db, crypto.Keccak256Hash([]byte(coinName)), currency_value)
-		return common.BytesToHash(common.LeftPadBytes([]byte(coinName), 32))
-	}
-	return common.Hash{}
-}
-
-func (self *StateDB) getCurrency(coinName string) common.Hash {
-	if strings.TrimSpace(coinName) == "" {
-		return common.Hash{}
-	}
-	coinName = strings.ToLower(coinName)
+func (self *StateDB) OwnTicket(contractAddr common.Address, categoryName string, value common.Hash) bool {
 	stateObject := self.getStateObject(EmptyAddress)
 	if stateObject != nil {
-		return stateObject.GetState(self.db, crypto.Keccak256Hash([]byte(coinName)))
-	}
-	return common.Hash{}
-}
-
-func (self *StateDB) AddNonceAddress(key []byte, nonceAddr common.Address) {
-	stateObject := self.GetOrNewStateObject(EmptyAddress)
-	if stateObject != nil {
-		key0 := crypto.Keccak256Hash(append([]byte("nonceAddr0"), key[:]...))
-		if stateObject.GetState(self.db, key0) != (common.Hash{}) {
-			return
+		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, strings.ToUpper(categoryName), value})
+		hash := stateObject.GetState(self.db, crypto.Keccak256Hash(bytes))
+		if hash == TrueHash {
+			return true
 		}
-		key1 := crypto.Keccak256Hash(append([]byte("nonceAddr1"), key[:]...))
-		stateObject.SetState(self.db, key0, common.BytesToHash(nonceAddr.Bytes()[:32]))
-		stateObject.SetState(self.db, key1, common.BytesToHash(nonceAddr.Bytes()[32:]))
+	}
+	return false
+}
+
+func (self *StateDB) AddTicket(contractAddr common.Address, categoryName string, value common.Hash) {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, strings.ToUpper(categoryName), value})
+		stateObject.SetState(self.db, crypto.Keccak256Hash(bytes), TrueHash)
 	}
 }
 
-func (self *StateDB) GetNonceAddress(key []byte) common.Address {
+func (self *StateDB) RemoveTicket(contractAddr common.Address, categoryName string, value common.Hash) bool {
+	stateObject := self.getStateObject(EmptyAddress)
+	if stateObject != nil {
+		bytes, _ := rlp.EncodeToBytes([]interface{}{contractAddr, strings.ToUpper(categoryName), value})
+		hash := stateObject.GetState(self.db, crypto.Keccak256Hash(bytes))
+		if hash == TrueHash {
+			stateObject.SetState(self.db, crypto.Keccak256Hash(bytes), FalseHash)
+			return true
+		}
+	}
+	return false
+}
+
+func (self *StateDB) RegisterTicket(contractAddr common.Address, categoryName string) bool {
+	return self.registerAddressByState("Ticket", contractAddr, strings.ToUpper(categoryName))
+}
+
+func (self *StateDB) GetContrctAddressByTicket(categoryName string) common.Address {
+	return self.getContrctAddress("Ticket", strings.ToUpper(categoryName))
+}
+
+//register
+func (self *StateDB) RegisterToken(contractAddr common.Address, coinName string) bool {
+	return self.registerAddressByState("Token", contractAddr, strings.ToUpper(coinName))
+}
+
+func (self *StateDB) GetContrctAddressByToken(coinName string) common.Address {
+	return self.getContrctAddress("Token", strings.ToUpper(coinName))
+}
+
+
+func (self *StateDB) getContrctAddress(name string, key string) common.Address {
+	key0, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{0}})
+	key1, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{1}})
+
+	hashKey0 := crypto.Keccak256Hash(key0)
+	hashKey1 := crypto.Keccak256Hash(key1)
+	return self.getAddressByState(hashKey0, hashKey1)
+}
+
+
+
+func (self *StateDB) getAddressByState(key0, key1 common.Hash) common.Address {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
-		key0 := crypto.Keccak256Hash(append([]byte("nonceAddr0"), key[:]...))
-		key1 := crypto.Keccak256Hash(append([]byte("nonceAddr1"), key[:]...))
 		h := stateObject.GetState(self.db, key0)
 		if h == (common.Hash{}) {
 			return common.Address{}
@@ -290,6 +302,26 @@ func (self *StateDB) GetNonceAddress(key []byte) common.Address {
 		return common.BytesToAddress(append(h[:], l[:]...))
 	}
 	return common.Address{}
+}
+
+func (self *StateDB) AddNonceAddress(key []byte, nonceAddr common.Address) {
+	key0 := crypto.Keccak256Hash(append([]byte("nonceAddr0"), key[:]...))
+	key1 := crypto.Keccak256Hash(append([]byte("nonceAddr1"), key[:]...))
+	self.setAddressByState(key0, key1, nonceAddr)
+}
+
+func (self *StateDB) GetNonceAddress(key []byte) common.Address {
+	key0 := crypto.Keccak256Hash(append([]byte("nonceAddr0"), key[:]...))
+	key1 := crypto.Keccak256Hash(append([]byte("nonceAddr1"), key[:]...))
+	return self.getAddressByState(key0, key1)
+}
+
+func (self *StateDB) setAddressByState(key0, key1 common.Hash, address common.Address) {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		stateObject.SetState(self.db, key0, common.BytesToHash(address.Bytes()[:32]))
+		stateObject.SetState(self.db, key1, common.BytesToHash(address.Bytes()[32:]))
+	}
 }
 
 // setError remembers the first non-nil error it is called with.
@@ -354,6 +386,26 @@ func (self *StateDB) AddPreimage(hash common.Hash, preimage []byte) {
 		copy(pi, preimage)
 		self.preimages[hash] = pi
 	}
+}
+
+func (self *StateDB) GetContrctNonce() (uint64) {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		value := stateObject.GetState(self.db, contrctNonceKey)
+		return new(big.Int).SetBytes(value[:]).Uint64()
+	}
+	return 0;
+}
+
+func (self *StateDB) IncAndGetContrctNonce() (uint64) {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		value := stateObject.GetState(self.db, contrctNonceKey)
+		nonce := new(big.Int).Add(new(big.Int).SetBytes(value[:]), common.Big1)
+		stateObject.SetState(self.db, contrctNonceKey, common.BigToHash(nonce))
+		return nonce.Uint64();
+	}
+	return 0;
 }
 
 // Preimages returns a list of SHA3 preimages that have been submitted.
@@ -459,9 +511,28 @@ func (self *StateDB) HasSuicided(addr common.Address) bool {
 	return false
 }
 
+func (self *StateDB) GetTicketNonce(addr common.Address) uint64 {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.TicketNonce()
+	}
+
+	return 0
+}
+
+
 /*
  * SETTERS
  */
+
+
+func (self *StateDB) SetTicketNonce(addr common.Address, nonce uint64) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetTicketNonce(nonce)
+	}
+}
+
 
 // AddBalance adds amount to the account associated with addr.
 func (self *StateDB) AddBalance(addr common.Address, coinName string, amount *big.Int) {
@@ -520,17 +591,17 @@ func (self *StateDB) Suicide(addr common.Address, toAddr common.Address) bool {
 		prev:      stateObject.suicided,
 		prevBooks: books,
 	})
-	if self.IsContract(toAddr) {
-		toStateObject := self.getStateObject(addr)
-		for _, book := range books {
-			toStateObject.AddBalance(book.Currency, book.Balance)
-		}
-	} else {
-		for _, book := range books {
-			currency := common.BytesToHash(common.LeftPadBytes([]byte(book.Currency), 32))
-			self.GetZState().AddTxOut(toAddr, book.Balance, currency.HashToUint256())
-		}
-	}
+	//if self.IsContract(toAddr) {
+	//	toStateObject := self.getStateObject(addr)
+	//	for _, book := range books {
+	//		toStateObject.AddBalance(book.Currency, book.Balance)
+	//	}
+	//} else {
+	//	for _, book := range books {
+	//		currency := common.BytesToHash(common.LeftPadBytes([]byte(book.Currency), 32))
+	//		self.GetZState().AddTxOut(toAddr, book.Balance, currency.HashToUint256())
+	//	}
+	//}
 
 	stateObject.markSuicided()
 	stateObject.data.Books = []*Book{}

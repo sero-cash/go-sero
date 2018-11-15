@@ -195,7 +195,7 @@ func (a Address) ToCaddr() ContractAddress {
 		return sc.(ContractAddress)
 	}
 	var addr ContractAddress
-	addr.SetBytes(keccak512(a.Bytes()))
+	addr.SetBytes(LeftPadBytes(a.Data[len(a.Data)-20:], 32))
 	a.caddr.Store(addr)
 	return addr
 }
@@ -208,6 +208,15 @@ func (a *ContractAddress) SetBytes(b []byte) {
 		b = b[len(b)-20:]
 	}
 	copy(a[20-len(b):], b)
+}
+
+func (a ContractAddress) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(a[:]).MarshalText()
+}
+
+// UnmarshalText parses a hash in hex syntax.
+func (a *ContractAddress) UnmarshalText(input []byte) error {
+	return hexutil.UnmarshalFixedText("ContractAddress", input, a[:])
 }
 
 // BytesToAddress returns Data with value b.
@@ -244,13 +253,13 @@ func Base58ToAddress(s string) Address {
 // Ethereum Data or not.
 func IsBase58Address(s string) bool {
 	if base58.IsBase58Str(s) {
-		temp :=Base58ToAddress(s).Base58()
+		temp := Base58ToAddress(s).Base58()
 		if temp == s {
-			return true;
+			return true
 		}
-		return false;
+		return false
 	}
-	return false;
+	return false
 
 	return base58.IsBase58Str(s)
 }

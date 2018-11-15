@@ -105,6 +105,11 @@ type (
 		prev     *big.Int
 	}
 
+	ticketNonceChange struct {
+		account  *common.Address
+		prev     uint64
+	}
+
 	storageChange struct {
 		account       *common.Address
 		key, prevalue common.Hash
@@ -130,6 +135,14 @@ type (
 		prevDirty bool
 	}
 )
+
+func (tn ticketNonceChange) revert(s *StateDB) {
+	s.getStateObject(*tn.account).setTicketNonce(tn.prev)
+}
+
+func (tn ticketNonceChange) dirtied() *common.Address {
+	return tn.account
+}
 
 func (ch createObjectChange) revert(s *StateDB) {
 	delete(s.stateObjects, *ch.account)

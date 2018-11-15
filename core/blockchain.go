@@ -1005,7 +1005,14 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	currentBlock = bc.CurrentBlock()
 	if !reorg && externTd.Cmp(localTd) == 0 {
 		// Split same-difficulty blocks by number, then at random
-		reorg = block.NumberU64() < currentBlock.NumberU64() || (block.NumberU64() == currentBlock.NumberU64() && mrand.Float64() < 0.5)
+		reorg = block.NumberU64() < currentBlock.NumberU64()
+		if !reorg && block.NumberU64() == currentBlock.NumberU64() {
+			if block.Transactions().Len() == currentBlock.Transactions().Len() {
+				reorg = mrand.Float64() < 0.5
+			} else {
+				reorg = block.Transactions().Len() > currentBlock.Transactions().Len()
+			}
+		}
 	}
 	if reorg {
 		// Reorganise the chain if the parent is not the head block
@@ -1196,7 +1203,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		}
 
 		for _, tx := range block.Transactions() {
-			err := stx.Verify(tx.GetZZSTX(), state.GetZState())
+			err := stx.Verify(tx.GetZZSTX(), &state.GetZState().State0)
 			if err != nil {
 				return i, events, coalescedLogs, err
 			}

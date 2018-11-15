@@ -17,7 +17,7 @@ func Debug_State1_addout_assert(state *State1, os *zstate.OutState0) {
 			}
 		}
 		trees := state.State0.GenState0Trees()
-		leaf := os.ToCommitment()
+		leaf := os.ToRootCM()
 		tree := trees.Trees[os.Index]
 		root := tree.RootKey()
 		if out, err := state.GetOut(&root); err != nil {
@@ -43,7 +43,7 @@ func Debug_State1_addout_end_assert(state *State1, os *zstate.OutState0) {
 	if zstate.Need_debug() {
 		trees := state.State0.GenState0Trees()
 
-		leaf := os.ToCommitment()
+		leaf := os.ToRootCM()
 		tree := trees.Trees[os.Index]
 		root := tree.RootKey()
 

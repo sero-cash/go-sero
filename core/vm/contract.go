@@ -18,8 +18,10 @@ package vm
 
 import (
 	"math/big"
+	"strings"
 
 	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 )
 
 // ContractRef is a reference to the contract's backing object
@@ -59,18 +61,19 @@ type Contract struct {
 	Input    []byte
 
 	Gas uint64
-	//Currency common.Hash
-	value *big.Int
+
+	asset *assets.Asset
 
 	Args []byte
 
 	DelegateCall bool
 
-	addrs map[common.ContractAddress]common.Address
+	addrs    map[common.ContractAddress]common.Address
+	currency string
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uint64) *Contract {
+func NewContract(caller ContractRef, object ContractRef, asset *assets.Asset, gas uint64) *Contract {
 	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil}
 
 	c.addrs = map[common.ContractAddress]common.Address{}
@@ -88,9 +91,20 @@ func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uin
 	// This pointer will be off the state transition
 	c.Gas = gas
 	// ensures a value is set
-	c.value = value
+	c.asset = asset
 
 	return c
+}
+
+func (c *Contract) SetCurrency(currency string) {
+	c.currency = currency
+}
+
+func (c *Contract) GetCurrency() string {
+	if c.currency == "" {
+		return "SERO"
+	}
+	return c.currency
 }
 
 func (c *Contract) PutNonceAddress(statedb StateDB, addr common.Address) {
@@ -115,7 +129,7 @@ func (c *Contract) AsDelegate() *Contract {
 	// that caller is something other than a Contract.
 	parent := c.caller.(*Contract)
 	c.CallerAddress = parent.CallerAddress
-	c.value = parent.value
+	c.asset = parent.asset
 
 	return c
 }
@@ -158,7 +172,20 @@ func (c *Contract) Address() common.Address {
 
 // Value returns the contracts value (sent to it from it's caller)
 func (c *Contract) Value() *big.Int {
-	return c.value
+	if c.asset.Tkn != nil {
+		value := big.Int(c.asset.Tkn.Value)
+		return &value
+	} else {
+		return new(big.Int)
+	}
+}
+
+func (c *Contract) Currency() string {
+	if c.asset.Tkn != nil {
+		return strings.TrimSpace(string(c.asset.Tkn.Currency[:]))
+	} else {
+		return "sero"
+	}
 }
 
 // SetCode sets the code to the contract

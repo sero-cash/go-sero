@@ -18,6 +18,9 @@ package core
 
 import (
 	"math/big"
+	"strings"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
@@ -86,23 +89,48 @@ func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash
 
 // CanTransfer checks whether there are enough funds in the address' account to make a transfer.
 // This does not take the necessary gas in to account to make the transfer valid.
-func CanTransfer(db vm.StateDB, addr common.Address, currency string, amount *big.Int) bool {
-	return db.GetBalance(addr, currency).Cmp(amount) >= 0
+func CanTransfer(db vm.StateDB, addr common.Address, asset assets.Asset) bool {
+	flag := true
+	if asset.Tkn != nil {
+		amount := big.Int(asset.Tkn.Value)
+		flag = db.GetBalance(addr, strings.Trim(string(asset.Tkn.Currency[:]), string([]byte{0}))).Cmp(&amount) >= 0
+	}
+	if flag && asset.Tkt != nil {
+		category := strings.Trim(string(asset.Tkt.Category[:]), string([]byte{0}))
+		return db.OwnTicket(addr, category, common.BytesToHash(asset.Tkt.Value[:]))
+	}
+	return flag
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
-func Transfer(db vm.StateDB, sender, recipient common.Address, currency string, amount *big.Int) {
-	if amount == nil || amount.Sign() <= 0 {
-		return
-	}
+func Transfer(db vm.StateDB, sender, recipient common.Address, asset assets.Asset) {
 	if db.IsContract(sender) {
-		db.SubBalance(sender, currency, amount)
-		if db.IsContract(recipient) {
-			db.AddBalance(recipient, currency, amount)
-		} else {
-			db.GetZState().AddTxOut(recipient, amount, common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256())
+		if asset.Tkn != nil {
+			amount := big.Int(asset.Tkn.Value)
+			if amount.Sign() > 0 {
+				currency := strings.Trim(string(asset.Tkn.Currency[:]), string([]byte{0}))
+				db.SubBalance(sender, currency, &amount)
+			}
 		}
-	} else if recipient != (common.Address{}) {
-		db.AddBalance(recipient, currency, amount)
+		if asset.Tkt != nil {
+			category := strings.Trim(string(asset.Tkt.Category[:]), string([]byte{0}))
+			db.RemoveTicket(sender, category, common.BytesToHash(asset.Tkt.Value[:]))
+		}
+	}
+
+	if db.IsContract(recipient) {
+		if asset.Tkn != nil {
+			amount := big.Int(asset.Tkn.Value)
+			if amount.Sign() > 0 {
+				currency := strings.Trim(string(asset.Tkn.Currency[:]), string([]byte{0}))
+				db.AddBalance(recipient, currency, &amount)
+			}
+		}
+		if asset.Tkt != nil {
+			category := strings.Trim(string(asset.Tkt.Category[:]), string([]byte{0}))
+			db.AddTicket(recipient, category, common.BytesToHash(asset.Tkt.Value[:]))
+		}
+	} else if db.IsContract(sender) {
+		db.GetZState().AddTxOut(recipient, asset)
 	}
 }

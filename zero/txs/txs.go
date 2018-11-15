@@ -18,101 +18,126 @@ package txs
 
 import (
 	"errors"
-	"fmt"
+
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
+
+	"github.com/sero-cash/go-czero-import/cpt"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
-	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-func verifyIn_O(d *keys.Uint256, sign *keys.Uint256, r *keys.Uint256) error {
-	if keys.VerifyOAddr(d, sign, r) {
-		return nil
-	} else {
-		return errors.New("txs.verify in_o failed")
-	}
+func Gen(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
+	st1 := state1.CurrentState1()
+	return Gen_state1(seed, t, st1)
 }
+func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e error) {
+	if preTx, err := preGen(t, st1); err == nil {
 
-func Gen(seed *keys.Uint256, t *tx.T, state *zstate.State) (s stx.T, e error) {
-	if preTx, err := preGen(t, state); err == nil {
-		if len(preTx.desc_os) > 2 {
-			e = errors.New("pre tx currency size > 2!!!")
-			return
-		}
+		balance_desc := cpt.BalanceDesc{}
 		s.Ehash = t.Ehash
-		var type_o_addr *keys.Uint512
-		for _, desc_o := range preTx.desc_os {
-			s_desc_o := stx.Desc_O{}
-			s_desc_o.Fee = desc_o.fee
-			s_desc_o.Z2O = desc_o.z2o
-			s_desc_o.Z2OIndex = uint64(preTx.C2I.addC(&desc_o.currency))
-			s_desc_o.Currency = desc_o.currency
-			for _, in := range desc_o.ins {
-				s_desc_o.Ins = append(
-					s_desc_o.Ins,
-					stx.In_O{
-						Root: *in.Pg.Root.ToUint256(),
-					},
-				)
+		s.Fee = t.Fee
+
+		{
+			asset_desc := cpt.AssetDesc{
+				Tkn_currency: utils.StringToUint256("SERO"),
+				Tkn_value:    t.Fee.ToUint256(),
+				Tkt_category: keys.Empty_Uint256,
+				Tkt_value:    keys.Empty_Uint256,
 			}
-			for _, out := range desc_o.outs {
-				out_o := stx.Out_O{}
-				out_o.Value = out.Value
-				out_o.Memo = out.Memo
-				switch out.Z {
-				case tx.TYPE_O:
-					pkr := keys.Addr2PKr(&out.Addr, keys.RandUint256().NewRef())
-					out_o.Addr = pkr
-				case tx.TYPE_N:
-					out_o.Addr = out.Addr
-					type_o_addr = &out.Addr
-				default:
-					panic("Gen desc_o out but z is type_z")
+			cpt.GenAssetCC(&asset_desc)
+			balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+		}
+
+		for _, in_o := range preTx.desc_o.ins {
+			s_in_o := stx.In_O{}
+			s_in_o.Root = *in_o.Pg.Root.ToUint256()
+			s.Desc_O.Ins = append(s.Desc_O.Ins, s_in_o)
+			{
+				asset := in_o.Out_O.Asset.ToCompleteAsset()
+				asset_desc := cpt.AssetDesc{
+					Tkn_currency: asset.Tkn.Currency,
+					Tkn_value:    asset.Tkn.Value.ToUint256(),
+					Tkt_category: asset.Tkt.Category,
+					Tkt_value:    asset.Tkt.Value,
 				}
-				s_desc_o.Outs = append(s_desc_o.Outs, out_o)
+				cpt.GenAssetCC(&asset_desc)
+				balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
 			}
-			s.Desc_Os = append(s.Desc_Os, s_desc_o)
+		}
+		for _, out_o := range preTx.desc_o.outs {
+			s_out_o := stx.Out_O{}
+			s_out_o.Asset = out_o.Asset.Clone()
+			{
+				asset := s_out_o.Asset.ToCompleteAsset()
+				asset_desc := cpt.AssetDesc{
+					Tkn_currency: asset.Tkn.Currency,
+					Tkn_value:    asset.Tkn.Value.ToUint256(),
+					Tkt_category: asset.Tkt.Category,
+					Tkt_value:    asset.Tkt.Value,
+				}
+				cpt.GenAssetCC(&asset_desc)
+				balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+			}
+			s_out_o.Memo = out_o.Memo
+			switch out_o.Z {
+			case tx.TYPE_O:
+				pkr := keys.Addr2PKr(&out_o.Addr, keys.RandUint256().NewRef())
+				s_out_o.Addr = pkr
+			case tx.TYPE_N:
+				s_out_o.Addr = out_o.Addr
+			default:
+				panic("Gen desc_o out but z is type_z")
+			}
+			s.Desc_O.Outs = append(s.Desc_O.Outs, s_out_o)
 		}
 
 		addr := keys.Seed2Addr(seed)
-		var from_r *keys.Uint256
-		if type_o_addr != nil {
-			from_r = new(keys.Uint256)
-			copy(from_r[:], type_o_addr[:16])
+		var from_r keys.Uint256
+		if t.FromRnd != nil {
+			copy(from_r[:], t.FromRnd[:])
 		} else {
+			from_r = keys.RandUint256()
 		}
-		s.From = keys.Addr2PKr(&addr, from_r)
+		s.From = keys.Addr2PKr(&addr, &from_r)
 
 		hash_o := s.ToHash_for_z()
-		if desc_zs, err := genDesc_Zs(seed, &preTx, &hash_o); err != nil {
+		if desc_z, err := genDesc_Zs(seed, &preTx, &hash_o, &balance_desc); err != nil {
 			e = err
 		} else {
-			s.Desc_Zs = desc_zs
+			s.Desc_Z = desc_z
 		}
 
-		hash_z := s.ToHash_for_o()
+		{
+			hash_z := s.ToHash_for_o()
+			balance_desc.Hash = hash_z
 
-		for _, desc_o := range s.Desc_Os {
-			if p_desc_o, ok := preTx.desc_os[desc_o.Currency]; !ok {
-				panic(fmt.Errorf("can not find desc_o for %v !!!", desc_o.Currency))
+			if sign, err := keys.SignPKr(seed, &hash_z, &s.From); err != nil {
+				e = err
 				return
 			} else {
-				for i := range p_desc_o.ins {
-					if sign, err := keys.SignOAddr(seed, &hash_z, nil, nil); err == nil {
-						desc_o.Ins[i].Sign = sign
-					} else {
-						e = err
-						return
-					}
+				s.Sign = sign
+			}
+
+			for i, s_in_o := range preTx.desc_o.ins {
+				if sign, err := keys.SignPKr(seed, &hash_z, &s_in_o.Out_O.Addr); err != nil {
+					e = err
+					return
+				} else {
+					s.Desc_O.Ins[i].Sign = sign
 				}
 			}
+
+			cpt.SignBalance(&balance_desc)
+			s.Bcr = balance_desc.Bcr
+			s.Bsign = balance_desc.Bsign
 		}
 
 		for _, used_out := range preTx.uouts {
-			state1.UpdateOutStat(&state.State0, &used_out)
+			state1.UpdateOutStat(st1.State0, &used_out)
 		}
 
 		return
@@ -137,145 +162,297 @@ func CheckInt(i *utils.I256) bool {
 	return CheckUint(&abs)
 }
 
-func Verify(s *stx.T, state *zstate.State) (e error) {
+func Verify(s *stx.T, state *zstate.State0) (e error) {
+	return Verify_state1(s, state)
+}
+func Verify_state1(s *stx.T, state *zstate.State0) (e error) {
+	balance_desc := cpt.BalanceDesc{}
+
 	hash_z := s.ToHash_for_o()
-	for _, desc_o := range s.Desc_Os {
-		if !CheckInt(&desc_o.Z2O) {
-			e = errors.New("verify check z2o too big")
-			return
+	balance_desc.Hash = hash_z
+
+	if !CheckUint(&s.Fee) {
+		e = errors.New("txs.verify check fee too big")
+		return
+	}
+
+	{
+		asset_desc := cpt.AssetDesc{
+			Tkn_currency: utils.StringToUint256("SERO"),
+			Tkn_value:    s.Fee.ToUint256(),
+			Tkt_category: keys.Empty_Uint256,
+			Tkt_value:    keys.Empty_Uint256,
 		}
-		if !CheckUint(&desc_o.Fee) {
-			e = errors.New("verify check fee too big")
+		cpt.GenAssetCC(&asset_desc)
+		balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+	}
+
+	if !keys.VerifyPKr(&hash_z, &s.Sign, &s.From) {
+		e = errors.New("txs.verify from verify failed")
+		return
+	}
+
+	for _, in_o := range s.Desc_O.Ins {
+		if ok := state.HasIn(&in_o.Root); ok {
+			e = errors.New("txs.verify in already in nils")
 			return
+		} else {
 		}
-		balance := utils.NewI256(0)
-		balance.AddI(&desc_o.Z2O)
-		balance.SubU(&desc_o.Fee)
-		for _, in := range desc_o.Ins {
-			if ok := state.State0.HasIn(&in.Root); ok {
-				e = errors.New("in already in nils")
-				return
-			} else {
-			}
-			if src, err := state.State0.GetOut(&in.Root); e == nil {
-				if src.IsO() {
-					if err := verifyIn_O(&hash_z, &in.Sign, nil); err == nil {
-						if !CheckUint(&src.Out_O.Out.Value) {
-							e = errors.New("verify check out value too big")
-							return
+		if src, err := state.GetOut(&in_o.Root); e == nil {
+			if src.IsO() {
+				if keys.VerifyPKr(&hash_z, &in_o.Sign, &src.Out_O.Addr) {
+					{
+						asset := src.Out_O.Asset.ToCompleteAsset()
+						asset_desc := cpt.AssetDesc{
+							Tkn_currency: asset.Tkn.Currency,
+							Tkn_value:    asset.Tkn.Value.ToUint256(),
+							Tkt_category: asset.Tkt.Category,
+							Tkt_value:    asset.Tkt.Value,
 						}
-						balance.AddU(&src.Out_O.Out.Value)
-						if !CheckInt(&balance) {
-							e = errors.New("verify check balance too big")
-							return
-						}
-					} else {
-						e = err
-						return
+						cpt.GenAssetCC(&asset_desc)
+						balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
 					}
 				} else {
-					e = errors.New("txs.Verify src is z,but in is o")
+					e = errors.New("txs.verify in_o verify failed")
 					return
 				}
 			} else {
-				e = err
+				e = errors.New("txs.Verify src is z,but in is o")
 				return
 			}
-		}
-
-		for _, out := range desc_o.Outs {
-			balance.SubU(&out.Value)
-			if !CheckInt(&balance) {
-				e = errors.New("verify check balance too big")
-				return
-			}
-		}
-
-		if balance.Cmp(&utils.I256_0) != 0 {
-			e = errors.New("Verify o banlance is not 0")
-			return
 		} else {
+			e = err
+			return
+		}
+	}
+	for _, out_o := range s.Desc_O.Outs {
+		if out_o.Asset.Tkn != nil {
+			if !CheckUint(&out_o.Asset.Tkn.Value) {
+				e = errors.New("txs.verify check balance too big")
+				return
+			} else {
+				{
+					asset := out_o.Asset.ToCompleteAsset()
+					asset_desc := cpt.AssetDesc{
+						Tkn_currency: asset.Tkn.Currency,
+						Tkn_value:    asset.Tkn.Value.ToUint256(),
+						Tkt_category: asset.Tkt.Category,
+						Tkt_value:    asset.Tkt.Value,
+					}
+					cpt.GenAssetCC(&asset_desc)
+					balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+				}
+			}
 		}
 	}
 
-	for _, desc_z := range s.Desc_Zs {
-		if ok := state.State0.HasIn(&desc_z.In.Nil); ok {
-			e = errors.New("Verify in already in nils")
+	if state.Cur.Index == int64(44) {
+		i := 0
+		i++
+	}
+
+	for _, in_z := range s.Desc_Z.Ins {
+		if ok := state.HasIn(&in_z.Nil); ok {
+			e = errors.New("txs.verify in already in nils")
 			return
 		} else {
 		}
-		if out, err := state.State0.GetOut(&desc_z.In.Anchor); err != nil {
+		if out, err := state.GetOut(&in_z.Anchor); err != nil {
 			e = err
 			return
 		} else {
 			if out == nil {
-				e = errors.New("Verify can not find out for anchor")
+				e = errors.New("txs.verify can not find out for anchor")
 			} else {
 			}
 		}
 	}
 
-	if err := verifyDesc_Zs(s); err != nil {
+	if err := verifyDesc_Zs(s, &balance_desc); err != nil {
 		e = err
 		return
 	} else {
 	}
 
+	balance_desc.Bcr = s.Bcr
+	balance_desc.Bsign = s.Bsign
+	if err := cpt.VerifyBalance(&balance_desc); err != nil {
+		e = err
+		return
+	}
+
 	return
 }
 
-func GetOuts(tk *keys.Uint512, state *zstate.State) (outs []*state1.OutState1, e error) {
+func GetOuts(tk *keys.Uint512) (outs []*state1.OutState1, e error) {
 	st1 := state1.CurrentState1()
-	for _, root := range st1.G2wouts {
-		if src, err := st1.GetOut(&root); err != nil {
-			e = err
-			return
-		} else {
-			if src != nil {
-				if src.IsMine(tk) {
-					if state.State0.HasIn(&src.Trace) {
-						panic("get outs src.nil in state0")
-					}
-					if root != *src.Pg.Root.ToUint256() {
-						panic("get outs wout.root!=src.Root")
-					}
-					outs = append(outs, src)
-				}
-			} else {
-				e = errors.New("get outs can not find src by root")
-			}
-		}
-	}
-	state1.SortOutStats(&state.State0, outs)
-	return
+	return st1.GetOuts(tk)
 }
 
-func GetRoots(tk *keys.Uint512, state *zstate.State, v *utils.U256, currency *keys.Uint256) (roots []keys.Uint256, amount utils.U256, e error) {
-	value := v.ToI256()
-	if outs, err := GetOuts(tk, state); err != nil {
+func GetRoots(tk *keys.Uint512, costTkns map[keys.Uint256]utils.U256, costTkts map[keys.Uint256][]keys.Uint256) (roots []keys.Uint256, tknMap map[keys.Uint256]utils.U256, tktMap map[keys.Uint256][]keys.Uint256, e error) {
+	tknMap = make(map[keys.Uint256]utils.U256)
+	tktMap = make(map[keys.Uint256][]keys.Uint256)
+	if outs, err := GetOuts(tk); err != nil {
 		e = err
 		return
 	} else {
-		for _, out := range outs {
-			root := out.Pg.Root.ToUint256()
-			if out.Out_O.Currency == *currency {
+		for cy, value := range costTkns {
+			tknRoots, amount, tkts, err := GetTknRoots(outs, &value, &cy)
+			if err != nil {
+				e = err
+				return
+			} else {
+				tknMap[cy] = amount
+				roots = append(roots, tknRoots...)
+				for catg, value := range tkts {
+					tktMap[catg] = append(tktMap[catg], value...)
+				}
+			}
+		}
+
+		for catg, value := range costTkts {
+			if _, ok := tktMap[catg]; ok {
+				for _, v := range value {
+					tktMap[catg] = uint256Remove(tktMap[catg], v)
+				}
+				if len(tktMap[catg]) == 0 {
+					delete(tktMap, catg)
+				}
+			}
+		}
+		for catg, value := range costTkts {
+			tktRoots, tkns, err := GeTktRoots(outs, &catg, value, roots)
+			if err != nil {
+				e = err
+				return
+			} else {
+				roots = append(roots, tktRoots...)
+				for cy, value := range tkns {
+					if _, ok := tknMap[cy]; ok {
+						amount := tknMap[cy]
+						amount.AddU(&value)
+						tknMap[cy] = amount
+					} else {
+						tknMap[cy] = value
+					}
+				}
+			}
+		}
+		for cy, value := range costTkns {
+			if balance, ok := tknMap[cy]; ok {
+				balance.SubU(&value)
+				if balance.Cmp(&utils.U256_0) > 0 {
+					tknMap[cy] = balance
+				} else {
+					delete(tknMap, cy)
+				}
+
+			}
+		}
+
+	}
+	return
+
+}
+
+func GetTknRoots(outs []*state1.OutState1, v *utils.U256, currency *keys.Uint256) (roots []keys.Uint256, amount utils.U256, tkts map[keys.Uint256][]keys.Uint256, e error) {
+	tkts = make(map[keys.Uint256][]keys.Uint256)
+	value := v.ToI256()
+	for _, out := range outs {
+		root := out.Pg.Root.ToUint256()
+		if out.Out_O.Asset.Tkn != nil {
+			if out.Out_O.Asset.Tkn.Currency == *currency {
 				roots = append(roots, *root)
-				amount.AddU(&out.Out_O.Out.Value)
+				amount.AddU(&out.Out_O.Asset.Tkn.Value)
 				out_o := out.Out_O
-				if value.Cmp(out_o.Out.Value.ToI256().ToRef()) < 0 {
+				if out_o.Asset.Tkt != nil {
+					if ts, ok := tkts[out_o.Asset.Tkt.Category]; ok {
+						ts = append(ts, out_o.Asset.Tkt.Value)
+						tkts[out_o.Asset.Tkt.Category] = ts
+					} else {
+						tkts[out_o.Asset.Tkt.Category] = []keys.Uint256{out_o.Asset.Tkt.Value}
+					}
+				}
+				if value.Cmp(out_o.Asset.Tkn.Value.ToI256().ToRef()) < 0 {
 					value = utils.NewI256(0)
 					break
 				} else {
-					value.SubU(&out_o.Out.Value)
+					value.SubU(&out_o.Asset.Tkn.Value)
 				}
 			} else {
 			}
 		}
-		if value.Cmp(&utils.I256_0) == 0 {
-			return
-		} else {
-			e = errors.New("can not find enough outs")
-			return
+	}
+	if value.Cmp(&utils.I256_0) == 0 {
+		return
+	} else {
+		e = errors.New("can not find enough outs")
+		return
+	}
+
+}
+
+func GeTktRoots(outs []*state1.OutState1, categroy *keys.Uint256, tkts []keys.Uint256, exits []keys.Uint256) (roots []keys.Uint256, tkns map[keys.Uint256]utils.U256, e error) {
+	tkns = map[keys.Uint256]utils.U256{}
+	tktSize := len(tkts)
+	for _, out := range outs {
+		root := out.Pg.Root.ToUint256()
+		if categroy != nil && tktSize > 0 {
+			if out.Out_O.Asset.Tkt != nil {
+				if out.Out_O.Asset.Tkt.Category == *categroy {
+					if uint256Contains(tkts, out.Out_O.Asset.Tkt.Value) {
+						if !uint256Contains(exits, *root) {
+							if out.Out_O.Asset.Tkn != nil {
+								if tkn, ok := tkns[out.Out_O.Asset.Tkn.Currency]; ok {
+									tkn.AddU(&out.Out_O.Asset.Tkn.Value)
+									tkns[out.Out_O.Asset.Tkn.Currency] = tkn
+								} else {
+									tkns[out.Out_O.Asset.Tkn.Currency] = out.Out_O.Asset.Tkn.Value
+								}
+
+							}
+							roots = append(roots, *root)
+						}
+						tktSize--
+					}
+				} else {
+
+				}
+			}
+		}
+		if tktSize == 0 {
+			break
 		}
 	}
+	if tktSize == 0 {
+		return
+	} else {
+		e = errors.New("can not find enough ticket outs")
+		return
+	}
+
+}
+
+func uint256Contains(arrs []keys.Uint256, item keys.Uint256) bool {
+	for _, a := range arrs {
+		if a == item {
+			return true
+		}
+	}
+	return false
+
+}
+
+func uint256Remove(slice []keys.Uint256, elem keys.Uint256) []keys.Uint256 {
+	if len(slice) == 0 {
+		return slice
+	}
+	for i, v := range slice {
+		if v == elem {
+			slice = append(slice[:i], slice[i+1:]...)
+			return uint256Remove(slice, elem)
+			break
+		}
+	}
+	return slice
 }

@@ -18,7 +18,7 @@ package keystore
 
 import (
 	"github.com/sero-cash/go-czero-import/keys"
-	sero "github.com/sero-cash/go-sero"
+	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -28,8 +28,8 @@ import (
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txs"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
-	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original
@@ -112,30 +112,52 @@ func (w *keystoreWallet) EncryptTx(account accounts.Account, tx *types.Transacti
 func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
 	w.keystore.mu.Lock()
 	defer w.keystore.mu.Unlock()
-	for i, ctx := range txt.CTxs {
-		tk := keys.Seed2Tk(seed.SeedToUint256())
-		outs, amount, err := txs.GetRoots(&tk, state.GetZState(), ctx.Cost().ToRef(), &ctx.Currency)
-		if err != nil {
-			return nil, err
+	ins := []tx.In{}
+	costTkn := txt.TokenCost()
+	costTkt := txt.TikectCost()
+	tk := keys.Seed2Tk(seed.SeedToUint256())
+	outs, tknMap, tktMap, err := txs.GetRoots(&tk, costTkn, costTkt)
+	if err != nil {
+		return nil, err
+	}
+	for _, out := range outs {
+		ins = append(ins, tx.In{Root: out})
+	}
+	for cy, value := range tknMap {
+		token := &assets.Token{
+			Currency: cy,
+			Value:    value,
 		}
-		ins := []tx.In{}
-		for _, out := range outs {
-			ins = append(ins, tx.In{Root: out})
+		asset := assets.Asset{
+			Tkn: token,
 		}
-		txt.CTxs[i].Ins = ins
-
-		balance := amount
-		balance.SubU(ctx.Cost().ToRef())
-
-		if balance.Cmp(&utils.U256_0) > 0 {
+		selfOut := tx.Out{
+			Addr:  keys.Seed2Addr(seed.SeedToUint256()),
+			Asset: asset,
+			Z:     tx.TYPE_Z,
+		}
+		txt.Outs = append(txt.Outs, selfOut)
+	}
+	for catg, value := range tktMap {
+		for _, v := range value {
+			ticket := &assets.Ticket{
+				Category: catg,
+				Value:    v,
+			}
+			asset := assets.Asset{
+				Tkt: ticket,
+			}
 			selfOut := tx.Out{
 				Addr:  keys.Seed2Addr(seed.SeedToUint256()),
-				Value: balance,
+				Asset: asset,
 				Z:     tx.TYPE_Z,
 			}
-			txt.CTxs[i].Outs = append(txt.CTxs[i].Outs, selfOut)
+			txt.Outs = append(txt.Outs, selfOut)
 		}
+
 	}
+
+	txt.Ins = ins
 
 	Ehash := rlpHash([]interface{}{
 		btx.GasPrice(),
@@ -144,23 +166,22 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 	})
 	copy(txt.Ehash[:], Ehash[:])
 
-	log.Info("EncryptTxWithSeed : ", "ctx_num", len(txt.CTxs))
-	for _, ctx := range txt.CTxs {
-		for i, in := range ctx.Ins {
-			log.Info("    ctx_in : ", "index", i, "root", in.Root)
-		}
-		for i, out := range ctx.Outs {
-			log.Info("    ctx_out : ", "index", i, "to", hexutil.Encode(out.Addr[:]))
-		}
+	log.Info("EncryptTxWithSeed : ", "in_num", len(txt.Ins), "out_num", len(txt.Outs))
+
+	for i, in := range txt.Ins {
+		log.Info("    ctx_in : ", "index", i, "root", in.Root)
+	}
+	for i, out := range txt.Outs {
+		log.Info("    ctx_out : ", "index", i, "to", hexutil.Encode(out.Addr[:]))
 	}
 
-	stx, err := txs.Gen(seed.SeedToUint256(), txt, state.GetZState())
+	stx, err := txs.Gen(seed.SeedToUint256(), txt)
 	if err != nil {
 		return nil, err
 	}
 
-	for i, desc_z := range stx.Desc_Zs {
-		log.Info("    desc_z : ", "index", i, "nil", hexutil.Encode(desc_z.In.Nil[:]), "trace", hexutil.Encode(desc_z.In.Trace[:]))
+	for i, in := range stx.Desc_Z.Ins {
+		log.Info("    desc_z : ", "index", i, "nil", hexutil.Encode(in.Nil[:]), "trace", hexutil.Encode(in.Trace[:]))
 	}
 
 	return btx.WithEncrypt(&stx)
@@ -196,6 +217,6 @@ func (w *keystoreWallet) EncryptTxWithPassphrase(account accounts.Account, passp
 
 func (w *keystoreWallet) IsMine(onceAddress common.Address) bool {
 	tk := w.account.Tk.ToUint512()
-	return keys.IsMyPKr(tk, onceAddress.ToUint512())
-
+	succ, _ := keys.IsMyPKr(tk, onceAddress.ToUint512())
+	return succ
 }

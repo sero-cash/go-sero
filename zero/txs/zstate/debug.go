@@ -36,7 +36,7 @@ func Need_debug() bool {
 func Debug_State0_addout_assert(state *State0, os *OutState0) {
 	if Need_debug() {
 		trees := state.GenState0Trees()
-		leaf := os.ToCommitment()
+		leaf := os.ToRootCM()
 		tree := trees.Trees[os.Index]
 		root := tree.RootKey()
 		if out, err := state.GetOut(&root); err != nil {

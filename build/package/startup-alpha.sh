@@ -1,15 +1,12 @@
 #!/bin/bash
 PACKAGEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/working/czero/lib/
-rm -rf ~/working/*
-cp -rf ${PACKAGEDIR}/* ~/working/
-cd ~/working
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PACKAGEDIR}/czero/lib/
 RPCPORT=8545
 SERVERPORT=60602
 RPCADDR=$(hostname -I|awk -F ' ' '{print $1}')
 RPCAPI='sero,web3'
-DATADIR='~/.datadir'
-LOGDIR='../.log'
+DATADIR="${PACKAGEDIR}/../datadir"
+LOGDIR="${PACKAGEDIR}/../log"
 PATTERN_MAIN_PROCESS="gero.*datadir="
 killProcess() {
     if [[ -z $1 ]]; then
@@ -26,4 +23,4 @@ if [ ! -d ${LOGDIR} ]; then
 fi
 killProcess ${PATTERN_MAIN_PROCESS}
 sleep 10
-nohup ~/working/bin/gero --alpha --datadir=${DATADIR} --rpc --rpcport ${RPCPORT} --rpcaddr ${RPCADDR} --rpcapi ${RPCAPI} --port ${SERVERPORT} --rpccorsdomain "*" &> ${LOGDIR}/gero.log &
+nohup ${PACKAGEDIR}/bin/gero --alpha --datadir=${DATADIR} --rpc --rpcport ${RPCPORT} --rpcaddr ${RPCADDR} --rpcapi ${RPCAPI} --port ${SERVERPORT} --rpccorsdomain "*" &> ${LOGDIR}/gero.log &

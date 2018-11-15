@@ -530,7 +530,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         var SolidityTypeAddress = function () {
             this._inputFormatter = f.formatInputAddress;
             this._outputFormatter = f.formatOutputAddress;
-            this._outputLenght = 64;
+            this._inputSeroAddressFormatter = f.formatInputFullAddress;
+            this._outSeroAddressFormatter = f.formatOutputAddress;
         };
 
         SolidityTypeAddress.prototype = new SolidityType({});
@@ -625,6 +626,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          */
 
         var f = require('./formatters');
+        var utils = require('../utils/utils')
 
         var SolidityTypeAddress = require('./address');
         var SolidityTypeBool = require('./bool');
@@ -676,7 +678,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {Object} plain param
          * @return {String} encoded plain param
          */
-        SolidityCoder.prototype.encodeParam = function (type, param) {
+        SolidityCoder.prototype.encodeParam = function (type, param,rand,sero) {
             return this.encodeParams([type], [param]);
         };
 
@@ -728,6 +730,62 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
 
             return encodeds;
+        };
+
+        SolidityCoder.prototype.opParams = function (types, params,rand,sero,dy) {
+            var solidityTypes = this.getSolidityTypes(types);
+            var addressParams = solidityTypes.map(function (solidityType, index) {
+                if (solidityType instanceof SolidityTypeAddress){
+                    return  solidityType.address(params[index], types[index],false)
+                }else{
+                    return
+                }
+            })[0]||'';
+            if (addressParams){
+                if (utils.isArray(addressParams)){
+                }else{
+                    addressParams = [addressParams];
+                }
+            }else {
+                addressParams = [];
+            }
+
+            var convertResult =  sero.convertAddressParams(rand,addressParams,dy);
+            rand = convertResult.rand;
+            if (addressParams.length >0 ){
+                var addrMap = convertResult.addr;
+                var convertParams =  solidityTypes.map(function (solidityType, index) {
+                    return  solidityType.convertAddress(params[index], types[index],addrMap)
+                });
+                params = convertParams;
+            }
+            var result ={};
+            result.params = params;
+            result.rand = rand;
+            return result;
+
+        };
+
+        SolidityCoder.prototype.addressPrefix = function (types, params,rand) {
+            var solidityTypes = this.getSolidityTypes(types);
+            var addressParams = solidityTypes.map(function (solidityType, index) {
+                if (solidityType instanceof SolidityTypeAddress){
+                    return  solidityType.address(params[index], types[index],true)
+                }else{
+                    return
+                }
+            })[0]||'';
+            if (addressParams){
+                if (utils.isArray(addressParams)){
+                }else{
+                    addressParams = [addressParams]
+                }
+            }else {
+                addressParams = [];
+            }
+            var result =rand+utils.padLeft(utils.toBigNumber(addressParams.length).toString(16),4)+addressParams.join("");
+
+            return result;
         };
 
 
@@ -825,12 +883,12 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {String} bytes
          * @return {Array} array of plain params
          */
-        SolidityCoder.prototype.decodeParams = function (types, bytes) {
+        SolidityCoder.prototype.decodeParams = function (types, bytes,sero) {
             var solidityTypes = this.getSolidityTypes(types);
             var offsets = this.getOffsets(types, solidityTypes);
 
             return solidityTypes.map(function (solidityType, index) {
-                return solidityType.decode(bytes, offsets[index],  types[index], index);
+                return solidityType.decode(bytes, offsets[index],  types[index],sero);
             });
         };
 
@@ -872,7 +930,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         module.exports = coder;
 
-    },{"./address":4,"./bool":5,"./bytes":6,"./dynamicbytes":8,"./formatters":9,"./int":10,"./real":12,"./string":13,"./uint":15,"./ureal":16}],8:[function(require,module,exports){
+    },{"../utils/utils":21,"./address":4,"./bool":5,"./bytes":6,"./dynamicbytes":8,"./formatters":9,"./int":10,"./real":12,"./string":13,"./uint":15,"./ureal":16}],8:[function(require,module,exports){
         var f = require('./formatters');
         var SolidityType = require('./type');
 
@@ -1017,7 +1075,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @returns {SolidityParam}
          */
         var formatInputAddress = function (value) {
-            var bytes = base58.decode(value).slice(0,20);
+            var bytes = base58.decode(value).slice(44);
             var result = utils.bytesToHex(bytes).substr(2);
             result = utils.padLeft(result, 64);
             return new SolidityParam(result);
@@ -1032,8 +1090,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          */
         var formatInputFullAddress = function (value) {
             var bytes = base58.decode(value);
-            var result = utils.bytesToHex(bytes).substr(2);
-            return new SolidityParam(result);
+            return utils.bytesToHex(bytes).substr(2);
         };
 
 
@@ -1434,6 +1491,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
     },{"./formatters":9,"./type":14}],14:[function(require,module,exports){
         var f = require('./formatters');
         var SolidityParam = require('./param');
+        var SolidityTypeAddress = require('./address');
+        var utils = require('../utils/utils')
 
         /**
          * SolidityType prototype is used to encode/decode solidity params of certain type
@@ -1655,6 +1714,55 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return value;
         };
 
+        SolidityType.prototype.address = function (value, name,isHex) {
+
+            var self = this;
+            if (this.isDynamicArray(name) || this.isStaticArray(name)) {
+
+                return (function () {
+                    var nestedName = self.nestedName(name);
+
+                    var result = [];
+                    value.forEach(function (v) {
+                        result = result.concat(self.address(v, nestedName,isHex));
+                    });
+                    return result;
+                })();
+
+            }
+            if (isHex) {
+                return self._inputSeroAddressFormatter(value);
+            }else{
+                return value;
+            }
+
+        };
+
+        SolidityType.prototype.convertAddress = function (value, name,addrMap) {
+            var self = this;
+            if (this.isDynamicArray(name) || this.isStaticArray(name)) {
+
+                return (function () {
+                    var nestedName = self.nestedName(name);
+
+                    var result = [];
+                    value.forEach(function (v) {
+                        result.push(self.convertAddress(v, nestedName,addrMap));
+                    });
+                    return result;
+                })();
+            }
+            if ( self._inputSeroAddressFormatter){
+                if (addrMap.hasOwnProperty(value)) {
+                    return addrMap[value]
+                }else{
+                    return value;
+                }
+            }else{
+                return value;
+            }
+        };
+
 
         /**
          * Should be used to decode value from bytes
@@ -1665,7 +1773,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {String} name type name
          * @returns {Object} decoded value
          */
-        SolidityType.prototype.decode = function (bytes, offset, name) {
+        SolidityType.prototype.decode = function (bytes, offset, name,sero) {
             var self = this;
 
             if (this.isDynamicArray(name)) {
@@ -1681,7 +1789,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     var result = [];
 
                     for (var i = 0; i < length * roundedNestedStaticPartLength; i += roundedNestedStaticPartLength) {
-                        result.push(self.decode(bytes, arrayStart + i, nestedName));
+                        result.push(self.decode(bytes, arrayStart + i, nestedName,sero));
                     }
 
                     return result;
@@ -1699,7 +1807,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     var result = [];
 
                     for (var i = 0; i < length * roundedNestedStaticPartLength; i += roundedNestedStaticPartLength) {
-                        result.push(self.decode(bytes, arrayStart + i, nestedName));
+                        result.push(self.decode(bytes, arrayStart + i, nestedName,sero));
                     }
 
                     return result;
@@ -1716,13 +1824,20 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }
 
             var length = this.staticPartLength(name);
-            var param = new SolidityParam(bytes.substr(offset * 2, length * 2));
-            return this._outputFormatter(param, name);
+
+            if (this._outSeroAddressFormatter) {
+                var fullAddress = sero.getFullAddress("0x"+bytes.substr(offset * 2, length * 2).substr(24));
+                return fullAddress;
+            }else{
+                var param = new SolidityParam(bytes.substr(offset * 2, length * 2));
+                return this._outputFormatter(param, name);
+            }
+
         };
 
         module.exports = SolidityType;
 
-    },{"./formatters":9,"./param":11}],15:[function(require,module,exports){
+    },{"../utils/utils":21,"./address":4,"./formatters":9,"./param":11}],15:[function(require,module,exports){
         var f = require('./formatters');
         var SolidityType = require('./type');
         var utils = require('../utils/utils');
@@ -2865,10 +2980,11 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         var Filter = require('./filter');
         var watches = require('./methods/watches');
 
-        var AllSolidityEvents = function (requestManager, json, address) {
-            this._requestManager = requestManager;
+        var AllSolidityEvents = function (sero, json, address) {
+            this._requestManager = sero.__requestManager;
             this._json = json;
             this._address = address;
+            this._sero =sero;
         };
 
         AllSolidityEvents.prototype.encode = function (options) {
@@ -3036,9 +3152,35 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     return input.type;
                 });
             }).map(function (types) {
-                return coder.encodeSeroParams(types, params);
-            })[0] || [];
+                return coder.encodeParams(types, params);
+            })[0] || '';
         };
+
+        var encodeConstructorPrefix = function (abi, params,rand) {
+            return abi.filter(function (json) {
+                return json.type === 'constructor' && json.inputs.length === params.length;
+            }).map(function (json) {
+                return json.inputs.map(function (input) {
+                    return input.type;
+                });
+            }).map(function (types) {
+                return coder.addressPrefix(types, params,rand);
+            })[0] || coder.addressPrefix([], [],rand);
+        };
+
+        var opArgs = function (abi, params,rand,sero,dy) {
+            return abi.filter(function (json) {
+                return json.type === 'constructor' && json.inputs.length === params.length;
+            }).map(function (json) {
+                return json.inputs.map(function (input) {
+                    return input.type;
+                });
+            }).map(function (types) {
+                return coder.opParams(types, params,rand,sero,dy);
+            })[0] || '';
+        };
+
+
 
         /**
          * Should be called to add functions to contract object
@@ -3069,11 +3211,11 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 return json.type === 'event';
             });
 
-            var All = new AllEvents(contract._sero._requestManager, events, contract.address);
+            var All = new AllEvents(contract._sero, events, contract.address);
             All.attachToContract(contract);
 
             events.map(function (json) {
-                return new SolidityEvent(contract._sero._requestManager, json, contract.address);
+                return new SolidityEvent(contract._sero, json, contract.address);
             }).forEach(function (e) {
                 e.attachToContract(contract);
             });
@@ -3095,8 +3237,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             // wait for receipt
             var filter = contract._sero.filter('latest', function(e){
                 if (!e && !callbackFired) {
-                    count++;
 
+                    count++;
+                    console.log("checkForContractAddress ccount =" + count)
                     // stop watching after 50 blocks (timeout)
                     if (count > 50) {
 
@@ -3147,6 +3290,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                             }
                         });
                     }
+                }else {
+                    console.log("erro filter " + e)
                 }
             });
         };
@@ -3201,8 +3346,14 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 }
                 options.abi =this.abi;
 
-                var seroParam = encodeConstructorParams(this.abi, args);
-                options.pairs = seroParam;
+                var rand ="0x";
+                var argsResult = opArgs(this.abi,args,rand,this.sero,false);
+                args = argsResult.params;
+                rand = argsResult.rand;
+                var bytes = encodeConstructorParams(this.abi, args);
+                options.data += bytes;
+                var prefix = encodeConstructorPrefix(this.abi,args,rand);
+                options.data = prefix +options.data.substr(2);
 
                 if (callback) {
 
@@ -3283,8 +3434,14 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 options = args.pop();
             }
 
+            var rand ="0x";
+            argsResult = opArgs(this.abi,args,rand,this.sero,false);
+            args = argsResult.params;
+            rand = argsResult.rand;
             var bytes = encodeConstructorParams(this.abi, args);
             options.data += bytes;
+            var prefix = encodeConstructorPrefix(this.abi,args,rand);
+            options.data = prefix +options.data.substr(2);
 
             return options.data;
         };
@@ -3383,12 +3540,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         /**
          * This prototype should be used to create event filters
          */
-        var SolidityEvent = function (requestManager, json, address) {
-            this._requestManager = requestManager;
+        var SolidityEvent = function (sero, json, address) {
+            this._requestManager = sero._requestManager;
             this._params = json.inputs;
             this._name = utils.transformToFullName(json);
             this._address = address;
             this._anonymous = json.anonymous;
+            this._sero = sero;
         };
 
         /**
@@ -3469,7 +3627,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 if (value === undefined || value === null) {
                     return null;
                 }
-
+                var rand = utils.bytesToHex(utils.base58ToBytes(this._address).slice(0,16));
+                value = coder.opParams([i.type],[value],rand,this._sero,false)[0]
                 if (utils.isArray(value)) {
                     return value.map(function (v) {
                         return '0x' + coder.encodeParam(i.type, v);
@@ -3498,10 +3657,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
             var argTopics = this._anonymous ? data.topics : data.topics.slice(1);
             var indexedData = argTopics.map(function (topics) { return topics.slice(2); }).join("");
-            var indexedParams = coder.decodeParams(this.types(true), indexedData);
+            var indexedParams = coder.decodeParams(this.types(true), indexedData,this._sero);
 
             var notIndexedData = data.data.slice(2);
-            var notIndexedParams = coder.decodeParams(this.types(false), notIndexedData);
+            var notIndexedParams = coder.decodeParams(this.types(false), notIndexedData,this._sero);
 
             var result = formatters.outputLogFormatter(data);
             result.event = this.displayName();
@@ -3992,36 +4151,33 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             tx.gas = utils.toDecimal(tx.gas);
             tx.gasPrice = utils.toBigNumber(tx.gasPrice);
             tx.value = utils.toBigNumber(tx.value);
-
-            if (tx.stx.Desc_Os) {
-                var in_os = []
-                var out_os = []
-                tx.stx.Desc_Os.forEach(function (e) {
-                    var curreny = utils.bytesToString(utils.hexToBytes(utils.fromDecimal(utils.toBigNumber(e.Currency))));
-                    if (e.Ins) {
-                        e.Ins.forEach(function (i) {
-                            var in_o = {};
-                            in_o['currency'] = curreny;
-                            in_o['root'] = i
-                            in_os.push(in_o)
-                        });
+            if (tx.stx.Desc_O){
+                tx.stx.Desc_O_Ins=tx.stx.Desc_O.Ins;
+                var O_Outs=[];
+                tx.stx.Desc_O.Outs.forEach(function(out){
+                    var out_O ={};
+                    if (utils.toBigNumber(out.Addr)!=0) {
+                        out_O.Addr = out.Addr;
                     }
-                    if (e.Outs) {
-                        e.Outs.forEach(function (o) {
-                            var out_o = {};
-                            out_o['currency'] = curreny;
-                            out_o['value'] = o.Value;
-                            out_o['addr'] = o.Addr;
-                            out_os.push(out_o)
-                        });
+                    if (out.Asset.Tkn){
+                        out_O.Currency = utils.bytesToString(utils.hexToBytes(utils.fromDecimal(utils.toBigNumber(out.Asset.Tkn.Currency))));
+                        out_O.Value = utils.toBigNumber(out.Asset.Tkn.Value);
                     }
-
+                    if (out.Asset.Tkt){
+                        out_O.Category = utils.bytesToString(utils.hexToBytes(utils.fromDecimal(utils.toBigNumber(out.Asset.Tkt.Category))));
+                        out_O.TktId = out.Asset.Tkt.Value;
+                    }
+                    out_O.Memo = out.Memo;
+                    O_Outs.push(out_O);
                 });
-                tx.In_Os = in_os;
-                tx.Out_Os = out_os;
+                tx.stx.Desc_O_Outs = O_Outs;
+                delete  tx.stx.Desc_O;
             }
-            tx.Desc_Zs = tx.stx.Desc_Zs;
-            delete tx.stx
+            if (tx.stx.Desc_Z){
+                tx.stx.Desc_Z_Ins=tx.stx.Desc_Z.Ins;
+                tx.stx.Desc_Z_Outs = tx.stx.Desc_Z.Outs;
+                delete  tx.stx.Desc_Z;
+            }
             return tx;
         };
 
@@ -4185,12 +4341,22 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         var outputBalanceFormatter = function(result) {
             if (!result) {
-                return result;
+                return ;
             }
-            for (var key in result){
-                result[key] = utils.toBigNumber(result[key]);
+            if (result.hasOwnProperty("tkn")){
+                if (result["tkn"]) {
+                    for (var key in result["tkn"]){
+                        result['tkn'][key] = utils.toBigNumber(result['tkn'][key]);
+                    }
+                }else {
+                    delete result.tkn
+                }
             }
-
+            if (result.hasOwnProperty('tkt')){
+                if (!result['tkt']){
+                    delete result.tkt
+                }
+            }
             return result;
         };
 
@@ -4305,9 +4471,14 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }
             this.validateArgs(args);
             options.to = this._address;
-            options.abi=[this.abi]
-            options.pairs = coder.encodeSeroParams(this._inputTypes,args);
-            options.data = '0x' +this.signature();
+            var dy = false;
+            if (options.hasOwnProperty("dy")){
+                dy = options.dy;
+            }
+            var rand = utils.bytesToHex(utils.base58ToBytes(this._address).slice(0,16));
+            var convertResult = coder.opParams(this._inputTypes,args,rand,this._sero,dy);
+            args = convertResult.params;
+            options.data = coder.addressPrefix(this._inputTypes,args,rand) + this.signature()+ coder.encodeParams(this._inputTypes, args);
             return options;
         };
 
@@ -4328,7 +4499,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }
 
             output = output.length >= 2 ? output.slice(2) : output;
-            var result = coder.decodeParams(this._outputTypes, output);
+            var result = coder.decodeParams(this._outputTypes, output,this._sero);
             return result.length === 1 ? result[0] : result;
         };
 
@@ -5768,6 +5939,18 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 outputFormatter: formatters.outputTransactionFormatter
             });
 
+            var convertAddressParams = new Method({
+                name: 'convertAddressParams',
+                call: 'sero_convertAddressParams',
+                params: 3,
+            });
+
+            var getFullAddress = new Method({
+                name: 'getFullAddress',
+                call: 'sero_getFullAddress',
+                params: 1,
+            });
+
             var getTransactionFromBlock = new Method({
                 name: 'getTransactionFromBlock',
                 call: transactionFromBlockCall,
@@ -5860,6 +6043,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 call,
                 estimateGas,
                 sendTransaction,
+                convertAddressParams,
+                getFullAddress,
                 compileSolidity,
                 compileLLL,
                 compileSerpent,

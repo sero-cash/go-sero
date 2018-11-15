@@ -39,6 +39,9 @@ func CurrentState1() *State1 {
 
 func Run(bc BlockChain) {
 	go run(bc)
+	for current_state1 != nil {
+		time.Sleep(time.Second * 1)
+	}
 }
 
 func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int, e error) {
