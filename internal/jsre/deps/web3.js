@@ -4147,40 +4147,18 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 tx.blockNumber = utils.toDecimal(tx.blockNumber);
             if(tx.transactionIndex !== null)
                 tx.transactionIndex = utils.toDecimal(tx.transactionIndex);
-            tx.nonce = utils.toDecimal(tx.nonce);
             tx.gas = utils.toDecimal(tx.gas);
             tx.gasPrice = utils.toBigNumber(tx.gasPrice);
-            tx.value = utils.toBigNumber(tx.value);
-
-            if (tx.stx.Desc_Os) {
-                var in_os = []
-                var out_os = []
-                tx.stx.Desc_Os.forEach(function (e) {
-                    var curreny = utils.bytesToString(utils.hexToBytes(utils.fromDecimal(utils.toBigNumber(e.Currency))));
-                    if (e.Ins) {
-                        e.Ins.forEach(function (i) {
-                            var in_o = {};
-                            in_o['currency'] = curreny;
-                            in_o['root'] = i
-                            in_os.push(in_o)
-                        });
-                    }
-                    if (e.Outs) {
-                        e.Outs.forEach(function (o) {
-                            var out_o = {};
-                            out_o['currency'] = curreny;
-                            out_o['value'] = o.Value;
-                            out_o['addr'] = o.Addr;
-                            out_os.push(out_o)
-                        });
-                    }
-
-                });
-                tx.In_Os = in_os;
-                tx.Out_Os = out_os;
+            if (tx.stx.Desc_O){
+                tx.stx.Desc_O_Ins=tx.stx.Desc_O.Ins;
+                tx.stx.Desc_O_Outs = tx.stx.Desc_O.Outs;
+                delete  tx.stx.Desc_O;
             }
-            tx.Desc_Zs = tx.stx.Desc_Zs;
-            delete tx.stx
+            if (tx.stx.Desc_Z){
+                tx.stx.Desc_Z_Ins=tx.stx.Desc_Z.Ins;
+                tx.stx.Desc_Z_Outs = tx.stx.Desc_Z.Outs;
+                delete  tx.stx.Desc_Z;
+            }
             return tx;
         };
 

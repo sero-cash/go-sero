@@ -1000,13 +1000,18 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 
 	//from, _ := types.Sender(abi, tx)
 
+	to := tx.To()
+
+	if to != nil && bytes.Equal(to.Data[:], (&common.Address{}).Data[:]) {
+		to = nil
+	}
 	result := &RPCTransaction{
 		From:     tx.From(),
 		Gas:      hexutil.Uint64(tx.Gas()),
 		GasPrice: (*hexutil.Big)(tx.GasPrice()),
 		Hash:     tx.Hash(),
 		Input:    hexutil.Bytes(tx.Data()),
-		To:       tx.To(),
+		To:       to,
 		Stx:      tx.Stxt(),
 	}
 	if blockHash != (common.Hash{}) {
@@ -1171,13 +1176,19 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 	//
 	//from, _ := types.Sender(abi, tx)
 
+	to := tx.To()
+
+	if to != nil && bytes.Equal(to.Data[:], (&common.Address{}).Data[:]) {
+		to = nil
+	}
+
 	fields := map[string]interface{}{
-		"blockHash":        blockHash,
-		"blockNumber":      hexutil.Uint64(blockNumber),
-		"transactionHash":  hash,
-		"transactionIndex": hexutil.Uint64(index),
-		//"from":              from,
-		"to":                tx.To(),
+		"blockHash":         blockHash,
+		"blockNumber":       hexutil.Uint64(blockNumber),
+		"transactionHash":   hash,
+		"transactionIndex":  hexutil.Uint64(index),
+		"from":              tx.From(),
+		"to":                to,
 		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
 		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),
 		"contractAddress":   nil,
