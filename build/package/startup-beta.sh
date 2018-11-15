@@ -1,7 +1,8 @@
 #!/bin/bash
+PACKAGEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/working/czero/lib/
 rm -rf ~/working/*
-cp -rf ~/temp/output/* ~/working/
+cp -rf ${PACKAGEDIR}/* ~/working/
 cd ~/working
 RPCPORT=8545
 SERVERPORT=60602
@@ -21,8 +22,8 @@ killProcess() {
 
 }
 if [ ! -d ${LOGDIR} ]; then
-	mkdir  ${LOGDIR}
+	mkdir ${LOGDIR}
 fi
 killProcess ${PATTERN_MAIN_PROCESS}
 sleep 10
-nohup ~/working/bin/gero --mine --datadir=${DATADIR} --rpc --rpcport ${RPCPORT} --rpcaddr ${RPCADDR} --rpcapi ${RPCAPI} --port ${SERVERPORT} --rpccorsdomain "*" &>${LOGDIR}/gero.log &
+nohup ~/working/bin/gero --mine --datadir=${DATADIR} --rpc --rpcport ${RPCPORT} --rpcaddr ${RPCADDR} --rpcapi ${RPCAPI} --port ${SERVERPORT} --rpccorsdomain "*" &> ${LOGDIR}/gero.log &

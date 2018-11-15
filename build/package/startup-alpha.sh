@@ -1,7 +1,8 @@
 #!/bin/bash
+PACKAGEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/working/czero/lib/
 rm -rf ~/working/*
-cp -rf ~/temp/output/* ~/working/
+cp -rf ${PACKAGEDIR}/* ~/working/
 cd ~/working
 RPCPORT=8545
 SERVERPORT=60602
