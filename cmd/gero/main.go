@@ -189,14 +189,24 @@ func init() {
 	app.Flags = append(app.Flags, metricsFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
-		netType := cpt.NET_Beta
-		switch {
-		case ctx.GlobalBool(utils.AlphanetFlag.Name):
-			netType = cpt.NET_Alpha
-		case ctx.GlobalBool(utils.DeveloperFlag.Name):
-			netType = cpt.NET_Dev
+
+		subCommandName := ""
+
+		if len(ctx.Args()) > 0 {
+			subCommandName = ctx.Args()[0]
 		}
-		cpt.ZeroInit(netType)
+
+		if !strings.EqualFold(subCommandName, "attach") {
+			netType := cpt.NET_Beta
+			switch {
+			case ctx.GlobalBool(utils.AlphanetFlag.Name):
+				netType = cpt.NET_Alpha
+			case ctx.GlobalBool(utils.DeveloperFlag.Name):
+				netType = cpt.NET_Dev
+			}
+			cpt.ZeroInit(netType)
+
+		}
 
 		runtime.GOMAXPROCS(runtime.NumCPU())
 
