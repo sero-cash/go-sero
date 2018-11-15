@@ -26,4 +26,4 @@ if [ ! -d ${LOGDIR} ]; then
 fi
 killProcess ${PATTERN_MAIN_PROCESS}
 sleep 10
-nohup ~/working/bin/gero --mine --datadir=${DATADIR} --rpc --rpcport ${RPCPORT} --rpcaddr ${RPCADDR} --rpcapi ${RPCAPI} --port ${SERVERPORT} --rpccorsdomain "*" &> ${LOGDIR}/gero.log &
+nohup ~/working/bin/gero --datadir=${DATADIR} --rpc --rpcport ${RPCPORT} --rpcaddr ${RPCADDR} --rpcapi ${RPCAPI} --port ${SERVERPORT} --rpccorsdomain "*" &> ${LOGDIR}/gero.log &
