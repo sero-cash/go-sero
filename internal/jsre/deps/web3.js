@@ -750,10 +750,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 addressParams = [];
             }
 
+            var convertResult =  sero.convertAddressParams(rand,addressParams,dy);
+            rand = convertResult.rand;
             if (addressParams.length >0 ){
-                var convertResult =  sero.convertAddressParams(rand,addressParams,dy);
                 var addrMap = convertResult.addr;
-                rand = convertResult.rand;
                 var convertParams =  solidityTypes.map(function (solidityType, index) {
                     return  solidityType.convertAddress(params[index], types[index],addrMap)
                 });
@@ -4479,7 +4479,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 dy = options.dy;
             }
             var rand = utils.bytesToHex(utils.base58ToBytes(this._address).slice(0,16));
-            args = coder.opParams(this._inputTypes,args,rand,this._sero,dy);
+            var convertResult = coder.opParams(this._inputTypes,args,rand,this._sero,dy);
+            args = convertResult.params;
             options.data = coder.addressPrefix(this._inputTypes,args,rand) + this.signature()+ coder.encodeParams(this._inputTypes, args);
             return options;
         };
