@@ -75,11 +75,9 @@ type CompleteAsset struct {
 func (self *Asset) ToCompleteAsset() (ret CompleteAsset) {
 	if self.Tkt != nil {
 		ret.Tkt = *self.Tkt
-		return
 	}
 	if self.Tkn != nil {
 		ret.Tkn = *self.Tkn
-		return
 	}
 	return
 }

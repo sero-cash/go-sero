@@ -116,6 +116,24 @@ func (self *user) addOut(v int) {
 	EndBlock()
 }
 
+func (self *user) addTkt(v int) {
+	out := stx.Out_O{}
+	out.Addr = self.getAR()
+	out.Asset = assets.Asset{
+		&assets.Token{
+			utils.StringToUint256("SERO"),
+			utils.NewU256(uint64(v)),
+		},
+		&assets.Ticket{
+			utils.StringToUint256("SERO_TICKET"),
+			cpt.Random(),
+		},
+	}
+	g_blocks.st.AddOut_O(&out)
+	g_blocks.st.Update()
+	EndBlock()
+}
+
 func (self *user) GetOuts() (outs []*state1.OutState1) {
 	if os, e := g_blocks.st1.GetOuts(keys.Seed2Tk(&self.seed).NewRef()); e != nil {
 		panic(e)
@@ -214,7 +232,7 @@ func TestTxs(t *testing.T) {
 	user_b := newUser(3)
 	user_c := newUser(4)
 
-	user_m.addOut(100)
+	user_m.addTkt(100)
 	user_m.addOut(100)
 	user_m.addOut(100)
 	user_m.addOut(100)

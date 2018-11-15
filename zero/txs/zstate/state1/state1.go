@@ -227,16 +227,27 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 			if out_o.Asset.Tkn == nil && out_o.Asset.Tkt == nil {
 				break
 			}
+			no_tkn_value := false
 			if out_o.Asset.Tkn != nil {
 				if out_o.Asset.Tkn.Value.Cmp(&utils.U256_0) <= 0 {
-					break
+					no_tkn_value = true
 				}
+			} else {
+				no_tkn_value = true
 			}
+			no_tkt_value := false
 			if out_o.Asset.Tkt != nil {
 				if out_o.Asset.Tkt.Value == keys.Empty_Uint256 {
-					break
+					no_tkt_value = true
 				}
+			} else {
+				no_tkn_value = true
 			}
+
+			if no_tkt_value && no_tkn_value {
+				break
+			}
+
 			if out_o.Addr == (keys.Uint512{}) {
 				break
 			}
