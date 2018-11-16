@@ -19,6 +19,8 @@ package txs
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -160,11 +162,10 @@ func CheckInt(i *utils.I256) bool {
 	return CheckUint(&abs)
 }
 
-func Verify(s *stx.T) (e error) {
-	st1 := state1.CurrentState1()
-	return Verify_state1(s, st1)
+func Verify(s *stx.T, state *zstate.State0) (e error) {
+	return Verify_state1(s, state)
 }
-func Verify_state1(s *stx.T, state *state1.State1) (e error) {
+func Verify_state1(s *stx.T, state *zstate.State0) (e error) {
 	balance_desc := cpt.BalanceDesc{}
 
 	hash_z := s.ToHash_for_o()
@@ -192,12 +193,12 @@ func Verify_state1(s *stx.T, state *state1.State1) (e error) {
 	}
 
 	for _, in_o := range s.Desc_O.Ins {
-		if ok := state.State0.HasIn(&in_o.Root); ok {
+		if ok := state.HasIn(&in_o.Root); ok {
 			e = errors.New("txs.verify in already in nils")
 			return
 		} else {
 		}
-		if src, err := state.State0.GetOut(&in_o.Root); e == nil {
+		if src, err := state.GetOut(&in_o.Root); e == nil {
 			if src.IsO() {
 				if keys.VerifyPKr(&hash_z, &in_o.Sign, &src.Out_O.Addr) {
 					{
@@ -245,13 +246,18 @@ func Verify_state1(s *stx.T, state *state1.State1) (e error) {
 		}
 	}
 
+	if state.Cur.Index == int64(44) {
+		i := 0
+		i++
+	}
+
 	for _, in_z := range s.Desc_Z.Ins {
-		if ok := state.State0.HasIn(&in_z.Nil); ok {
+		if ok := state.HasIn(&in_z.Nil); ok {
 			e = errors.New("txs.verify in already in nils")
 			return
 		} else {
 		}
-		if out, err := state.State0.GetOut(&in_z.Anchor); err != nil {
+		if out, err := state.GetOut(&in_z.Anchor); err != nil {
 			e = err
 			return
 		} else {
