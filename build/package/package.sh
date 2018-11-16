@@ -23,7 +23,7 @@ GERO_BASE=${LOCAL_PATH}/../../
 CZERO_IMPT_PATH=${LOCAL_PATH}/../../../go-czero-import
 if [ ! -d ${CZERO_IMPT_PATH} ]; then
     echo "the path ${CZERO_IMPT_PATH} should be available for build czero"
-    echo "please cd ${CZERO_IMPT_PATH}\n git clone https://github.com/sero-cash/go-czero-import.git"
+    echo "please cd ${GERO_BASE}/..\n git clone https://github.com/sero-cash/go-czero-import.git"
     exit
 fi
 cp ${CZERO_PATH}/lib/libczero.* ${CZERO_IMPT_PATH}/czero/lib/
@@ -31,18 +31,18 @@ cd ${GERO_BASE}
 make clean all
 
 cd $LOCAL_PATH
-if [ -d ./output ]; then
-	rm -rf ./output
+if [ -d ./geropkg]; then
+	rm -rf ./geropkg
 fi
-if [ -f ./output.tar ]; then
-	rm ./output.tar
+if [ -f ./geropkg.tar ]; then
+	rm ./geropkg.tar
 fi
-mkdir output
+mkdir geropkg
 cd ${GERO_BASE}
-cp -rf ./build/bin ${LOCAL_PATH}/output
-cp -rf ${CZERO_IMPT_PATH}/czero ${LOCAL_PATH}/output
-cp ./build/package/*.sh ${LOCAL_PATH}/output 
+cp -rf ./build/bin ${LOCAL_PATH}/geropkg
+cp -rf ${CZERO_IMPT_PATH}/czero ${LOCAL_PATH}/geropkg
+cp ./build/package/*.sh ${LOCAL_PATH}/geropkg 
 cd ${LOCAL_PATH}
-tar czvf ./output.tar.gz ./output/*
+tar czvf ./geropkg.tar.gz ./geropkg/*
 cd -
-
+echo "${LOCAL_PATH}/geropkg.tar.gz is available now"
