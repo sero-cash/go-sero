@@ -55,11 +55,11 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 	current_header = bc.GetCurrenHeader()
 	tks := bc.GetTks()
 
-	if current_header != nil {
-		log.Info("Start parse block chain for : ", "num", current_header.Number.Uint64(), "root", hexutil.Encode(current_header.Root[:])[:8])
-	} else {
-		log.Info("Start parse block chain ,current header is nil ")
-	}
+	//if current_header != nil {
+	//	log.Info("Start parse block chain for : ", "num", current_header.Number.Uint64(), "root", hexutil.Encode(current_header.Root[:])[:8])
+	//} else {
+	//	log.Info("Start parse block chain ,current header is nil ")
+	//}
 
 	need_load := []*types.Header{}
 	for {
@@ -103,9 +103,9 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 		}
 	}
 
-	if len(need_load) > 1 {
-		log.Info("PARSE NEED_LOAD_BLOCKS : ", "count", len(need_load))
-	}
+	//if len(need_load) > 1 {
+	//	log.Info("PARSE NEED_LOAD_BLOCKS : ", "count", len(need_load))
+	//}
 
 	var st1 *State1
 	for i := len(need_load) - 1; i >= 0; i-- {
@@ -122,13 +122,13 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			load_name = state1_file_name(parent_num, &parent_hash)
 		}
 
-		if len(load_name) > 0 {
-			log.Info("STATE1 PARSE BLOCK : ", "load", load_name[5:17], "save", saved_name[5:17])
-		}
+		//if len(load_name) > 0 {
+		//	log.Info("STATE1 PARSE BLOCK : ", "load", load_name[5:17], "save", saved_name[5:17])
+		//}
 
 		state := bc.NewState(&current_hash)
 
-		log.Info("----", "cm_num", len(state.Block.Commitments))
+		//log.Info("----", "cm_num", len(state.Block.Commitments))
 		current_cm_count += len(state.Block.Commitments)
 
 		if st1 == nil {
@@ -154,7 +154,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 		current_state1 = &st1
 	}
 
-	log.Info("End parse block chain for state1 : ", "out_num", len(current_state1.G2wouts))
+	//log.Info("End parse block chain for state1 : ", "out_num", len(current_state1.G2wouts))
 	return current_cm_count, nil
 
 }

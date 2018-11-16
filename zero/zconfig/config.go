@@ -55,7 +55,7 @@ func Remove_State1_dir_files(height int) {
 				if height-index > 35 {
 					path := filepath.Join(state1_dir, name)
 					os.Remove(path)
-					fmt.Printf("remove state1 file: %s\n", name)
+					//fmt.Printf("remove state1 file: %s\n", name)
 				}
 			}
 		}
