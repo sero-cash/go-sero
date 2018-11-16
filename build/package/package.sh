@@ -34,8 +34,8 @@ cd $LOCAL_PATH
 if [ -d ./geropkg]; then
 	rm -rf ./geropkg
 fi
-if [ -f ./geropkg.tar ]; then
-	rm ./geropkg.tar
+if [ -f ./geropkg.tar.gz ]; then
+	rm ./geropkg.tar.gz
 fi
 mkdir geropkg
 cd ${GERO_BASE}
