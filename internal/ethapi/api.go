@@ -463,6 +463,19 @@ func (s *PublicBlockChainAPI) BlockNumber() hexutil.Uint64 {
 	return hexutil.Uint64(header.Number.Uint64())
 }
 
+func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy string) (*common.Address, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return nil, err
+	}
+	contractAddress := state.GetContrctAddressByToken(cy)
+	empty := common.Address{}
+	if contractAddress.Data == empty.Data {
+		return nil, errors.New(cy + "not exists!")
+	}
+	return &contractAddress, nil
+}
+
 type ConvertAddress struct {
 	Addr map[common.Address]common.Address `json:"addr"`
 	Rand *keys.Uint128                     `json:"rand"`
