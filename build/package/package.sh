@@ -31,7 +31,7 @@ cd ${GERO_BASE}
 make clean all
 
 cd $LOCAL_PATH
-if [ -d ./geropkg]; then
+if [ -d ./geropkg ]; then
 	rm -rf ./geropkg
 fi
 if [ -f ./geropkg.tar.gz ]; then
