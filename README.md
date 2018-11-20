@@ -28,8 +28,6 @@ The go-sero project comes with several wrappers/executables found in the `cmd` d
 |:----------:|-------------|
 | **gero** | Our main Gero CLI client. It is the entry point into the Sero network (alpha or dev net), capable of running as a full node (default). It can be used by other processes as a gateway into the Sero network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `gero --help` and the [CLI Wiki page](https://github.com/sero-cash/go-Sero/wiki/Command-Line-Options) for command line options. |
 | `bootnode` | Stripped down version of our Sero client implementation that only takes part in the network node discovery protocol, but does not run any of the higher level application protocols. It can be used as a lightweight bootstrap node to aid in finding peers in private networks. |
-| `evm` | Developer utility version of the EVM (Sero Virtual Machine) that is capable of running bytecode snippets within a configurable environment and execution mode. Its purpose is to allow isolated, fine-grained debugging of EVM opcodes (e.g. `evm --code 60ff60ff --debug`). |
-| `rlpdump` | Developer utility tool to convert binary RLP ([Recursive Length Prefix](https://github.com/ethereum/wiki/wiki/RLP)) dumps (data encoding used by the Sero protocol both network as well as consensus wise) to user friendlier hierarchical representation (e.g. `rlpdump --hex CE0183FFFFFFC4C304050583616263`). |
 
 
 ## Running gero
