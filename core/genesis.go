@@ -232,7 +232,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 	}
 	statedb, _ := state.NewGenesis(common.Hash{}, state.NewDatabase(db))
 	statedb.RegisterToken(state.EmptyAddress, "SERO")
-	statedb.AddBalance(state.EmptyAddress, "SERO", new(big.Int).SetUint64(50000000e+18))
+	statedb.AddBalance(state.EmptyAddress, "SERO", new(big.Int).Mul(big.NewInt(50000000), big.NewInt(1e+18)))
 
 	sero := common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32))
 	var keys common.Addresses
@@ -328,7 +328,7 @@ func DefaultGenesisBlock() *Genesis {
 		Config:     params.BetanetChainConfig,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		GasLimit:   5000000,
-		Difficulty: big.NewInt(51485767),
+		Difficulty: big.NewInt(171798691),
 		//Difficulty: big.NewInt(17179869184),
 		//Alloc:      decodePrealloc(mainnetAllocData),
 		Coinbase:   common.Base58ToAddress("1111111111111111111111111111111111111111111111111111111111111111"),

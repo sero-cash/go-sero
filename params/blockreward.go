@@ -21,55 +21,60 @@ import (
 )
 
 var (
+
+	base = big.NewInt(1e+9)
+	defaultReward = new(big.Int).Mul(big.NewInt(5e+10), base)
+	devReward = new(big.Int).Mul(big.NewInt(3e+10), base)
+
 	BetaBlockRewards = []*big.Int{
-		big.NewInt(34214780857e+9),
-		big.NewInt(24757439115e+9),
-		big.NewInt(17914210648e+9),
-		big.NewInt(12962525794e+9),
-		big.NewInt(9379541096e+9),
-		big.NewInt(6786932775e+9),
-		big.NewInt(4910949910e+9),
-		big.NewInt(3553509341e+9),
-		big.NewInt(2571280276e+9),
-		big.NewInt(1860550127e+9),
+		new(big.Int).Mul(big.NewInt(34214780857), base),
+		new(big.Int).Mul(big.NewInt(24757439115), base),
+		new(big.Int).Mul(big.NewInt(17914210648), base),
+		new(big.Int).Mul(big.NewInt(12962525794), base),
+		new(big.Int).Mul(big.NewInt(9379541096), base),
+		new(big.Int).Mul(big.NewInt(6786932775), base),
+		new(big.Int).Mul(big.NewInt(4910949910), base),
+		new(big.Int).Mul(big.NewInt(3553509341), base),
+		new(big.Int).Mul(big.NewInt(2571280276), base),
+		new(big.Int).Mul(big.NewInt(1860550127), base),
 	}
 
 	AiphaBlockRewards = []*big.Int{
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
 	}
 
 	DevBlockRewards = []*big.Int{
-		big.NewInt(3e+19),
-		big.NewInt(3e+19),
-		big.NewInt(3e+19),
-		big.NewInt(3e+19),
-		big.NewInt(3e+19),
-		big.NewInt(3e+19),
-		big.NewInt(3e+19),
-		big.NewInt(3e+19),
-		big.NewInt(3e+19),
-		big.NewInt(3e+19),
+		devReward,
+		devReward,
+		devReward,
+		devReward,
+		devReward,
+		devReward,
+		devReward,
+		devReward,
+		devReward,
+		devReward,
 	}
 
 	DefaultBlockRewards = []*big.Int{
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
-		big.NewInt(5e+19),
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
+		defaultReward,
 	}
 )
