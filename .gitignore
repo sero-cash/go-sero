@@ -48,3 +48,4 @@ profile.cov
 
 cgu
 config.ini
+build/package
