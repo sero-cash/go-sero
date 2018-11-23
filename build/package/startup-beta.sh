@@ -1,6 +1,6 @@
 #!/bin/bash
 PACKAGEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PACKAGEDIR}/czero/lib/
+export LD_LIBRARY_PATH=${PACKAGEDIR}/czero/lib/:${LD_LIBRARY_PATH}
 RPCPORT=8545
 SERVERPORT=60602
 RPCADDR=$(hostname -I|awk -F ' ' '{print $1}')
