@@ -29,8 +29,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
 
-	"github.com/sero-cash/go-sero/crypto"
-
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/common/math"
@@ -233,10 +231,10 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 		db = serodb.NewMemDatabase()
 	}
 	statedb, _ := state.NewGenesis(common.Hash{}, state.NewDatabase(db))
-	statedb.RegisterToken(common.BytesToAddress(crypto.Keccak512(nil)), "sero")
-	statedb.AddBalance(state.EmptyAddress, "sero", new(big.Int).SetUint64(50000000))
+	statedb.RegisterToken(state.EmptyAddress, "SERO")
+	statedb.AddBalance(state.EmptyAddress, "SERO", new(big.Int).SetUint64(50000000e+18))
 
-	sero := common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32))
+	sero := common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32))
 	var keys common.Addresses
 	for k := range g.Alloc {
 		keys = append(keys, k)
@@ -245,7 +243,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 	for _, addr := range keys {
 		account := g.Alloc[addr]
 		if account.Code != nil && len(account.Code) > 0 {
-			statedb.AddBalance(addr, "sero", account.Balance)
+			statedb.AddBalance(addr, "SERO", account.Balance)
 			statedb.SetCode(addr, account.Code)
 		} else {
 			asset := assets.Asset{Tkn: &assets.Token{

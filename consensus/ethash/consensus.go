@@ -40,7 +40,7 @@ import (
 
 // Ethash proof-of-work protocol constants.
 var (
-	blockNumber            *big.Int = big.NewInt(2102400)
+	stepBlockNumber        *big.Int = big.NewInt(2102400)
 	allowedFutureBlockTime          = 15 * time.Second // Max time from current time allowed for blocks, before they're considered future blocks
 	bigOne                 *big.Int = big.NewInt(1)
 	big4W                  *big.Int = big.NewInt(40000)
@@ -387,7 +387,7 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 // reward. The total reward consists of the static block reward .
 func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, header *types.Header) {
 	// Select the correct block reward based on chain progression
-	if header.Number.Cmp(blockNumber.Mul(blockNumber, big.NewInt(10))) > 0 {
+	if header.Number.Cmp(new(big.Int).Mul(stepBlockNumber, big.NewInt(10))) > 0 {
 		return
 	}
 
@@ -400,13 +400,13 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 		blockRewards = params.DevBlockRewards
 	}
 
-	r := new(big.Int).Div(header.Number, blockNumber).Uint64()
+	r := new(big.Int).Div(header.Number, stepBlockNumber).Uint64()
 	reward := new(big.Int).Set(blockRewards[r])
 
 	avgGas := statedb.GetAvgUsedGas(header.Number.Uint64() - 1)
 
 	if header.GasUsed >= avgGas.Uint64() {
-		otherRawrd := new(big.Int).Div(reward, big.NewInt(5))
+		otherRawrd := new(big.Int).Div(new(big.Int).Mul(reward, big2), big.NewInt(5))
 		if statedb.GetBalance(state.EmptyAddress, "SERO").Cmp(otherRawrd) >= 0 {
 			reward = reward.Add(reward, otherRawrd)
 			statedb.SubBalance(state.EmptyAddress, "SERO", otherRawrd)
@@ -414,7 +414,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 	} else {
 		reward = reward.Mul(reward, big.NewInt(4)).Div(reward, big.NewInt(5))
 	}
-	log.Info(fmt.Sprintf("blockNumber =%v, Last_avgGas = %v, currentGasUsed = %v, reward =%v", header.Number.Uint64(), avgGas.Uint64(), header.GasUsed, reward.Uint64()))
+	log.Info(fmt.Sprintf("BlockNumber =%v, Last_avgGas = %v, currentGasUsed = %v, reward =%v", header.Number.Uint64(), avgGas.Uint64(), header.GasUsed, reward.Uint64()))
 
 	if header.Number.Uint64() < 40000 {
 		avgGas = avgGas.Mul(avgGas, header.Number).Add(avgGas, new(big.Int).SetUint64(header.GasUsed)).Div(avgGas, new(big.Int).Add(header.Number, bigOne))

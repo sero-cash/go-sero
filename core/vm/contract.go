@@ -184,7 +184,7 @@ func (c *Contract) Currency() string {
 	if c.asset.Tkn != nil {
 		return strings.TrimSpace(string(c.asset.Tkn.Currency[:]))
 	} else {
-		return "sero"
+		return "SERO"
 	}
 }
 

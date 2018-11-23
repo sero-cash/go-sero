@@ -109,7 +109,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	cfg.State.SetCode(address, code)
 	// Call the code with the given configuration.
 	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 		Value:    utils.U256(*cfg.Value),
 	},
 	}
@@ -140,7 +140,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	)
 
 	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 		Value:    utils.U256(*cfg.Value),
 	},
 	}
@@ -166,7 +166,7 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 	sender := cfg.State.GetOrNewStateObject(cfg.Origin)
 	// Call the code with the given configuration.
 	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
+		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 		Value:    utils.U256(*cfg.Value),
 	},
 	}
