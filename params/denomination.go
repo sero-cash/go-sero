@@ -22,6 +22,7 @@ package params
 //    new(big.Int).Mul(value, big.NewInt(params.Sero))
 //
 const (
-	Ta   = 1
-	Sero = 1e9
+	Ta    = 1
+	Gta   = 1e9
+	Ether = 1e18
 )

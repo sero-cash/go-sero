@@ -57,7 +57,7 @@ import (
 )
 
 const (
-	defaultGasPrice = 5 * params.Ta
+	defaultGasPrice = params.Gta
 )
 
 var (

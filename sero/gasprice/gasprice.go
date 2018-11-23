@@ -29,7 +29,7 @@ import (
 	"github.com/sero-cash/go-sero/rpc"
 )
 
-var maxPrice = big.NewInt(2500 * params.Ta)
+var maxPrice = big.NewInt(500 * params.Gta)
 
 type Config struct {
 	Blocks     int
