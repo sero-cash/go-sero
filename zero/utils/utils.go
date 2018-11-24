@@ -457,3 +457,31 @@ func (self *Procs) Wait() []Proc {
 		return nil
 	}
 }
+
+type ProcsPool struct {
+	pool sync.Pool
+}
+
+func NewProcsPool(num int) (ret ProcsPool) {
+	ret = ProcsPool{
+		sync.Pool{
+			New: func() interface{} {
+				procs := NewProcs(num)
+				return &procs
+			},
+		},
+	}
+	return
+}
+
+func (self *ProcsPool) GetProcs() (ret *Procs) {
+	ret = self.pool.Get().(*Procs)
+	if ret == nil {
+		panic(fmt.Errorf("GetProcsFromPool error: fetch nil!"))
+	}
+	return
+}
+
+func (self *ProcsPool) PutProcs(p *Procs) {
+	self.pool.Put(p)
+}

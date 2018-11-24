@@ -25,7 +25,7 @@ import (
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-var gen_input_procs = utils.NewProcs(3)
+var gen_input_procs_pool = utils.NewProcsPool(3)
 
 type gen_input_desc struct {
 	desc cpt.InputDesc
@@ -41,7 +41,7 @@ func (self *gen_input_desc) Run() bool {
 	}
 }
 
-var gen_output_procs = utils.NewProcs(3)
+var gen_output_procs_pool = utils.NewProcsPool(3)
 
 type gen_output_desc struct {
 	desc cpt.OutputDesc
@@ -58,6 +58,9 @@ func (self *gen_output_desc) Run() bool {
 }
 
 func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256, balance_desc *cpt.BalanceDesc) (desc_z stx.Desc_Z, e error) {
+	var gen_input_procs = gen_input_procs_pool.GetProcs()
+	defer gen_input_procs_pool.PutProcs(gen_input_procs)
+
 	for _, in := range ptx.desc_z.ins {
 		g := gen_input_desc{}
 		g.desc.Seed = *seed
@@ -68,6 +71,9 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256, balance_de
 
 		gen_input_procs.StartProc(&g)
 	}
+
+	var gen_output_procs = gen_output_procs_pool.GetProcs()
+	defer gen_output_procs_pool.PutProcs(gen_output_procs)
 
 	for _, out := range ptx.desc_z.outs {
 
@@ -123,7 +129,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256, balance_de
 	return
 }
 
-var verify_input_procs = utils.NewProcs(3)
+var verify_input_procs_pool = utils.NewProcsPool(5)
 
 type verify_input_desc struct {
 	desc cpt.InputVerifyDesc
@@ -139,7 +145,7 @@ func (self *verify_input_desc) Run() bool {
 	}
 }
 
-var verify_output_procs = utils.NewProcs(3)
+var verify_output_procs_pool = utils.NewProcsPool(3)
 
 type verify_output_desc struct {
 	desc cpt.OutputVerifyDesc
@@ -156,6 +162,9 @@ func (self *verify_output_desc) Run() bool {
 }
 
 func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc) (e error) {
+	var verify_input_procs = verify_input_procs_pool.GetProcs()
+	defer verify_input_procs_pool.PutProcs(verify_input_procs)
+
 	for _, in_z := range tx.Desc_Z.Ins {
 		balance_desc.Zin_acms = append(balance_desc.Zin_acms, in_z.AssetCM[:]...)
 
@@ -167,6 +176,10 @@ func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc) (e error) {
 
 		verify_input_procs.StartProc(&g)
 	}
+
+	var verify_output_procs = verify_output_procs_pool.GetProcs()
+	defer verify_output_procs_pool.PutProcs(verify_output_procs)
+
 	for _, out_z := range tx.Desc_Z.Outs {
 		balance_desc.Zout_acms = append(balance_desc.Zout_acms, out_z.AssetCM[:]...)
 
