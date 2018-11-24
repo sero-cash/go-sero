@@ -17,7 +17,6 @@
 package core
 
 import (
-	"fmt"
 	"github.com/sero-cash/go-sero/crypto"
 
 	"github.com/sero-cash/go-sero/common"
@@ -25,7 +24,6 @@ import (
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/core/vm"
-	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/params"
 )
 
@@ -95,14 +93,14 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
-	log.Info(fmt.Sprintf("ApplyTransaction headGasLimit = %v, blockNum =%v,crruentGasLimit= %v ,txGas = %v", header.GasLimit, header.Number.Uint64(), *gp, msg.Gas()))
 	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
 
 	if err == nil {
 		err = statedb.GetZState().AddStx(tx.GetZZSTX())
-		gp.AddGas(gas)
 	}
+
 	if err != nil {
+		gp.AddGas(gas)
 		return nil, 0, err
 	}
 
