@@ -30,6 +30,7 @@ type WitnessBase struct {
 	Cursor_depth uint
 	Parents      []merkle.Leaf
 	Logs         []merkle.Leaf
+	Rt           *merkle.Leaf
 }
 type Witness struct {
 	Tree merkle.Tree
@@ -54,7 +55,13 @@ func PartialPath(w Witness) *merkle.PathFiller {
 }
 
 func (w *Witness) Root() merkle.Leaf {
-	return w.Tree.TempRoot(PartialPath(*w), merkle.DEPTH)
+	if w.Rt == nil {
+		rt := w.Tree.TempRoot(PartialPath(*w), merkle.DEPTH)
+		w.Rt = &rt
+		return rt
+	} else {
+		return *w.Rt
+	}
 }
 
 func (w *Witness) Append(leaf merkle.Leaf) {
@@ -84,6 +91,7 @@ func (w *Witness) Append(leaf merkle.Leaf) {
 			w.Cursor.Append(leaf)
 		}
 	}
+	w.Root()
 }
 func (w *Witness) nextDepth() uint {
 	return merkle.NextDepth(w.Tree, uint(len(w.Filled)))

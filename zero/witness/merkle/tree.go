@@ -94,10 +94,12 @@ type Tree struct {
 	Left  *Leaf `rlp:"nil"`
 	Right *Leaf `rlp:"nil"`
 	Pats  []Parent
+	root  *Leaf
 }
 
 func (t *Tree) Clone() (ret Tree) {
 	utils.DeepCopy(&ret, t)
+	ret.root = t.root
 	return
 }
 
@@ -143,6 +145,7 @@ func (t *Tree) TempIsComplete(depth uint) bool {
 	return true
 }
 func (t *Tree) Append(l Leaf) {
+	t.root = nil
 	if t.IsComplete() {
 		panic("tree is full")
 	}
@@ -169,6 +172,7 @@ func (t *Tree) Append(l Leaf) {
 			}
 		}
 	}
+	t.Root()
 }
 
 func Size(t Tree) (ret uint) {
@@ -251,7 +255,13 @@ func (pf *PathFiller) Next(depth uint) Leaf {
 }
 
 func (tree *Tree) Root() Leaf {
-	return tree.TempRoot(&PathFiller{}, DEPTH)
+	if tree.root == nil {
+		rt := tree.TempRoot(&PathFiller{}, DEPTH)
+		tree.root = &rt
+		return rt
+	} else {
+		return *tree.root
+	}
 }
 func (tree *Tree) RootKey() (ret keys.Uint256) {
 	root := tree.Root()

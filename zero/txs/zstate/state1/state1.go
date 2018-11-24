@@ -18,6 +18,7 @@ package state1
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -145,6 +146,9 @@ func (state *State1) GetOut(root *keys.Uint256) (src *OutState1, e error) {
 }
 
 func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *merkle.Tree) {
+
+	t := utils.TR_enter(fmt.Sprintf("ADD_OUT----INIT num=%v", self.State0.Num()))
+
 	out_hash := os.ToRootCM()
 	out_leaf := merkle.Leaf{}
 	copy(out_leaf[:], out_hash[:])
@@ -159,7 +163,7 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 
 	Debug_State1_addout_assert(self, os)
 
-	//t := utils.TR_enter(fmt.Sprintf("ADD_OUT..MAX_NUM num=%v", self.State0.Num()))
+	t.Renter("ADD_OUT----MAX_NUM")
 
 	for _, wout := range self.G2wouts {
 		if src, err := self.GetOut(&wout); err != nil {
@@ -172,12 +176,9 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 		}
 	}
 
-	//t.Renter("RANGE.WOUTS")
+	t.Renter("ADD_OUT----RANGE.WOUTS")
 
 	index_cur := witness.NewIndexCur(&pg)
-	//for i := len(pgs) - 1; i > -1; i-- {
-	//	wpt := pgs[i]
-	//	NextPathGen(&icur, wpt, &roots)
 
 	for i := len(self.G2wouts) - 1; i > -1; i-- {
 		wout := self.G2wouts[i]
@@ -203,7 +204,6 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 						panic("gen witness src wit root != out")
 					} else {
 					}
-					//src.Pg = temp_pg
 				} else {
 				}
 				src.WitnessIndex++
@@ -214,9 +214,9 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 
 	Debug_State1_addout_end_assert(self, os)
 
-	//t.Renter("ADD.WOUTS")
+	t.Renter("ADD_OUT----ADD_WOUTS")
 	self.addWouts(tks, os, &pg)
-	//t.Leave()
+	t.Leave()
 	return
 }
 
@@ -290,33 +290,6 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 				state.add_out_dirty(&wos.Trace, &wos)
 				break
 			}
-			/*info := cpt.Info{}
-			info.Currency = out_o.Currency
-			info.V = out_o.Out.Value.ToUint256()
-			info.Text = out_o.Out.Memo
-			if succ, einfo, commitment := cpt.EncodeEInfo(&tk, &out_o.Out.Addr, &info); succ {
-				if commitment == *os.ToCommitment() {
-					root := pg.Root.ToUint256()
-					state.append_wout_dirty(root)
-					wos := OutState1{}
-					wos.Pg = *pg
-					wos.Tk = tk
-					wos.Out_O = *os.Out_O
-					wos.Index = os.Index
-					wos.Desc_Z = &stx.Desc_Z{}
-					wos.Desc_Z.Out.Commitment = commitment
-					wos.Desc_Z.Out.EInfo = einfo
-					wos.Trace = info.Trace
-					wos.Z = false
-					wos.Num = state.State0.Num()
-					state.add_out_dirty(root, &wos)
-					state.add_out_dirty(&wos.Trace, &wos)
-					break
-				} else {
-					panic("add wouts but commitment not match!")
-				}
-			} else {
-			}*/
 		} else {
 			if succ, rsk := keys.IsMyPKr(&tk, &os.Out_Z.PKr); succ {
 				info_desc := cpt.InfoDesc{}
@@ -385,6 +358,7 @@ func (state *State1) UpdateWitness(tks []keys.Uint512) {
 		state.del(&del)
 	}
 	for i, commitment := range state.State0.Block.Commitments {
+		t := utils.TR_enter("UpdateWitness---RootKey")
 		tree := trees.Trees[trees.Start_index+uint64(i)]
 		out := tree.RootKey()
 		if os, err := state.State0.GetOut(&out); err != nil {
@@ -394,15 +368,16 @@ func (state *State1) UpdateWitness(tks []keys.Uint512) {
 				panic("gen witness out from B2outs can not find in G2outs")
 			} else {
 			}
+			t.Renter("UpdateWitness---ToRootCM")
 			os_commitment := os.ToRootCM()
 			if commitment != *os_commitment {
 				panic("gen witness out!=os.Root()")
 			} else {
 			}
-			t := utils.TR_enter("UpdateWitness. addOut")
+			t.Renter("UpdateWitness---addOut")
 			state.addOut(tks, os, &tree)
-			t.Leave()
 		}
+		t.Leave()
 	}
 	return
 }

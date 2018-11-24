@@ -373,25 +373,33 @@ func (self *U256) SubU(a *U256) {
 	return
 }
 
+var TR_enable = false
+
 type TimeRecord struct {
 	start time.Time
 	name  string
 }
 
 func TR_enter(name string) (tr TimeRecord) {
-	//fmt.Printf("\n{{\nStart (" + name + ") >>>>>> \n")
-	//tr.start = time.Now()
-	//tr.name = name
+	if TR_enable {
+		tr.start = time.Now()
+		tr.name = name
+	}
 	return
 }
 
-//func (tr *TimeRecord) Renter(name string) {
-//	fmt.Printf(" ...... [[ Ren ("+tr.name+":"+name+")     s=%v ]]\n", time.Since(tr.start))
-//	tr.start = time.Now()
-//}
+func (tr *TimeRecord) Renter(name string) {
+	if TR_enable {
+		fmt.Printf("TR-----("+tr.name+")     s=%v\n", time.Since(tr.start))
+		tr.name = name
+		tr.start = time.Now()
+	}
+}
 
 func (tr *TimeRecord) Leave() {
-	//fmt.Printf("End ("+tr.name+")     s=%v  <<<<<<<\n}}\n", time.Since(tr.start))
+	if TR_enable {
+		fmt.Printf("TR-----("+tr.name+")     s=%v\n", time.Since(tr.start))
+	}
 }
 
 func StringToUint256(str string) keys.Uint256 {
