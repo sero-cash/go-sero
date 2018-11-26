@@ -264,9 +264,9 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 			}
 			results = append(results, trie.SyncResult{Hash: hash, Data: data})
 
-			if len(results) >= cap(results) {
-				break
-			}
+			//if len(results) >= cap(results) {
+			//	break
+			//}
 		}
 		// Feed the retrieved results back and queue new tasks
 		if _, index, err := sched.Process(results); err != nil {
