@@ -149,8 +149,8 @@ func outName0(k *keys.Uint256) (ret []byte) {
 	return
 }
 func (self *State0) Update() {
-	self.rw.RLock()
-	defer self.rw.RUnlock()
+	self.rw.Lock()
+	defer self.rw.Unlock()
 	if self.last_out_dirty {
 		tri.UpdateObj(self.tri, LAST_OUTSTATE0_NAME.Bytes(), &self.Cur)
 		tri.UpdateObj(
@@ -246,6 +246,9 @@ func (state *State0) addOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint2
 func (self *State0) HasIn(hash *keys.Uint256) (exists bool) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
+	return self.hasIn(hash)
+}
+func (self *State0) hasIn(hash *keys.Uint256) (exists bool) {
 	if v, ok := self.G2ins[*hash]; ok {
 		exists = v
 		return
@@ -266,7 +269,7 @@ func (self *State0) HasIn(hash *keys.Uint256) (exists bool) {
 }
 
 func (state *State0) addIn(root *keys.Uint256) (e error) {
-	if exists := state.HasIn(root); exists {
+	if exists := state.hasIn(root); exists {
 		e = fmt.Errorf("add in but exists")
 		return
 	} else {
