@@ -29,17 +29,17 @@ type testEthkey struct {
 	*cmdtest.TestCmd
 }
 
-// spawns ethkey with the given command line args.
+// spawns serokey with the given command line args.
 func runEthkey(t *testing.T, args ...string) *testEthkey {
 	tt := new(testEthkey)
 	tt.TestCmd = cmdtest.NewTestCmd(t, tt)
-	tt.Run("ethkey-test", args...)
+	tt.Run("serokey-test", args...)
 	return tt
 }
 
 func TestMain(m *testing.M) {
-	// Run the app if we've been exec'd as "ethkey-test" in runEthkey.
-	reexec.Register("ethkey-test", func() {
+	// Run the app if we've been exec'd as "serokey-test" in runEthkey.
+	reexec.Register("serokey-test", func() {
 		if err := app.Run(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
