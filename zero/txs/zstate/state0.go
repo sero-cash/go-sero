@@ -40,7 +40,7 @@ type State0 struct {
 	g2ins_dirty    map[keys.Uint256]bool
 	g2outs_dirty   map[keys.Uint256]bool
 
-	rw  *sync.RWMutex
+	rw *sync.RWMutex
 }
 
 func (self *State0) Tri() tri.Tri {
@@ -209,6 +209,10 @@ func (self *State0) Revert() {
 func (state *State0) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
+	return state.addOut(out_o, out_z)
+}
+
+func (state *State0) addOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
 	os := OutState0{}
 	if out_o != nil {
 		o := *out_o
@@ -297,7 +301,7 @@ func (state *State0) AddStx(st *stx.T) (e error) {
 	}
 
 	for _, out := range st.Desc_Z.Outs {
-		state.AddOut(nil, &out)
+		state.addOut(nil, &out)
 	}
 
 	return
