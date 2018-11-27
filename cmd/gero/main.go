@@ -96,6 +96,8 @@ var (
 		utils.MaxPendingPeersFlag,
 		utils.SerobaseFlag,
 		utils.GasPriceFlag,
+		utils.VThreadsFlag,
+		utils.PThreadsFlag,
 		utils.MinerThreadsFlag,
 		utils.MiningEnabledFlag,
 		utils.TargetGasLimitFlag,

@@ -28,6 +28,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/txs"
+
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/accounts"
@@ -269,6 +271,18 @@ var (
 		Usage: "Number of trie node generations to keep in memory",
 		Value: int(state.MaxTrieCacheGen),
 	}
+	// Zero Proof settings
+	VThreadsFlag = cli.IntFlag{
+		Name:  "vthreads",
+		Usage: "Number of CPU threads to use for zero verify",
+		Value: runtime.NumCPU() + 2,
+	}
+	PThreadsFlag = cli.IntFlag{
+		Name:  "pthreads",
+		Usage: "Number of CPU threads to use for zero prove",
+		Value: runtime.NumCPU(),
+	}
+
 	// Miner settings
 	MiningEnabledFlag = cli.BoolFlag{
 		Name:  "mine",
@@ -993,6 +1007,10 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
 		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
 	}
+
+	txs.G_p_thread_num = ctx.GlobalInt(PThreadsFlag.Name)
+	txs.G_v_thread_num = ctx.GlobalInt(VThreadsFlag.Name)
+
 	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
 		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)
 	}

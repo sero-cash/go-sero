@@ -18,6 +18,7 @@ package txs
 
 import (
 	"errors"
+	"runtime"
 
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
@@ -25,7 +26,9 @@ import (
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-var gen_input_procs_pool = utils.NewProcsPool(3)
+var G_p_thread_num = runtime.NumCPU()
+
+var gen_input_procs_pool = utils.NewProcsPool(func() int { return G_p_thread_num })
 
 type gen_input_desc struct {
 	desc cpt.InputDesc
@@ -41,7 +44,7 @@ func (self *gen_input_desc) Run() bool {
 	}
 }
 
-var gen_output_procs_pool = utils.NewProcsPool(3)
+var gen_output_procs_pool = utils.NewProcsPool(func() int { return G_p_thread_num })
 
 type gen_output_desc struct {
 	desc cpt.OutputDesc
@@ -129,7 +132,8 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256, balance_de
 	return
 }
 
-var verify_input_procs_pool = utils.NewProcsPool(5)
+var G_v_thread_num = runtime.NumCPU()
+var verify_input_procs_pool = utils.NewProcsPool(func() int { return G_v_thread_num })
 
 type verify_input_desc struct {
 	desc cpt.InputVerifyDesc
@@ -145,7 +149,7 @@ func (self *verify_input_desc) Run() bool {
 	}
 }
 
-var verify_output_procs_pool = utils.NewProcsPool(3)
+var verify_output_procs_pool = utils.NewProcsPool(func() int { return G_v_thread_num })
 
 type verify_output_desc struct {
 	desc cpt.OutputVerifyDesc

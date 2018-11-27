@@ -470,11 +470,11 @@ type ProcsPool struct {
 	pool sync.Pool
 }
 
-func NewProcsPool(num int) (ret ProcsPool) {
+func NewProcsPool(numget func() int) (ret ProcsPool) {
 	ret = ProcsPool{
 		sync.Pool{
 			New: func() interface{} {
-				procs := NewProcs(num)
+				procs := NewProcs(numget())
 				return &procs
 			},
 		},
