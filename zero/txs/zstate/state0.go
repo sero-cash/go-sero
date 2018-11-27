@@ -19,6 +19,7 @@ package zstate
 import (
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -38,6 +39,8 @@ type State0 struct {
 	last_out_dirty bool
 	g2ins_dirty    map[keys.Uint256]bool
 	g2outs_dirty   map[keys.Uint256]bool
+
+	rw  *sync.RWMutex
 }
 
 func (self *State0) Tri() tri.Tri {
@@ -50,6 +53,7 @@ func (self *State0) Num() uint64 {
 
 func NewState0(tri tri.Tri, num uint64) (state State0) {
 	state = State0{tri: tri, num: num}
+	state.rw = new(sync.RWMutex)
 	state.clear()
 	state.load()
 	return
@@ -145,6 +149,8 @@ func outName0(k *keys.Uint256) (ret []byte) {
 	return
 }
 func (self *State0) Update() {
+	self.rw.RLock()
+	defer self.rw.RUnlock()
 	if self.last_out_dirty {
 		tri.UpdateObj(self.tri, LAST_OUTSTATE0_NAME.Bytes(), &self.Cur)
 		tri.UpdateObj(
@@ -201,6 +207,8 @@ func (self *State0) Revert() {
 }
 
 func (state *State0) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
+	state.rw.Lock()
+	defer state.rw.Unlock()
 	os := OutState0{}
 	if out_o != nil {
 		o := *out_o
@@ -232,6 +240,8 @@ func (state *State0) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint2
 }
 
 func (self *State0) HasIn(hash *keys.Uint256) (exists bool) {
+	self.rw.Lock()
+	defer self.rw.Unlock()
 	if v, ok := self.G2ins[*hash]; ok {
 		exists = v
 		return
@@ -262,6 +272,8 @@ func (state *State0) addIn(root *keys.Uint256) (e error) {
 }
 
 func (state *State0) AddStx(st *stx.T) (e error) {
+	state.rw.Lock()
+	defer state.rw.Unlock()
 	for _, in := range st.Desc_O.Ins {
 		if err := state.addIn(&in.Root); err != nil {
 			e = err
@@ -292,6 +304,8 @@ func (state *State0) AddStx(st *stx.T) (e error) {
 }
 
 func (state *State0) GetOut(root *keys.Uint256) (src *OutState0, e error) {
+	state.rw.Lock()
+	defer state.rw.Unlock()
 	if out := state.G2outs[*root]; out != nil {
 		return out, nil
 	} else {
@@ -313,6 +327,8 @@ type State0Trees struct {
 }
 
 func (state *State0) GenState0Trees() (ret State0Trees) {
+	state.rw.RLock()
+	defer state.rw.RUnlock()
 	if state.Cur.Index >= 0 {
 		ret.Trees = make(map[uint64]merkle.Tree)
 		tree := state.Block.Tree.Clone()
