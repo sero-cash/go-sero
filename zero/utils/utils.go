@@ -381,25 +381,26 @@ type TimeRecord struct {
 }
 
 func TR_enter(name string) (tr TimeRecord) {
-	if TR_enable {
-		tr.start = time.Now()
-		tr.name = name
-	}
+	tr.start = time.Now()
+	tr.name = name
 	return
 }
 
 func (tr *TimeRecord) Renter(name string) {
 	if TR_enable {
-		fmt.Printf("TR-----("+tr.name+")     s=%v\n", time.Since(tr.start))
+		td := time.Since(tr.start)
 		tr.name = name
 		tr.start = time.Now()
+		fmt.Printf("TR-----("+tr.name+")     s=%v\n", td)
 	}
 }
 
-func (tr *TimeRecord) Leave() {
+func (tr *TimeRecord) Leave() time.Duration {
+	td := time.Since(tr.start)
 	if TR_enable {
-		fmt.Printf("TR-----("+tr.name+")     s=%v\n", time.Since(tr.start))
+		fmt.Printf("TR-----("+tr.name+")     s=%v\n", td)
 	}
+	return td
 }
 
 func StringToUint256(str string) keys.Uint256 {

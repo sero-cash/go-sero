@@ -139,7 +139,17 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			st1.Finalize(saved_name)
 			st1 = nil
 		}
-		t.Leave()
+		td := t.Leave()
+		log.Info(
+			"STATE0 PARSE PROCESS : ",
+			"t", current_header.Number.Int64(),
+			"c",
+			header.Number.Int64(),
+			"n",
+			len(st1.State0.Block.Commitments),
+			"d",
+			td,
+		)
 	}
 
 	if current_state1 == nil {
