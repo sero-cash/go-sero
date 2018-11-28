@@ -711,36 +711,15 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return result;
         };
 
-        /**
-         * Should be used to encode list of params,used by sero
-         *
-         * @method encodeSeroParams
-         * @param {Array} types
-         * @param {Array} params
-         * @return {String} encoded list of params
-         */
-        SolidityCoder.prototype.encodeSeroParams = function (types, params) {
+
+        SolidityCoder.prototype.getAddressParams = function (types, params) {
             var solidityTypes = this.getSolidityTypes(types);
-
-            var encodeds = solidityTypes.map(function (solidityType, index) {
-                encodedJson ={};
-                encodedJson[types[index]] = solidityType.encodeSero(params[index], types[index]);
-                return JSON.stringify(encodedJson);
-            });
-
-
-            return encodeds;
-        };
-
-        SolidityCoder.prototype.getAddressParams = function (types, params,rand,sero,dy) {
-            var solidityTypes = this.getSolidityTypes(types);
-            var addressParams = solidityTypes.map(function (solidityType, index) {
+            var addressParams = [];
+            solidityTypes.map(function (solidityType, index) {
                 if (solidityType instanceof SolidityTypeAddress){
-                    return  solidityType.address(params[index], types[index],false)
-                }else{
-                    return
+                    addressParams = addressParams.concat(solidityType.address(params[index], types[index],false));
                 }
-            })[0]||'';
+            });
             if (addressParams){
                 if (utils.isArray(addressParams)){
                 }else{
@@ -750,26 +729,11 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 addressParams = [];
             }
             return addressParams;
-
-            var convertResult =  sero.convertAddressParams(rand,addressParams,dy);
-            rand = convertResult.rand;
-            if (addressParams.length >0 ){
-                var addrMap = convertResult.addr;
-                var convertParams =  solidityTypes.map(function (solidityType, index) {
-                    return  solidityType.convertAddress(params[index], types[index],addrMap)
-                });
-                params = convertParams;
-            }
-            var result ={};
-            result.params = params;
-            result.rand = rand;
-            return result;
-
         };
 
         SolidityCoder.prototype.opParams = function (types, params,rand,sero,dy,callback) {
             var solidityTypes = this.getSolidityTypes(types);
-            var  addressParams = this.getAddressParams(types, params,rand,sero,dy);
+            var  addressParams = this.getAddressParams(types, params);
             if (callback){
                 var cb = function(err,result){
                     if (err){
@@ -812,13 +776,12 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         SolidityCoder.prototype.addressPrefix = function (types, params,rand) {
             var solidityTypes = this.getSolidityTypes(types);
-            var addressParams = solidityTypes.map(function (solidityType, index) {
+            var addressParams =[];
+            solidityTypes.map(function (solidityType, index) {
                 if (solidityType instanceof SolidityTypeAddress){
-                    return  solidityType.address(params[index], types[index],true)
-                }else{
-                    return
+                    addressParams = addressParams.concat(solidityType.address(params[index], types[index],true));
                 }
-            })[0]||'';
+            });
             if (addressParams){
                 if (utils.isArray(addressParams)){
                 }else{
@@ -927,14 +890,29 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {String} bytes
          * @return {Array} array of plain params
          */
-        SolidityCoder.prototype.decodeParams = function (types, bytes,sero) {
+        SolidityCoder.prototype.decodeParams = function (types, bytes,addrMap) {
             var solidityTypes = this.getSolidityTypes(types);
             var offsets = this.getOffsets(types, solidityTypes);
 
             return solidityTypes.map(function (solidityType, index) {
-                return solidityType.decode(bytes, offsets[index],  types[index],sero);
+                return solidityType.decode(bytes, offsets[index],  types[index],addrMap);
             });
+
         };
+
+        SolidityCoder.prototype.decodeShortAddress = function (types, bytes) {
+            var solidityTypes = this.getSolidityTypes(types);
+            var offsets = this.getOffsets(types, solidityTypes);
+            var shortAddress=[];
+            solidityTypes.map(function (solidityType, index) {
+                var shortAddr = solidityType.decodeAddress(bytes, offsets[index],  types[index]);
+                if (shortAddr){
+                    shortAddress = shortAddress.concat(solidityType.decodeAddress(bytes, offsets[index],  types[index]));
+                }
+            });
+            return shortAddress;
+        };
+
 
         SolidityCoder.prototype.getOffsets = function (types, solidityTypes) {
             var lengths =  solidityTypes.map(function (solidityType, index) {
@@ -1817,7 +1795,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {String} name type name
          * @returns {Object} decoded value
          */
-        SolidityType.prototype.decode = function (bytes, offset, name,sero) {
+        SolidityType.prototype.decode = function (bytes, offset, name,mapaddr) {
             var self = this;
 
             if (this.isDynamicArray(name)) {
@@ -1833,7 +1811,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     var result = [];
 
                     for (var i = 0; i < length * roundedNestedStaticPartLength; i += roundedNestedStaticPartLength) {
-                        result.push(self.decode(bytes, arrayStart + i, nestedName,sero));
+                        result.push(self.decode(bytes, arrayStart + i, nestedName,mapaddr));
                     }
 
                     return result;
@@ -1851,7 +1829,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     var result = [];
 
                     for (var i = 0; i < length * roundedNestedStaticPartLength; i += roundedNestedStaticPartLength) {
-                        result.push(self.decode(bytes, arrayStart + i, nestedName,sero));
+                        result.push(self.decode(bytes, arrayStart + i, nestedName,mapaddr));
                     }
 
                     return result;
@@ -1870,13 +1848,65 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var length = this.staticPartLength(name);
 
             if (this._outSeroAddressFormatter) {
-                var fullAddress = sero.getFullAddress("0x"+bytes.substr(offset * 2, length * 2).substr(24));
-                return fullAddress;
+                if (mapaddr){
+                    var short = "0x"+bytes.substr(offset * 2, length * 2).substr(24);
+                    return mapaddr[short];
+                }else {
+                    return "0x"+bytes.substr(offset * 2, length * 2);
+                }
+
             }else{
                 var param = new SolidityParam(bytes.substr(offset * 2, length * 2));
                 return this._outputFormatter(param, name);
             }
 
+        };
+
+
+        SolidityType.prototype.decodeAddress = function (bytes, offset, name) {
+            var self = this;
+            if (self._outSeroAddressFormatter){
+                if (this.isDynamicArray(name)) {
+
+                    return (function () {
+                        var arrayOffset = parseInt('0x' + bytes.substr(offset * 2, 64)); // in bytes
+                        var length = parseInt('0x' + bytes.substr(arrayOffset * 2, 64)); // in int
+                        var arrayStart = arrayOffset + 32; // array starts after length; // in bytes
+
+                        var nestedName = self.nestedName(name);
+                        var nestedStaticPartLength = self.staticPartLength(nestedName);  // in bytes
+                        var roundedNestedStaticPartLength = Math.floor((nestedStaticPartLength + 31) / 32) * 32;
+                        var result = [];
+
+                        for (var i = 0; i < length * roundedNestedStaticPartLength; i += roundedNestedStaticPartLength) {
+                            result.concat(self.decode(bytes, arrayStart + i, nestedName));
+                        }
+
+                        return result;
+                    })();
+
+                } else if (this.isStaticArray(name)) {
+
+                    return (function () {
+                        var length = self.staticArrayLength(name);                      // in int
+                        var arrayStart = offset;                                        // in bytes
+
+                        var nestedName = self.nestedName(name);
+                        var nestedStaticPartLength = self.staticPartLength(nestedName); // in bytes
+                        var roundedNestedStaticPartLength = Math.floor((nestedStaticPartLength + 31) / 32) * 32;
+                        var result = [];
+
+                        for (var i = 0; i < length * roundedNestedStaticPartLength; i += roundedNestedStaticPartLength) {
+                            result.concat(self.decode(bytes, arrayStart + i, nestedName));
+                        }
+
+                        return result;
+                    })();
+                }
+
+                var length = this.staticPartLength(name);
+                return "0x"+bytes.substr(offset * 2, length * 2).substr(24);
+            }
         };
 
         module.exports = SolidityType;
@@ -2671,15 +2701,15 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          */
         var isChecksumAddress = function (address) {
             // Check each case
-            address = address.replace('0x', '');
-            var addressHash = sha3(address.toLowerCase());
+            // address = address.replace('0x', '');
+            // var addressHash = sha3(address.toLowerCase());
 
-            for (var i = 0; i < 40; i++) {
-                // the nth letter should be uppercase if the nth digit of casemap is 1
-                if ((parseInt(addressHash[i], 16) > 7 && address[i].toUpperCase() !== address[i]) || (parseInt(addressHash[i], 16) <= 7 && address[i].toLowerCase() !== address[i])) {
-                    return false;
-                }
-            }
+            // for (var i = 0; i < 40; i++) {
+            //     // the nth letter should be uppercase if the nth digit of casemap is 1
+            //     if ((parseInt(addressHash[i], 16) > 7 && address[i].toUpperCase() !== address[i]) || (parseInt(addressHash[i], 16) <= 7 && address[i].toLowerCase() !== address[i])) {
+            //         return false;
+            //     }
+            // }
             return true;
         };
 
@@ -2694,17 +2724,17 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         var toChecksumAddress = function (address) {
             if (typeof address === 'undefined') return '';
 
-            address = address.toLowerCase().replace('0x', '');
-            var addressHash = sha3(address);
-            var checksumAddress = '0x';
+            // address = address.toLowerCase().replace('0x', '');
+            // var addressHash = sha3(address);
+            var checksumAddress = '';
 
             for (var i = 0; i < address.length; i++) {
                 // If ith character is 9 to f then make it uppercase
-                if (parseInt(addressHash[i], 16) > 7) {
-                    checksumAddress += address[i].toUpperCase();
-                } else {
-                    checksumAddress += address[i];
-                }
+                // if (parseInt(addressHash[i], 16) > 7) {
+                //     checksumAddress += address[i].toUpperCase();
+                // } else {
+                checksumAddress += address[i];
+                // }
             }
             return checksumAddress;
         };
@@ -2888,7 +2918,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
     },{"./base58":17,"./sha3.js":20,"bignumber.js":"bignumber.js","utf8":85}],22:[function(require,module,exports){
         module.exports={
-            "version": "0.0.1"
+            "version": "0.2.6"
         }
 
     },{}],23:[function(require,module,exports){
@@ -3268,7 +3298,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 });
             }).map(function (types) {
                 return coder.opParams(types, params,rand,sero,dy,callback);
-            })[0] || '';
+            })[0] || coder.opParams([], [],rand,sero,dy,callback);
         };
 
 
@@ -3764,32 +3794,75 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {Object} data
          * @return {Object} result object with decoded indexed && not indexed params
          */
-        SolidityEvent.prototype.decode = function (data) {
+        SolidityEvent.prototype.decode = function (data,callback) {
 
             data.data = data.data || '';
             data.topics = data.topics || [];
-
-
+            var self = this;
             var argTopics = this._anonymous ? data.topics : data.topics.slice(1);
             var indexedData = argTopics.map(function (topics) { return topics.slice(2); }).join("");
-            var indexedParams = coder.decodeParams(this.types(true), indexedData,this._sero);
-
             var notIndexedData = data.data.slice(2);
-            var notIndexedParams = coder.decodeParams(this.types(false), notIndexedData,this._sero);
+            if (callback){
 
-            var result = formatters.outputLogFormatter(data);
-            result.event = this.displayName();
-            result.address = data.address;
+                var shortAddress= coder.decodeShortAddress(this.types(true), indexedData);
+                shortAddress = shortAddress.concat(coder.decodeShortAddress(this.types(true), notIndexedData))
+                var mapAddr = null;
+                if (shortAddress.length>0) {
+                    var cb = function (err,mapAddr){
+                        var indexedParams = coder.decodeParams(self.types(true), indexedData,mapAddr);
+                        var notIndexedParams = coder.decodeParams(self.types(false), notIndexedData,mapAddr);
+                        var result = formatters.outputLogFormatter(data);
+                        result.event = self.displayName();
+                        result.address = data.address;
 
-            result.args = this._params.reduce(function (acc, current) {
-                acc[current.name] = current.indexed ? indexedParams.shift() : notIndexedParams.shift();
-                return acc;
-            }, {});
+                        result.args = self._params.reduce(function (acc, current) {
+                            acc[current.name] = current.indexed ? indexedParams.shift() : notIndexedParams.shift();
+                            return acc;
+                        }, {});
 
-            delete result.data;
-            delete result.topics;
+                        delete result.data;
+                        delete result.topics;
+                        callback(null,result)
+                    }
+                    this._sero.getFullAddress(shortAddress,cb);
+                }else{
+                    var indexedParams = coder.decodeParams(this.types(true), indexedData,mapAddr);
+                    var notIndexedParams = coder.decodeParams(this.types(false), notIndexedData,mapAddr);
 
-            return result;
+                    var result = formatters.outputLogFormatter(data);
+                    result.event = this.displayName();
+                    result.address = data.address;
+
+                    result.args = this._params.reduce(function (acc, current) {
+                        acc[current.name] = current.indexed ? indexedParams.shift() : notIndexedParams.shift();
+                        return acc;
+                    }, {});
+
+                    delete result.data;
+                    delete result.topics;
+                    callback(null,result)
+                }
+            }else{
+
+                var mapAddr = null;
+                var indexedParams = coder.decodeParams(this.types(true), indexedData,mapAddr);
+                var notIndexedParams = coder.decodeParams(this.types(false), notIndexedData,mapAddr);
+                var result = formatters.outputLogFormatter(data);
+                result.event = this.displayName();
+                result.address = data.address;
+
+                result.args = this._params.reduce(function (acc, current) {
+                    acc[current.name] = current.indexed ? indexedParams.shift() : notIndexedParams.shift();
+                    return acc;
+                }, {});
+
+                delete result.data;
+                delete result.topics;
+
+                return result;
+            }
+
+
         };
 
         /**
@@ -4597,6 +4670,30 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return options;
         };
 
+        SolidityFunction.prototype.toPayloadCall = function (args,callback) {
+            var options = {};
+            if (args.length > this._inputTypes.length && utils.isObject(args[args.length -1])) {
+                options = args[args.length - 1];
+            }
+            this.validateArgs(args);
+            options.to = this._address;
+            var dy = false;
+            if (options.hasOwnProperty("dy")){
+                dy = options.dy;
+            }
+            var rand = utils.bytesToHex(utils.base58ToBytes(this._address).slice(0,16));
+            var self = this;
+            var cb = function(err,result){
+                if (err){
+                    throw errors.InvalidResponse(err);
+                }
+                args = result.params;
+                options.data = coder.addressPrefix(self._inputTypes,args,rand) + self.signature()+ coder.encodeParams(self._inputTypes, args);
+                callback(options)
+            }
+            coder.opParams(this._inputTypes,args,rand,this._sero,dy,cb);
+        };
+
         /**
          * Should be used to get function signature
          *
@@ -4608,14 +4705,39 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
 
-        SolidityFunction.prototype.unpackOutput = function (output) {
+        SolidityFunction.prototype.unpackOutput = function (output,callback) {
             if (!output) {
                 return;
             }
 
             output = output.length >= 2 ? output.slice(2) : output;
-            var result = coder.decodeParams(this._outputTypes, output,this._sero);
-            return result.length === 1 ? result[0] : result;
+            var self = this;
+
+            var shortAddress = coder.decodeShortAddress(this._outputTypes,output);
+
+            if (!callback) {
+                var addrMap = this._sero.getFullAddress(shortAddress);
+                var result = coder.decodeParams(this._outputTypes, output,addrMap);
+                return result.length === 1 ? result[0] : result;
+            }
+
+            if (shortAddress.length>0) {
+                var cb =  function(err,mapAddr){
+                    if (err) {
+                        throw err;
+                    }
+                    var result = coder.decodeParams(self._outputTypes, output,mapAddr);
+                    result = result.length === 1 ? result[0] : result;
+                    callback(err,result);
+                }
+                this._sero.getFullAddress(shortAddress,cb);
+
+            }else{
+                var result = coder.decodeParams(this._outputTypes, output,null);
+                result =  result.length === 1 ? result[0] : result;
+                callback(null,result);
+            }
+
         };
 
         /**
@@ -4632,28 +4754,29 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var args = Array.prototype.slice.call(arguments).filter(function (a) {return a !== undefined; });
             var callback = this.extractCallback(args);
             var defaultBlock = this.extractDefaultBlock(args);
-            var payload = this.toPayload(args);
-
 
             if (!callback) {
+                var payload = this.toPayload(args);
                 var output = this._sero.call(payload, defaultBlock);
                 return this.unpackOutput(output);
             }
 
             var self = this;
-            this._sero.call(payload, defaultBlock, function (error, output) {
-                if (error) return callback(error, null);
+            var cb =  function(payload){
+                self._sero.call(payload, defaultBlock, function (error, output) {
+                    if (error) return callback(error, null);
 
-                var unpacked = null;
-                try {
-                    unpacked = self.unpackOutput(output);
-                }
-                catch (e) {
-                    error = e;
-                }
+                    var unpacked = null;
+                    try {
+                        self.unpackOutput(output,callback);
+                    }
+                    catch (e) {
+                        error = e;
+                    }
+                });
+            }
+            this.toPayloadCall(args,cb);
 
-                callback(error, unpacked);
-            });
         };
 
         /**
@@ -4664,17 +4787,24 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         SolidityFunction.prototype.sendTransaction = function () {
             var args = Array.prototype.slice.call(arguments).filter(function (a) {return a !== undefined; });
             var callback = this.extractCallback(args);
-            var payload = this.toPayload(args);
-
-            if (payload.value > 0 && !this._payable) {
+            var options = {};
+            if (args.length > this._inputTypes.length && utils.isObject(args[args.length -1])) {
+                options = args[args.length - 1];
+            }
+            if (options.value > 0 && !this._payable) {
                 throw new Error('Cannot send value to non-payable function');
             }
-
             if (!callback) {
+                var payload = this.toPayload(args);
                 return this._sero.sendTransaction(payload);
             }
+            var self = this;
+            var cb =function(payload){
+                self._sero.sendTransaction(payload, callback);
+            }
+            this.toPayloadCall(args,cb);
 
-            this._sero.sendTransaction(payload, callback);
+
         };
 
         /**
@@ -4685,13 +4815,16 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         SolidityFunction.prototype.estimateGas = function () {
             var args = Array.prototype.slice.call(arguments);
             var callback = this.extractCallback(args);
-            var payload = this.toPayload(args);
-
             if (!callback) {
+                var payload = this.toPayload(args);
                 return this._sero.estimateGas(payload);
             }
 
-            this._sero.estimateGas(payload, callback);
+            var self = this;
+            var cb =function(payload){
+                self._sero.estimateGas(payload, callback);
+            }
+            this.toPayloadCall(args,cb);
         };
 
         /**
@@ -4702,9 +4835,16 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          */
         SolidityFunction.prototype.getData = function () {
             var args = Array.prototype.slice.call(arguments);
-            var payload = this.toPayload(args);
+            var callback = this.extractCallback(args);
+            if (!callback){
+                var payload = this.toPayload(args);
+                return payload.data;
+            }
+            var cb = function(result){
+                callback(result.data);
+            }
+            this.toPayloadCall(args,cb);
 
-            return payload.data;
         };
 
         /**

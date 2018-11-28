@@ -31,7 +31,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
-	"github.com/sero-cash/go-sero/accounts/abi"
 	"github.com/sero-cash/go-sero/accounts/keystore"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -513,26 +512,30 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *ke
 	return &ConvertAddress{addrMap, rand}, nil
 }
 
-func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, short common.ContractAddress) (*common.Address, error) {
+func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses []common.ContractAddress) (map[common.ContractAddress]common.Address, error) {
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
 		return nil, err
 	}
+	addrMap := map[common.ContractAddress]common.Address{}
+	for _, short := range shortAddresses {
+		full := state.GetNonceAddress(short[:])
 
-	full := state.GetNonceAddress(short[:])
+		wallets := s.b.AccountManager().Wallets()
 
-	wallets := s.b.AccountManager().Wallets()
-
-	if len(wallets) > 0 {
-		for _, wallet := range wallets {
-			if wallet.IsMine(full) {
-				full = wallet.Accounts()[0].Address
-				break
+		if len(wallets) > 0 {
+			for _, wallet := range wallets {
+				if wallet.IsMine(full) {
+					full = wallet.Accounts()[0].Address
+					break
+				}
 			}
 		}
+		addrMap[short] = full
 	}
-	return &full, nil
+	return addrMap, nil
+
 }
 
 type Balance struct {
@@ -682,8 +685,6 @@ type CallArgs struct {
 	GasPrice hexutil.Big     `json:"gasPrice"`
 	Value    hexutil.Big     `json:"value"`
 	Data     hexutil.Bytes   `json:"data"`
-	Pairs    []string        `json:"pairs"`
-	ABI      *abi.ABI        `json:"abi"`
 	Currency Smbol           `json:"cy"`
 	Dynamic  bool            `json:"dy"` //contract address parameters are dynamically generated.
 	Category Smbol           `json:"catg"`
@@ -785,18 +786,8 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	if err := vmError(); err != nil {
 		return nil, 0, false, err
 	}
-	//return res, gas, failed, err
-	wallets := s.b.AccountManager().Wallets()
-	if args.ABI != nil && args.To != nil {
-		out, err := args.ABI.Transfer(args.Data, res, state, *args.To, wallets)
-		if err != nil {
-			return nil, 0, false, err
-		}
-		return out, gas, failed, err
 
-	} else {
-		return res, gas, failed, err
-	}
+	return res, gas, failed, err
 
 }
 
