@@ -877,16 +877,16 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 		evm.StateDB.SetTicketNonce(contract.Address(), nonce+1)
 		bytes, _ := rlp.EncodeToBytes([]interface{}{contract.Address(), categoryName, nonce})
 		value = crypto.Keccak256Hash(bytes)
-	} else {
-		if !evm.StateDB.RemoveTicket(contract.Address(), categoryName, common.BytesToHash(value[:])) {
-			return common.Hash{}, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "The ticket does not belong to you.")
-		}
+		evm.StateDB.AddTicket(contract.Address(), categoryName, value)
 	}
+	//else {
+	//	if !evm.StateDB.RemoveTicket(contract.Address(), categoryName, common.BytesToHash(value[:])) {
+	//		return common.Hash{}, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "The ticket does not belong to you.")
+	//	}
+	//}
 
 	toAddr := evm.StateDB.GetNonceAddress(d[44:64])
-	evm.StateDB.AddTicket(contract.Address(), categoryName, value)
-
-	if toAddr != (common.Address{}) {
+	if toAddr != contract.Address() {
 		asset := assets.Asset{
 			Tkt: &assets.Ticket{
 				Category: *common.BytesToHash(common.LeftPadBytes([]byte(categoryName), 32)).HashToUint256(),
