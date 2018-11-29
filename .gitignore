@@ -49,3 +49,6 @@ profile.cov
 cgu
 config.ini
 build/package
+build/geropkg/bin
+build/geropkg/czero
+build/geropkg_*.tar.gz
