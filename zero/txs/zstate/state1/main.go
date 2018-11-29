@@ -3,9 +3,9 @@ package state1
 import (
 	"fmt"
 
-	"github.com/sero-cash/go-sero/zero/utils"
-
 	"github.com/pkg/errors"
+
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/log"
 
@@ -55,6 +55,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 	}()
 	var current_header *types.Header
 	current_header = bc.GetCurrenHeader()
+	target_number := current_header.Number.Int64()
 	tks := bc.GetTks()
 
 	need_load := []*types.Header{}
@@ -130,7 +131,8 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			st1.State0 = &state.State0
 		}
 
-		t.Renter(fmt.Sprintf("PARSE_BLOCK_CHAIN----UpdateWiteness(count=%d)", len(st1.State0.Block.Commitments)))
+		commitment_len := len(st1.State0.Block.Commitments)
+		t.Renter(fmt.Sprintf("PARSE_BLOCK_CHAIN----UpdateWiteness(count=%d)", commitment_len))
 		st1.UpdateWitness(tks)
 		current_state1 = st1
 
@@ -142,11 +144,11 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 		td := t.Leave()
 		log.Info(
 			"STATE0 PARSE PROCESS : ",
-			"t", current_header.Number.Int64(),
+			"t", target_number,
 			"c",
-			header.Number.Int64(),
+			current_num,
 			"n",
-			len(st1.State0.Block.Commitments),
+			commitment_len,
 			"d",
 			td,
 		)

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"runtime"
 	godebug "runtime/debug"
 	"sort"
@@ -206,7 +207,7 @@ func init() {
 			case ctx.GlobalBool(utils.DeveloperFlag.Name):
 				netType = cpt.NET_Dev
 			}
-			cpt.ZeroInit(netType)
+			cpt.ZeroInit(getKeyStore(ctx), netType)
 
 		}
 
@@ -250,6 +251,40 @@ func init() {
 		console.Stdin.Close() // Resets terminal mode.
 		return nil
 	}
+}
+
+func getKeyStore(ctx *cli.Context) string {
+	dataDir := ""
+	switch {
+	case ctx.GlobalIsSet(utils.DataDirFlag.Name):
+		dataDir = ctx.GlobalString(utils.DataDirFlag.Name)
+	case ctx.GlobalBool(utils.AlphanetFlag.Name):
+		dataDir = filepath.Join(node.DefaultDataDir(), "alpha")
+	case ctx.GlobalBool(utils.DeveloperFlag.Name):
+		dataDir = filepath.Join(node.DefaultDataDir(), "dev")
+	}
+	keyStoreDir := ""
+
+	if ctx.GlobalIsSet(utils.KeyStoreDirFlag.Name) {
+		keyStoreDir = ctx.GlobalString(utils.KeyStoreDirFlag.Name)
+	}
+	var (
+		keydir string
+	)
+	switch {
+	case filepath.IsAbs(keyStoreDir):
+		keydir = keyStoreDir
+	case dataDir != "":
+		if keyStoreDir == "" {
+			keydir = filepath.Join(dataDir, "keystore")
+		} else {
+			keydir, _ = filepath.Abs(keyStoreDir)
+		}
+	case keyStoreDir != "":
+		keydir, _ = filepath.Abs(keyStoreDir)
+	}
+
+	return keydir
 }
 
 func main() {

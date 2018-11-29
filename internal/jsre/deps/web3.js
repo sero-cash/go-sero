@@ -4342,22 +4342,24 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             if (tx.stx.Desc_O){
                 tx.stx.Desc_O_Ins=tx.stx.Desc_O.Ins;
                 var O_Outs=[];
-                tx.stx.Desc_O.Outs.forEach(function(out){
-                    var out_O ={};
-                    if (utils.toBigNumber(out.Addr)!=0) {
-                        out_O.Addr = out.Addr;
-                    }
-                    if (out.Asset.Tkn){
-                        out_O.Currency = utils.bytesToString(utils.hexToBytes(utils.fromDecimal(utils.toBigNumber(out.Asset.Tkn.Currency))));
-                        out_O.Value = utils.toBigNumber(out.Asset.Tkn.Value);
-                    }
-                    if (out.Asset.Tkt){
-                        out_O.Category = utils.bytesToString(utils.hexToBytes(utils.fromDecimal(utils.toBigNumber(out.Asset.Tkt.Category))));
-                        out_O.TktId = out.Asset.Tkt.Value;
-                    }
-                    out_O.Memo = out.Memo;
-                    O_Outs.push(out_O);
-                });
+                if (tx.stx.Desc_O.Outs){
+                    tx.stx.Desc_O.Outs.forEach(function(out){
+                        var out_O ={};
+                        if (utils.toBigNumber(out.Addr)!=0) {
+                            out_O.Addr = out.Addr;
+                        }
+                        if (out.Asset.Tkn){
+                            out_O.Currency = utils.bytesToString(utils.hexToBytes(utils.fromDecimal(utils.toBigNumber(out.Asset.Tkn.Currency))));
+                            out_O.Value = utils.toBigNumber(out.Asset.Tkn.Value);
+                        }
+                        if (out.Asset.Tkt){
+                            out_O.Category = utils.bytesToString(utils.hexToBytes(utils.fromDecimal(utils.toBigNumber(out.Asset.Tkt.Category))));
+                            out_O.TktId = out.Asset.Tkt.Value;
+                        }
+                        out_O.Memo = out.Memo;
+                        O_Outs.push(out_O);
+                    });
+                }
                 tx.stx.Desc_O_Outs = O_Outs;
                 delete  tx.stx.Desc_O;
             }
