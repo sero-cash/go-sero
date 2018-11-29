@@ -26,7 +26,7 @@ if [ ! -d ${CZERO_IMPT_PATH} ]; then
     echo "please cd ${GERO_BASE}/..\n git clone https://github.com/sero-cash/go-czero-import.git"
     exit
 fi
-cp ${CZERO_PATH}/lib/libczero.* ${CZERO_IMPT_PATH}/czero/lib/
+cp ${CZERO_PATH}/lib_$0/libczero.* ${CZERO_IMPT_PATH}/czero/lib/
 cd ${GERO_BASE}
 make clean all
 

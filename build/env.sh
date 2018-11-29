@@ -29,9 +29,9 @@ fi
 GOPATH="$workspace"
 export GOPATH
 
-DYLD_LIBRARY_PATH="../go-czero-import/czero/lib"
+DYLD_LIBRARY_PATH="../go-czero-import/czero/lib_DARWIN"
 export DYLD_LIBRARY_PATH
-LD_LIBRARY_PATH="../go-czero-import/czero/lib"
+LD_LIBRARY_PATH="../go-czero-import/czero/lib_LINUX"
 export LD_LIBRARY_PATH
 
 # Run the command inside the workspace.
