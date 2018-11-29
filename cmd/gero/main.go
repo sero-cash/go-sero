@@ -289,32 +289,43 @@ func getKeyStore(ctx *cli.Context) string {
 
 var logo = `
                             
-SSSSSSSSSSSSSSSSSSSSSSSSSSS
-SSSSSSSSSs       sSSSSSSSSS
-SSSSSSS    SSSSS    SSSSSSS
-SSSSSS   SSS   SSS    SSSSS
-SSSS   SS    .   sSS   SSSS
-SSSS  SS   SSs SSS SSs SSSS
-SSS  SS   SS    SS   S  SSS
-SS. SS   SS      S   SS .SS
-SS  SS  sSS           S  SS
-SS SSS   SSS          SS SS
-S  S S   SSSS     .    S .S
-S  S S   SSSSSS    S   S sS
-S  S SS   SSSSSSS   S  S  S
-S  S  SS    SSSSSS   S S  S
-S  S   SS    SSSSS   S S  S
-SS S.    S.    SSSS    S  S
-SS .S     SS    SSS   S  SS
-SS  S   S   S   SSS  SS  SS
-SSS  S   S      SS   S  SSS
-SSS  SS  SS     SS  SS  SSS
-SSSS  SS  SS s.SS  SS  SSSS
-SSSSS  SSS s.    SSS  SSSSS
-SSSSSS   SSSSSSSSSs  SSSSSS
-SSSSSSS.   s .     .SSSSSSS
-SSSSSSSSSSs     sSSSSSSSSSS
-SSSSSSSSSSSSSSSSSSSSSSSSSSS
+                         sssSSssss
+                   sSSSSSSSSSSSSSSSSSSSs
+               sSSSSSSSSSSSSSSSSSSSSSSSSSSs
+             sSSSSSSss               ssSSSSSSs
+          ssSSSSSSs        s sss        sSSSSSSs
+         sSSSSSs     sSSSSSSSSSSSSSSs      sSSSSS
+        sSSSS     +SSSSSSS+        sSSSsss   SSSSSs
+      sSSSSs   sSSSSSSSs   sssSss      SSSS    sSSSS
+      SSSS     SSSSSs     sSSSSSSSSs   sSSSSs   sSSSSs
+    sSSSS    sSSSSSs     SSSSSSSSSSSs   SSSSSs    SSSSs
+    SSSSs    SSSSSS     SSSSSSSSSSSSSs  SSSSSSSs   SSSS
+   SSSSs    SSSSSSs    sSSSSSSSSSSSSSSs SSSSSSSSs  sSSSs
+  sSSSs     SSSSSSs      SSSSSSSSSSSSSssSSSSSSSSSs  +SSSs
+  SSSS      SSSSSSs      sSSSSSSSSS+SSSSSSSSSSSSSS  sSSSS
+ sSSSs      SSSSSS         sSSSSSSSSSSsSSSSSSSSSSSs ssSSS
+ sSSSs  s   SSSSSSs           SSSSSSSSSSssSSSSSSSSS   SSSs
+ SSSS  sS    SSSSSSs             SSSSSSSSSs sSSSSSS   SSSs
+ SSSss sSs   sSSSSSSs             ssSSSSSSSS  sSSSS   SSSs
+ SSS+s SSS    sSSSSSSS               sSSSSSSS ssSSS   SSSS
+ SSSSs sSSSs    sSSSSSSSss             sSSSSSSs SSS   SSSs
+ SSSS  sSSSSS     SSSSSSSSSs            sSSSSSSs SS   SSS+
+ SSSSs  SSSSSSS     sSSSSSSSSS            SSSSSs ss   SSSs
+  SSS+  sSSSSSSSSSs   sSSSSSSSSSs         SSSSSS ss  +SSS
+  SSSS   SSSSSSSSSSSss   sSSSSSSSs        sSSSSS    sSSSS
+  sSSSs  sSSSSSSSs sSSSs   sSSSSSSs       SSSSSs    sSSSs
+   SSSSs  sSSSSSSs  SSSSSSs sSSSSSSs      SSSSSs   sSSS+
+    SSSS    SSSSS+   SSSSSSSssSSSSSs     sSSSS    sSSSS
+    sSSSS    SSSSS   ssSSSSSSsSSSSss    sSSSSs    SSSS
+      SSSSss   SSSs     SSSSSSSSSs     SSSSS    sSSSSs
+       SSSSs    sSSs      +SSSSS     sSSSSs   ssSSSs
+        sSSSSS    sSSSS           sSSSSs     SSSSSs
+          SSSSS+ss     sSSSSSSSSSSSS      sSSSSSs
+            SSSSSSss                   ssSSSSSSs
+             sSSSSSSSsss           ssSSSSSSSS
+                sSSSSSSSSSSSSSSSSSSSSSSSSSs
+                   ssSSSSSSSSSSSSSSSSSs
+                          rrssssrr
 
 `
 
