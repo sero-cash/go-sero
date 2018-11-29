@@ -287,7 +287,39 @@ func getKeyStore(ctx *cli.Context) string {
 	return keydir
 }
 
+var logo = `
+                            
+SSSSSSSSSSSSSSSSSSSSSSSSSSS
+SSSSSSSSSs       sSSSSSSSSS
+SSSSSSS    SSSSS    SSSSSSS
+SSSSSS   SSS   SSS    SSSSS
+SSSS   SS    .   sSS   SSSS
+SSSS  SS   SSs SSS SSs SSSS
+SSS  SS   SS    SS   S  SSS
+SS. SS   SS      S   SS .SS
+SS  SS  sSS           S  SS
+SS SSS   SSS          SS SS
+S  S S   SSSS     .    S .S
+S  S S   SSSSSS    S   S sS
+S  S SS   SSSSSSS   S  S  S
+S  S  SS    SSSSSS   S S  S
+S  S   SS    SSSSS   S S  S
+SS S.    S.    SSSS    S  S
+SS .S     SS    SSS   S  SS
+SS  S   S   S   SSS  SS  SS
+SSS  S   S      SS   S  SSS
+SSS  SS  SS     SS  SS  SSS
+SSSS  SS  SS s.SS  SS  SSSS
+SSSSS  SSS s.    SSS  SSSSS
+SSSSSS   SSSSSSSSSs  SSSSSS
+SSSSSSS.   s .     .SSSSSSS
+SSSSSSSSSSs     sSSSSSSSSSS
+SSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+`
+
 func main() {
+	fmt.Println(logo)
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
