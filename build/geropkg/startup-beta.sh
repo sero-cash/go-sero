@@ -5,7 +5,7 @@ SERVERPORT=60602
 LOCALHOST=`/sbin/ifconfig -a|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "addr:"`
 RPCAPI='sero,web3'
 DATADIR="${PACKAGEDIR%/*}/datadir"
-LOGDIR="${PACKAGEDIR%/*}/log"
+
 
 if [ -f "pid" ];then
     kill -9 `cat pid`
@@ -37,4 +37,4 @@ fi
 
 
 sleep 10
-nohup ${PACKAGEDIR}/bin/gero --datadir=${DATADIR} --rpc --rpcport ${RPCPORT} --rpcaddr ${LOCALHOST} --rpcapi ${RPCAPI} --port ${SERVERPORT} --rpccorsdomain "*" &> ${LOGDIR}/gero.log 2>&1& echo $! pid
+${PACKAGEDIR}/bin/gero --datadir=${DATADIR} --rpc --rpcport ${RPCPORT} --rpcaddr ${LOCALHOST} --rpcapi ${RPCAPI} --port ${SERVERPORT} --rpccorsdomain "*"

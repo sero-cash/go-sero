@@ -33,7 +33,7 @@ function sysname() {
     if [ "Linux" == "$SYSTEM" ]
     then
         name=`cat /etc/system-release|awk '{print $1}'`
-        echo "Linux $name"
+        echo "$name"
     fi
 
 }
@@ -44,15 +44,15 @@ if [ "Darwin" == "$SNAME" ]
 then
     echo $SNAME
     cp $CZERO_PATH/czero/lib_DARWIN/* $SERO_PATH/build/geropkg/czero/lib/
-elif [ "Linux CentOS" == "$SNAME" ]
+elif [ "CentOS" == "$SNAME" ]
 then
     echo $SNAME
     cp $CZERO_PATH/czero/lib_LINUX/* $SERO_PATH/build/geropkg/czero/lib/
-elif [ "Linux Ubuntu" == "$SNAME" ]
+elif [ "Ubuntu" == "$SNAME" ]
 then
     echo $SNAME
     cp $CZERO_PATH/czero/lib_LINUX/* $SERO_PATH/build/geropkg/czero/lib/
-elif [ "Linux Fedora" == "$SNAME" ]
+elif [ "Fedora" == "$SNAME" ]
 then
     echo $SNAME
     cp $CZERO_PATH/czero/lib_FEDORA/* $SERO_PATH/build/geropkg/czero/lib/
