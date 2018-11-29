@@ -448,7 +448,7 @@ func (self *worker) commitNewWork() {
 
 	work.commitTransactions(self.mux, txs, self.chain, header.Coinbase)
 
-	log.Info(fmt.Sprintf("commitTransactions %v tx done in %v", len(pending), time.Since(tstart)))
+	log.Debug(fmt.Sprintf("commitTransactions %v tx done in %v", len(pending), time.Since(tstart)))
 
 	// Create the new block to seal with the consensus engine
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {

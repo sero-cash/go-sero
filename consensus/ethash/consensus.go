@@ -414,7 +414,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 	} else {
 		reward = reward.Mul(reward, big.NewInt(4)).Div(reward, big.NewInt(5))
 	}
-	log.Info(fmt.Sprintf("BlockNumber =%v, Last_avgGas = %v, currentGasUsed = %v, reward =%v", header.Number.Uint64(), avgGas.Uint64(), header.GasUsed, reward.Uint64()))
+	log.Debug(fmt.Sprintf("BlockNumber =%v, Last_avgGas = %v, currentGasUsed = %v, reward =%v", header.Number.Uint64(), avgGas.Uint64(), header.GasUsed, reward.Uint64()))
 
 	if header.Number.Uint64() < 40000 {
 		avgGas = avgGas.Mul(avgGas, header.Number).Add(avgGas, new(big.Int).SetUint64(header.GasUsed)).Div(avgGas, new(big.Int).Add(header.Number, bigOne))

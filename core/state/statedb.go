@@ -21,10 +21,8 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
-	"sync"
-	"time"
-
 	"strings"
+	"sync"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
@@ -860,7 +858,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	for addr := range s.journal.dirties {
 		s.stateObjectsDirty[addr] = struct{}{}
 	}
-	start := time.Now()
+
 	// Commit objects to the trie.
 	for addr, stateObject := range s.stateObjects {
 		_, isDirty := s.stateObjectsDirty[addr]
@@ -884,8 +882,6 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		delete(s.stateObjectsDirty, addr)
 	}
-
-	log.Info(fmt.Sprintf("Commit objects to the trie done in %v,num=%v\n", time.Since(start), s.GetZState().Num()))
 
 	// Write trie changes.
 	root, err = s.trie.Commit(s.leafCallback)

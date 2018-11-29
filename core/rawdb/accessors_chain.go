@@ -21,8 +21,6 @@ import (
 	"encoding/binary"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/serodb"
-
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/log"
@@ -342,56 +340,55 @@ func WriteBlock(db DatabaseWriter, block *types.Block) {
 
 }
 
-func ReadHash(db DatabaseReader, number uint64) []common.Hash {
-	hashs := []common.Hash{}
-	key := indexKey(number)
-	data, _ := db.Get(key)
-	if len(data) > 0 {
-		if err := rlp.Decode(bytes.NewReader(data), &hashs); err != nil {
-			log.Error("Invalid block hashIndexs", "number", number, "err", err)
-			return hashs
-		}
-	}
-	return hashs
-}
+//func ReadHash(db DatabaseReader, number uint64) []common.Hash {
+//	hashs := []common.Hash{}
+//	key := indexKey(number)
+//	data, _ := db.Get(key)
+//	if len(data) > 0 {
+//		if err := rlp.Decode(bytes.NewReader(data), &hashs); err != nil {
+//			log.Error("Invalid block hashIndexs", "number", number, "err", err)
+//			return hashs
+//		}
+//	}
+//	return hashs
+//}
 
-func WriteHash(db serodb.Database, number uint64, hash common.Hash) {
-	hashs := []common.Hash{}
-	key := indexKey(number)
-	data, _ := db.Get(key)
-	if len(data) > 0 {
-		if err := rlp.Decode(bytes.NewReader(data), &hashs); err != nil {
-			log.Error("Invalid block hashIndexs", "hash", hash, "err", err)
-			return
-		}
-	}
-	for _, v := range hashs {
-		if v == hash {
-			return
-		}
-	}
-
-	hashs = append(hashs, hash)
-	log.Info("block", "number", number, "hashs ", common.HashToHex(hashs))
-	data, err := rlp.EncodeToBytes(hashs)
-	if err != nil {
-		log.Crit("Failed to RLP encode hashs", "err", err)
-	}
-	if err := db.Put(key, data); err != nil {
-		log.Crit("Failed to store hashs", "err", err)
-	}
-}
-
-func WriteHashs(db DatabaseWriter, number uint64, hashs []common.Hash) {
-	key := indexKey(number)
-	data, err := rlp.EncodeToBytes(hashs)
-	if err != nil {
-		log.Crit("Failed to RLP encode hashs", "err", err)
-	}
-	if err := db.Put(key, data); err != nil {
-		log.Crit("Failed to store hashs", "err", err)
-	}
-}
+//func WriteHash(db serodb.Database, number uint64, hash common.Hash) {
+//	hashs := []common.Hash{}
+//	key := indexKey(number)
+//	data, _ := db.Get(key)
+//	if len(data) > 0 {
+//		if err := rlp.Decode(bytes.NewReader(data), &hashs); err != nil {
+//			log.Error("Invalid block hashIndexs", "hash", hash, "err", err)
+//			return
+//		}
+//	}
+//	for _, v := range hashs {
+//		if v == hash {
+//			return
+//		}
+//	}
+//
+//	hashs = append(hashs, hash)
+//	data, err := rlp.EncodeToBytes(hashs)
+//	if err != nil {
+//		log.Crit("Failed to RLP encode hashs", "err", err)
+//	}
+//	if err := db.Put(key, data); err != nil {
+//		log.Crit("Failed to store hashs", "err", err)
+//	}
+//}
+//
+//func WriteHashs(db DatabaseWriter, number uint64, hashs []common.Hash) {
+//	key := indexKey(number)
+//	data, err := rlp.EncodeToBytes(hashs)
+//	if err != nil {
+//		log.Crit("Failed to RLP encode hashs", "err", err)
+//	}
+//	if err := db.Put(key, data); err != nil {
+//		log.Crit("Failed to store hashs", "err", err)
+//	}
+//}
 
 // DeleteBlock removes all block data associated with a hash.
 func DeleteBlock(db DatabaseDeleter, hash common.Hash, number uint64) {
