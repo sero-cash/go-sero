@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 ROOT=$(cd `dirname $0`; pwd)
 
@@ -6,6 +6,8 @@ DATADIR="${ROOT}/data"
 if [ ! -z "$1" ]; then
     DATADIR=$1
 fi
+
+sh ${ROOT}/stop.sh
 
 echo "rm -rf ${DATADIR}/gero"
 rm -rf ${DATADIR}/gero

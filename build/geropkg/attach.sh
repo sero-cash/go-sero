@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 ROOT=$(cd `dirname $0`; pwd)
 DATADIR="${ROOT}/data"

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 ROOT=$(cd `dirname $0`; pwd)
 

@@ -1,9 +1,8 @@
-#!/usr/bin
+#!/bin/sh
 
 ROOT=$(cd `dirname $0`; pwd)
-if [ -f "${ROOT}/pid" ];then
-    kill -9 `cat pid`
-fi
+
+sh ${ROOT}/stop.sh
 
 function sysname() {
 
