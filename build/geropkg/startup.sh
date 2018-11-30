@@ -57,7 +57,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 if [[ ! "$cmd" == "* --datadir*" ]]; then
-     cmd="$cmd --datadir ${DEFAULT_DATD_DIR}"
+     cmd="$cmd --datadir=${DEFAULT_DATD_DIR}"
 fi
 
 if [[ ! "$cmd" == "* --port*" ]]; then
