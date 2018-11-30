@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin
 
 ROOT=$(cd `dirname $0`; pwd)
 if [ -f "${ROOT}/pid" ];then
@@ -64,6 +64,5 @@ if [[ ! "$cmd" == "* --port*" ]]; then
      cmd="$cmd --port ${DEFAULT_PORT}"
 fi
 
-#cmd="${cmd} &> ${LOGDIR}/gero.log 2>&1"
 echo $cmd
-${cmd}
+${cmd} &> ${ROOT}/log/gero.log & echo $! > ${ROOT}/pid
