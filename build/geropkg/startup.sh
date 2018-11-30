@@ -35,12 +35,12 @@ LOGDIR="${ROOT}/log"
 DEFAULT_RPCPORT=8545
 DEFAULT_PORT=60602
 
-cmd="${ROOT}/bin/gero"
+cmd="${ROOT}/bin/gero --datadir=${DEFAULT_DATD_DIR} --port ${DEFAULT_PORT}"
 if [[ $# -gt 0 ]]; then
      while [[ "$1" != "" ]]; do
        	 case "$1" in
 		--datadir)
-		    cmd="$cmd --datadir=$2";shift 2;;
+		    cmd=${cmd/--datadir=${DEFAULT_DATD_DIR}/--datadir=$2};shift 2;;
         --dev)
 		    cmd="$cmd --dev";shift;;
 
@@ -50,18 +50,10 @@ if [[ $# -gt 0 ]]; then
 		    localhost=$(hostname -I|awk -F ' ' '{print $1}')
 		    cmd="$cmd --rpc --rpcport $2 --rpcaddr $localhost --rpcapi 'personal,sero,web3' --rpccorsdomain '*'";shift;;
         --port)
-		    cmd="$cmd --port $2";shift 2;;
+            cmd=${cmd/--port ${DEFAULT_PORT}/--port $2};shift 2;;
 		*)exit;;
         esac
     done
-fi
-
-if [[ ! "$cmd" == "* --datadir*" ]]; then
-     cmd="$cmd --datadir=${DEFAULT_DATD_DIR}"
-fi
-
-if [[ ! "$cmd" == "* --port*" ]]; then
-     cmd="$cmd --port ${DEFAULT_PORT}"
 fi
 
 echo $cmd
