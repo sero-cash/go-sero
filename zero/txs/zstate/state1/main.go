@@ -55,8 +55,9 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 	}()
 	var current_header *types.Header
 	current_header = bc.GetCurrenHeader()
-	target_number := current_header.Number.Int64()
 	tks := bc.GetTks()
+
+	progress := utils.NewProgress("STATE1_PROCESS : ", current_header.Number.Uint64())
 
 	need_load := []*types.Header{}
 	for {
@@ -142,16 +143,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			st1 = nil
 		}
 		td := t.Leave()
-		log.Debug(
-			"STATE0 PARSE PROCESS : ",
-			"t", target_number,
-			"c",
-			current_num,
-			"n",
-			commitment_len,
-			"d",
-			td,
-		)
+		progress.Tick(current_num, "len", commitment_len, "d", td)
 	}
 
 	if current_state1 == nil {
