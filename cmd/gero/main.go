@@ -254,7 +254,7 @@ func init() {
 }
 
 func getKeyStore(ctx *cli.Context) string {
-	dataDir := ""
+	dataDir := node.DefaultDataDir()
 	switch {
 	case ctx.GlobalIsSet(utils.DataDirFlag.Name):
 		dataDir = ctx.GlobalString(utils.DataDirFlag.Name)

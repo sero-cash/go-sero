@@ -16,6 +16,23 @@
 
 package vm
 
+import "math/big"
+
+var (
+	big1      = big.NewInt(1)
+	big4      = big.NewInt(4)
+	big8      = big.NewInt(8)
+	big16     = big.NewInt(16)
+	big32     = big.NewInt(32)
+	big64     = big.NewInt(64)
+	big96     = big.NewInt(96)
+	big480    = big.NewInt(480)
+	big1024   = big.NewInt(1024)
+	big3072   = big.NewInt(3072)
+	big199680 = big.NewInt(199680)
+)
+
+/*
 import (
 	"crypto/sha256"
 	"errors"
@@ -242,6 +259,7 @@ func (c *bigModExp) Run(input []byte) ([]byte, error) {
 	return common.LeftPadBytes(base.Exp(base, exp, mod).Bytes(), int(modLen)), nil
 }
 
+
 // newCurvePoint unmarshals a binary blob into a bn256 elliptic curve point,
 // returning it, or an error if the point is invalid.
 func newCurvePoint(blob []byte) (*bn256.G1, error) {
@@ -349,3 +367,4 @@ func (c *bn256Pairing) Run(input []byte) ([]byte, error) {
 	}
 	return false32Byte, nil
 }
+*/
