@@ -29,14 +29,26 @@ fi
 GOPATH="$workspace"
 export GOPATH
 
+args=()
+index=0
+for i in "$@"; do
+   args[$index]=$i
+   index=$[$index+1]
+done
 DYLD_LIBRARY_PATH="../go-czero-import/czero/lib_DARWIN"
 export DYLD_LIBRARY_PATH
-LD_LIBRARY_PATH="../go-czero-import/czero/lib_LINUX"
-export LD_LIBRARY_PATH
+if [ $1 == "fedora" ]; then
+    unset args[0]
+    LD_LIBRARY_PATH="../go-czero-import/czero/lib_FEDORA"
+    export LD_LIBRARY_PATH
+else
+    LD_LIBRARY_PATH="../go-czero-import/czero/lib_LINUX"
+    export LD_LIBRARY_PATH
+fi
 
 # Run the command inside the workspace.
 cd "$ethdir/go-sero"
 PWD="$ethdir/go-sero"
 
-# Launch the arguments with the configured environment.
-exec "$@"
+#Launch the arguments with the configured environment.
+exec "${args[@]}"

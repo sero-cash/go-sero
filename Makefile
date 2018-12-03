@@ -9,6 +9,7 @@
 .PHONY: gero-windows gero-windows-386 gero-windows-amd64
 
 GOBIN = $(shell pwd)/build/bin
+root=$(shell pwd)
 GO ?= latest
 
 PKG = ./...
@@ -55,13 +56,27 @@ gero-cross: gero-linux gero-darwin gero-windows
 	@echo "Full cross compilation done:"
 	@ls -ld $(GOBIN)/gero-*
 
-gero-linux: gero-linux-amd64
+gero-linux: gero-centos-amd64 gero-ubuntu-amd64 gero-fedora-amd64
 	@echo "Linux cross compilation done:"
 	@ls -ld $(GOBIN)/gero-linux-*
 
 gero-linux-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/gero
-	@echo "Linux amd64 cross compilation done:"
+    build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/gero
+    @echo "Linux amd64 cross compilation done:"
+
+gero-centos-amd64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --out=gero-centos --targets=linux/amd64 -v ./cmd/gero
+	@echo "Linux centos amd64 cross compilation done:"
+	@ls -ld $(GOBIN)/gero-linux-* | grep amd64
+
+gero-ubuntu-amd64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --out=gero-ubuntu --targets=linux/amd64 -v ./cmd/gero
+	@echo "Linux  ubuntu amd64 cross compilation done:"
+	@ls -ld $(GOBIN)/gero-linux-* | grep amd64
+
+gero-fedora-amd64:
+	build/env.sh fedora go run build/ci.go xgo -- --go=$(GO) --out=gero-fedora --targets=linux/amd64 -v ./cmd/gero
+	@echo "Linux fedora cross compilation done:"
 	@ls -ld $(GOBIN)/gero-linux-* | grep amd64
 
 gero-darwin: gero-darwin-amd64
