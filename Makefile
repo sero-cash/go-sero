@@ -56,28 +56,19 @@ gero-cross: gero-linux gero-darwin gero-windows
 	@echo "Full cross compilation done:"
 	@ls -ld $(GOBIN)/gero-*
 
-gero-linux: gero-centos-amd64 gero-ubuntu-amd64 gero-fedora-amd64
+gero-linux: gero-linux-amd640-v3 gero-linux-amd64-v4
 	@echo "Linux cross compilation done:"
 	@ls -ld $(GOBIN)/gero-linux-*
 
-gero-linux-amd64:
-    build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/gero
-    @echo "Linux amd64 cross compilation done:"
-
-gero-centos-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --out=gero-centos --targets=linux/amd64 -v ./cmd/gero
+gero-linux-amd64-v3:
+	build/env.sh linux-v3 go run build/ci.go xgo -- --go=$(GO) --out=gero-v3 --targets=linux/amd64 -v ./cmd/gero
 	@echo "Linux centos amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/gero-linux-* | grep amd64
+	@ls -ld $(GOBIN)/gero-v3-linux-* | grep amd64
 
-gero-ubuntu-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --out=gero-ubuntu --targets=linux/amd64 -v ./cmd/gero
+gero-linux-amd64-v4:
+	build/env.sh linux-v4 go run build/ci.go xgo -- --go=$(GO) --out=gero-v4 --targets=linux/amd64 -v ./cmd/gero
 	@echo "Linux  ubuntu amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/gero-linux-* | grep amd64
-
-gero-fedora-amd64:
-	build/env.sh fedora go run build/ci.go xgo -- --go=$(GO) --out=gero-fedora --targets=linux/amd64 -v ./cmd/gero
-	@echo "Linux fedora cross compilation done:"
-	@ls -ld $(GOBIN)/gero-linux-* | grep amd64
+	@ls -ld $(GOBIN)/gero-v4-linux-* | grep amd64
 
 gero-darwin: gero-darwin-amd64
 	@echo "Darwin cross compilation done:"
@@ -85,7 +76,7 @@ gero-darwin: gero-darwin-amd64
 
 
 gero-darwin-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 -v ./cmd/gero
+	build/env.sh darwin-amd64 go run build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 -v ./cmd/gero
 	@echo "Darwin amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/gero-darwin-* | grep amd64
 
@@ -94,6 +85,6 @@ gero-windows: gero-windows-amd64
 	@ls -ld $(GOBIN)/gero-windows-*
 
 gero-windows-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/gero
+	build/env.sh windows-amd64 go run build/ci.go xgo -- --go=$(GO)  --targets=windows/amd64 -v ./cmd/gero
 	@echo "Windows amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/gero-windows-* | grep amd64
