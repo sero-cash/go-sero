@@ -142,7 +142,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			st1 = nil
 		}
 		td := t.Leave()
-		log.Info(
+		log.Debug(
 			"STATE0 PARSE PROCESS : ",
 			"t", target_number,
 			"c",
