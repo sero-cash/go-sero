@@ -49,14 +49,14 @@ var (
 	hashTrue                 = common.LeftPadBytes([]byte{1}, 32)
 	hashFalse                = common.LeftPadBytes([]byte{0}, 32)
 
-	topic_issueToken  = common.HexToHash("0x3be6bf24d822bcd6f6348f6f5a5c2d3108f04991ee63e80cde49a8c4746a0ef3")
-	topic_send        = common.HexToHash("0x868bd6629e7c2e3d2ccf7b9968fad79b448e7a2bfb3ee20ed1acbc695c3c8b23")
-	topic_balanceOf   = common.HexToHash("0xcf19eb4256453a4e30b6a06d651f1970c223fb6bd1826a28ed861f0e602db9b8")
-	topic_allotTicket = common.HexToHash("0xa6a366f1a72e1aef5d8d52ee240a476f619d15be7bc62d3df37496025b83459f")
-	topic_currency    = common.HexToHash("0x7c98e64bd943448b4e24ef8c2cdec7b8b1275970cfe10daf2a9bfa4b04dce905")
-	topic_category    = common.HexToHash("0xf1964f6690a0536daa42e5c575091297d2479edcc96f721ad85b95358644d276")
-	topic_ticket      = common.HexToHash("0x9ab0d7c07029f006485cf3468ce7811aa8743b5a108599f6bec9367c50ac6aad")
-	topic_setCurrency = common.HexToHash("0x0d3419022a97c2b5b03008b32a2cb33ab9f9b6721ce570c5031e04b6eadeb630")
+	topic_issueToken    = common.HexToHash("0x3be6bf24d822bcd6f6348f6f5a5c2d3108f04991ee63e80cde49a8c4746a0ef3")
+	topic_send          = common.HexToHash("0x868bd6629e7c2e3d2ccf7b9968fad79b448e7a2bfb3ee20ed1acbc695c3c8b23")
+	topic_balanceOf     = common.HexToHash("0xcf19eb4256453a4e30b6a06d651f1970c223fb6bd1826a28ed861f0e602db9b8")
+	topic_allotTicket   = common.HexToHash("0xa6a366f1a72e1aef5d8d52ee240a476f619d15be7bc62d3df37496025b83459f")
+	topic_currency      = common.HexToHash("0x7c98e64bd943448b4e24ef8c2cdec7b8b1275970cfe10daf2a9bfa4b04dce905")
+	topic_category      = common.HexToHash("0xf1964f6690a0536daa42e5c575091297d2479edcc96f721ad85b95358644d276")
+	topic_ticket        = common.HexToHash("0x9ab0d7c07029f006485cf3468ce7811aa8743b5a108599f6bec9367c50ac6aad")
+	topic_setCallValues = common.HexToHash("0xa6cafc6282f61eff9032603a017e652f68410d3d3c69f0a3eeca8f181aec1d17")
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -703,16 +703,22 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	// Get the arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
-	if value.Sign() != 0 {
+	asset := contract.GetCallMsg()
+	if asset == nil && value.Sign() != 0 {
+		asset = &assets.Asset{Tkn: &assets.Token{
+			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+			Value:    utils.U256(*value),
+		},
+		}
+	}
+
+	if asset != nil {
 		gas += params.CallStipend
 	}
 
-	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte(contract.GetCurrency()), 32)).HashToUint256(),
-		Value:    utils.U256(*value),
-	},
-	}
-	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, asset)
+	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, *asset)
+	contract.SetCallMsg(nil);
+
 	if err != nil {
 		stack.push(interpreter.intPool.getZero())
 	} else {
@@ -742,16 +748,22 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
-	if value.Sign() != 0 {
+	asset := contract.GetCallMsg()
+	if asset == nil && value.Sign() != 0 {
+		asset = &assets.Asset{Tkn: &assets.Token{
+			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+			Value:    utils.U256(*value),
+		},
+		}
+	}
+
+	if asset != nil {
 		gas += params.CallStipend
 	}
 
-	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte(contract.GetCurrency()), 32)).HashToUint256(),
-		Value:    utils.U256(*value),
-	},
-	}
-	ret, returnGas, err := interpreter.evm.CallCode(contract, toAddr, args, gas, asset)
+	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, *asset)
+	contract.SetCallMsg(nil);
+
 	if err != nil {
 		stack.push(interpreter.intPool.getZero())
 	} else {
@@ -1048,8 +1060,47 @@ func makeLog(size int) executionFunc {
 			} else {
 				memory.Set(mStart.Uint64(), 32, []byte{})
 			}
-		} else if topics[0] == topic_setCurrency {
-			contract.SetCurrency(string(d[32 : 32+new(big.Int).SetBytes(d[0:32]).Uint64()]))
+		} else if topics[0] == topic_setCallValues {
+			currency_offset := new(big.Int).SetBytes(d[0:32]).Uint64()
+			length := new(big.Int).SetBytes(data[currency_offset:currency_offset+32]).Uint64()
+			var currency string
+			if length != 0 {
+				currency = string(data[currency_offset+32 : currency_offset+32+length])
+			}
+
+			var category string
+			category_offset := new(big.Int).SetBytes(d[64:96]).Uint64()
+			length = new(big.Int).SetBytes(data[category_offset:category_offset+32]).Uint64()
+			if length != 0 {
+				category = string(data[category_offset+32 : category_offset+32+length])
+			}
+
+			currency = strings.ToUpper(currency)
+			category = strings.ToUpper(category)
+
+			amount := new(big.Int).SetBytes(d[32:64])
+			ticketHash := common.BytesToHash(d[96:128])
+
+			var token *assets.Token
+			if len(currency) != 0 && amount.Sign() != 0 {
+				token = &assets.Token{
+					Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
+					Value:    utils.U256(*amount),
+				}
+			}
+
+			var ticket *assets.Ticket
+			if len(category) != 0 && ticketHash != (common.Hash{}) {
+				ticket = &assets.Ticket{
+					Category: *common.BytesToHash(common.LeftPadBytes([]byte(category), 32)).HashToUint256(),
+					Value:    *ticketHash.HashToUint256(),
+				}
+			}
+
+			if token != nil || ticket != nil {
+				contract.SetCallMsg(&assets.Asset{Tkn: token, Tkt: ticket})
+			}
+
 		} else {
 			interpreter.evm.StateDB.AddLog(&types.Log{
 				Address: contract.Address(),

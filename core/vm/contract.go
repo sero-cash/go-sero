@@ -68,8 +68,9 @@ type Contract struct {
 
 	DelegateCall bool
 
-	addrs    map[common.ContractAddress]common.Address
-	currency string
+	addrs map[common.ContractAddress]common.Address
+	//currency string
+	callMsg *assets.Asset
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
@@ -92,19 +93,15 @@ func NewContract(caller ContractRef, object ContractRef, asset *assets.Asset, ga
 	c.Gas = gas
 	// ensures a value is set
 	c.asset = asset
-
 	return c
 }
 
-func (c *Contract) SetCurrency(currency string) {
-	c.currency = currency
+func (c *Contract) SetCallMsg(callMsg *assets.Asset) {
+	c.callMsg = callMsg
 }
 
-func (c *Contract) GetCurrency() string {
-	if c.currency == "" {
-		return "SERO"
-	}
-	return c.currency
+func (c *Contract) GetCallMsg() *assets.Asset {
+	return c.callMsg
 }
 
 func (c *Contract) PutNonceAddress(statedb StateDB, addr common.Address) {
