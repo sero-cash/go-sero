@@ -334,12 +334,12 @@ func gasCall(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem
 	var (
 		gas            = gt.Calls
 		transfersValue = stack.Back(2).Sign() != 0
-		address        = common.BigToAddress(stack.Back(1))
+		//address        = common.BigToAddress(stack.Back(1))
 	)
-	if !evm.StateDB.Exist(address) {
-		gas += params.CallNewAccountGas
-	}
-	if transfersValue {
+	//if !evm.StateDB.Exist(address) {
+	//	gas += params.CallNewAccountGas
+	//}
+	if transfersValue || contract.callMsg != nil {
 		gas += params.CallValueTransferGas
 	}
 	memoryGas, err := memoryGasCost(mem, memorySize)
