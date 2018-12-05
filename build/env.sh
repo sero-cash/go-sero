@@ -26,6 +26,7 @@ for i in "$@"; do
 done
 
 mkdir -p "../go-czero-import/czero/lib"
+
 #current system verion is  DARWIN_AMD64
 rm -rf ../go-czero-import/czero/lib/*
 cd "$root/../go-czero-import/czero"

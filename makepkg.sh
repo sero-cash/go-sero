@@ -43,12 +43,22 @@ for os in ${os_version[@]}
         cp -rf  $CZERO_PATH/czero/lib_DARWIN_AMD64/* $SERO_PATH/build/geropkg/czero/lib/
       fi
       cd $BUILD_PATH
-      if [ -f ./geropkg_$os.tar.gz ]; then
-        rm ./geropkg_$os.tar.gz
+
+      if [ $os == "windows-amd64" ];then
+        if [ -f ./geropkg-$os.zip ]; then
+              rm ./geropkg-$os.zip
+        fi
+        zip -r geropkg_$os.zip geropkg/*
+      else
+         if [ -f ./geropkg-$os.tar.gz ]; then
+              rm ./geropkg-$os.tar.gz
+         fi
+         tar czvf geropkg-$os.tar.gz geropkg/*
       fi
-      tar czvf geropkg_$os.tar.gz geropkg/*
 
       cd $LOCAL_PATH
 
     done
+rm -rf $BUILD_PATH/geropkg/bin
+rm -rf $BUILD_PATH/geropkg/czero
 

@@ -43,19 +43,19 @@ SNAME=`sysname`
 if [ "Darwin" == "$SNAME" ]
 then
     echo $SNAME
-    cp $CZERO_PATH/czero/lib_DARWIN/* $SERO_PATH/build/geropkg/czero/lib/
+    cp $CZERO_PATH/czero/lib_DARWIN_AMD64/* $SERO_PATH/build/geropkg/czero/lib/
 elif [ "CentOS" == "$SNAME" ]
 then
     echo $SNAME
-    cp $CZERO_PATH/czero/lib_LINUX/* $SERO_PATH/build/geropkg/czero/lib/
+    cp $CZERO_PATH/czero/lib_LINUX_AMD64_V3/* $SERO_PATH/build/geropkg/czero/lib/
 elif [ "Ubuntu" == "$SNAME" ]
 then
     echo $SNAME
-    cp $CZERO_PATH/czero/lib_LINUX/* $SERO_PATH/build/geropkg/czero/lib/
+    cp $CZERO_PATH/czero/lib_LINUX_AMD64_V3/* $SERO_PATH/build/geropkg/czero/lib/
 elif [ "Fedora" == "$SNAME" ]
 then
     echo $SNAME
-    cp $CZERO_PATH/czero/lib_FEDORA/* $SERO_PATH/build/geropkg/czero/lib/
+    cp $CZERO_PATH/czero/lib_LINUX_AMD64_V4/* $SERO_PATH/build/geropkg/czero/lib/
 fi
 
 cd $LOCAL_PATH
