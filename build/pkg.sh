@@ -24,18 +24,19 @@ cp -rf $CZERO_PATH/czero/include/* $SERO_PATH/build/geropkg/czero/include/
 
 function sysname() {
 
-    SYSTEM=`uname -s`
+    SYSTEM=`uname -s |cut -f1 -d_`
+
     if [ "Darwin" == "$SYSTEM" ]
     then
         echo "Darwin"
-    fi
 
-    if [ "Linux" == "$SYSTEM" ]
+    elif [ "Linux" == "$SYSTEM" ]
     then
-        name=`cat /etc/system-release|awk '{print $1}'`
-        echo "$name"
+        name=`uname  -r |cut -f1 -d.`
+        echo Linux-V"$name"
+    else
+        echo "$SYSTEM"
     fi
-
 }
 
 SNAME=`sysname`
@@ -44,15 +45,11 @@ if [ "Darwin" == "$SNAME" ]
 then
     echo $SNAME
     cp $CZERO_PATH/czero/lib_DARWIN_AMD64/* $SERO_PATH/build/geropkg/czero/lib/
-elif [ "CentOS" == "$SNAME" ]
+elif [ "Linux-v3" == "$SNAME" ]
 then
     echo $SNAME
     cp $CZERO_PATH/czero/lib_LINUX_AMD64_V3/* $SERO_PATH/build/geropkg/czero/lib/
-elif [ "Ubuntu" == "$SNAME" ]
-then
-    echo $SNAME
-    cp $CZERO_PATH/czero/lib_LINUX_AMD64_V3/* $SERO_PATH/build/geropkg/czero/lib/
-elif [ "Fedora" == "$SNAME" ]
+elif [ "Linux-v4" == "$SNAME" ]
 then
     echo $SNAME
     cp $CZERO_PATH/czero/lib_LINUX_AMD64_V4/* $SERO_PATH/build/geropkg/czero/lib/

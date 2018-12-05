@@ -27,7 +27,7 @@ for i in "$@"; do
    index=$[$index+1]
 done
 
-mkdir -p "../go-czero-import/czero/lib"
+mkdir -p "$root/../go-czero-import/czero/lib"
 
 
 function sysname() {
@@ -54,21 +54,21 @@ SNAME=`sysname`
 
 if [ "Darwin" == "$SNAME" ]
 then
-    rm -rf ../go-czero-import/czero/lib/*
+    rm -rf $root/../go-czero-import/czero/lib/*
     cd "$root/../go-czero-import/czero"
     cp -rf lib_DARWIN_AMD64/* lib/
     DYLD_LIBRARY_PATH="../go-czero-import/czero/lib_DARWIN_AMD64"
     export DYLD_LIBRARY_PATH
 elif [ "Linux-V3" == "$SNAME" ]
 then
-   rm -rf ../go-czero-import/czero/lib/*
+   rm -rf $root/../go-czero-import/czero/lib/*
    cd "$root/../go-czero-import/czero"
    cp -rf lib_LINUX_AMD64_V3/* lib/
    LD_LIBRARY_PATH="../go-czero-import/czero/lib_LINUX_AMD64_V3"
    export LD_LIBRARY_PATH
 elif [ "Linux-V4" == "$SNAME" ]
 then
-    rm -rf ../go-czero-import/czero/lib/*
+    rm -rf $root/../go-czero-import/czero/lib/*
     cd "$root/../go-czero-import/czero"
     cp -rf lib_LINUX_AMD64_V4/* lib/
     LD_LIBRARY_PATH="../go-czero-import/czero/lib_LINUX_AMD64_V4"
@@ -79,7 +79,7 @@ then
      exit
 elif [ "$SNAME" == "MINGW32" ]
 then
-    rm -rf ../go-czero-import/czero/lib/*
+    rm -rf $root/../go-czero-import/czero/lib/*
     cd "$root/../go-czero-import/czero"
     cp -rf lib_WINDOWS_AMD64/* lib/
 else

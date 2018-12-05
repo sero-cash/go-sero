@@ -50,6 +50,8 @@ if [[ $# -gt 0 ]]; then
 		    cmd="$cmd --rpc --rpcport $2 --rpcaddr $localhost --rpcapi 'personal,sero,web3' --rpccorsdomain '*'";shift;;
         --port)
             cmd=${cmd/--port ${DEFAULT_PORT}/--port $2};shift 2;;
+        --keystore)
+            cmd="$cmd --keystore $2";shift 2;;
 		*)exit;;
         esac
     done
