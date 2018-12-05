@@ -16,7 +16,13 @@ cd $SERO_PATH
 git fetch&&git rebase
 make clean
 BUILD_PATH="${SERO_PATH%}/build"
-os_version=("linux-amd64-v3" "linux-amd64-v4" "darwin-amd64" "windows-amd64")
+os_version=()
+if [ x"$1" = x ]; then
+    os_version=("linux-amd64-v3" "linux-amd64-v4" "darwin-amd64" "windows-amd64")
+else
+    os_version[0]="$1"
+fi
+
 for os in ${os_version[@]}
     do
       echo "make gero-${os}"
