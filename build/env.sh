@@ -11,15 +11,11 @@ workspace="$PWD/build/_workspace"
 root="$PWD"
 SERO_PATH="$PWD"
 CZERO_PATH="$PWD/../go-czero-import"
-ethdir="$workspace/src/github.com/sero-cash"
-rm -rf "$ethdir"
-if [ ! -L "$ethdir/go-sero" ]; then
-    mkdir -p "$ethdir"
-    cd "$ethdir"
-    ln -s $SERO_PATH go-sero
-    cd "$root"
-fi
+echo $CZERO_PATH
+_GOPATH=`cd ../../../../;pwd`
+echo $_GOPATH
 
+cd "$root"
 args=()
 index=0
 for i in "$@"; do
@@ -114,21 +110,15 @@ else
 fi
 
 
-if [ ! -L "$ethdir/go-czero-import" ]; then
-    mkdir -p "$ethdir"
-    cd "$ethdir"
-    ln -s $CZERO_PATH go-czero-import
-    cd "$root"
-fi
 
 # Set up the environment to use the workspace.
-GOPATH="$workspace"
+GOPATH="$_GOPATH"
 export GOPATH
 
 
 # Run the command inside the workspace.
-cd "$ethdir/go-sero"
-PWD="$ethdir/go-sero"
+cd "$SERO_PATH"
+PWD="$SERO_PATH"
 
 #Launch the arguments with the configured environment.
 exec "${args[@]}"
