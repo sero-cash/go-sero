@@ -9,12 +9,14 @@ fi
 # Create fake Go workspace if it doesn't exist yet.
 workspace="$PWD/build/_workspace"
 root="$PWD"
+SERO_PATH="$PWD"
+CZERO_PATH="$PWD/../go-czero-import"
 ethdir="$workspace/src/github.com/sero-cash"
 rm -rf "$ethdir"
 if [ ! -L "$ethdir/go-sero" ]; then
     mkdir -p "$ethdir"
     cd "$ethdir"
-    ln -s ../../../../../. go-sero
+    ln -s $SERO_PATH go-sero
     cd "$root"
 fi
 
@@ -115,7 +117,7 @@ fi
 if [ ! -L "$ethdir/go-czero-import" ]; then
     mkdir -p "$ethdir"
     cd "$ethdir"
-    ln -s ../../../../../../go-czero-import/. go-czero-import
+    ln -s $CZERO_PATH go-czero-import
     cd "$root"
 fi
 
