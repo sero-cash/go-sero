@@ -42,7 +42,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -145,10 +144,6 @@ func main() {
 		doLint(os.Args[2:])
 	case "archive":
 		doArchive(os.Args[2:])
-	case "nsis":
-		doWindowsInstaller(os.Args[2:])
-	case "aar":
-		doAndroidArchive(os.Args[2:])
 	case "xcode":
 		doXCodeFramework(os.Args[2:])
 	case "xgo":
@@ -586,147 +581,6 @@ func stageDebianSource(tmpdir string, meta debMetadata) (pkgdir string) {
 	}
 
 	return pkgdir
-}
-
-// Windows installer
-func doWindowsInstaller(cmdline []string) {
-	// Parse the flags and make skip installer generation on PRs
-	var (
-		arch    = flag.String("arch", runtime.GOARCH, "Architecture for cross build packaging")
-		signer  = flag.String("abi", "", `Environment variable holding the signing key (e.g. WINDOWS_SIGNING_KEY)`)
-		upload  = flag.String("upload", "", `Destination to upload the archives (usually "gethstore/builds")`)
-		workdir = flag.String("workdir", "", `Output directory for packages (uses temp dir if unset)`)
-	)
-	flag.CommandLine.Parse(cmdline)
-	*workdir = makeWorkdir(*workdir)
-	env := build.Env()
-	maybeSkipArchive(env)
-
-	// Aggregate binaries that are included in the installer
-	var (
-		devTools []string
-		allTools []string
-		gethTool string
-	)
-	for _, file := range allToolsArchiveFiles {
-		if file == "COPYING" { // license, copied later
-			continue
-		}
-		allTools = append(allTools, filepath.Base(file))
-		if filepath.Base(file) == "gero.exe" {
-			gethTool = file
-		} else {
-			devTools = append(devTools, file)
-		}
-	}
-
-	// Render NSIS scripts: Installer NSIS contains two installer sections,
-	// first section contains the gero binary, second section holds the dev tools.
-	templateData := map[string]interface{}{
-		"License":  "COPYING",
-		"Geth":     gethTool,
-		"DevTools": devTools,
-	}
-	build.Render("build/nsis.gero.nsi", filepath.Join(*workdir, "gero.nsi"), 0644, nil)
-	build.Render("build/nsis.install.nsh", filepath.Join(*workdir, "install.nsh"), 0644, templateData)
-	build.Render("build/nsis.uninstall.nsh", filepath.Join(*workdir, "uninstall.nsh"), 0644, allTools)
-	build.Render("build/nsis.pathupdate.nsh", filepath.Join(*workdir, "PathUpdate.nsh"), 0644, nil)
-	build.Render("build/nsis.envvarupdate.nsh", filepath.Join(*workdir, "EnvVarUpdate.nsh"), 0644, nil)
-	build.CopyFile(filepath.Join(*workdir, "SimpleFC.dll"), "build/nsis.simplefc.dll", 0755)
-	build.CopyFile(filepath.Join(*workdir, "COPYING"), "COPYING", 0755)
-
-	// Build the installer. This assumes that all the needed files have been previously
-	// built (don't mix building and packaging to keep cross compilation complexity to a
-	// minimum).
-	version := strings.Split(params.Version, ".")
-	if env.Commit != "" {
-		version[2] += "-" + env.Commit[:8]
-	}
-	installer, _ := filepath.Abs("gero-" + archiveBasename(*arch, params.ArchiveVersion(env.Commit)) + ".exe")
-	build.MustRunCommand("makensis.exe",
-		"/DOUTPUTFILE="+installer,
-		"/DMAJORVERSION="+version[0],
-		"/DMINORVERSION="+version[1],
-		"/DBUILDVERSION="+version[2],
-		"/DARCH="+*arch,
-		filepath.Join(*workdir, "gero.nsi"),
-	)
-
-	// Sign and publish installer.
-	if err := archiveUpload(installer, *upload, *signer); err != nil {
-		log.Fatal(err)
-	}
-}
-
-// Android archives
-
-func doAndroidArchive(cmdline []string) {
-	var (
-		local  = flag.Bool("local", false, `Flag whether we're only doing a local build (skip Maven artifacts)`)
-		signer = flag.String("abi", "", `Environment variable holding the signing key (e.g. ANDROID_SIGNING_KEY)`)
-		deploy = flag.String("deploy", "", `Destination to deploy the archive (usually "https://oss.sonatype.org")`)
-		upload = flag.String("upload", "", `Destination to upload the archive (usually "gethstore/builds")`)
-	)
-	flag.CommandLine.Parse(cmdline)
-	env := build.Env()
-
-	// Sanity check that the SDK and NDK are installed and set
-	if os.Getenv("ANDROID_HOME") == "" {
-		log.Fatal("Please ensure ANDROID_HOME points to your Android SDK")
-	}
-	if os.Getenv("ANDROID_NDK") == "" {
-		log.Fatal("Please ensure ANDROID_NDK points to your Android NDK")
-	}
-	// Build the Android archive and Maven resources
-	build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile", "golang.org/x/mobile/cmd/gobind"))
-	build.MustRun(gomobileTool("init", "--ndk", os.Getenv("ANDROID_NDK")))
-	build.MustRun(gomobileTool("bind", "-ldflags", "-s -w", "--target", "android", "--javapkg", "org.ethereum", "-v", "github.com/sero-cash/go-sero/mobile"))
-
-	if *local {
-		// If we're building locally, copy bundle to build dir and skip Maven
-		os.Rename("gero.aar", filepath.Join(GOBIN, "gero.aar"))
-		return
-	}
-	meta := newMavenMetadata(env)
-	build.Render("build/mvn.pom", meta.Package+".pom", 0755, meta)
-
-	// Skip Maven deploy and Azure upload for PR builds
-	maybeSkipArchive(env)
-
-	// Sign and upload the archive to Azure
-	archive := "gero-" + archiveBasename("android", params.ArchiveVersion(env.Commit)) + ".aar"
-	os.Rename("gero.aar", archive)
-
-	if err := archiveUpload(archive, *upload, *signer); err != nil {
-		log.Fatal(err)
-	}
-	// Sign and upload all the artifacts to Maven Central
-	os.Rename(archive, meta.Package+".aar")
-	if *signer != "" && *deploy != "" {
-		// Import the signing key into the local GPG instance
-		b64key := os.Getenv(*signer)
-		key, err := base64.StdEncoding.DecodeString(b64key)
-		if err != nil {
-			log.Fatalf("invalid base64 %s", *signer)
-		}
-		gpg := exec.Command("gpg", "--import")
-		gpg.Stdin = bytes.NewReader(key)
-		build.MustRun(gpg)
-
-		keyID, err := build.PGPKeyID(string(key))
-		if err != nil {
-			log.Fatal(err)
-		}
-		// Upload the artifacts to Sonatype and/or Maven Central
-		repo := *deploy + "/service/local/staging/deploy/maven2"
-		if meta.Develop {
-			repo = *deploy + "/content/repositories/snapshots"
-		}
-		build.MustRunCommand("mvn", "gpg:sign-and-deploy-file", "-e", "-X",
-			"-settings=build/mvn.settings", "-Durl="+repo, "-DrepositoryId=ossrh",
-			"-Dgpg.keyname="+keyID,
-			"-DpomFile="+meta.Package+".pom", "-Dfile="+meta.Package+".aar")
-	}
 }
 
 func gomobileTool(subcmd string, args ...string) *exec.Cmd {

@@ -48,7 +48,7 @@ for os in ${os_version[@]}
         if [ -f ./geropkg-$os.zip ]; then
               rm ./geropkg-$os.zip
         fi
-        zip -r geropkg_$os.zip geropkg/*
+        zip -r geropkg-$os.zip geropkg/*
       else
          if [ -f ./geropkg-$os.tar.gz ]; then
               rm ./geropkg-$os.tar.gz

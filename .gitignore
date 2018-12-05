@@ -52,3 +52,5 @@ build/package
 build/geropkg/bin
 build/geropkg/czero
 build/geropkg_*.tar.gz
+build/geropkg-*.tar.gz
+build/geropkg-*.zip
