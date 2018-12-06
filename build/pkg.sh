@@ -45,11 +45,11 @@ if [ "Darwin" == "$SNAME" ]
 then
     echo $SNAME
     cp $CZERO_PATH/czero/lib_DARWIN_AMD64/* $SERO_PATH/build/geropkg/czero/lib/
-elif [ "Linux-v3" == "$SNAME" ]
+elif [ "Linux-V3" == "$SNAME" ]
 then
     echo $SNAME
     cp $CZERO_PATH/czero/lib_LINUX_AMD64_V3/* $SERO_PATH/build/geropkg/czero/lib/
-elif [ "Linux-v4" == "$SNAME" ]
+elif [ "Linux-V4" == "$SNAME" ]
 then
     echo $SNAME
     cp $CZERO_PATH/czero/lib_LINUX_AMD64_V4/* $SERO_PATH/build/geropkg/czero/lib/
