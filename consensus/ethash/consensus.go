@@ -40,11 +40,11 @@ import (
 
 // Ethash proof-of-work protocol constants.
 var (
-	stepBlockNumber        *big.Int = big.NewInt(2102400)
 	allowedFutureBlockTime          = 15 * time.Second // Max time from current time allowed for blocks, before they're considered future blocks
 	bigOne                 *big.Int = big.NewInt(1)
 	big4W                  *big.Int = big.NewInt(40000)
 	big39999               *big.Int = big.NewInt(39999)
+	big200W                *big.Int = big.NewInt(2000000)
 )
 
 // Various error messages to mark blocks invalid. These should be private to
@@ -244,8 +244,8 @@ var (
 	expDiffPeriod = big.NewInt(100000)
 	big1          = big.NewInt(1)
 	big2          = big.NewInt(2)
+	big6          = big.NewInt(6)
 	big9          = big.NewInt(9)
-	//big10         = big.NewInt(10)
 	bigMinus99 = big.NewInt(-99)
 )
 
@@ -383,48 +383,78 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 	return types.NewBlock(header, txs, receipts), nil
 }
 
+var (
+	base    = big.NewInt(1e+17)
+	big100  = big.NewInt(100)
+	oneSero = new(big.Int).Mul(big.NewInt(10), base)
+
+	blockRewards = []*big.Int{
+		new(big.Int).Mul(big.NewInt(350), base),
+		new(big.Int).Mul(big.NewInt(250), base),
+		new(big.Int).Mul(big.NewInt(180), base),
+		new(big.Int).Mul(big.NewInt(130), base),
+		new(big.Int).Mul(big.NewInt(90), base),
+		new(big.Int).Mul(big.NewInt(60), base),
+		new(big.Int).Mul(big.NewInt(45), base),
+		new(big.Int).Mul(big.NewInt(30), base),
+		new(big.Int).Mul(big.NewInt(20), base),
+		new(big.Int).Mul(big.NewInt(15), base),
+	}
+)
+
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward .
 func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, header *types.Header) {
 	// Select the correct block reward based on chain progression
-	if header.Number.Cmp(new(big.Int).Mul(stepBlockNumber, big.NewInt(10))) > 0 {
+	poolBalance := statedb.GetBalance(state.EmptyAddress, "SERO")
+	if poolBalance.Sign() <= 0 {
 		return
 	}
 
-	blockRewards := params.DefaultBlockRewards
-	if config.ChainID.Uint64() == 1 {
-		blockRewards = params.BetaBlockRewards
-	} else if config.ChainID.Uint64() == 3 {
-		blockRewards = params.AiphaBlockRewards
+	difficulty := big.NewInt(1717986918)
+	if config.ChainID.Uint64() == 3 {
+		difficulty = big.NewInt(51485767)
 	} else if config.ChainID.Uint64() == 4 {
-		blockRewards = params.DevBlockRewards
+		difficulty = big.NewInt(1048576)
 	}
 
-	r := new(big.Int).Div(header.Number, stepBlockNumber).Uint64()
-	reward := new(big.Int).Set(blockRewards[r])
+	r := new(big.Int).Div(header.Number, big200W).Uint64()
+	if r > 9 {
+		r = 9
+	}
+	reward := new(big.Int).SetBytes(blockRewards[r].Bytes())
 
-	avgGas := statedb.GetAvgUsedGas(header.Number.Uint64() - 1)
-
-	if header.GasUsed >= avgGas.Uint64() {
-		otherRawrd := new(big.Int).Div(new(big.Int).Mul(reward, big2), big.NewInt(5))
-		if statedb.GetBalance(state.EmptyAddress, "SERO").Cmp(otherRawrd) >= 0 {
-			reward = reward.Add(reward, otherRawrd)
-			statedb.SubBalance(state.EmptyAddress, "SERO", otherRawrd)
+	if header.Difficulty.Cmp(difficulty) < 0 {
+		ratio := new(big.Int).Div(new(big.Int).Mul(header.Difficulty, big100), difficulty).Uint64()
+		if ratio >= 80 {
+			reward = reward.Mul(reward, big.NewInt(4)).Div(reward, big.NewInt(5))
+		} else if ratio >= 60 {
+			reward = reward.Mul(reward, big.NewInt(3)).Div(reward, big.NewInt(5))
+		} else if ratio >= 40 {
+			reward = reward.Mul(reward, big.NewInt(2)).Div(reward, big.NewInt(5))
+		} else if ratio >= 20 {
+			reward = reward.Mul(reward, big.NewInt(1)).Div(reward, big.NewInt(5))
+		} else {
+			reward = oneSero
 		}
+	}
+
+	ratio := new(big.Int).Div(new(big.Int).Mul(new(big.Int).SetUint64(header.GasUsed), big100), new(big.Int).SetUint64(header.GasLimit)).Uint64()
+	if ratio >= 80 {
+		reward = new(big.Int).Div(new(big.Int).Mul(reward, big6), big.NewInt(5))
 	} else {
 		reward = reward.Mul(reward, big.NewInt(4)).Div(reward, big.NewInt(5))
 	}
-	log.Debug(fmt.Sprintf("BlockNumber =%v, Last_avgGas = %v, currentGasUsed = %v, reward =%v", header.Number.Uint64(), avgGas.Uint64(), header.GasUsed, reward.Uint64()))
 
-	if header.Number.Uint64() < 40000 {
-		avgGas = avgGas.Mul(avgGas, header.Number).Add(avgGas, new(big.Int).SetUint64(header.GasUsed)).Div(avgGas, new(big.Int).Add(header.Number, bigOne))
-	} else {
-		usedGas := new(big.Int).SetUint64(header.GasUsed)
-		avgGas = avgGas.Mul(avgGas, big39999).Div(avgGas, big4W).Add(avgGas, usedGas.Div(usedGas, big4W))
+	if reward.Cmp(oneSero) < 0 {
+		reward = oneSero
 	}
 
-	statedb.SetAvgUsedGas(header.Number.Uint64(), avgGas)
-
+	if poolBalance.Cmp(reward) < 0 {
+		reward = poolBalance;
+	}
+	statedb.SubBalance(state.EmptyAddress, "SERO", reward)
+	log.Info(fmt.Sprintf("BlockNumber = %v, gasLimie = %v, gasUsed = %v, reward =%v", header.Number.Uint64(), header.GasLimit, header.GasUsed, reward))
 	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 		Value:    utils.U256(*reward),

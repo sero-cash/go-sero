@@ -59,8 +59,6 @@ type Genesis struct {
 	Coinbase   common.Address `json:"coinbase"`
 	Alloc      GenesisAlloc   `json:"alloc"      gencodec:"required"`
 
-	AvgUsedGas uint64 `json:"avgUsedGas"      gencodec:"required"`
-
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
 	Number     uint64      `json:"number"`
@@ -232,7 +230,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 	}
 	statedb, _ := state.NewGenesis(common.Hash{}, state.NewDatabase(db))
 	statedb.RegisterToken(state.EmptyAddress, "SERO")
-	statedb.AddBalance(state.EmptyAddress, "SERO", new(big.Int).Mul(big.NewInt(50000000), big.NewInt(1e+18)))
+	statedb.AddBalance(state.EmptyAddress, "SERO", new(big.Int).Mul(big.NewInt(250000000), big.NewInt(1e+18)))
 
 	sero := common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32))
 	var keys common.Addresses
@@ -256,12 +254,6 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 		for key, value := range account.Storage {
 			statedb.SetState(addr, key, value)
 		}
-	}
-
-	if g.AvgUsedGas != 0 {
-		statedb.SetAvgUsedGas(0, new(big.Int).SetUint64(g.AvgUsedGas))
-	} else {
-		statedb.SetAvgUsedGas(0, params.GenesisAvgUsedGas)
 	}
 
 	root := statedb.IntermediateRoot(false)
@@ -329,6 +321,7 @@ func DefaultGenesisBlock() *Genesis {
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		GasLimit:   5000000,
 		Difficulty: big.NewInt(1717986918),
+
 		//Alloc:      decodePrealloc(mainnetAllocData),
 		Coinbase:   common.Base58ToAddress("1111111111111111111111111111111111111111111111111111111111111111"),
 		ParentHash: common.Hash{},
