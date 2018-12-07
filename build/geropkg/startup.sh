@@ -57,5 +57,7 @@ if [[ $# -gt 0 ]]; then
     done
 fi
 
+mkdir -p ${ROOT}/log
+
 echo $cmd
 ${cmd} &> ${ROOT}/log/gero.log & echo $! > ${ROOT}/pid

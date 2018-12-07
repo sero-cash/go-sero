@@ -1,5 +1,7 @@
 #!/bin/sh
 
+
+
 LOCAL_PATH=$(cd `dirname $0`; pwd)
 echo "LOCAL_PATH=$LOCAL_PATH"
 SERO_PATH="${LOCAL_PATH%}"
@@ -16,11 +18,28 @@ cd $SERO_PATH
 git fetch&&git rebase
 make clean
 BUILD_PATH="${SERO_PATH%}/build"
-os_version=()
-if [ x"$1" = x ]; then
+
+os="all"
+version="v0.3.1-beta.rc.5"
+while getopts ":o:v:" opt
+do
+    case $opt in
+        o)
+        os=$OPTARG
+        ;;
+        v)
+        version=$OPTARG
+        ;;
+        ?)
+        echo "unkonw param"
+        exit 1;;
+    esac
+done
+
+if [ "$os" = "all" ]; then
     os_version=("linux-amd64-v3" "linux-amd64-v4" "darwin-amd64" "windows-amd64")
 else
-    os_version[0]="$1"
+    os_version[0]="$os"
 fi
 
 for os in ${os_version[@]}
@@ -51,15 +70,11 @@ for os in ${os_version[@]}
       cd $BUILD_PATH
 
       if [ $os == "windows-amd64" ];then
-        if [ -f ./geropkg-$os.zip ]; then
-              rm ./geropkg-$os.zip
-        fi
-        zip -r geropkg-$os.zip geropkg/*
+        rm -rf ./gero-*-$os.zip
+        zip -r gero-$version-$os.zip geropkg/*
       else
-         if [ -f ./geropkg-$os.tar.gz ]; then
-              rm ./geropkg-$os.tar.gz
-         fi
-         tar czvf geropkg-$os.tar.gz geropkg/*
+         rm -rf ./gero-*-$os.tar.gz
+         tar czvf gero-$version-$os.tar.gz geropkg/*
       fi
 
       cd $LOCAL_PATH
