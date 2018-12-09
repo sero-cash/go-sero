@@ -45,7 +45,7 @@ func (out *OutState0) IsO() bool {
 
 func (self *OutState0) ToOutCM() *keys.Uint256 {
 	if self.IsO() {
-		asset := self.Out_O.Asset.ToCompleteAsset()
+		asset := self.Out_O.Asset.ToFlatAsset()
 		cm := cpt.GenOutCM(
 			asset.Tkn.Currency.NewRef(),
 			asset.Tkn.Value.ToUint256().NewRef(),

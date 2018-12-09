@@ -107,10 +107,13 @@ func (self *user) getAR() (pkr keys.Uint512) {
 func (self *user) addOut(v int) {
 	out := stx.Out_O{}
 	out.Addr = self.getAR()
-	out.Asset = assets.NewPackageByToken(&assets.Token{
-		utils.StringToUint256("SERO"),
-		utils.NewU256(uint64(v)),
-	})
+	out.Asset = assets.NewAsset(
+		&assets.Token{
+			utils.StringToUint256("SERO"),
+			utils.NewU256(uint64(v)),
+		},
+		nil,
+	)
 	g_blocks.st.AddOut_O(&out)
 	g_blocks.st.Update()
 	EndBlock()

@@ -258,7 +258,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 					desc_info := cpt.InfoDesc{}
 					desc_info.Ar = utils.NewU256(os.Index).ToRef().ToUint256()
 					desc_info.Rsk = rsk
-					asset := os.Out_O.Asset.ToCompleteAsset()
+					asset := os.Out_O.Asset.ToFlatAsset()
 					desc_info.Tkn_currency = asset.Tkn.Currency
 					desc_info.Tkn_value = asset.Tkn.Value.ToUint256()
 					desc_info.Tkt_category = asset.Tkt.Category

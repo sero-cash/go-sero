@@ -83,7 +83,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256, balance_de
 		g := gen_output_desc{}
 
 		g.desc.Seed = *seed
-		asset := out.Asset.ToCompleteAsset()
+		asset := out.Asset.ToFlatAsset()
 		g.desc.Tkn_currency = asset.Tkn.Currency
 		g.desc.Tkn_value = asset.Tkn.Value.ToUint256()
 		g.desc.Tkt_category = asset.Tkt.Category

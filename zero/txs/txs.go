@@ -57,7 +57,7 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 			s_in_o.Root = *in_o.Pg.Root.ToUint256()
 			s.Desc_O.Ins = append(s.Desc_O.Ins, s_in_o)
 			{
-				asset := in_o.Out_O.Asset.ToCompleteAsset()
+				asset := in_o.Out_O.Asset.ToFlatAsset()
 				asset_desc := cpt.AssetDesc{
 					Tkn_currency: asset.Tkn.Currency,
 					Tkn_value:    asset.Tkn.Value.ToUint256(),
@@ -72,7 +72,7 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 			s_out_o := stx.Out_O{}
 			s_out_o.Asset = out_o.Asset.Clone()
 			{
-				asset := s_out_o.Asset.ToCompleteAsset()
+				asset := s_out_o.Asset.ToFlatAsset()
 				asset_desc := cpt.AssetDesc{
 					Tkn_currency: asset.Tkn.Currency,
 					Tkn_value:    asset.Tkn.Value.ToUint256(),
@@ -202,7 +202,7 @@ func Verify_state1(s *stx.T, state *zstate.State0) (e error) {
 			if src.IsO() {
 				if keys.VerifyPKr(&hash_z, &in_o.Sign, &src.Out_O.Addr) {
 					{
-						asset := src.Out_O.Asset.ToCompleteAsset()
+						asset := src.Out_O.Asset.ToFlatAsset()
 						asset_desc := cpt.AssetDesc{
 							Tkn_currency: asset.Tkn.Currency,
 							Tkn_value:    asset.Tkn.Value.ToUint256(),
@@ -232,7 +232,7 @@ func Verify_state1(s *stx.T, state *zstate.State0) (e error) {
 				return
 			} else {
 				{
-					asset := out_o.Asset.ToCompleteAsset()
+					asset := out_o.Asset.ToFlatAsset()
 					asset_desc := cpt.AssetDesc{
 						Tkn_currency: asset.Tkn.Currency,
 						Tkn_value:    asset.Tkn.Value.ToUint256(),
