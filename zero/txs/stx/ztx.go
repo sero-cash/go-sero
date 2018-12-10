@@ -109,14 +109,15 @@ func (self *Desc_Z) ToHash() (ret keys.Uint256) {
 }
 
 type T struct {
-	Ehash  keys.Uint256
-	From   keys.Uint512
-	Fee    utils.U256
-	Sign   keys.Uint512
-	Bcr    keys.Uint256
-	Bsign  keys.Uint512
-	Desc_Z Desc_Z
-	Desc_O Desc_O
+	Ehash    keys.Uint256
+	From     keys.Uint512
+	Fee      utils.U256
+	Sign     keys.Uint512
+	Bcr      keys.Uint256
+	Bsign    keys.Uint512
+	Desc_Z   Desc_Z
+	Desc_O   Desc_O
+	Desc_Pkg PkgDesc_Z
 }
 
 func (self *T) ToHash_for_z() (ret keys.Uint256) {
@@ -125,6 +126,7 @@ func (self *T) ToHash_for_z() (ret keys.Uint256) {
 	d.Write(self.From[:])
 	d.Write(self.Fee.ToUint256().NewRef()[:])
 	d.Write(self.Desc_O.ToHash_for_z().NewRef()[:])
+	d.Write(self.Desc_Pkg.ToHash().NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }

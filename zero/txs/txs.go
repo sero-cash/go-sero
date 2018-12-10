@@ -19,6 +19,8 @@ package txs
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
+
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
 
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -95,6 +97,21 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 			s.Desc_O.Outs = append(s.Desc_O.Outs, s_out_o)
 		}
 
+		if preTx.desc_pkg.pack != nil {
+			s.Desc_Pkg.Pack = &pkg.Pkg_Z{preTx.desc_pkg.pack.Clone()}
+			{
+				asset := s.Desc_Pkg.Pack.Temp.Asset.ToFlatAsset()
+				asset_desc := cpt.AssetDesc{
+					Tkn_currency: asset.Tkn.Currency,
+					Tkn_value:    asset.Tkn.Value.ToUint256(),
+					Tkt_category: asset.Tkt.Category,
+					Tkt_value:    asset.Tkt.Value,
+				}
+				cpt.GenAssetCC(&asset_desc)
+				balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+			}
+		}
+
 		addr := keys.Seed2Addr(seed)
 		var from_r keys.Uint256
 		if t.FromRnd != nil {
@@ -155,11 +172,6 @@ func CheckUint(i *utils.U256) bool {
 	} else {
 		return true
 	}
-}
-
-func CheckInt(i *utils.I256) bool {
-	abs := i.Abs()
-	return CheckUint(&abs)
 }
 
 func Verify(s *stx.T, state *zstate.State0) (e error) {
@@ -245,10 +257,26 @@ func Verify_state1(s *stx.T, state *zstate.State0) (e error) {
 			}
 		}
 	}
-
-	if state.Cur.Index == int64(44) {
-		i := 0
-		i++
+	if s.Desc_Pkg.Pack != nil {
+		out := s.Desc_Pkg.Pack.Temp
+		if out.Asset.Tkn != nil {
+			if !CheckUint(&out.Asset.Tkn.Value) {
+				e = errors.New("txs.verify check balance too big")
+				return
+			} else {
+				{
+					asset := out.Asset.ToFlatAsset()
+					asset_desc := cpt.AssetDesc{
+						Tkn_currency: asset.Tkn.Currency,
+						Tkn_value:    asset.Tkn.Value.ToUint256(),
+						Tkt_category: asset.Tkt.Category,
+						Tkt_value:    asset.Tkt.Value,
+					}
+					cpt.GenAssetCC(&asset_desc)
+					balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+				}
+			}
+		}
 	}
 
 	for _, in_z := range s.Desc_Z.Ins {

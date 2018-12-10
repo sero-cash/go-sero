@@ -19,6 +19,7 @@ package tx
 import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
@@ -31,6 +32,11 @@ type Out struct {
 	Asset assets.Asset
 	Memo  keys.Uint512
 	Z     OutType
+}
+
+type PkgOpen struct {
+	Id  uint64
+	key pkg.Key
 }
 
 type OutType int
@@ -47,6 +53,8 @@ type T struct {
 	Fee     utils.U256
 	Ins     []In
 	Outs    []Out
+	PkgPack *pkg.Pkg_O
+	PkgOpen *PkgOpen
 }
 
 func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
@@ -65,6 +73,17 @@ func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
 			}
 		}
 	}
+	if self.PkgPack != nil {
+		asset := self.PkgPack.Asset
+		if asset.Tkn != nil {
+			if cost, ok := ret[asset.Tkn.Currency]; ok {
+				cost.AddU(&asset.Tkn.Value)
+				ret[asset.Tkn.Currency] = cost
+			} else {
+				ret[asset.Tkn.Currency] = asset.Tkn.Value
+			}
+		}
+	}
 	return
 }
 
@@ -79,6 +98,17 @@ func (self *T) TikectCost() (ret map[keys.Uint256][]keys.Uint256) {
 				} else {
 					ret[out.Asset.Tkt.Category] = []keys.Uint256{out.Asset.Tkt.Value}
 				}
+			}
+		}
+	}
+	if self.PkgPack != nil {
+		asset := self.PkgPack.Asset
+		if asset.Tkt != nil {
+			if tkts, ok := ret[asset.Tkt.Category]; ok {
+				tkts = append(tkts, asset.Tkt.Value)
+				ret[asset.Tkt.Category] = tkts
+			} else {
+				ret[asset.Tkt.Category] = []keys.Uint256{asset.Tkt.Value}
 			}
 		}
 	}

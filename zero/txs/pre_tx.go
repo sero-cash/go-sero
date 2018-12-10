@@ -19,6 +19,8 @@ package txs
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
@@ -30,11 +32,22 @@ type preTxDesc struct {
 	outs []tx.Out
 }
 
+type prePkgOpen struct {
+	id   uint64
+	opkg pkg.Pkg_O
+	zpkg pkg.Pkg_Z
+}
+type prePkgDesc struct {
+	pack *pkg.Pkg_O
+	open *prePkgOpen
+}
+
 type preTx struct {
 	last_anchor keys.Uint256
 	uouts       []state1.OutState1
 	desc_o      preTxDesc
 	desc_z      preTxDesc
+	desc_pkg    prePkgDesc
 }
 
 type cyState struct {
@@ -134,6 +147,29 @@ func preGen(ts *tx.T, state1 *state1.State1) (p preTx, e error) {
 			default:
 				p.desc_z.outs = append(p.desc_z.outs, out)
 			}
+		}
+	}
+	if ts.PkgPack != nil {
+		out := ts.PkgPack
+		if out.Asset.Tkn != nil {
+			cy_state_map.sub(&out.Asset.Tkn.Currency, &out.Asset.Tkn.Value)
+		}
+		if out.Asset.Tkt != nil {
+			if c, ok := tk_map[out.Asset.Tkt.Value]; ok {
+				if c > 0 {
+					tk_map[out.Asset.Tkt.Value] = c - 1
+				} else {
+					e = fmt.Errorf("out tkt duplicate: %v", out.Asset.Tkt.Value)
+					return
+				}
+			} else {
+				e = fmt.Errorf("out tkt not in ins: %v", out.Asset.Tkt.Value)
+				return
+			}
+		}
+		p.desc_pkg.pack = &pkg.Pkg_O{
+			out.PKr,
+			out.Asset,
 		}
 	}
 

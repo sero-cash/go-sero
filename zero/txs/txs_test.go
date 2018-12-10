@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
 
@@ -171,6 +173,49 @@ func (self *user) Logout() (ret uint64) {
 	return
 }
 
+func (self *user) Package(v int, fee int, u user) {
+	fmt.Printf("user(%v) send %v:%v to user(%v)\n", self.i, v, fee, u.i)
+	outs := self.GetOuts()
+	in := tx.In{}
+	in.Root = *outs[0].Pg.Root.ToUint256()
+	out0 := pkg.Pkg_O{}
+	out0.PKr = u.addr
+	out0.Asset = assets.Asset{
+		&assets.Token{
+			utils.StringToUint256("SERO"),
+			utils.NewU256(uint64(v)),
+		},
+		nil,
+	}
+
+	out1 := tx.Out{}
+	out1.Addr = self.addr
+	out1.Asset = outs[0].Out_O.Asset.Clone()
+	out1.Asset.Tkn.Value.SubU(utils.NewU256(uint64(v)).ToRef())
+	out1.Asset.Tkn.Value.SubU(utils.NewU256(uint64(fee)).ToRef())
+
+	out1.Z = tx.TYPE_Z
+
+	t := tx.T{}
+	t.Fee = utils.NewU256(uint64(fee))
+	t.Ins = append(t.Ins, in)
+	t.Outs = append(t.Outs, out1)
+	t.PkgPack = &out0
+
+	s, e := self.Gen(&self.seed, &t)
+	if e != nil {
+		fmt.Printf("user(%v) send gen error: %v", self.i, e)
+	}
+
+	if e := self.Verify(&s); e != nil {
+		fmt.Printf("user(%v) send verify error: %v", self.i, e)
+	}
+
+	g_blocks.st.AddStx(&s)
+	g_blocks.st.Update()
+	EndBlock()
+}
+
 func (self *user) Send(v int, fee int, u user, z bool) {
 	fmt.Printf("user(%v) send %v:%v to user(%v)\n", self.i, v, fee, u.i)
 	outs := self.GetOuts()
@@ -224,7 +269,7 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 }
 
 func TestMain(m *testing.M) {
-	cpt.ZeroInit(cpt.NET_Dev)
+	cpt.ZeroInit("", cpt.NET_Dev)
 	NewBlock()
 	m.Run()
 }
@@ -244,7 +289,15 @@ func TestTxs(t *testing.T) {
 		t.Fail()
 	}
 
-	user_m.Send(50, 10, user_a, true)
+	user_m.Package(50, 10, user_a)
+	g_blocks.st.OpenPkg(4, &pkg.Key{})
+	g_blocks.st.Update()
+	EndBlock()
+
+	g_blocks.st.GetPkg(4)
+	EndBlock()
+
+	//user_m.Send(50, 10, user_a, true)
 
 	if user_m.Logout() != 340 {
 		t.Fail()

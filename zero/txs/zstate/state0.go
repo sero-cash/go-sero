@@ -18,8 +18,11 @@ package zstate
 
 import (
 	"fmt"
+	"math/big"
 	"sort"
 	"sync"
+
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -35,10 +38,12 @@ type State0 struct {
 	Block  State0Block
 	G2ins  map[keys.Uint256]bool
 	G2outs map[keys.Uint256]*OutState0
+	G2pkgs map[uint64]*pkg.Pkg_Z
 
 	last_out_dirty bool
 	g2ins_dirty    map[keys.Uint256]bool
 	g2outs_dirty   map[keys.Uint256]bool
+	g2pkgs_dirty   map[uint64]bool
 
 	rw *sync.RWMutex
 }
@@ -63,13 +68,25 @@ func (state *State0) clear_dirty() {
 	state.last_out_dirty = false
 	state.g2ins_dirty = make(map[keys.Uint256]bool)
 	state.g2outs_dirty = make(map[keys.Uint256]bool)
+	state.g2pkgs_dirty = make(map[uint64]bool)
 }
 func (state *State0) clear() {
 	state.Cur = NewCur()
 	state.G2ins = make(map[keys.Uint256]bool)
 	state.G2outs = make(map[keys.Uint256]*OutState0)
+	state.G2pkgs = make(map[uint64]*pkg.Pkg_Z)
 	state.Block = State0Block{}
 	state.clear_dirty()
+}
+
+func (state *State0) add_pkg_dirty(id uint64, pkg *pkg.Pkg_Z) {
+	state.G2pkgs[id] = pkg
+	state.g2pkgs_dirty[id] = true
+}
+
+func (state *State0) del_pkg_dirty(id uint64) {
+	state.G2pkgs[id] = nil
+	state.g2pkgs_dirty[id] = true
 }
 
 func (state *State0) append_del_dirty(del *keys.Uint256) {
@@ -148,6 +165,11 @@ func outName0(k *keys.Uint256) (ret []byte) {
 	ret = append(ret, k[:]...)
 	return
 }
+func pkgName0(k uint64) (ret []byte) {
+	ret = []byte("ZState0_PkgName")
+	ret = append(ret, big.NewInt(int64(k)).Bytes()...)
+	return
+}
 func (self *State0) Update() {
 	self.rw.Lock()
 	defer self.rw.Unlock()
@@ -196,6 +218,17 @@ func (self *State0) Update() {
 			panic("state0 update g2outs can not find dirty out")
 		}
 	}
+
+	g2pkgs_dirty := sort.IntSlice{}
+	for k := range self.g2pkgs_dirty {
+		g2pkgs_dirty = append(g2pkgs_dirty, int(k))
+	}
+	sort.Sort(g2pkgs_dirty)
+
+	for _, k := range g2pkgs_dirty {
+		v := self.G2pkgs[uint64(k)]
+		tri.UpdateObj(self.tri, pkgName0(uint64(k)), v)
+	}
 	self.clear_dirty()
 	return
 }
@@ -204,6 +237,33 @@ func (self *State0) Revert() {
 	self.clear()
 	self.load()
 	return
+}
+
+func (state *State0) addPkg(pkg *pkg.Pkg_Z) (ret uint64) {
+	id := state.Cur.Index
+	state.add_pkg_dirty(uint64(id), pkg.Clone().ToRef())
+	return uint64(id)
+}
+
+func (state *State0) DelPkg(id uint64) {
+	state.rw.Lock()
+	defer state.rw.Unlock()
+	state.del_pkg_dirty(id)
+}
+
+func (state *State0) OpenPkg(id uint64, key *pkg.Key) (ret pkg.Pkg_O, e error) {
+	pg := state.GetPkg(id)
+	ret, e = pkg.Check(&key.K0, pg)
+	if e != nil {
+		return
+	} else {
+		if e = pkg.Verify(&key.K1, &ret, pg); e != nil {
+			return
+		} else {
+			state.DelPkg(id)
+			return
+		}
+	}
 }
 
 func (state *State0) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
@@ -307,7 +367,27 @@ func (state *State0) AddStx(st *stx.T) (e error) {
 		state.addOut(nil, &out)
 	}
 
+	if st.Desc_Pkg.Pack != nil {
+		state.addPkg(st.Desc_Pkg.Pack)
+	}
+
 	return
+}
+
+func (state *State0) getPkg(id uint64) (pg *pkg.Pkg_Z) {
+	if pg = state.G2pkgs[id]; pg != nil {
+		return
+	} else {
+		get := pkg.Pkg_ZGet{}
+		tri.GetObj(state.tri, pkgName0(id), &get)
+		pg = get.Out()
+		return
+	}
+}
+func (state *State0) GetPkg(id uint64) (pg *pkg.Pkg_Z) {
+	state.rw.Lock()
+	defer state.rw.Unlock()
+	return state.getPkg(id)
 }
 
 func (state *State0) GetOut(root *keys.Uint256) (src *OutState0, e error) {
