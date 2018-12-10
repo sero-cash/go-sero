@@ -24,18 +24,18 @@ import (
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-type OutState0 struct {
+type OutState struct {
 	Index uint64
 	Out_O *stx.Out_O `rlp:"nil"`
 	Out_Z *stx.Out_Z `rlp:"nil"`
 }
 
-func (self *OutState0) Clone() (ret OutState0) {
+func (self *OutState) Clone() (ret OutState) {
 	utils.DeepCopy(&ret, self)
 	return
 }
 
-func (out *OutState0) IsO() bool {
+func (out *OutState) IsO() bool {
 	if out.Out_Z == nil {
 		return true
 	} else {
@@ -43,7 +43,7 @@ func (out *OutState0) IsO() bool {
 	}
 }
 
-func (self *OutState0) ToOutCM() *keys.Uint256 {
+func (self *OutState) ToOutCM() *keys.Uint256 {
 	if self.IsO() {
 		asset := self.Out_O.Asset.ToFlatAsset()
 		cm := cpt.GenOutCM(
@@ -61,14 +61,14 @@ func (self *OutState0) ToOutCM() *keys.Uint256 {
 	}
 }
 
-func (self *OutState0) ToRootCM() *keys.Uint256 {
+func (self *OutState) ToRootCM() *keys.Uint256 {
 	out_cm := self.ToOutCM()
 	cm := cpt.GenRootCM(self.Index, out_cm)
 	return &cm
 }
 
 /*
-func (self *OutState0) ToCommitment() *keys.Uint256 {
+func (self *OutState) ToCommitment() *keys.Uint256 {
 	if self.IsO() {
 		hs := self.Out_O.ToHash()
 		return &hs
@@ -79,7 +79,7 @@ func (self *OutState0) ToCommitment() *keys.Uint256 {
 	}
 }*/
 
-func (self *OutState0) Serial() (ret []byte, e error) {
+func (self *OutState) Serial() (ret []byte, e error) {
 	if self != nil {
 		return rlp.EncodeToBytes(self)
 	} else {
@@ -88,7 +88,7 @@ func (self *OutState0) Serial() (ret []byte, e error) {
 }
 
 type OutState0Get struct {
-	out *OutState0
+	out *OutState
 }
 
 func (self *OutState0Get) Unserial(v []byte) (e error) {
@@ -96,7 +96,7 @@ func (self *OutState0Get) Unserial(v []byte) (e error) {
 		self.out = nil
 		return
 	} else {
-		self.out = &OutState0{}
+		self.out = &OutState{}
 		if err := rlp.DecodeBytes(v, &self.out); err != nil {
 			e = err
 			return

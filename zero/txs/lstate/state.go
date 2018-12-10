@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package state1
+package lstate
 
 import (
 	"errors"
@@ -38,46 +38,46 @@ import (
 	"github.com/sero-cash/go-sero/zero/zconfig"
 )
 
-type State1 struct {
-	State0 *zstate.State0
+type State struct {
+	State0 *zstate.State
 
 	mu      sync.RWMutex
-	G2outs  map[keys.Uint256]*OutState1
+	G2outs  map[keys.Uint256]*OutState
 	G2wouts []keys.Uint256
 
-	data State1Data
+	data StateData
 
 	is_dirty bool
 }
 
-func LoadState1(state0 *zstate.State0, loadName string) (state State1) {
+func LoadState(state0 *zstate.State, loadName string) (state State) {
 	state.State0 = state0
 	state.load(loadName)
 	return
 }
 
-func (self *State1) add_out_dirty(k *keys.Uint256, state *OutState1) {
+func (self *State) add_out_dirty(k *keys.Uint256, state *OutState) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.G2outs[*k] = state
 	self.is_dirty = true
 }
-func (self *State1) del_wout_dirty(i uint) {
+func (self *State) del_wout_dirty(i uint) {
 	self.G2wouts = append(self.G2wouts[:i], self.G2wouts[i+1:]...)
 	self.is_dirty = true
 }
 
-func (self *State1) append_wout_dirty(k *keys.Uint256) {
+func (self *State) append_wout_dirty(k *keys.Uint256) {
 	self.G2wouts = append(self.G2wouts, *k)
 	self.is_dirty = true
 }
 
-func (state *State1) clear_dirty() {
+func (state *State) clear_dirty() {
 	state.is_dirty = false
 }
 
-func (self *State1) load(loadName string) {
-	self.G2outs = make(map[keys.Uint256]*OutState1)
+func (self *State) load(loadName string) {
+	self.G2outs = make(map[keys.Uint256]*OutState)
 	self.G2wouts = []keys.Uint256{}
 	self.clear_dirty()
 
@@ -86,7 +86,7 @@ func (self *State1) load(loadName string) {
 		if bytes, err := ioutil.ReadFile(current_file); err != nil {
 			panic(err)
 		} else {
-			get := State1DataGet{}
+			get := StateDataGet{}
 			get.Unserial(bytes)
 			self.data = get.out
 			self.dataTo()
@@ -95,13 +95,13 @@ func (self *State1) load(loadName string) {
 	}
 }
 
-func (self *State1) toData() {
+func (self *State) toData() {
 	self.mu.RLock()
 	defer self.mu.RUnlock()
-	outs := []*OutState1{}
+	outs := []*OutState{}
 	for _, root := range self.G2wouts {
 		if out, ok := self.G2outs[root]; !ok {
-			panic("State1 serial but g2outs can not find such root")
+			panic("LState serial but g2outs can not find such root")
 		} else {
 			outs = append(outs, out)
 		}
@@ -109,7 +109,7 @@ func (self *State1) toData() {
 	self.data.Outs = outs
 }
 
-func (self *State1) dataTo() {
+func (self *State) dataTo() {
 	for _, out := range self.data.Outs {
 		root := keys.Uint256(out.Pg.Root)
 		self.G2wouts = append(self.G2wouts, root)
@@ -118,7 +118,7 @@ func (self *State1) dataTo() {
 	}
 }
 
-func (self *State1) Finalize(saveName string) {
+func (self *State) Finalize(saveName string) {
 	self.toData()
 	self.clear_dirty()
 	current_file := zconfig.State1_file(saveName)
@@ -131,7 +131,7 @@ func (self *State1) Finalize(saveName string) {
 	return
 }
 
-func (state *State1) GetOut(root *keys.Uint256) (src *OutState1, e error) {
+func (state *State) GetOut(root *keys.Uint256) (src *OutState, e error) {
 	state.mu.RLock()
 	defer state.mu.RUnlock()
 	if out, ok := state.G2outs[*root]; ok {
@@ -145,7 +145,7 @@ func (state *State1) GetOut(root *keys.Uint256) (src *OutState1, e error) {
 	}
 }
 
-func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *merkle.Tree) {
+func (self *State) addOut(tks []keys.Uint512, os *zstate.OutState, os_tree *merkle.Tree) {
 
 	t := utils.TR_enter(fmt.Sprintf("ADD_OUT----INIT num=%v", self.State0.Num()))
 
@@ -220,7 +220,7 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 	return
 }
 
-func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witness.PathGen) {
+func (state *State) addWouts(tks []keys.Uint512, os *zstate.OutState, pg *witness.PathGen) {
 	for _, tk := range tks {
 		if os.IsO() {
 			out_o := os.Out_O
@@ -273,7 +273,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 				}
 				root := pg.Root.ToUint256()
 				state.append_wout_dirty(root)
-				wos := OutState1{}
+				wos := OutState{}
 				wos.Pg = *pg
 				wos.Tk = tk
 				wos.Out_O = *os.Out_O
@@ -298,7 +298,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 				if err := cpt.DecOutput(&info_desc, &os.Out_Z.AssetCM); err == nil {
 					root := pg.Root.ToUint256()
 					state.append_wout_dirty(root)
-					wos := OutState1{}
+					wos := OutState{}
 					wos.Pg = *pg
 					wos.Out_O.Addr = os.Out_Z.PKr
 					wos.Out_O.Asset = assets.NewAsset(
@@ -330,7 +330,7 @@ func (state *State1) addWouts(tks []keys.Uint512, os *zstate.OutState0, pg *witn
 	}
 }
 
-func (state *State1) del(del *keys.Uint256) (e error) {
+func (state *State) del(del *keys.Uint256) (e error) {
 	if src, err := state.GetOut(del); err != nil {
 		e = err
 		return
@@ -352,7 +352,7 @@ func (state *State1) del(del *keys.Uint256) (e error) {
 	return
 }
 
-func (state *State1) UpdateWitness(tks []keys.Uint512) {
+func (state *State) UpdateWitness(tks []keys.Uint512) {
 	trees := state.State0.GenState0Trees()
 	for _, del := range state.State0.Block.Dels {
 		state.del(&del)
@@ -382,7 +382,7 @@ func (state *State1) UpdateWitness(tks []keys.Uint512) {
 	return
 }
 
-func (self *State1) GetOuts(tk *keys.Uint512) (outs []*OutState1, e error) {
+func (self *State) GetOuts(tk *keys.Uint512) (outs []*OutState, e error) {
 	for _, root := range self.G2wouts {
 		if src, err := self.GetOut(&root); err != nil {
 			e = err

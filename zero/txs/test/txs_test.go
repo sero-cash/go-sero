@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package txs
+package test
 
 import (
 	"fmt"
@@ -45,8 +45,8 @@ import (
 type Blocks struct {
 	ca  state.Database
 	sd  *state.StateDB
-	st  *zstate.State
-	st0 *zstate.State0
+	st  *zstate.ZState
+	st0 *zstate.State
 	st1 *state1.State1
 }
 
@@ -58,9 +58,9 @@ func NewBlock() {
 		g_blocks.ca = state.NewDatabase(db)
 		g_blocks.sd, _ = state.NewGenesis(common.Hash{}, g_blocks.ca)
 		g_blocks.st = g_blocks.sd.GetZState()
-		g_blocks.st0 = &g_blocks.st.State0
+		g_blocks.st0 = &g_blocks.st.State
 	} else {
-		g_blocks.st0.Block = zstate.State0Block{}
+		g_blocks.st0.Block = zstate.StateBlock{}
 		g_blocks.st0.Block.Tree = g_blocks.st0.Cur.Tree.Clone().ToRef()
 
 	}

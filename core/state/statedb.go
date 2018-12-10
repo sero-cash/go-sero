@@ -67,7 +67,7 @@ type StateDB struct {
 	// This map holds 'live' objects, which will get modified while processing a state transition.
 	stateObjects      map[common.Address]*stateObject
 	stateObjectsDirty map[common.Address]struct{}
-	zstate            *zstate.State
+	zstate            *zstate.ZState
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are
@@ -137,7 +137,7 @@ func (self *StateTri) TryGlobalPut(key, value []byte) error {
 	return self.Dbput.Put(key, value)
 }
 
-func (self *StateDB) GetZState() *zstate.State {
+func (self *StateDB) GetZState() *zstate.ZState {
 
 	if self.zstate == nil {
 		st := StateTri{self.trie, self.db.TrieDB().DiskDB(), self.db.TrieDB().WDiskDB()}
@@ -274,7 +274,6 @@ func (self *StateDB) GetContrctAddressByToken(coinName string) common.Address {
 	return self.getContrctAddress("Token", strings.ToUpper(coinName))
 }
 
-
 func (self *StateDB) getContrctAddress(name string, key string) common.Address {
 	key0, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{0}})
 	key1, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{1}})
@@ -283,8 +282,6 @@ func (self *StateDB) getContrctAddress(name string, key string) common.Address {
 	hashKey1 := crypto.Keccak256Hash(key1)
 	return self.getAddressByState(hashKey0, hashKey1)
 }
-
-
 
 func (self *StateDB) getAddressByState(key0, key1 common.Hash) common.Address {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
@@ -386,24 +383,24 @@ func (self *StateDB) AddPreimage(hash common.Hash, preimage []byte) {
 	}
 }
 
-func (self *StateDB) GetContrctNonce() (uint64) {
+func (self *StateDB) GetContrctNonce() uint64 {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
 		value := stateObject.GetState(self.db, contrctNonceKey)
 		return new(big.Int).SetBytes(value[:]).Uint64()
 	}
-	return 0;
+	return 0
 }
 
-func (self *StateDB) IncAndGetContrctNonce() (uint64) {
+func (self *StateDB) IncAndGetContrctNonce() uint64 {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
 		value := stateObject.GetState(self.db, contrctNonceKey)
 		nonce := new(big.Int).Add(new(big.Int).SetBytes(value[:]), common.Big1)
 		stateObject.SetState(self.db, contrctNonceKey, common.BigToHash(nonce))
-		return nonce.Uint64();
+		return nonce.Uint64()
 	}
-	return 0;
+	return 0
 }
 
 // Preimages returns a list of SHA3 preimages that have been submitted.
@@ -518,11 +515,9 @@ func (self *StateDB) GetTicketNonce(addr common.Address) uint64 {
 	return 0
 }
 
-
 /*
  * SETTERS
  */
-
 
 func (self *StateDB) SetTicketNonce(addr common.Address, nonce uint64) {
 	stateObject := self.GetOrNewStateObject(addr)
@@ -530,7 +525,6 @@ func (self *StateDB) SetTicketNonce(addr common.Address, nonce uint64) {
 		stateObject.SetTicketNonce(nonce)
 	}
 }
-
 
 // AddBalance adds amount to the account associated with addr.
 func (self *StateDB) AddBalance(addr common.Address, coinName string, amount *big.Int) {

@@ -31,13 +31,13 @@ import (
 	"github.com/sero-cash/go-sero/zero/witness/merkle"
 )
 
-type State0 struct {
+type State struct {
 	tri    tri.Tri
 	num    uint64
 	Cur    Current
-	Block  State0Block
+	Block  StateBlock
 	G2ins  map[keys.Uint256]bool
-	G2outs map[keys.Uint256]*OutState0
+	G2outs map[keys.Uint256]*OutState
 	G2pkgs map[uint64]*pkg.Pkg_Z
 
 	last_out_dirty bool
@@ -48,55 +48,55 @@ type State0 struct {
 	rw *sync.RWMutex
 }
 
-func (self *State0) Tri() tri.Tri {
+func (self *State) Tri() tri.Tri {
 	return self.tri
 }
 
-func (self *State0) Num() uint64 {
+func (self *State) Num() uint64 {
 	return self.num
 }
 
-func NewState0(tri tri.Tri, num uint64) (state State0) {
-	state = State0{tri: tri, num: num}
+func NewState0(tri tri.Tri, num uint64) (state State) {
+	state = State{tri: tri, num: num}
 	state.rw = new(sync.RWMutex)
 	state.clear()
 	state.load()
 	return
 }
 
-func (state *State0) clear_dirty() {
+func (state *State) clear_dirty() {
 	state.last_out_dirty = false
 	state.g2ins_dirty = make(map[keys.Uint256]bool)
 	state.g2outs_dirty = make(map[keys.Uint256]bool)
 	state.g2pkgs_dirty = make(map[uint64]bool)
 }
-func (state *State0) clear() {
+func (state *State) clear() {
 	state.Cur = NewCur()
 	state.G2ins = make(map[keys.Uint256]bool)
-	state.G2outs = make(map[keys.Uint256]*OutState0)
+	state.G2outs = make(map[keys.Uint256]*OutState)
 	state.G2pkgs = make(map[uint64]*pkg.Pkg_Z)
-	state.Block = State0Block{}
+	state.Block = StateBlock{}
 	state.clear_dirty()
 }
 
-func (state *State0) add_pkg_dirty(id uint64, pkg *pkg.Pkg_Z) {
+func (state *State) add_pkg_dirty(id uint64, pkg *pkg.Pkg_Z) {
 	state.G2pkgs[id] = pkg
 	state.g2pkgs_dirty[id] = true
 }
 
-func (state *State0) del_pkg_dirty(id uint64) {
+func (state *State) del_pkg_dirty(id uint64) {
 	state.G2pkgs[id] = nil
 	state.g2pkgs_dirty[id] = true
 }
 
-func (state *State0) append_del_dirty(del *keys.Uint256) {
+func (state *State) append_del_dirty(del *keys.Uint256) {
 	if del == nil {
 		panic("set_last_out but del is nil")
 	}
 	state.Block.Dels = append(state.Block.Dels, *del)
 	state.last_out_dirty = true
 }
-func (state *State0) append_commitment_dirty(commitment *keys.Uint256) {
+func (state *State) append_commitment_dirty(commitment *keys.Uint256) {
 	if commitment == nil {
 		panic("set_last_out but out is nil")
 	}
@@ -113,12 +113,12 @@ func (state *State0) append_commitment_dirty(commitment *keys.Uint256) {
 	state.last_out_dirty = true
 }
 
-func (state *State0) add_in_dirty(in *keys.Uint256) {
+func (state *State) add_in_dirty(in *keys.Uint256) {
 	state.G2ins[*in] = true
 	state.g2ins_dirty[*in] = true
 }
 
-func (state *State0) add_out_dirty(k *keys.Uint256, out *OutState0) {
+func (state *State) add_out_dirty(k *keys.Uint256, out *OutState) {
 	state.G2outs[*k] = out
 	state.g2outs_dirty[*k] = true
 }
@@ -126,13 +126,13 @@ func (state *State0) add_out_dirty(k *keys.Uint256, out *OutState0) {
 const LAST_OUTSTATE0_NAME = tri.KEY_NAME("ZState0_Cur")
 const BLOCK_NAME = "ZState0_BLOCK"
 
-func (self *State0) Name2BKey(name string, num uint64) (ret []byte) {
+func (self *State) Name2BKey(name string, num uint64) (ret []byte) {
 	key := fmt.Sprintf("%s_%d", name, num)
 	ret = []byte(key)
 	return
 }
 
-func (self *State0) load() {
+func (self *State) load() {
 	get := CurrentGet{}
 	tri.GetObj(
 		self.tri,
@@ -170,7 +170,7 @@ func pkgName0(k uint64) (ret []byte) {
 	ret = append(ret, big.NewInt(int64(k)).Bytes()...)
 	return
 }
-func (self *State0) Update() {
+func (self *State) Update() {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	if self.last_out_dirty {
@@ -233,25 +233,25 @@ func (self *State0) Update() {
 	return
 }
 
-func (self *State0) Revert() {
+func (self *State) Revert() {
 	self.clear()
 	self.load()
 	return
 }
 
-func (state *State0) addPkg(pkg *pkg.Pkg_Z) (ret uint64) {
+func (state *State) addPkg(pkg *pkg.Pkg_Z) (ret uint64) {
 	id := state.Cur.Index
 	state.add_pkg_dirty(uint64(id), pkg.Clone().ToRef())
 	return uint64(id)
 }
 
-func (state *State0) DelPkg(id uint64) {
+func (state *State) DelPkg(id uint64) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	state.del_pkg_dirty(id)
 }
 
-func (state *State0) OpenPkg(id uint64, key *pkg.Key) (ret pkg.Pkg_O, e error) {
+func (state *State) OpenPkg(id uint64, key *pkg.Key) (ret pkg.Pkg_O, e error) {
 	pg := state.GetPkg(id)
 	ret, e = pkg.Check(&key.K0, pg)
 	if e != nil {
@@ -266,14 +266,14 @@ func (state *State0) OpenPkg(id uint64, key *pkg.Key) (ret pkg.Pkg_O, e error) {
 	}
 }
 
-func (state *State0) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
+func (state *State) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	return state.addOut(out_o, out_z)
 }
 
-func (state *State0) addOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
-	os := OutState0{}
+func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
+	os := OutState{}
 	if out_o != nil {
 		o := *out_o
 		os.Out_O = &o
@@ -303,12 +303,12 @@ func (state *State0) addOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint2
 	return
 }
 
-func (self *State0) HasIn(hash *keys.Uint256) (exists bool) {
+func (self *State) HasIn(hash *keys.Uint256) (exists bool) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	return self.hasIn(hash)
 }
-func (self *State0) hasIn(hash *keys.Uint256) (exists bool) {
+func (self *State) hasIn(hash *keys.Uint256) (exists bool) {
 	if v, ok := self.G2ins[*hash]; ok {
 		exists = v
 		return
@@ -328,7 +328,7 @@ func (self *State0) hasIn(hash *keys.Uint256) (exists bool) {
 	return
 }
 
-func (state *State0) addIn(root *keys.Uint256) (e error) {
+func (state *State) addIn(root *keys.Uint256) (e error) {
 	if exists := state.hasIn(root); exists {
 		e = fmt.Errorf("add in but exists")
 		return
@@ -338,7 +338,7 @@ func (state *State0) addIn(root *keys.Uint256) (e error) {
 	}
 }
 
-func (state *State0) AddStx(st *stx.T) (e error) {
+func (state *State) AddStx(st *stx.T) (e error) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	for _, in := range st.Desc_O.Ins {
@@ -374,7 +374,7 @@ func (state *State0) AddStx(st *stx.T) (e error) {
 	return
 }
 
-func (state *State0) getPkg(id uint64) (pg *pkg.Pkg_Z) {
+func (state *State) getPkg(id uint64) (pg *pkg.Pkg_Z) {
 	if pg = state.G2pkgs[id]; pg != nil {
 		return
 	} else {
@@ -384,13 +384,13 @@ func (state *State0) getPkg(id uint64) (pg *pkg.Pkg_Z) {
 		return
 	}
 }
-func (state *State0) GetPkg(id uint64) (pg *pkg.Pkg_Z) {
+func (state *State) GetPkg(id uint64) (pg *pkg.Pkg_Z) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	return state.getPkg(id)
 }
 
-func (state *State0) GetOut(root *keys.Uint256) (src *OutState0, e error) {
+func (state *State) GetOut(root *keys.Uint256) (src *OutState, e error) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	if out := state.G2outs[*root]; out != nil {
@@ -413,7 +413,7 @@ type State0Trees struct {
 	Start_index uint64
 }
 
-func (state *State0) GenState0Trees() (ret State0Trees) {
+func (state *State) GenState0Trees() (ret State0Trees) {
 	state.rw.RLock()
 	defer state.rw.RUnlock()
 	if state.Cur.Index >= 0 {

@@ -19,6 +19,8 @@ package txs
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/zero/txs/lstate"
+
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
@@ -28,15 +30,14 @@ import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
-	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 func Gen(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
-	st1 := state1.CurrentState1()
+	st1 := lstate.CurrentState1()
 	return Gen_state1(seed, t, st1)
 }
-func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e error) {
+func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e error) {
 	if preTx, err := preGen(t, st1); err == nil {
 
 		balance_desc := cpt.BalanceDesc{}
@@ -154,7 +155,7 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 		}
 
 		for _, used_out := range preTx.uouts {
-			state1.UpdateOutStat(st1.State0, &used_out)
+			lstate.UpdateOutStat(st1.State0, &used_out)
 		}
 
 		return
@@ -174,10 +175,10 @@ func CheckUint(i *utils.U256) bool {
 	}
 }
 
-func Verify(s *stx.T, state *zstate.State0) (e error) {
+func Verify(s *stx.T, state *zstate.State) (e error) {
 	return Verify_state1(s, state)
 }
-func Verify_state1(s *stx.T, state *zstate.State0) (e error) {
+func Verify_state1(s *stx.T, state *zstate.State) (e error) {
 	balance_desc := cpt.BalanceDesc{}
 
 	hash_z := s.ToHash_for_o()
@@ -312,8 +313,8 @@ func Verify_state1(s *stx.T, state *zstate.State0) (e error) {
 	return
 }
 
-func GetOuts(tk *keys.Uint512) (outs []*state1.OutState1, e error) {
-	st1 := state1.CurrentState1()
+func GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error) {
+	st1 := lstate.CurrentState1()
 	return st1.GetOuts(tk)
 }
 
@@ -383,7 +384,7 @@ func GetRoots(tk *keys.Uint512, costTkns map[keys.Uint256]utils.U256, costTkts m
 
 }
 
-func GetTknRoots(outs []*state1.OutState1, v *utils.U256, currency *keys.Uint256) (roots []keys.Uint256, amount utils.U256, tkts map[keys.Uint256][]keys.Uint256, e error) {
+func GetTknRoots(outs []*lstate.OutState, v *utils.U256, currency *keys.Uint256) (roots []keys.Uint256, amount utils.U256, tkts map[keys.Uint256][]keys.Uint256, e error) {
 	tkts = make(map[keys.Uint256][]keys.Uint256)
 	value := v.ToI256()
 	for _, out := range outs {
@@ -420,7 +421,7 @@ func GetTknRoots(outs []*state1.OutState1, v *utils.U256, currency *keys.Uint256
 
 }
 
-func GeTktRoots(outs []*state1.OutState1, categroy *keys.Uint256, tkts []keys.Uint256, exits []keys.Uint256) (roots []keys.Uint256, tkns map[keys.Uint256]utils.U256, e error) {
+func GeTktRoots(outs []*lstate.OutState, categroy *keys.Uint256, tkts []keys.Uint256, exits []keys.Uint256) (roots []keys.Uint256, tkns map[keys.Uint256]utils.U256, e error) {
 	tkns = map[keys.Uint256]utils.U256{}
 	tktSize := len(tkts)
 	for _, out := range outs {

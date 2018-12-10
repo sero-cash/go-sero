@@ -1,4 +1,4 @@
-package state1
+package lstate
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ import (
 type BlockChain interface {
 	GetCurrenHeader() *types.Header
 	GetHeader(hash *common.Hash) *types.Header
-	NewState(hash *common.Hash) *zstate.State
+	NewState(hash *common.Hash) *zstate.ZState
 	GetTks() []keys.Uint512
 }
 
@@ -33,9 +33,9 @@ func state1_file_name(num uint64, hash *common.Hash) (ret string) {
 	return
 }
 
-var current_state1 *State1
+var current_state1 *State
 
-func CurrentState1() *State1 {
+func CurrentState1() *State {
 	return current_state1
 }
 
@@ -101,7 +101,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 		}
 	}
 
-	var st1 *State1
+	var st1 *State
 	for i := len(need_load) - 1; i >= 0; i-- {
 
 		header := need_load[i]
@@ -123,13 +123,13 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 
 		current_cm_count += len(state.Block.Commitments)
 
-		t.Renter("PARSE_BLOCK_CHAIN----LoadState1")
+		t.Renter("PARSE_BLOCK_CHAIN----LoadState")
 
 		if st1 == nil {
-			s1 := LoadState1(&state.State0, load_name)
+			s1 := LoadState(&state.State, load_name)
 			st1 = &s1
 		} else {
-			st1.State0 = &state.State0
+			st1.State0 = &state.State
 		}
 
 		commitment_len := len(st1.State0.Block.Commitments)
@@ -151,7 +151,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 		current_hash := current_header.Hash()
 		state_name := state1_file_name(current_num, &current_hash)
 		st := bc.NewState(&current_hash)
-		st1 := LoadState1(&st.State0, state_name)
+		st1 := LoadState(&st.State, state_name)
 		current_state1 = &st1
 	}
 

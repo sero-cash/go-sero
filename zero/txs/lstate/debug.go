@@ -1,4 +1,4 @@
-package state1
+package lstate
 
 import (
 	"github.com/sero-cash/go-czero-import/keys"
@@ -6,7 +6,7 @@ import (
 	"github.com/sero-cash/go-sero/zero/witness/merkle"
 )
 
-func Debug_State1_addout_assert(state *State1, os *zstate.OutState0) {
+func Debug_State1_addout_assert(state *State, os *zstate.OutState) {
 	if zstate.Need_debug() {
 		wmap := make(map[keys.Uint256]int)
 		for i, wout := range state.G2wouts {
@@ -39,7 +39,7 @@ func Debug_State1_addout_assert(state *State1, os *zstate.OutState0) {
 	}
 }
 
-func Debug_State1_addout_end_assert(state *State1, os *zstate.OutState0) {
+func Debug_State1_addout_end_assert(state *State, os *zstate.OutState) {
 	if zstate.Need_debug() {
 		trees := state.State0.GenState0Trees()
 

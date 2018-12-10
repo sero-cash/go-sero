@@ -22,13 +22,13 @@ import (
 	"github.com/sero-cash/go-sero/zero/witness/merkle"
 )
 
-type State0Block struct {
+type StateBlock struct {
 	Tree        *merkle.Tree `rlp:"nil"`
 	Commitments []keys.Uint256
 	Dels        []keys.Uint256
 }
 
-func (self *State0Block) Serial() (ret []byte, e error) {
+func (self *StateBlock) Serial() (ret []byte, e error) {
 	if self != nil {
 		if bytes, err := rlp.EncodeToBytes(self); err != nil {
 			e = err
@@ -43,7 +43,7 @@ func (self *State0Block) Serial() (ret []byte, e error) {
 }
 
 type State0BlockGet struct {
-	out State0Block
+	out StateBlock
 }
 
 func (self *State0BlockGet) Unserial(v []byte) (e error) {

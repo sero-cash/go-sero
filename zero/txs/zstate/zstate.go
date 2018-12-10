@@ -25,36 +25,36 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 )
 
-type State struct {
-	State0
+type ZState struct {
+	State
 }
 
-func NewState(tri0 tri.Tri, num uint64) (state *State) {
-	state = &State{}
-	state.State0 = NewState0(tri0, num)
+func NewState(tri0 tri.Tri, num uint64) (state *ZState) {
+	state = &ZState{}
+	state.State = NewState0(tri0, num)
 	return
 }
 
-func (self *State) Copy() *State {
+func (self *ZState) Copy() *ZState {
 	return nil
 }
 
-func (self *State) Update() {
-	self.State0.Update()
+func (self *ZState) Update() {
+	self.State.Update()
 	return
 }
 
-func (self *State) Revert() {
-	self.State0.Revert()
+func (self *ZState) Revert() {
+	self.State.Revert()
 	return
 }
 
-func (state *State) AddOut_O(out *stx.Out_O) {
-	state.State0.AddOut(out.Clone().ToRef(), nil)
+func (state *ZState) AddOut_O(out *stx.Out_O) {
+	state.State.AddOut(out.Clone().ToRef(), nil)
 }
 
-func (state *State) AddStx(st *stx.T) (e error) {
-	if err := state.State0.AddStx(st); err != nil {
+func (state *ZState) AddStx(st *stx.T) (e error) {
+	if err := state.State.AddStx(st); err != nil {
 		e = err
 		return
 	} else {
@@ -62,7 +62,7 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	return
 }
 
-func (state *State) AddTxOut(addr common.Address, asset assets.Asset) {
+func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset) {
 	o := stx.Out_O{*addr.ToUint512(), asset, keys.Uint512{}}
 	state.AddOut_O(&o)
 }

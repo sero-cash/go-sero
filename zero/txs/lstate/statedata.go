@@ -14,18 +14,18 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package state1
+package lstate
 
 import (
 	"github.com/sero-cash/go-sero/rlp"
 )
 
-type State1Data struct {
-	Outs   []*OutState1
+type StateData struct {
+	Outs   []*OutState
 	MaxNum uint64
 }
 
-func (self *State1Data) Serial() (ret []byte) {
+func (self *StateData) Serial() (ret []byte) {
 	if self != nil {
 		if bytes, err := rlp.EncodeToBytes(self); err != nil {
 			panic(err)
@@ -38,11 +38,11 @@ func (self *State1Data) Serial() (ret []byte) {
 	}
 }
 
-type State1DataGet struct {
-	out State1Data
+type StateDataGet struct {
+	out StateData
 }
 
-func (self *State1DataGet) Unserial(v []byte) {
+func (self *StateDataGet) Unserial(v []byte) {
 	if len(v) == 0 {
 		return
 	} else {

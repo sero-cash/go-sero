@@ -19,16 +19,17 @@ package txs
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/txs/lstate"
+
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
-	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type preTxDesc struct {
-	ins  []state1.OutState1
+	ins  []lstate.OutState
 	outs []tx.Out
 }
 
@@ -44,7 +45,7 @@ type prePkgDesc struct {
 
 type preTx struct {
 	last_anchor keys.Uint256
-	uouts       []state1.OutState1
+	uouts       []lstate.OutState
 	desc_o      preTxDesc
 	desc_z      preTxDesc
 	desc_pkg    prePkgDesc
@@ -79,7 +80,7 @@ func newcyStateMap() (ret cyStateMap) {
 	return
 }
 
-func preGen(ts *tx.T, state1 *state1.State1) (p preTx, e error) {
+func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 	p.last_anchor = state1.State0.Cur.Tree.RootKey()
 	cy_state_map := newcyStateMap()
 	cy_state_map.sub(&ts.Fee.Currency, &ts.Fee.Value)
@@ -165,6 +166,7 @@ func preGen(ts *tx.T, state1 *state1.State1) (p preTx, e error) {
 		p.desc_pkg.pack = &pkg.Pkg_O{
 			out.PKr,
 			out.Asset,
+			keys.Uint512{},
 		}
 	}
 

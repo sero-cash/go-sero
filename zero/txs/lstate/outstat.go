@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package state1
+package lstate
 
 import (
 	"sort"
@@ -62,7 +62,7 @@ func (self *OutStatGet) Unserial(v []byte) (e error) {
 
 type OutStatWrap struct {
 	stat OutStat
-	out  *OutState1
+	out  *OutState
 }
 
 type OutStats []OutStatWrap
@@ -97,7 +97,7 @@ func outStatName(root *keys.Uint256) (ret []byte) {
 	return
 }
 
-func UpdateOutStat(st *zstate.State0, out *OutState1) {
+func UpdateOutStat(st *zstate.State, out *OutState) {
 	os := OutStat{}
 	os.Z = out.Z
 	if out.Out_O.Asset.Tkn != nil {
@@ -109,7 +109,7 @@ func UpdateOutStat(st *zstate.State0, out *OutState1) {
 	tri.UpdateGlobalObj(st.Tri(), outStatName(out.Pg.Root.ToUint256()), &os)
 }
 
-func SortOutStats(st *zstate.State0, outs []*OutState1) {
+func SortOutStats(st *zstate.State, outs []*OutState) {
 	wraps := OutStats{}
 	for _, out := range outs {
 		out_root := out.Pg.Root.ToUint256()

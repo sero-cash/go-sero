@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package state1
+package lstate
 
 import (
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -24,7 +24,7 @@ import (
 	"github.com/sero-cash/go-sero/zero/witness"
 )
 
-type OutState1 struct {
+type OutState struct {
 	Pg           witness.PathGen
 	WitnessIndex uint64
 	OutIndex     uint64
@@ -36,7 +36,7 @@ type OutState1 struct {
 	Z            bool
 }
 
-func (self *OutState1) IsMine(tk *keys.Uint512) bool {
+func (self *OutState) IsMine(tk *keys.Uint512) bool {
 	if self.Tk == *tk {
 		return true
 	} else {
@@ -44,18 +44,18 @@ func (self *OutState1) IsMine(tk *keys.Uint512) bool {
 	}
 }
 
-func (self *OutState1) Serial() (ret []byte, e error) {
+func (self *OutState) Serial() (ret []byte, e error) {
 	return rlp.EncodeToBytes(self)
 }
-func (self *OutState1) Unserial(v []byte) (*OutState1, error) {
-	out := OutState1{}
+func (self *OutState) Unserial(v []byte) (*OutState, error) {
+	out := OutState{}
 	if err := rlp.DecodeBytes(v, &out); err != nil {
 		return nil, err
 	} else {
 		return &out, nil
 	}
 }
-func (self *OutState1) ToWitness() (commitment keys.Uint256, index uint32, path [cpt.DEPTH * 32]byte, anchor keys.Uint256) {
+func (self *OutState) ToWitness() (commitment keys.Uint256, index uint32, path [cpt.DEPTH * 32]byte, anchor keys.Uint256) {
 	el := self.Pg.Leaf
 	commitment = *el.ToUint256()
 	path_temp, index_temp := self.Pg.Path, self.Pg.Index

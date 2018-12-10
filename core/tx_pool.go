@@ -425,7 +425,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrGasLimit
 	}
 
-	err := stx.Verify(tx.GetZZSTX(), &pool.currentState.GetZState().State0)
+	err := stx.Verify(tx.GetZZSTX(), &pool.currentState.GetZState().State)
 	if err != nil {
 		return ErrVerifyError
 	}

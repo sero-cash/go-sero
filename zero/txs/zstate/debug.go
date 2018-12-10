@@ -33,7 +33,7 @@ func Need_debug() bool {
 	}
 }
 
-func Debug_State0_addout_assert(state *State0, os *OutState0) {
+func Debug_State0_addout_assert(state *State, os *OutState) {
 	if Need_debug() {
 		trees := state.GenState0Trees()
 		leaf := os.ToRootCM()
