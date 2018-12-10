@@ -45,8 +45,8 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e err
 
 		{
 			asset_desc := cpt.AssetDesc{
-				Tkn_currency: utils.StringToUint256("SERO"),
-				Tkn_value:    t.Fee.ToUint256(),
+				Tkn_currency: t.Fee.Currency,
+				Tkn_value:    t.Fee.Value.ToUint256(),
 				Tkt_category: keys.Empty_Uint256,
 				Tkt_value:    keys.Empty_Uint256,
 			}
@@ -183,15 +183,15 @@ func Verify_state1(s *stx.T, state *zstate.State0) (e error) {
 	hash_z := s.ToHash_for_o()
 	balance_desc.Hash = hash_z
 
-	if !CheckUint(&s.Fee) {
+	if !CheckUint(&s.Fee.Value) {
 		e = errors.New("txs.verify check fee too big")
 		return
 	}
 
 	{
 		asset_desc := cpt.AssetDesc{
-			Tkn_currency: utils.StringToUint256("SERO"),
-			Tkn_value:    s.Fee.ToUint256(),
+			Tkn_currency: s.Fee.Currency,
+			Tkn_value:    s.Fee.Value.ToUint256(),
 			Tkt_category: keys.Empty_Uint256,
 			Tkt_value:    keys.Empty_Uint256,
 		}

@@ -19,6 +19,8 @@ package stx
 import (
 	"encoding/hex"
 
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
 	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -111,7 +113,7 @@ func (self *Desc_Z) ToHash() (ret keys.Uint256) {
 type T struct {
 	Ehash    keys.Uint256
 	From     keys.Uint512
-	Fee      utils.U256
+	Fee      assets.Token
 	Sign     keys.Uint512
 	Bcr      keys.Uint256
 	Bsign    keys.Uint512
@@ -124,7 +126,7 @@ func (self *T) ToHash_for_z() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Ehash[:])
 	d.Write(self.From[:])
-	d.Write(self.Fee.ToUint256().NewRef()[:])
+	d.Write(self.Fee.ToHash().NewRef()[:])
 	d.Write(self.Desc_O.ToHash_for_z().NewRef()[:])
 	d.Write(self.Desc_Pkg.ToHash().NewRef()[:])
 	copy(ret[:], d.Sum(nil))

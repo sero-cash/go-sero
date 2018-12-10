@@ -50,7 +50,7 @@ const (
 type T struct {
 	FromRnd *keys.Uint256
 	Ehash   keys.Uint256
-	Fee     utils.U256
+	Fee     assets.Token
 	Ins     []In
 	Outs    []Out
 	PkgPack *pkg.Pkg_O
@@ -59,8 +59,9 @@ type T struct {
 
 func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
 	ret = make(map[keys.Uint256]utils.U256)
-	seroCy := utils.StringToUint256("SERO")
-	ret[seroCy] = self.Fee
+	//seroCy := utils.StringToUint256("SERO")
+	//ret[seroCy] = self.Fee
+	ret[self.Fee.Currency] = self.Fee.Value
 	if len(self.Outs) > 0 {
 		for _, out := range self.Outs {
 			if out.Asset.Tkn != nil {

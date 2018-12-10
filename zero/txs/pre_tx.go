@@ -69,25 +69,20 @@ func (self cyStateMap) sub(key *keys.Uint256, value *utils.U256) {
 	if _, ok := self[*key]; ok {
 		self[*key].balance.SubU(value)
 	} else {
-		self[*key] = &cyState{
-			*value.ToI256().ToRef(),
-		}
+		self[*key] = &cyState{}
+		self[*key].balance.SubU(value)
 	}
 }
 
-func newcyStateMap(fee *utils.U256) (ret cyStateMap) {
+func newcyStateMap() (ret cyStateMap) {
 	ret = make(map[keys.Uint256]*cyState)
-	b := utils.NewI256(0)
-	b.SubU(fee)
-	ret[utils.StringToUint256("SERO")] = &cyState{
-		balance: b,
-	}
 	return
 }
 
 func preGen(ts *tx.T, state1 *state1.State1) (p preTx, e error) {
 	p.last_anchor = state1.State0.Cur.Tree.RootKey()
-	cy_state_map := newcyStateMap(&ts.Fee)
+	cy_state_map := newcyStateMap()
+	cy_state_map.sub(&ts.Fee.Currency, &ts.Fee.Value)
 	tk_map := make(map[keys.Uint256]int)
 	for _, in := range ts.Ins {
 		if src, err := state1.GetOut(&in.Root); err == nil {

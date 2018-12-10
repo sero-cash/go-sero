@@ -102,7 +102,10 @@ func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z
 	}
 	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
 	tx := &ztx.T{
-		Fee:  utils.U256(*fee),
+		Fee: assets.Token{
+			utils.StringToUint256("SERO"),
+			utils.U256(*fee),
+		},
 		Outs: outDatas,
 	}
 	return tx
@@ -170,7 +173,7 @@ func (tx *Transaction) Data() []byte { return common.CopyBytes(tx.data.Payload) 
 func (tx *Transaction) Gas() uint64 {
 	fee := tx.data.Stxt.Fee
 	price := tx.data.Price
-	return new(big.Int).Div(fee.ToIntRef(), price).Uint64()
+	return new(big.Int).Div(fee.Value.ToIntRef(), price).Uint64()
 }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
 
@@ -244,7 +247,7 @@ func (tx *Transaction) AsMessage() (Message, error) {
 		to:         tx.To(),
 		data:       tx.data.Payload,
 		checkNonce: true,
-		asset:        tx.Pkg(),
+		asset:      tx.Pkg(),
 	}
 
 	return msg, nil
@@ -385,7 +388,7 @@ type Message struct {
 	to         *common.Address
 	from       common.Address
 	nonce      uint64
-	asset        assets.Asset
+	asset      assets.Asset
 	gasLimit   uint64
 	gasPrice   *big.Int
 	data       []byte
@@ -401,7 +404,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, asset ass
 		gasPrice:   gasPrice,
 		data:       data,
 		checkNonce: checkNonce,
-		asset:        asset,
+		asset:      asset,
 	}
 	return message
 }

@@ -197,7 +197,10 @@ func (self *user) Package(v int, fee int, u user) {
 	out1.Z = tx.TYPE_Z
 
 	t := tx.T{}
-	t.Fee = utils.NewU256(uint64(fee))
+	t.Fee = assets.Token{
+		utils.StringToUint256("SERO"),
+		utils.NewU256(uint64(fee)),
+	}
 	t.Ins = append(t.Ins, in)
 	t.Outs = append(t.Outs, out1)
 	t.PkgPack = &out0
@@ -249,7 +252,10 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 	}
 
 	t := tx.T{}
-	t.Fee = utils.NewU256(uint64(fee))
+	t.Fee = assets.Token{
+		utils.StringToUint256("SERO"),
+		utils.NewU256(uint64(fee)),
+	}
 	t.Ins = append(t.Ins, in)
 	t.Outs = append(t.Outs, out0)
 	t.Outs = append(t.Outs, out1)
@@ -289,15 +295,22 @@ func TestTxs(t *testing.T) {
 		t.Fail()
 	}
 
+	//user_m.Send(50, 10, user_a, true)
 	user_m.Package(50, 10, user_a)
+	if g_blocks.st.GetPkg(4) == nil {
+		t.Fail()
+	}
+
 	g_blocks.st.OpenPkg(4, &pkg.Key{})
 	g_blocks.st.Update()
 	EndBlock()
 
-	g_blocks.st.GetPkg(4)
+	if g_blocks.st.GetPkg(4) != nil {
+		t.Fail()
+	}
 	EndBlock()
 
-	//user_m.Send(50, 10, user_a, true)
+	user_a.addOut(50)
 
 	if user_m.Logout() != 340 {
 		t.Fail()
