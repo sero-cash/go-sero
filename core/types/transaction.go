@@ -392,10 +392,10 @@ type Message struct {
 	gasLimit   uint64
 	gasPrice   *big.Int
 	data       []byte
-	checkNonce bool
+	contractPayGas bool
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, asset assets.Asset, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, asset assets.Asset, gasLimit uint64, gasPrice *big.Int, data []byte, contractPayGas bool) Message {
 	message := Message{
 		from:       from,
 		to:         to,
@@ -403,7 +403,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, asset ass
 		gasLimit:   gasLimit,
 		gasPrice:   gasPrice,
 		data:       data,
-		checkNonce: checkNonce,
+		contractPayGas: contractPayGas,
 		asset:      asset,
 	}
 	return message
@@ -415,7 +415,7 @@ func (m Message) GasPrice() *big.Int   { return m.gasPrice }
 func (m Message) Gas() uint64          { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
-func (m Message) CheckNonce() bool     { return m.checkNonce }
+func (m Message) ContractPayGas() bool     { return m.contractPayGas }
 func (m Message) Asset() assets.Asset {
 	return m.asset
 }

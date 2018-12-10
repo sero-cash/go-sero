@@ -57,6 +57,7 @@ var (
 	topic_category      = common.HexToHash("0xf1964f6690a0536daa42e5c575091297d2479edcc96f721ad85b95358644d276")
 	topic_ticket        = common.HexToHash("0x9ab0d7c07029f006485cf3468ce7811aa8743b5a108599f6bec9367c50ac6aad")
 	topic_setCallValues = common.HexToHash("0xa6cafc6282f61eff9032603a017e652f68410d3d3c69f0a3eeca8f181aec1d17")
+	topic_setTokenRate  = common.HexToHash("0xa6cafc6282f61eff9032603a017e652f68410d3d3c69f0a3eeca8f181aec1d17")
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -1101,6 +1102,8 @@ func makeLog(size int) executionFunc {
 				contract.SetCallMsg(&assets.Asset{Tkn: token, Tkt: ticket})
 			}
 
+		} else if topics[0] == topic_setTokenRate {
+			interpreter.evm.StateDB.SetTokenRate(contract.Address(), new(big.Int).SetBytes(d[:]))
 		} else {
 			interpreter.evm.StateDB.AddLog(&types.Log{
 				Address: contract.Address(),

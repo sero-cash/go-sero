@@ -18,6 +18,9 @@ package core
 
 import (
 	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
+	"math/big"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
@@ -102,6 +105,17 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	if err != nil {
 		gp.AddGas(gas)
 		return nil, 0, err
+	}
+
+	if msg.ContractPayGas() {
+		remaining := new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas() - gas), msg.GasPrice())
+		rate := statedb.GetTokenRate(*msg.To(),"")
+		asset := assets.Asset{Tkn: &assets.Token{
+			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+			Value:    utils.U256(*remaining),
+		},
+		}
+		statedb.GetZState().AddTxOut(msg.From(), asset)
 	}
 
 	root := statedb.IntermediateRoot(true).Bytes()

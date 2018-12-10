@@ -17,6 +17,7 @@
 package core
 
 import (
+	"errors"
 	"math"
 	"math/big"
 
@@ -27,6 +28,10 @@ import (
 	"github.com/sero-cash/go-sero/core/vm"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/params"
+)
+
+var (
+	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
 )
 
 type StateTransition struct {
@@ -49,10 +54,13 @@ type Message interface {
 
 	GasPrice() *big.Int
 	Gas() uint64
+
 	Asset() assets.Asset
 
 	Nonce() uint64
-	CheckNonce() bool
+
+	ContractPayGas() bool
+
 	Data() []byte
 }
 
@@ -131,9 +139,18 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) preCheck() error {
+	to := st.msg.To()
+	if st.msg.ContractPayGas() {
+		mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
+		if st.state.GetBalance(*to, "SERO").Cmp(mgval) < 0 {
+			return errInsufficientBalanceForGas
+		}
+		st.state.SubBalance(*to, "SERO", mgval)
+	}
 	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
 		return err
 	}
+
 	st.gas += st.msg.Gas()
 	st.initialGas = st.msg.Gas()
 	return nil
@@ -206,14 +223,19 @@ func (st *StateTransition) refundGas() {
 	}
 	st.gas += refund
 
-	// Return ETH for remaining gas, exchanged at the original rate.
+	// Return SERO for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
-		Value:    utils.U256(*remaining),
-	},
+
+	if st.msg.ContractPayGas() {
+		st.state.AddBalance(*st.msg.To(), "SERO", remaining)
+	} else {
+		asset := assets.Asset{Tkn: &assets.Token{
+			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+			Value:    utils.U256(*remaining),
+		},
+		}
+		st.state.GetZState().AddTxOut(st.msg.From(), asset)
 	}
-	st.state.GetZState().AddTxOut(st.msg.From(), asset)
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.
