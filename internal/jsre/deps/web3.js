@@ -6244,6 +6244,27 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [formatters.inputTransactionFormatter]
             });
 
+            var packPackage = new Method({
+                name: 'packPackage',
+                call: 'sero_packPackage',
+                params: 1,
+                inputFormatter: [formatters.inputTransactionFormatter]
+            });
+
+            var unpackPackage = new Method({
+                name: 'unpackPackage',
+                call: 'sero_unpackPackage',
+                params: 1,
+                inputFormatter: [formatters.inputTransactionFormatter]
+            });
+
+            var changePackage = new Method({
+                name: 'changePackage',
+                call: 'sero_changePackage',
+                params: 1,
+                inputFormatter: [formatters.inputTransactionFormatter]
+            });
+
             var call = new Method({
                 name: 'call',
                 call: 'sero_call',
@@ -6306,6 +6327,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 call,
                 estimateGas,
                 sendTransaction,
+                packPackage,
+                unpackPackage,
+                changePackage,
                 convertAddressParams,
                 getFullAddress,
                 currencyToContractAddress,

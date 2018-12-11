@@ -17,6 +17,8 @@
 package keystore
 
 import (
+	"errors"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/accounts"
@@ -29,6 +31,8 @@ import (
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txs/lstate"
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
 )
 
@@ -157,12 +161,28 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 
 	}
 
+	if txt.PkgOpen != nil {
+		zpkg := lstate.CurrentState1().State.Pkgs.GetPkg(&txt.PkgOpen.Id)
+		if zpkg == nil {
+			return nil, errors.New("PkgOpen Id is not exists!")
+		}
+		pkg_o, err := pkg.DePkg(&txt.PkgOpen.Key, &zpkg.Pack.Pkg)
+		if err != nil {
+			return nil, err
+		}
+		selfOut := tx.Out{
+			Addr:  zpkg.Pack.Pkr,
+			Asset: pkg_o.Asset,
+			Z:     tx.TYPE_Z,
+		}
+		txt.Outs = append(txt.Outs, selfOut)
+	}
+
 	txt.Ins = ins
 
 	Ehash := rlpHash([]interface{}{
 		btx.GasPrice(),
 		btx.Data(),
-		btx.Currency(),
 	})
 	copy(txt.Ehash[:], Ehash[:])
 

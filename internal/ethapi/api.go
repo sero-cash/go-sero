@@ -677,6 +677,18 @@ func (s *Smbol) IsEmpty() bool {
 	return (strings.TrimSpace(string(*s)) == "")
 }
 
+func (s *Smbol) IsNotEmpty() bool {
+	return !s.IsEmpty()
+}
+
+func (s *Smbol) IsSero() bool {
+	return (strings.ToUpper(strings.TrimSpace(string(*s))) == "SERO")
+}
+
+func (s *Smbol) IsNotSero() bool {
+	return !s.IsSero()
+}
+
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
 	From     common.Address  `json:"from"`
@@ -1217,16 +1229,17 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Value    *hexutil.Big    `json:"value"`
-	Data     *hexutil.Bytes  `json:"data"`
-	Currency Smbol           `json:"cy"`
-	Dynamic  bool            `json:"dy"` //contract address parameters are dynamically generated.
-	Category Smbol           `json:"catg"`
-	Tkt      *common.Hash    `json:"tkt"`
+	From        common.Address  `json:"from"`
+	To          *common.Address `json:"to"`
+	Gas         *hexutil.Uint64 `json:"gas"`
+	GasCurrency Smbol           `json:"gasCy"` //default SERO
+	GasPrice    *hexutil.Big    `json:"gasPrice"`
+	Value       *hexutil.Big    `json:"value"`
+	Data        *hexutil.Bytes  `json:"data"`
+	Currency    Smbol           `json:"cy"`
+	Dynamic     bool            `json:"dy"` //contract address parameters are dynamically generated.
+	Category    Smbol           `json:"catg"`
+	Tkt         *common.Hash    `json:"tkt"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
@@ -1234,6 +1247,20 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	if args.Gas == nil {
 		args.Gas = new(hexutil.Uint64)
 		*(*uint64)(args.Gas) = 90000
+	}
+
+	state, _, err := b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return err
+	}
+	if args.To == nil || !state.IsContract(*args.To) {
+		if args.GasCurrency.IsNotEmpty() && args.GasCurrency.IsNotSero() {
+			return errors.New(`GasCurrency must be null or SERO`)
+		}
+	}
+
+	if args.GasCurrency.IsEmpty() {
+		args.GasCurrency = Smbol(params.DefaultCurrency)
 	}
 	if args.GasPrice == nil {
 		price, err := b.SuggestPrice(ctx)
@@ -1296,9 +1323,24 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	if args.Data != nil {
 		input = *args.Data
 	}
-	tx := types.NewTransaction((*big.Int)(args.GasPrice), input, string(args.Currency))
-	txt := types.NewTxt(to, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, string(args.Currency), string(args.Category), args.Tkt)
+	tx := types.NewTransaction((*big.Int)(args.GasPrice), input)
+	txt := types.NewTxt(to, (*big.Int)(args.Value), string(args.GasCurrency), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, string(args.Currency), string(args.Category), args.Tkt)
 	txt.FromRnd = rand.ToUint256().NewRef()
+	return tx, txt, nil
+}
+
+func (args *SendTxArgs) toPackage(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+
+	to := args.To
+	if state.IsContract(*args.To) {
+		to = args.To
+	} else {
+		pkr := keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())
+		to.SetBytes(pkr[:])
+	}
+	tx := types.NewTransaction((*big.Int)(args.GasPrice), nil)
+	txt := types.NewPackage(to, (*big.Int)(args.Value), string(args.GasCurrency), (*big.Int)(args.GasPrice), uint64(*args.Gas), string(args.Currency), string(args.Category), args.Tkt)
+	txt.FromRnd = keys.RandUint256().NewRef()
 	return tx, txt, nil
 }
 
@@ -1325,6 +1367,248 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	s.nonceLock.mu.Lock()
+	defer s.nonceLock.mu.Unlock()
+	// Look up the wallet containing the requested abi
+	account := accounts.Account{Address: args.From}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Assemble the transaction and sign with the wallet
+	tx, txt, err := args.toTransaction(state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if th, ok := s.b.GetEngin().(threaded); ok {
+		miner := s.b.GetMiner()
+		if miner.CanStart() {
+			miner.SetCanStart(0)
+			defer miner.SetCanStart(1)
+		}
+		threads := th.Threads()
+		if threads >= 0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
+		}
+	}
+	encrypted, err := wallet.EncryptTx(account, tx, txt, state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return submitTransaction(ctx, s.b, encrypted)
+}
+
+func (s *PublicTransactionPoolAPI) PackPackage(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	s.nonceLock.mu.Lock()
+	defer s.nonceLock.mu.Unlock()
+	// Look up the wallet containing the requested abi
+	account := accounts.Account{Address: args.From}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	if args.To == nil {
+		return common.Hash{}, errors.New("to can not be nil")
+	}
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Assemble the transaction and sign with the wallet
+	tx, txt, err := args.toPackage(state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if th, ok := s.b.GetEngin().(threaded); ok {
+		miner := s.b.GetMiner()
+		if miner.CanStart() {
+			miner.SetCanStart(0)
+			defer miner.SetCanStart(1)
+		}
+		threads := th.Threads()
+		if threads >= 0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
+		}
+	}
+	encrypted, err := wallet.EncryptTx(account, tx, txt, state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return submitTransaction(ctx, s.b, encrypted)
+}
+
+type UnpackPkgArgs struct {
+	From     common.Address  `json:"from"`
+	Gas      *hexutil.Uint64 `json:"gas"`
+	GasPrice *hexutil.Big    `json:"gasPrice"`
+	PkgId    *keys.Uint256   `json:"id"`
+	Key      *keys.Uint256   `json:"key"`
+}
+
+func (args *UnpackPkgArgs) setDefaults(ctx context.Context, b Backend) error {
+	if args.Gas == nil {
+		args.Gas = new(hexutil.Uint64)
+		*(*uint64)(args.Gas) = 90000
+	}
+
+	if args.GasPrice == nil {
+		price, err := b.SuggestPrice(ctx)
+		if err != nil {
+			return err
+		}
+		args.GasPrice = (*hexutil.Big)(price)
+	} else {
+		if args.GasPrice.ToInt().Sign() == 0 {
+			return errors.New(`gasPrice can not be zero`)
+		}
+	}
+	if args.PkgId == nil {
+		return errors.New("id can not be nil")
+	}
+
+	if args.Key == nil {
+		return errors.New("key can not be nil")
+	}
+
+	return nil
+}
+
+func (args *UnpackPkgArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+	tx := types.NewTransaction((*big.Int)(args.GasPrice), nil)
+	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
+	txt := &ztx.T{
+		Fee: assets.Token{
+			utils.StringToUint256("SERO"),
+			utils.U256(*fee),
+		},
+		PkgOpen: &ztx.PkgOpen{*args.PkgId, *args.Key},
+	}
+	txt.FromRnd = keys.RandUint256().NewRef()
+	return tx, txt, nil
+}
+
+func (s *PublicTransactionPoolAPI) UnpackPackage(ctx context.Context, args UnpackPkgArgs) (common.Hash, error) {
+	s.nonceLock.mu.Lock()
+	defer s.nonceLock.mu.Unlock()
+	// Look up the wallet containing the requested abi
+	account := accounts.Account{Address: args.From}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Assemble the transaction and sign with the wallet
+	tx, txt, err := args.toTransaction(state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if th, ok := s.b.GetEngin().(threaded); ok {
+		miner := s.b.GetMiner()
+		if miner.CanStart() {
+			miner.SetCanStart(0)
+			defer miner.SetCanStart(1)
+		}
+		threads := th.Threads()
+		if threads >= 0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
+		}
+	}
+	encrypted, err := wallet.EncryptTx(account, tx, txt, state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return submitTransaction(ctx, s.b, encrypted)
+}
+
+type ChangePkgArgs struct {
+	From     common.Address  `json:"from"`
+	Gas      *hexutil.Uint64 `json:"gas"`
+	GasPrice *hexutil.Big    `json:"gasPrice"`
+	PkgId    *keys.Uint256   `json:"id"`
+	To       *common.Address `json:"To"`
+}
+
+func (args *ChangePkgArgs) setDefaults(ctx context.Context, b Backend) error {
+	if args.Gas == nil {
+		args.Gas = new(hexutil.Uint64)
+		*(*uint64)(args.Gas) = 90000
+	}
+
+	if args.GasPrice == nil {
+		price, err := b.SuggestPrice(ctx)
+		if err != nil {
+			return err
+		}
+		args.GasPrice = (*hexutil.Big)(price)
+	} else {
+		if args.GasPrice.ToInt().Sign() == 0 {
+			return errors.New(`gasPrice can not be zero`)
+		}
+	}
+	if args.PkgId == nil {
+		return errors.New("id can not be nil")
+	}
+
+	if args.To == nil {
+		return errors.New("to can not be nil")
+	}
+
+	return nil
+}
+
+func (args *ChangePkgArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+	tx := types.NewTransaction((*big.Int)(args.GasPrice), nil)
+	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
+	txt := &ztx.T{
+		Fee: assets.Token{
+			utils.StringToUint256("SERO"),
+			utils.U256(*fee),
+		},
+		PkgChange: &ztx.PkgChange{*args.PkgId, keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())},
+	}
+	txt.FromRnd = keys.RandUint256().NewRef()
+	return tx, txt, nil
+}
+
+func (s *PublicTransactionPoolAPI) ChangePackage(ctx context.Context, args UnpackPkgArgs) (common.Hash, error) {
 	s.nonceLock.mu.Lock()
 	defer s.nonceLock.mu.Unlock()
 	// Look up the wallet containing the requested abi

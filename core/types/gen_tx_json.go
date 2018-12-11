@@ -16,15 +16,13 @@ var _ = (*txdataMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (t txdata) MarshalJSON() ([]byte, error) {
 	type txdata struct {
-		Price    *hexutil.Big  `json:"gasPrice" gencodec:"required"`
-		Payload  hexutil.Bytes `json:"input"    gencodec:"required"`
-		Currency string        `json:"currency"    gencodec:"required"`
-		Stxt     *stx.T        `json:"stxt"    gencodec:"required"`
+		Price   *hexutil.Big  `json:"gasPrice" gencodec:"required"`
+		Payload hexutil.Bytes `json:"input"    gencodec:"required"`
+		Stxt    *stx.T        `json:"stxt"    gencodec:"required"`
 	}
 	var enc txdata
 	enc.Price = (*hexutil.Big)(t.Price)
 	enc.Payload = t.Payload
-	enc.Currency = t.Currency
 	enc.Stxt = t.Stxt
 	return json.Marshal(&enc)
 }
@@ -32,10 +30,9 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (t *txdata) UnmarshalJSON(input []byte) error {
 	type txdata struct {
-		Price    *hexutil.Big   `json:"gasPrice" gencodec:"required"`
-		Payload  *hexutil.Bytes `json:"input"    gencodec:"required"`
-		Currency *string        `json:"currency"    gencodec:"required"`
-		Stxt     *stx.T         `json:"stxt"    gencodec:"required"`
+		Price   *hexutil.Big   `json:"gasPrice" gencodec:"required"`
+		Payload *hexutil.Bytes `json:"input"    gencodec:"required"`
+		Stxt    *stx.T         `json:"stxt"    gencodec:"required"`
 	}
 	var dec txdata
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -49,10 +46,6 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'input' for txdata")
 	}
 	t.Payload = *dec.Payload
-	if dec.Currency == nil {
-		return errors.New("missing required field 'currency' for txdata")
-	}
-	t.Currency = *dec.Currency
 	if dec.Stxt == nil {
 		return errors.New("missing required field 'stxt' for txdata")
 	}

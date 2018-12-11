@@ -20,13 +20,14 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
+
 	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"container/heap"
 	"io"
-	"strings"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -48,10 +49,9 @@ type Transaction struct {
 }
 
 type txdata struct {
-	Price    *big.Int `json:"gasPrice" gencodec:"required"`
-	Payload  []byte   `json:"input"    gencodec:"required"`
-	Currency string   `json:"currency"    gencodec:"required"`
-	Stxt     *zstx.T  `json:"stxt"    gencodec:"required"`
+	Price   *big.Int `json:"gasPrice" gencodec:"required"`
+	Payload []byte   `json:"input"    gencodec:"required"`
+	Stxt    *zstx.T  `json:"stxt"    gencodec:"required"`
 }
 
 type txdataMarshaling struct {
@@ -60,11 +60,11 @@ type txdataMarshaling struct {
 	Stxt    *zstx.T
 }
 
-func NewTransaction(gasPrice *big.Int, data []byte, currency string) *Transaction {
-	return newTransaction(gasPrice, data, currency)
+func NewTransaction(gasPrice *big.Int, data []byte) *Transaction {
+	return newTransaction(gasPrice, data)
 }
 
-func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z ztx.OutType, currency string, catg string, tkt *common.Hash) *ztx.T {
+func NewTxt(to *common.Address, value *big.Int, gasCurrency string, gasPrice *big.Int, gas uint64, z ztx.OutType, currency string, catg string, tkt *common.Hash) *ztx.T {
 
 	outDatas := []ztx.Out{}
 	var token *assets.Token
@@ -103,7 +103,7 @@ func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z
 	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
 	tx := &ztx.T{
 		Fee: assets.Token{
-			utils.StringToUint256("SERO"),
+			utils.StringToUint256(gasCurrency),
 			utils.U256(*fee),
 		},
 		Outs: outDatas,
@@ -112,14 +112,51 @@ func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z
 
 }
 
-func newTransaction(gasPrice *big.Int, data []byte, currency string) *Transaction {
+func NewPackage(pkr *common.Address, value *big.Int, gasCurrency string, gasPrice *big.Int, gas uint64, currency string, catg string, tkt *common.Hash) *ztx.T {
+
+	var token *assets.Token
+	var ticket *assets.Ticket
+	if value != nil {
+		token = &assets.Token{
+			Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256()),
+			Value:    *utils.U256(*value).ToRef(),
+		}
+	}
+	if tkt != nil {
+		ticket = &assets.Ticket{
+			Category: *(common.BytesToHash(common.LeftPadBytes([]byte(catg), 32)).HashToUint256()),
+			Value:    *tkt.HashToUint256(),
+		}
+
+	}
+	asset := assets.Asset{
+		Tkn: token,
+		Tkt: ticket,
+	}
+
+	pkg := pkg.Pkg_O{
+		Asset: asset,
+	}
+	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
+	tx := &ztx.T{
+		Fee: assets.Token{
+			utils.StringToUint256(gasCurrency),
+			utils.U256(*fee),
+		},
+		PkgPack: &ztx.PkgPack{PKr: *(pkr.ToUint512()),
+			Pkg: pkg},
+	}
+	return tx
+
+}
+
+func newTransaction(gasPrice *big.Int, data []byte) *Transaction {
 	if len(data) > 0 {
 		data = common.CopyBytes(data)
 	}
 	d := txdata{
-		Payload:  data,
-		Price:    new(big.Int),
-		Currency: currency,
+		Payload: data,
+		Price:   new(big.Int),
 	}
 	if gasPrice != nil {
 		d.Price.Set(gasPrice)
@@ -229,13 +266,6 @@ func (tx *Transaction) Size() common.StorageSize {
 	rlp.Encode(&c, &tx.data)
 	tx.size.Store(common.StorageSize(c))
 	return common.StorageSize(c)
-}
-
-func (tx *Transaction) Currency() string {
-	if strings.TrimSpace(tx.data.Currency) == "" {
-		return "sero"
-	}
-	return tx.data.Currency
 }
 
 // AsMessage returns the transaction as a core.Message.
