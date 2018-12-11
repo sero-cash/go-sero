@@ -246,7 +246,6 @@ func (tx *Transaction) AsMessage() (Message, error) {
 		gasPrice:   new(big.Int).Set(tx.data.Price),
 		to:         tx.To(),
 		data:       tx.data.Payload,
-		checkNonce: true,
 		asset:      tx.Pkg(),
 	}
 
@@ -392,10 +391,10 @@ type Message struct {
 	gasLimit   uint64
 	gasPrice   *big.Int
 	data       []byte
-	contractPayGas bool
+	currency string
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, asset assets.Asset, gasLimit uint64, gasPrice *big.Int, data []byte, contractPayGas bool) Message {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, asset assets.Asset, gasLimit uint64, gasPrice *big.Int, data []byte, currency string) Message {
 	message := Message{
 		from:       from,
 		to:         to,
@@ -403,7 +402,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, asset ass
 		gasLimit:   gasLimit,
 		gasPrice:   gasPrice,
 		data:       data,
-		contractPayGas: contractPayGas,
+		currency: currency,
 		asset:      asset,
 	}
 	return message
@@ -413,9 +412,8 @@ func (m Message) From() common.Address { return m.from }
 func (m Message) To() *common.Address  { return m.to }
 func (m Message) GasPrice() *big.Int   { return m.gasPrice }
 func (m Message) Gas() uint64          { return m.gasLimit }
-func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
-func (m Message) ContractPayGas() bool     { return m.contractPayGas }
+func (m Message) Currency() string     { return m.currency }
 func (m Message) Asset() assets.Asset {
 	return m.asset
 }

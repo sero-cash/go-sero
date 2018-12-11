@@ -17,6 +17,7 @@
 package core
 
 import (
+	"errors"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -90,6 +91,11 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	if err != nil {
 		return nil, 0, err
 	}
+
+	if msg.Currency() != "SERO" && msg.To() != nil && !statedb.IsContract(*msg.To()) {
+		return nil, 0, errors.New("error")
+	}
+
 	// Create a new context to be used in the EVM environment
 	context := NewEVMContext(msg, header, bc, author)
 	// Create a new environment which holds all relevant information
@@ -107,15 +113,19 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 		return nil, 0, err
 	}
 
-	if msg.ContractPayGas() {
-		remaining := new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas() - gas), msg.GasPrice())
-		rate := statedb.GetTokenRate(*msg.To(),"")
-		asset := assets.Asset{Tkn: &assets.Token{
-			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
-			Value:    utils.U256(*remaining),
-		},
+	if msg.Currency() != "SERO" {
+		tokes, tas := statedb.GetTokenRate(*msg.To(), "")
+		if tokes.Sign() != 0 && tas.Sign() != 0 {
+			remainingFee := new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()-gas), msg.GasPrice())
+			remainToken := new(big.Int).Div(new(big.Int).Mul(remainingFee, tokes), tas)
+			asset := assets.Asset{Tkn: &assets.Token{
+				Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+				Value:    utils.U256(*remainToken),
+			},
+			}
+			statedb.GetZState().AddTxOut(msg.From(), asset)
+			statedb.SubBalance(*msg.To(), msg.Currency(), remainToken);
 		}
-		statedb.GetZState().AddTxOut(msg.From(), asset)
 	}
 
 	root := statedb.IntermediateRoot(true).Bytes()

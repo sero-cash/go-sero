@@ -57,9 +57,9 @@ type Message interface {
 
 	Asset() assets.Asset
 
-	Nonce() uint64
+	//Nonce() uint64
 
-	ContractPayGas() bool
+	Currency() string
 
 	Data() []byte
 }
@@ -139,8 +139,8 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) preCheck() error {
-	to := st.msg.To()
-	if st.msg.ContractPayGas() {
+	if st.msg.Currency() != "SERO" {
+		to := st.msg.To()
 		mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
 		if st.state.GetBalance(*to, "SERO").Cmp(mgval) < 0 {
 			return errInsufficientBalanceForGas
@@ -226,7 +226,7 @@ func (st *StateTransition) refundGas() {
 	// Return SERO for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
 
-	if st.msg.ContractPayGas() {
+	if st.msg.Currency() != "SERO" {
 		st.state.AddBalance(*st.msg.To(), "SERO", remaining)
 	} else {
 		asset := assets.Asset{Tkn: &assets.Token{

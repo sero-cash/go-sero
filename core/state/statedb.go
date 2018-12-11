@@ -265,21 +265,25 @@ func (self *StateDB) GetContrctAddressByTicket(categoryName string) common.Addre
 	return self.getContrctAddress("Ticket", strings.ToUpper(categoryName))
 }
 
-func (self *StateDB) GetTokenRate(contractAddr common.Address, coinName string) *big.Int {
+func (self *StateDB) GetTokenRate(contractAddr common.Address, coinName string) (*big.Int, *big.Int) {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
-		bytes, _ := rlp.EncodeToBytes([]interface{}{"TokenRate", contractAddr, strings.ToUpper(coinName)})
-		hash := stateObject.GetState(self.db, crypto.Keccak256Hash(bytes))
-		return new(big.Int).SetBytes(hash[:])
+		bytes0, _ := rlp.EncodeToBytes([]interface{}{"RateToken", contractAddr, strings.ToUpper(coinName)})
+		hash0 := stateObject.GetState(self.db, crypto.Keccak256Hash(bytes0))
+		bytes1, _ := rlp.EncodeToBytes([]interface{}{"RateTa", contractAddr, strings.ToUpper(coinName)})
+		hash1 := stateObject.GetState(self.db, crypto.Keccak256Hash(bytes1))
+		return new(big.Int).SetBytes(hash0[:]), new(big.Int).SetBytes(hash1[:])
 	}
-	return new(big.Int)
+	return new(big.Int), new(big.Int)
 }
 
-func (self *StateDB) SetTokenRate(contractAddr common.Address, coinName string, rate *big.Int) {
+func (self *StateDB) SetTokenRate(contractAddr common.Address, coinName string, tokens *big.Int, tas *big.Int) {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
-		bytes, _ := rlp.EncodeToBytes([]interface{}{"TokenRate", contractAddr, strings.ToUpper(coinName)})
-		stateObject.SetState(self.db, crypto.Keccak256Hash(bytes), common.BigToHash(rate))
+		bytes0, _ := rlp.EncodeToBytes([]interface{}{"RateToken", contractAddr, strings.ToUpper(coinName)})
+		stateObject.SetState(self.db, crypto.Keccak256Hash(bytes0), common.BigToHash(tokens))
+		bytes1, _ := rlp.EncodeToBytes([]interface{}{"RateTa", contractAddr, strings.ToUpper(coinName)})
+		stateObject.SetState(self.db, crypto.Keccak256Hash(bytes1), common.BigToHash(tokens))
 	}
 }
 
