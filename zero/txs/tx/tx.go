@@ -42,13 +42,13 @@ type PkgPack struct {
 }
 
 type PkgOpen struct {
-	Id  uint64
-	key keys.Uint256
+	Id  keys.Uint256
+	Key keys.Uint256
 }
 
 type PkgChange struct {
 	Id  uint64
-	Pkr keys.Uint512
+	PKr keys.Uint512
 }
 
 type OutType int

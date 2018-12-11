@@ -179,6 +179,7 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 	}
 
 	if ts.PkgOpen != nil {
+		//pkg := state1.State.Pkgs.GetPkg(&ts.PkgOpen.Id)
 	}
 
 	for currency, state := range cy_state_map {
