@@ -17,6 +17,7 @@
 package txs
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
@@ -27,7 +28,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
-	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type preTxDesc struct {
@@ -45,7 +45,7 @@ type prePkgOpen struct {
 
 type prePkgChange struct {
 	pkr  keys.Uint512
-	zpkg pkg.Pkg_Z
+	zpkg pkgstate.ZPkg
 }
 
 type prePkgDesc struct {
@@ -62,140 +62,95 @@ type preTx struct {
 	desc_pkg    prePkgDesc
 }
 
-type cyState struct {
-	balance utils.I256
-}
-
-type cyStateMap map[keys.Uint256]*cyState
-
-func (self cyStateMap) add(key *keys.Uint256, value *utils.U256) {
-	if _, ok := self[*key]; ok {
-		self[*key].balance.AddU(value)
-	} else {
-		self[*key] = &cyState{
-			*value.ToI256().ToRef(),
-		}
-	}
-}
-func (self cyStateMap) sub(key *keys.Uint256, value *utils.U256) {
-	if _, ok := self[*key]; ok {
-		self[*key].balance.SubU(value)
-	} else {
-		self[*key] = &cyState{}
-		self[*key].balance.SubU(value)
-	}
-}
-
-func newcyStateMap() (ret cyStateMap) {
-	ret = make(map[keys.Uint256]*cyState)
-	return
-}
-
 func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 	p.last_anchor = state1.State.State.Cur.Tree.RootKey()
-	cy_state_map := newcyStateMap()
-	cy_state_map.sub(&ts.Fee.Currency, &ts.Fee.Value)
-	tk_map := make(map[keys.Uint256]int)
+	ck_state := NewCKState(&ts.Fee)
+
 	for _, in := range ts.Ins {
 		if src, err := state1.GetOut(&in.Root); err == nil {
-			added := false
-			if src.Out_O.Asset.Tkn != nil {
-				cy_state_map.add(&src.Out_O.Asset.Tkn.Currency, &src.Out_O.Asset.Tkn.Value)
-				added = true
-			}
-			if src.Out_O.Asset.Tkt != nil {
-				if _, ok := tk_map[src.Out_O.Asset.Tkt.Value]; !ok {
-					tk_map[src.Out_O.Asset.Tkt.Value] = 1
-				} else {
-					e = fmt.Errorf("in tkt duplicate: %v", src.Out_O.Asset.Tkt.Value)
-					return
+			if added, err := ck_state.AddIn(&src.Out_O.Asset); err != nil {
+				e = err
+				return
+			} else {
+				if added {
+					if src.Out_Z == nil {
+						p.desc_o.ins = append(p.desc_o.ins, *src)
+					} else {
+						p.desc_z.ins = append(p.desc_z.ins, *src)
+					}
 				}
-				added = true
+				p.uouts = append(p.uouts, *src)
 			}
-			if added {
-				if src.Out_Z == nil {
-					p.desc_o.ins = append(p.desc_o.ins, *src)
-				} else {
-					p.desc_z.ins = append(p.desc_z.ins, *src)
-				}
-			}
-			p.uouts = append(p.uouts, *src)
 		} else {
 			e = err
 			return
 		}
 	}
+
 	for _, out := range ts.Outs {
-		added := false
-		if out.Asset.Tkn != nil {
-			cy_state_map.sub(&out.Asset.Tkn.Currency, &out.Asset.Tkn.Value)
-			added = true
-		}
-		if out.Asset.Tkt != nil {
-			if c, ok := tk_map[out.Asset.Tkt.Value]; ok {
-				if c > 0 {
-					tk_map[out.Asset.Tkt.Value] = c - 1
-				} else {
-					e = fmt.Errorf("out tkt duplicate: %v", out.Asset.Tkt.Value)
-					return
+		if added, err := ck_state.AddOut(&out.Asset); err != nil {
+			e = err
+			return
+		} else {
+			if added {
+				switch out.Z {
+				case tx.TYPE_N:
+					fallthrough
+				case tx.TYPE_O:
+					p.desc_o.outs = append(p.desc_o.outs, out)
+				default:
+					p.desc_z.outs = append(p.desc_z.outs, out)
 				}
-			} else {
-				e = fmt.Errorf("out tkt not in ins: %v", out.Asset.Tkt.Value)
-				return
-			}
-			added = true
-		}
-		if added {
-			switch out.Z {
-			case tx.TYPE_N:
-				fallthrough
-			case tx.TYPE_O:
-				p.desc_o.outs = append(p.desc_o.outs, out)
-			default:
-				p.desc_z.outs = append(p.desc_z.outs, out)
 			}
 		}
 	}
+
 	if ts.PkgPack != nil {
-		asset := &ts.PkgPack.Pkg.Asset
-		if asset.Tkn != nil {
-			cy_state_map.sub(&asset.Tkn.Currency, &asset.Tkn.Value)
+		if _, err := ck_state.AddOut(&ts.PkgPack.Pkg.Asset); err != nil {
+			e = err
+			return
+		} else {
+			p.desc_pkg.pack = &prePkgPack{}
+			p.desc_pkg.pack.pkg = *ts.PkgPack
 		}
-		if asset.Tkt != nil {
-			if c, ok := tk_map[asset.Tkt.Value]; ok {
-				if c > 0 {
-					tk_map[asset.Tkt.Value] = c - 1
-				} else {
-					e = fmt.Errorf("out tkt duplicate: %v", asset.Tkt.Value)
-					return
-				}
-			} else {
-				e = fmt.Errorf("out tkt not in ins: %v", asset.Tkt.Value)
-				return
-			}
-		}
-		p.desc_pkg.pack = &prePkgPack{}
-		p.desc_pkg.pack.pkg = *ts.PkgPack
 	}
 
 	if ts.PkgOpen != nil {
-		//pkg := state1.State.Pkgs.GetPkg(&ts.PkgOpen.Id)
-	}
-
-	for currency, state := range cy_state_map {
-		if state.balance.Cmp(&utils.I256_0) != 0 {
-			e = fmt.Errorf("currency %v banlance != 0", currency)
+		if zpkg := state1.State.Pkgs.GetPkg(&ts.PkgOpen.Id); zpkg == nil {
+			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgOpen.Id[:]))
 			return
 		} else {
+			if opkg, err := pkg.DePkg(&ts.PkgOpen.Key, &zpkg.Pack.Pkg); err != nil {
+				e = fmt.Errorf("Decode Pkg error %v", hex.EncodeToString(ts.PkgOpen.Id[:]))
+				return
+			} else {
+				if _, err := ck_state.AddIn(&opkg.Asset); err != nil {
+					e = err
+					return
+				} else {
+					p.desc_pkg.open = &prePkgOpen{}
+					p.desc_pkg.open.opkg.O = opkg
+					p.desc_pkg.open.opkg.Z = *zpkg
+				}
+			}
 		}
 	}
 
-	for ticket, c := range tk_map {
-		if c > 0 {
-			e = fmt.Errorf("tikect not use %v", ticket)
+	if ts.PkgChange != nil {
+		if zpkg := state1.State.Pkgs.GetPkg(&ts.PkgOpen.Id); zpkg == nil {
+			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgOpen.Id[:]))
 			return
+		} else {
+			p.desc_pkg.change = &prePkgChange{}
+			p.desc_pkg.change.pkr = ts.PkgChange.PKr
+			p.desc_pkg.change.zpkg = *zpkg
 		}
 	}
 
-	return
+	if err := ck_state.Check(); err != nil {
+		e = err
+		return
+	} else {
+		return
+	}
 }

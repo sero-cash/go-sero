@@ -18,8 +18,11 @@ package txs
 
 import (
 	"errors"
+	"fmt"
 
-	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
+	"github.com/sero-cash/go-sero/common/hexutil"
+
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
 
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
 
@@ -71,6 +74,25 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 				balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
 			}
 		}
+		if preTx.desc_pkg.open != nil {
+			open := preTx.desc_pkg.open
+			s.Desc_Pkg.Open = &stx.PkgOpen{
+				open.opkg.Z.Pack.Id,
+				t.PkgOpen.Key,
+			}
+			{
+				asset := open.opkg.O.Asset.ToFlatAsset()
+				asset_desc := cpt.AssetDesc{
+					Tkn_currency: asset.Tkn.Currency,
+					Tkn_value:    asset.Tkn.Value.ToUint256(),
+					Tkt_category: asset.Tkt.Category,
+					Tkt_value:    asset.Tkt.Value,
+				}
+				cpt.GenAssetCC(&asset_desc)
+				balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
+			}
+		}
+
 		for _, out_o := range preTx.desc_o.outs {
 			s_out_o := stx.Out_O{}
 			s_out_o.Asset = out_o.Asset.Clone()
@@ -115,6 +137,14 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 				}
 				cpt.GenAssetCC(&asset_desc)
 				balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+			}
+		}
+
+		if preTx.desc_pkg.change != nil {
+			change := preTx.desc_pkg.change
+			s.Desc_Pkg.Change = &stx.PkgChange{
+				change.zpkg.Pack.Id,
+				change.pkr,
 			}
 		}
 
@@ -180,10 +210,10 @@ func CheckUint(i *utils.U256) bool {
 	}
 }
 
-func Verify(s *stx.T, state *txstate.State) (e error) {
+func Verify(s *stx.T, state *zstate.ZState) (e error) {
 	return Verify_state1(s, state)
 }
-func Verify_state1(s *stx.T, state *txstate.State) (e error) {
+func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	balance_desc := cpt.BalanceDesc{}
 
 	hash_z := s.ToHash_for_o()
@@ -211,12 +241,12 @@ func Verify_state1(s *stx.T, state *txstate.State) (e error) {
 	}
 
 	for _, in_o := range s.Desc_O.Ins {
-		if ok := state.HasIn(&in_o.Root); ok {
+		if ok := state.State.HasIn(&in_o.Root); ok {
 			e = errors.New("txs.verify in already in nils")
 			return
 		} else {
 		}
-		if src, err := state.GetOut(&in_o.Root); e == nil {
+		if src, err := state.State.GetOut(&in_o.Root); e == nil {
 			if src.IsO() {
 				if keys.VerifyPKr(&hash_z, &in_o.Sign, &src.Out_O.Addr) {
 					{
@@ -243,6 +273,24 @@ func Verify_state1(s *stx.T, state *txstate.State) (e error) {
 			return
 		}
 	}
+
+	if s.Desc_Pkg.Open != nil {
+		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Open.Id); pg == nil {
+			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Change.Id[:]))
+			return
+		} else {
+			asset := pg.Pack.Pkg.Temp.Asset
+			asset_desc := cpt.AssetDesc{
+				Tkn_currency: asset.Tkn.Currency,
+				Tkn_value:    asset.Tkn.Value.ToUint256(),
+				Tkt_category: asset.Tkt.Category,
+				Tkt_value:    asset.Tkt.Value,
+			}
+			cpt.GenAssetCC(&asset_desc)
+			balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
+		}
+	}
+
 	for _, out_o := range s.Desc_O.Outs {
 		if out_o.Asset.Tkn != nil {
 			if !CheckUint(&out_o.Asset.Tkn.Value) {
@@ -263,6 +311,7 @@ func Verify_state1(s *stx.T, state *txstate.State) (e error) {
 			}
 		}
 	}
+
 	if s.Desc_Pkg.Pack != nil {
 		out := s.Desc_Pkg.Pack.Pkg.Temp
 		if out.Asset.Tkn != nil {
@@ -285,19 +334,27 @@ func Verify_state1(s *stx.T, state *txstate.State) (e error) {
 		}
 	}
 
-	for _, in_z := range s.Desc_Z.Ins {
-		if ok := state.HasIn(&in_z.Nil); ok {
-			e = errors.New("txs.verify in already in nils")
+	if s.Desc_Pkg.Change != nil {
+		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Change.Id); pg == nil {
+			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Change.Id[:]))
 			return
 		} else {
 		}
-		if out, err := state.GetOut(&in_z.Anchor); err != nil {
-			e = err
+	}
+
+	for _, in_z := range s.Desc_Z.Ins {
+		if ok := state.State.HasIn(&in_z.Nil); ok {
+			e = errors.New("txs.verify in already in nils")
 			return
 		} else {
-			if out == nil {
-				e = errors.New("txs.verify can not find out for anchor")
+			if out, err := state.State.GetOut(&in_z.Anchor); err != nil {
+				e = err
+				return
 			} else {
+				if out == nil {
+					e = errors.New("txs.verify can not find out for anchor")
+				} else {
+				}
 			}
 		}
 	}
@@ -313,9 +370,9 @@ func Verify_state1(s *stx.T, state *txstate.State) (e error) {
 	if err := cpt.VerifyBalance(&balance_desc); err != nil {
 		e = err
 		return
+	} else {
+		return
 	}
-
-	return
 }
 
 func GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error) {

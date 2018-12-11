@@ -156,7 +156,7 @@ func (self *user) Gen(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
 }
 
 func (self *user) Verify(t *stx.T) (e error) {
-	return txs.Verify_state1(t, &g_blocks.st1.State.State)
+	return txs.Verify_state1(t, g_blocks.st1.State)
 }
 
 func (self *user) Logout() (ret uint64) {
