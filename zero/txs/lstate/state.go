@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
 
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -39,7 +40,7 @@ import (
 )
 
 type State struct {
-	State0 *txstate.State
+	State *zstate.ZState
 
 	mu      sync.RWMutex
 	G2outs  map[keys.Uint256]*OutState
@@ -50,8 +51,8 @@ type State struct {
 	is_dirty bool
 }
 
-func LoadState(state0 *txstate.State, loadName string) (state State) {
-	state.State0 = state0
+func LoadState(zstate *zstate.ZState, loadName string) (state State) {
+	state.State = zstate
 	state.load(loadName)
 	return
 }
@@ -127,7 +128,7 @@ func (self *State) Finalize(saveName string) {
 		panic(err)
 	} else {
 	}
-	zconfig.Remove_State1_dir_files(int(self.State0.Num()))
+	zconfig.Remove_State1_dir_files(int(self.State.State.Num()))
 	return
 }
 
@@ -147,7 +148,7 @@ func (state *State) GetOut(root *keys.Uint256) (src *OutState, e error) {
 
 func (self *State) addOut(tks []keys.Uint512, os *txstate.OutState, os_tree *merkle.Tree) {
 
-	t := utils.TR_enter(fmt.Sprintf("ADD_OUT----INIT num=%v", self.State0.Num()))
+	t := utils.TR_enter(fmt.Sprintf("ADD_OUT----INIT num=%v", self.State.State.Num()))
 
 	out_hash := os.ToRootCM()
 	out_leaf := merkle.Leaf{}
@@ -285,7 +286,7 @@ func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, pg *witne
 					panic("add wouts but RootCM not match!")
 				}
 				wos.Trace = cpt.GenTil(&tk, pg.Leaf.ToUint256())
-				wos.Num = state.State0.Num()
+				wos.Num = state.State.State.Num()
 				state.add_out_dirty(root, &wos)
 				state.add_out_dirty(&wos.Trace, &wos)
 				break
@@ -321,7 +322,7 @@ func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, pg *witne
 						panic("add wouts but RootCM not match!")
 					}
 					wos.Trace = cpt.GenTil(&tk, pg.Leaf.ToUint256())
-					wos.Num = state.State0.Num()
+					wos.Num = state.State.State.Num()
 					state.add_out_dirty(root, &wos)
 					state.add_out_dirty(&wos.Trace, &wos)
 				}
@@ -353,15 +354,15 @@ func (state *State) del(del *keys.Uint256) (e error) {
 }
 
 func (state *State) UpdateWitness(tks []keys.Uint512) {
-	trees := state.State0.GenState0Trees()
-	for _, del := range state.State0.Block.Dels {
+	trees := state.State.State.GenState0Trees()
+	for _, del := range state.State.State.Block.Dels {
 		state.del(&del)
 	}
-	for i, commitment := range state.State0.Block.Commitments {
+	for i, commitment := range state.State.State.Block.Commitments {
 		t := utils.TR_enter("UpdateWitness---RootKey")
 		tree := trees.Trees[trees.Start_index+uint64(i)]
 		out := tree.RootKey()
-		if os, err := state.State0.GetOut(&out); err != nil {
+		if os, err := state.State.State.GetOut(&out); err != nil {
 			panic(err)
 		} else {
 			if os == nil {
@@ -390,7 +391,7 @@ func (self *State) GetOuts(tk *keys.Uint512) (outs []*OutState, e error) {
 		} else {
 			if src != nil {
 				if src.IsMine(tk) {
-					if self.State0.HasIn(&src.Trace) {
+					if self.State.State.HasIn(&src.Trace) {
 						panic("get outs src.nil in state0")
 					}
 					if root != *src.Pg.Root.ToUint256() {
@@ -403,6 +404,6 @@ func (self *State) GetOuts(tk *keys.Uint512) (outs []*OutState, e error) {
 			}
 		}
 	}
-	SortOutStats(self.State0, outs)
+	SortOutStats(&self.State.State, outs)
 	return
 }

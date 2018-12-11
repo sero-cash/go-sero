@@ -92,7 +92,7 @@ func newcyStateMap() (ret cyStateMap) {
 }
 
 func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
-	p.last_anchor = state1.State0.Cur.Tree.RootKey()
+	p.last_anchor = state1.State.State.Cur.Tree.RootKey()
 	cy_state_map := newcyStateMap()
 	cy_state_map.sub(&ts.Fee.Currency, &ts.Fee.Value)
 	tk_map := make(map[keys.Uint256]int)
@@ -176,6 +176,9 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 		}
 		p.desc_pkg.pack = &prePkgPack{}
 		p.desc_pkg.pack.pkg = *ts.PkgPack
+	}
+
+	if ts.PkgOpen != nil {
 	}
 
 	for currency, state := range cy_state_map {

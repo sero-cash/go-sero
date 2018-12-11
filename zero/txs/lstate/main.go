@@ -126,13 +126,13 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 		t.Renter("PARSE_BLOCK_CHAIN----LoadState")
 
 		if st1 == nil {
-			s1 := LoadState(&state.State, load_name)
+			s1 := LoadState(state, load_name)
 			st1 = &s1
 		} else {
-			st1.State0 = &state.State
+			st1.State = state
 		}
 
-		commitment_len := len(st1.State0.Block.Commitments)
+		commitment_len := len(st1.State.State.Block.Commitments)
 		t.Renter(fmt.Sprintf("PARSE_BLOCK_CHAIN----UpdateWiteness(count=%d)", commitment_len))
 		st1.UpdateWitness(tks)
 		current_state1 = st1
@@ -151,7 +151,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 		current_hash := current_header.Hash()
 		state_name := state1_file_name(current_num, &current_hash)
 		st := bc.NewState(&current_hash)
-		st1 := LoadState(&st.State, state_name)
+		st1 := LoadState(st, state_name)
 		current_state1 = &st1
 	}
 

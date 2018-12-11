@@ -70,10 +70,10 @@ func NewBlock() {
 
 func EndBlock() {
 	if g_blocks.st1 == nil {
-		st1 := lstate.LoadState(g_blocks.st0, "")
+		st1 := lstate.LoadState(g_blocks.st, "")
 		g_blocks.st1 = &st1
 	} else {
-		g_blocks.st1.State0 = g_blocks.st0
+		g_blocks.st1.State = g_blocks.st
 	}
 	g_blocks.st1.UpdateWitness(keys.Seeds2Tks(seeds))
 	NewBlock()
@@ -156,7 +156,7 @@ func (self *user) Gen(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
 }
 
 func (self *user) Verify(t *stx.T) (e error) {
-	return txs.Verify_state1(t, g_blocks.st1.State0)
+	return txs.Verify_state1(t, &g_blocks.st1.State.State)
 }
 
 func (self *user) Logout() (ret uint64) {

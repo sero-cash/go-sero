@@ -160,7 +160,7 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 		}
 
 		for _, used_out := range preTx.uouts {
-			lstate.UpdateOutStat(st1.State0, &used_out)
+			lstate.UpdateOutStat(&st1.State.State, &used_out)
 		}
 
 		return
