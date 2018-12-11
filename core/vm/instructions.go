@@ -1103,7 +1103,7 @@ func makeLog(size int) executionFunc {
 			}
 
 		} else if topics[0] == topic_setTokenRate {
-			interpreter.evm.StateDB.SetTokenRate(contract.Address(), new(big.Int).SetBytes(d[:]))
+			interpreter.evm.StateDB.SetTokenRate(contract.Address(), "", new(big.Int).SetBytes(d[0:32]), new(big.Int).SetBytes(d[32:64]))
 		} else {
 			interpreter.evm.StateDB.AddLog(&types.Log{
 				Address: contract.Address(),

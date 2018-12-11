@@ -36,8 +36,8 @@ type StateDB interface {
 	RegisterTicket(common.Address, string) bool
 	GetContrctAddressByTicket(key string) common.Address
 
-	//SetTokenRate(common.Address, string, *big.Int, *big.Int)
-	//GetTokenRate(common.Address, string) *big.Int,*big.Int
+	SetTokenRate(common.Address, string, *big.Int, *big.Int)
+	GetTokenRate(common.Address, string) (*big.Int, *big.Int)
 	RegisterToken(common.Address, string) bool
 	GetContrctAddressByToken(key string) common.Address
 
