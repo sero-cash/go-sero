@@ -47,7 +47,7 @@ type PkgOpen struct {
 }
 
 type PkgChange struct {
-	Id  uint64
+	Id  keys.Uint256
 	PKr keys.Uint512
 }
 

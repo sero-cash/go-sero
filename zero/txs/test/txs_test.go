@@ -151,6 +151,11 @@ func (self *user) GetOuts() (outs []*lstate.OutState) {
 	}
 }
 
+func (self *user) GetPkgs(is_from bool) (ret []*lstate.Pkg) {
+	ret = g_blocks.st1.GetPkgs(keys.Seed2Tk(&self.seed).NewRef(), is_from)
+	return
+}
+
 func (self *user) Gen(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
 	return txs.Gen_state1(seed, t, g_blocks.st1)
 }
@@ -303,6 +308,13 @@ func TestTxs(t *testing.T) {
 		t.Fail()
 	}
 
+	if pkgs := user_m.GetPkgs(true); len(pkgs) == 0 {
+		t.Fail()
+	}
+	if pkgs := user_a.GetPkgs(false); len(pkgs) == 0 {
+		t.Fail()
+	}
+
 	g_blocks.st.Pkgs.OpenPkg(&keys.Uint256{}, &user_a.addr, &keys.Uint256{})
 	g_blocks.st.Update()
 	EndBlock()
@@ -310,6 +322,13 @@ func TestTxs(t *testing.T) {
 	if g_blocks.st.Pkgs.GetPkg(&keys.Uint256{}) != nil {
 		t.Fail()
 	}
+	if pkgs := user_m.GetPkgs(true); len(pkgs) != 0 {
+		t.Fail()
+	}
+	if pkgs := user_a.GetPkgs(false); len(pkgs) != 0 {
+		t.Fail()
+	}
+
 	EndBlock()
 
 	user_a.addOut(50)

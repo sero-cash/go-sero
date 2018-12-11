@@ -23,6 +23,10 @@ import (
 	"os"
 	"sync"
 
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
+
+	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
+
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
@@ -42,13 +46,13 @@ import (
 type State struct {
 	State *zstate.ZState
 
-	mu      sync.RWMutex
-	G2outs  map[keys.Uint256]*OutState
-	G2wouts []keys.Uint256
+	mu          sync.RWMutex
+	G2outs      map[keys.Uint256]*OutState
+	G2wouts     []keys.Uint256
+	G2pkgs_from map[keys.Uint256]*Pkg
+	G2pkgs_to   map[keys.Uint256]*Pkg
 
 	data StateData
-
-	is_dirty bool
 }
 
 func LoadState(zstate *zstate.ZState, loadName string) (state State) {
@@ -61,25 +65,24 @@ func (self *State) add_out_dirty(k *keys.Uint256, state *OutState) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.G2outs[*k] = state
-	self.is_dirty = true
 }
+
 func (self *State) del_wout_dirty(i uint) {
 	self.G2wouts = append(self.G2wouts[:i], self.G2wouts[i+1:]...)
-	self.is_dirty = true
 }
 
 func (self *State) append_wout_dirty(k *keys.Uint256) {
 	self.G2wouts = append(self.G2wouts, *k)
-	self.is_dirty = true
 }
 
 func (state *State) clear_dirty() {
-	state.is_dirty = false
 }
 
 func (self *State) load(loadName string) {
 	self.G2outs = make(map[keys.Uint256]*OutState)
 	self.G2wouts = []keys.Uint256{}
+	self.G2pkgs_from = make(map[keys.Uint256]*Pkg)
+	self.G2pkgs_to = make(map[keys.Uint256]*Pkg)
 	self.clear_dirty()
 
 	if loadName != "" {
@@ -107,6 +110,17 @@ func (self *State) toData() {
 			outs = append(outs, out)
 		}
 	}
+
+	pkgs_from := []*Pkg{}
+	for _, pkg := range self.G2pkgs_from {
+		pkgs_from = append(pkgs_from, pkg)
+	}
+
+	pkgs_to := []*Pkg{}
+	for _, pkg := range self.G2pkgs_to {
+		pkgs_to = append(pkgs_to, pkg)
+	}
+
 	self.data.Outs = outs
 }
 
@@ -116,6 +130,14 @@ func (self *State) dataTo() {
 		self.G2wouts = append(self.G2wouts, root)
 		self.G2outs[root] = out
 		self.G2outs[out.Trace] = out
+	}
+
+	for _, pkg := range self.data.Pkgs_from {
+		self.G2pkgs_from[pkg.Pkg.Z.Pack.Id] = pkg
+	}
+
+	for _, pkg := range self.data.Pkgs_to {
+		self.G2pkgs_to[pkg.Pkg.Z.Pack.Id] = pkg
 	}
 }
 
@@ -353,6 +375,45 @@ func (state *State) del(del *keys.Uint256) (e error) {
 	return
 }
 
+func (state *State) addPkg(id *keys.Uint256, pg *pkgstate.ZPkg) {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+
+	if _, ok := state.G2pkgs_from[*id]; ok {
+		delete(state.G2pkgs_from, *id)
+	}
+	if _, ok := state.G2pkgs_to[*id]; ok {
+		delete(state.G2pkgs_to, *id)
+	}
+
+	if pg != nil {
+		p := &Pkg{
+			pkgstate.OPkg{
+				*pg,
+				pkg.Pkg_O{},
+			},
+		}
+		state.G2pkgs_from[*id] = p
+		state.G2pkgs_to[*id] = p
+	}
+}
+
+func (state *State) GetPkgs(tk *keys.Uint512, is_from bool) (ret []*Pkg) {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+
+	var pkgs map[keys.Uint256]*Pkg
+	if is_from {
+		pkgs = state.G2pkgs_from
+	} else {
+		pkgs = state.G2pkgs_to
+	}
+	for _, v := range pkgs {
+		ret = append(ret, v)
+	}
+	return
+}
+
 func (state *State) UpdateWitness(tks []keys.Uint512) {
 	trees := state.State.State.GenState0Trees()
 	for _, del := range state.State.State.Block.Dels {
@@ -379,6 +440,10 @@ func (state *State) UpdateWitness(tks []keys.Uint512) {
 			state.addOut(tks, os, &tree)
 		}
 		t.Leave()
+	}
+	for id := range state.State.Pkgs.G2pkgs_dirty {
+		pg := state.State.Pkgs.GetPkg(&id)
+		state.addPkg(&id, pg)
 	}
 	return
 }

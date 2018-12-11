@@ -21,8 +21,10 @@ import (
 )
 
 type StateData struct {
-	Outs   []*OutState
-	MaxNum uint64
+	Outs      []*OutState
+	Pkgs_from []*Pkg
+	Pkgs_to   []*Pkg
+	MaxNum    uint64
 }
 
 func (self *StateData) Serial() (ret []byte) {

@@ -58,7 +58,7 @@ type PkgState struct {
 	rw           *sync.RWMutex
 	num          uint64
 	G2pkgs       map[keys.Uint256]*ZPkg
-	g2pkgs_dirty map[keys.Uint256]bool
+	G2pkgs_dirty map[keys.Uint256]bool
 }
 
 func NewPkgState(tri tri.Tri, num uint64) (state PkgState) {
@@ -69,17 +69,16 @@ func NewPkgState(tri tri.Tri, num uint64) (state PkgState) {
 }
 
 func (self *PkgState) Update() {
-	g2pkgs_dirty := utils.Uint256s{}
-	for k := range self.g2pkgs_dirty {
-		g2pkgs_dirty = append(g2pkgs_dirty, k)
+	G2pkgs_dirty := utils.Uint256s{}
+	for k := range self.G2pkgs_dirty {
+		G2pkgs_dirty = append(G2pkgs_dirty, k)
 	}
-	sort.Sort(g2pkgs_dirty)
+	sort.Sort(G2pkgs_dirty)
 
-	for _, k := range g2pkgs_dirty {
+	for _, k := range G2pkgs_dirty {
 		v := self.G2pkgs[k]
 		tri.UpdateObj(self.tri, pkgName(&k), v)
 	}
-	self.clear_dirty()
 	return
 }
 
@@ -88,22 +87,19 @@ func (self *PkgState) Revert() {
 	return
 }
 
-func (state *PkgState) clear_dirty() {
-	state.g2pkgs_dirty = make(map[keys.Uint256]bool)
-}
 func (state *PkgState) clear() {
 	state.G2pkgs = make(map[keys.Uint256]*ZPkg)
-	state.clear_dirty()
+	state.G2pkgs_dirty = make(map[keys.Uint256]bool)
 }
 
 func (state *PkgState) add_pkg_dirty(pkg *ZPkg) {
 	state.G2pkgs[pkg.Pack.Id] = pkg
-	state.g2pkgs_dirty[pkg.Pack.Id] = true
+	state.G2pkgs_dirty[pkg.Pack.Id] = true
 }
 
 func (state *PkgState) del_pkg_dirty(id *keys.Uint256) {
 	state.G2pkgs[*id] = nil
-	state.g2pkgs_dirty[*id] = true
+	state.G2pkgs_dirty[*id] = true
 }
 
 func pkgName(k *keys.Uint256) (ret []byte) {
