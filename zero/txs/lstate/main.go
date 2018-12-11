@@ -121,7 +121,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 
 		state := bc.NewState(&current_hash)
 
-		current_cm_count += len(state.Block.Commitments)
+		current_cm_count += len(state.State.Block.Commitments)
 
 		t.Renter("PARSE_BLOCK_CHAIN----LoadState")
 

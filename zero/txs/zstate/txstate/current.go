@@ -14,40 +14,38 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package zstate
+package txstate
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/witness/merkle"
 )
 
-type StateBlock struct {
-	Tree        *merkle.Tree `rlp:"nil"`
-	Commitments []keys.Uint256
-	Dels        []keys.Uint256
+type Current struct {
+	Index int64
+	Tree  merkle.Tree
 }
 
-func (self *StateBlock) Serial() (ret []byte, e error) {
+func NewCur() (ret Current) {
+	ret.Index = -1
+	return
+}
+
+func (self *Current) Serial() (ret []byte, e error) {
 	if self != nil {
-		if bytes, err := rlp.EncodeToBytes(self); err != nil {
-			e = err
-			return
-		} else {
-			ret = bytes
-			return
-		}
+		return rlp.EncodeToBytes(self)
 	} else {
 		return
 	}
 }
 
-type State0BlockGet struct {
-	out StateBlock
+type CurrentGet struct {
+	out Current
 }
 
-func (self *State0BlockGet) Unserial(v []byte) (e error) {
+func (self *CurrentGet) Unserial(v []byte) (e error) {
 	if len(v) == 0 {
+		self.out = NewCur()
 		return
 	} else {
 		if err := rlp.DecodeBytes(v, &self.out); err != nil {

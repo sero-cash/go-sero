@@ -34,9 +34,21 @@ type Out struct {
 	Z     OutType
 }
 
+type PkgPack struct {
+	Id  keys.Uint256
+	PKr keys.Uint512
+	Pkg pkg.Pkg_O
+	Key keys.Uint256
+}
+
 type PkgOpen struct {
 	Id  uint64
-	key pkg.Key
+	key keys.Uint256
+}
+
+type PkgChange struct {
+	Id  uint64
+	Pkr keys.Uint512
 }
 
 type OutType int
@@ -48,19 +60,18 @@ const (
 )
 
 type T struct {
-	FromRnd *keys.Uint256
-	Ehash   keys.Uint256
-	Fee     assets.Token
-	Ins     []In
-	Outs    []Out
-	PkgPack *pkg.Pkg_O
-	PkgOpen *PkgOpen
+	FromRnd   *keys.Uint256
+	Ehash     keys.Uint256
+	Fee       assets.Token
+	Ins       []In
+	Outs      []Out
+	PkgPack   *PkgPack
+	PkgChange *PkgChange
+	PkgOpen   *PkgOpen
 }
 
 func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
 	ret = make(map[keys.Uint256]utils.U256)
-	//seroCy := utils.StringToUint256("SERO")
-	//ret[seroCy] = self.Fee
 	ret[self.Fee.Currency] = self.Fee.Value
 	if len(self.Outs) > 0 {
 		for _, out := range self.Outs {
@@ -75,7 +86,7 @@ func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
 		}
 	}
 	if self.PkgPack != nil {
-		asset := self.PkgPack.Asset
+		asset := self.PkgPack.Pkg.Asset
 		if asset.Tkn != nil {
 			if cost, ok := ret[asset.Tkn.Currency]; ok {
 				cost.AddU(&asset.Tkn.Value)
@@ -103,7 +114,7 @@ func (self *T) TikectCost() (ret map[keys.Uint256][]keys.Uint256) {
 		}
 	}
 	if self.PkgPack != nil {
-		asset := self.PkgPack.Asset
+		asset := self.PkgPack.Pkg.Asset
 		if asset.Tkt != nil {
 			if tkts, ok := ret[asset.Tkt.Category]; ok {
 				tkts = append(tkts, asset.Tkt.Value)

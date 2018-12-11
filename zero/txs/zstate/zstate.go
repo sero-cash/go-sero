@@ -18,6 +18,8 @@ package zstate
 
 import (
 	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
@@ -26,12 +28,14 @@ import (
 )
 
 type ZState struct {
-	State
+	State txstate.State
+	Pkgs  pkgstate.PkgState
 }
 
 func NewState(tri0 tri.Tri, num uint64) (state *ZState) {
 	state = &ZState{}
-	state.State = NewState0(tri0, num)
+	state.State = txstate.NewState(tri0, num)
+	state.Pkgs = pkgstate.NewPkgState(tri0, num)
 	return
 }
 
@@ -41,11 +45,13 @@ func (self *ZState) Copy() *ZState {
 
 func (self *ZState) Update() {
 	self.State.Update()
+	self.Pkgs.Update()
 	return
 }
 
 func (self *ZState) Revert() {
 	self.State.Revert()
+	self.Pkgs.Revert()
 	return
 }
 
@@ -58,6 +64,15 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 		e = err
 		return
 	} else {
+		if st.Desc_Pkg.Pack != nil {
+			state.Pkgs.Force_addPkg(&st.From, st.Desc_Pkg.Pack)
+		}
+		if st.Desc_Pkg.Open != nil {
+			state.Pkgs.Force_delPkg(&st.Desc_Pkg.Open.Id)
+		}
+		if st.Desc_Pkg.Change != nil {
+			state.Pkgs.Force_changePkr(&st.Desc_Pkg.Open.Id, &st.Desc_Pkg.Change.Pkr)
+		}
 	}
 	return
 }

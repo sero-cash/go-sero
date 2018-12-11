@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package zstate
+package txstate
 
 import (
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -66,18 +66,6 @@ func (self *OutState) ToRootCM() *keys.Uint256 {
 	cm := cpt.GenRootCM(self.Index, out_cm)
 	return &cm
 }
-
-/*
-func (self *OutState) ToCommitment() *keys.Uint256 {
-	if self.IsO() {
-		hs := self.Out_O.ToHash()
-		return &hs
-		hs[31] = 0
-		return cpt.GenCommitment(self.Out_O.ToHash().NewRef(), &self.Out_O.Addr, &hs, &self.Out_O.Memo).NewRef()
-	} else {
-		return self.Out_Z.ToHash().NewRef()
-	}
-}*/
 
 func (self *OutState) Serial() (ret []byte, e error) {
 	if self != nil {

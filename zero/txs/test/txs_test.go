@@ -20,14 +20,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/sero-cash/go-sero/zero/txs/pkg"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
+
+	"github.com/sero-cash/go-sero/zero/txs"
+
+	"github.com/sero-cash/go-sero/zero/txs/lstate"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
 
 	"github.com/sero-cash/go-sero/zero/txs/tx"
-
-	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 
 	"github.com/sero-cash/go-czero-import/cpt"
 
@@ -46,8 +48,8 @@ type Blocks struct {
 	ca  state.Database
 	sd  *state.StateDB
 	st  *zstate.ZState
-	st0 *zstate.State
-	st1 *state1.State1
+	st0 *txstate.State
+	st1 *lstate.State
 }
 
 var g_blocks Blocks
@@ -60,7 +62,7 @@ func NewBlock() {
 		g_blocks.st = g_blocks.sd.GetZState()
 		g_blocks.st0 = &g_blocks.st.State
 	} else {
-		g_blocks.st0.Block = zstate.StateBlock{}
+		g_blocks.st0.Block = txstate.StateBlock{}
 		g_blocks.st0.Block.Tree = g_blocks.st0.Cur.Tree.Clone().ToRef()
 
 	}
@@ -68,7 +70,7 @@ func NewBlock() {
 
 func EndBlock() {
 	if g_blocks.st1 == nil {
-		st1 := state1.LoadState1(g_blocks.st0, "")
+		st1 := lstate.LoadState(g_blocks.st0, "")
 		g_blocks.st1 = &st1
 	} else {
 		g_blocks.st1.State0 = g_blocks.st0
@@ -139,7 +141,7 @@ func (self *user) addTkt(v int) {
 	EndBlock()
 }
 
-func (self *user) GetOuts() (outs []*state1.OutState1) {
+func (self *user) GetOuts() (outs []*lstate.OutState) {
 	if os, e := g_blocks.st1.GetOuts(keys.Seed2Tk(&self.seed).NewRef()); e != nil {
 		panic(e)
 		return
@@ -150,11 +152,11 @@ func (self *user) GetOuts() (outs []*state1.OutState1) {
 }
 
 func (self *user) Gen(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
-	return Gen_state1(seed, t, g_blocks.st1)
+	return txs.Gen_state1(seed, t, g_blocks.st1)
 }
 
 func (self *user) Verify(t *stx.T) (e error) {
-	return Verify_state1(t, g_blocks.st1.State0)
+	return txs.Verify_state1(t, g_blocks.st1.State0)
 }
 
 func (self *user) Logout() (ret uint64) {
@@ -178,9 +180,9 @@ func (self *user) Package(v int, fee int, u user) {
 	outs := self.GetOuts()
 	in := tx.In{}
 	in.Root = *outs[0].Pg.Root.ToUint256()
-	out0 := pkg.Pkg_O{}
+	out0 := tx.PkgPack{}
 	out0.PKr = u.addr
-	out0.Asset = assets.Asset{
+	out0.Pkg.Asset = assets.Asset{
 		&assets.Token{
 			utils.StringToUint256("SERO"),
 			utils.NewU256(uint64(v)),
@@ -297,15 +299,15 @@ func TestTxs(t *testing.T) {
 
 	//user_m.Send(50, 10, user_a, true)
 	user_m.Package(50, 10, user_a)
-	if g_blocks.st.GetPkg(4) == nil {
+	if g_blocks.st.Pkgs.GetPkg(&keys.Uint256{}) == nil {
 		t.Fail()
 	}
 
-	g_blocks.st.OpenPkg(4, &pkg.Key{})
+	g_blocks.st.Pkgs.OpenPkg(&keys.Uint256{}, &user_a.addr, &keys.Uint256{})
 	g_blocks.st.Update()
 	EndBlock()
 
-	if g_blocks.st.GetPkg(4) != nil {
+	if g_blocks.st.Pkgs.GetPkg(&keys.Uint256{}) != nil {
 		t.Fail()
 	}
 	EndBlock()

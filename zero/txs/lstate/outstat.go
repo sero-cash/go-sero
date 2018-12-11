@@ -20,9 +20,10 @@ import (
 	"sort"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
-	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
@@ -97,7 +98,7 @@ func outStatName(root *keys.Uint256) (ret []byte) {
 	return
 }
 
-func UpdateOutStat(st *zstate.State, out *OutState) {
+func UpdateOutStat(st *txstate.State, out *OutState) {
 	os := OutStat{}
 	os.Z = out.Z
 	if out.Out_O.Asset.Tkn != nil {
@@ -109,7 +110,7 @@ func UpdateOutStat(st *zstate.State, out *OutState) {
 	tri.UpdateGlobalObj(st.Tri(), outStatName(out.Pg.Root.ToUint256()), &os)
 }
 
-func SortOutStats(st *zstate.State, outs []*OutState) {
+func SortOutStats(st *txstate.State, outs []*OutState) {
 	wraps := OutStats{}
 	for _, out := range outs {
 		out_root := out.Pg.Root.ToUint256()

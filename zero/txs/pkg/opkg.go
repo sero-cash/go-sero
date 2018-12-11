@@ -8,7 +8,6 @@ import (
 )
 
 type Pkg_O struct {
-	PKr   keys.Uint512
 	Asset assets.Asset
 	Memo  keys.Uint512
 }
@@ -20,7 +19,6 @@ func (this Pkg_O) ToRef() (ret *Pkg_O) {
 
 func (self *Pkg_O) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
-	d.Write(self.PKr[:])
 	d.Write(self.Asset.ToHash().NewRef()[:])
 	d.Write(self.Memo[:])
 	copy(ret[:], d.Sum(nil))

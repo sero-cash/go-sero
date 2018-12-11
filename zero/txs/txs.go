@@ -19,11 +19,11 @@ package txs
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
+
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
 
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
-
-	"github.com/sero-cash/go-sero/zero/txs/zstate"
 
 	"github.com/sero-cash/go-czero-import/cpt"
 
@@ -99,9 +99,14 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 		}
 
 		if preTx.desc_pkg.pack != nil {
-			s.Desc_Pkg.Pack = &pkg.Pkg_Z{preTx.desc_pkg.pack.Clone()}
+			pack := preTx.desc_pkg.pack
+			s.Desc_Pkg.Pack = &stx.PkgPack{
+				pack.pkg.Id,
+				pack.pkg.PKr,
+				pkg.EnPkg(&pack.pkg.Key, &pack.pkg.Pkg),
+			}
 			{
-				asset := s.Desc_Pkg.Pack.Temp.Asset.ToFlatAsset()
+				asset := preTx.desc_pkg.pack.pkg.Pkg.Asset.ToFlatAsset()
 				asset_desc := cpt.AssetDesc{
 					Tkn_currency: asset.Tkn.Currency,
 					Tkn_value:    asset.Tkn.Value.ToUint256(),
@@ -175,10 +180,10 @@ func CheckUint(i *utils.U256) bool {
 	}
 }
 
-func Verify(s *stx.T, state *zstate.State) (e error) {
+func Verify(s *stx.T, state *txstate.State) (e error) {
 	return Verify_state1(s, state)
 }
-func Verify_state1(s *stx.T, state *zstate.State) (e error) {
+func Verify_state1(s *stx.T, state *txstate.State) (e error) {
 	balance_desc := cpt.BalanceDesc{}
 
 	hash_z := s.ToHash_for_o()
@@ -259,7 +264,7 @@ func Verify_state1(s *stx.T, state *zstate.State) (e error) {
 		}
 	}
 	if s.Desc_Pkg.Pack != nil {
-		out := s.Desc_Pkg.Pack.Temp
+		out := s.Desc_Pkg.Pack.Pkg.Temp
 		if out.Asset.Tkn != nil {
 			if !CheckUint(&out.Asset.Tkn.Value) {
 				e = errors.New("txs.verify check balance too big")

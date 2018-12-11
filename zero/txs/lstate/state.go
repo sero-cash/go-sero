@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
 
 	"github.com/sero-cash/go-czero-import/cpt"
 
@@ -32,14 +33,13 @@ import (
 	"github.com/sero-cash/go-sero/zero/witness"
 
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/utils"
 	"github.com/sero-cash/go-sero/zero/witness/merkle"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 )
 
 type State struct {
-	State0 *zstate.State
+	State0 *txstate.State
 
 	mu      sync.RWMutex
 	G2outs  map[keys.Uint256]*OutState
@@ -50,7 +50,7 @@ type State struct {
 	is_dirty bool
 }
 
-func LoadState(state0 *zstate.State, loadName string) (state State) {
+func LoadState(state0 *txstate.State, loadName string) (state State) {
 	state.State0 = state0
 	state.load(loadName)
 	return
@@ -145,7 +145,7 @@ func (state *State) GetOut(root *keys.Uint256) (src *OutState, e error) {
 	}
 }
 
-func (self *State) addOut(tks []keys.Uint512, os *zstate.OutState, os_tree *merkle.Tree) {
+func (self *State) addOut(tks []keys.Uint512, os *txstate.OutState, os_tree *merkle.Tree) {
 
 	t := utils.TR_enter(fmt.Sprintf("ADD_OUT----INIT num=%v", self.State0.Num()))
 
@@ -220,7 +220,7 @@ func (self *State) addOut(tks []keys.Uint512, os *zstate.OutState, os_tree *merk
 	return
 }
 
-func (state *State) addWouts(tks []keys.Uint512, os *zstate.OutState, pg *witness.PathGen) {
+func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, pg *witness.PathGen) {
 	for _, tk := range tks {
 		if os.IsO() {
 			out_o := os.Out_O
