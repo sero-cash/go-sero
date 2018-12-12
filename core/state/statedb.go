@@ -19,6 +19,7 @@ package state
 
 import (
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
 	"math/big"
 	"sort"
 	"strings"
@@ -68,6 +69,7 @@ type StateDB struct {
 	stateObjects      map[common.Address]*stateObject
 	stateObjectsDirty map[common.Address]struct{}
 	zstate            *zstate.ZState
+	pkgState          *pkgstate.PkgState
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are
@@ -145,6 +147,16 @@ func (self *StateDB) GetZState() *zstate.ZState {
 	}
 	return self.zstate
 }
+
+func (self *StateDB) GetPkgState() *pkgstate.PkgState {
+	if self.pkgState == nil {
+		st := StateTri{self.trie, self.db.TrieDB().DiskDB(), self.db.TrieDB().WDiskDB()}
+		state := pkgstate.NewPkgState(&st, self.number)
+		self.pkgState = &state
+	}
+	return self.pkgState
+}
+
 
 func NewGenesis(root common.Hash, db Database) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)

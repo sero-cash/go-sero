@@ -19,6 +19,7 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-czero-import/keys"
 	"math/big"
 	"strings"
 
@@ -58,6 +59,8 @@ var (
 	topic_ticket        = common.HexToHash("0x9ab0d7c07029f006485cf3468ce7811aa8743b5a108599f6bec9367c50ac6aad")
 	topic_setCallValues = common.HexToHash("0xa6cafc6282f61eff9032603a017e652f68410d3d3c69f0a3eeca8f181aec1d17")
 	topic_setTokenRate  = common.HexToHash("0xa6cafc6282f61eff9032603a017e652f68410d3d3c69f0a3eeca8f181aec1d17")
+	topic_openPkg       = common.HexToHash("0xa6cafc6282f61eff9032603a017e652f68410d3d3c69f0a3eeca8f181aec1d17")
+	topic_changePKr     = common.HexToHash("0xa6cafc6282f61eff9032603a017e652f68410d3d3c69f0a3eeca8f181aec1d17")
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -719,7 +722,6 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 
 	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, *asset)
 	contract.SetCallMsg(nil);
-
 	if err != nil {
 		stack.push(interpreter.intPool.getZero())
 	} else {
@@ -764,7 +766,6 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 
 	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, *asset)
 	contract.SetCallMsg(nil);
-
 	if err != nil {
 		stack.push(interpreter.intPool.getZero())
 	} else {
@@ -865,7 +866,7 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 
 func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (common.Hash, error) {
 	offset := new(big.Int).SetBytes(d[64:96]).Uint64()
-	len := new(big.Int).SetBytes(mem[offset : offset+32]).Uint64()
+	len := new(big.Int).SetBytes(mem[offset:offset+32]).Uint64()
 	if len == 0 {
 		return common.Hash{}, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "nameLen is zero")
 	}
@@ -918,7 +919,7 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 
 func handleIssueToken(d []byte, db StateDB, contractAddr common.Address, mem []byte) (bool, error) {
 	offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-	len := new(big.Int).SetBytes(mem[offset : offset+32]).Uint64()
+	len := new(big.Int).SetBytes(mem[offset:offset+32]).Uint64()
 	if len == 0 {
 		return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contractAddr, "nameLen is zero")
 	}
@@ -949,7 +950,7 @@ func handleSend(d []byte, evm *EVM, contract *Contract, mem []byte) ([]byte, uin
 		return nil, 0, fmt.Errorf("handleSend error , contract : %s, toAddr : %s, error : %s", contract.Address(), toAddr, "not load toAddrss")
 	}
 	currency_offset := new(big.Int).SetBytes(d[32:64]).Uint64()
-	length := new(big.Int).SetBytes(mem[currency_offset : currency_offset+32]).Uint64()
+	length := new(big.Int).SetBytes(mem[currency_offset:currency_offset+32]).Uint64()
 	var currency string
 	if length != 0 {
 		currency = string(mem[currency_offset+32 : currency_offset+32+length])
@@ -957,7 +958,7 @@ func handleSend(d []byte, evm *EVM, contract *Contract, mem []byte) ([]byte, uin
 
 	var category string
 	category_offset := new(big.Int).SetBytes(d[96:128]).Uint64()
-	length = new(big.Int).SetBytes(mem[category_offset : category_offset+32]).Uint64()
+	length = new(big.Int).SetBytes(mem[category_offset:category_offset+32]).Uint64()
 	if length != 0 {
 		category = string(mem[category_offset+32 : category_offset+32+length])
 	}
@@ -1024,7 +1025,7 @@ func makeLog(size int) executionFunc {
 			}
 		} else if topics[0] == topic_balanceOf {
 			offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-			len := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
+			len := new(big.Int).SetBytes(data[offset:offset+32]).Uint64()
 			balance := new(big.Int)
 			if len != 0 {
 				coinName := string(data[offset+32 : offset+32+len])
@@ -1104,6 +1105,21 @@ func makeLog(size int) executionFunc {
 
 		} else if topics[0] == topic_setTokenRate {
 			interpreter.evm.StateDB.SetTokenRate(contract.Address(), "", new(big.Int).SetBytes(d[0:32]), new(big.Int).SetBytes(d[32:64]))
+		} else if topics[0] == topic_openPkg {
+			id := keys.Uint256{}
+			copy(id[:], d[0:32])
+
+			pkr := keys.Uint512{}
+			copy(pkr[:], d[32:96])
+
+			key := keys.Uint256{}
+			copy(key[:], d[96:128])
+			_, err:= interpreter.evm.StateDB.GetPkgState().OpenPkg(&id, &pkr, &key)
+			if err != nil {
+				//pkg.O
+			}
+		} else if topics[0] == topic_changePKr {
+
 		} else {
 			interpreter.evm.StateDB.AddLog(&types.Log{
 				Address: contract.Address(),

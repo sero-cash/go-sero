@@ -220,7 +220,7 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 	}
 	dataHex := tx.Data[ps.Indexes.Data]
 	valueHex := tx.Value[ps.Indexes.Value]
-	gasLimit := tx.GasLimit[ps.Indexes.Gas]
+	//gasLimit := tx.GasLimit[ps.Indexes.Gas]
 
 	//Value, Data hex encoding is messy: https://github.com/ethereum/tests/issues/203
 	value := new(big.Int)
@@ -241,7 +241,7 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 		Value:    utils.U256(*value),
 	},
 	}
-	msg := types.NewMessage(from, to, tx.Nonce, asset, gasLimit, tx.GasPrice, data, "SERO")
+	msg := types.NewMessage(from, to, tx.Nonce, asset, assets.Token{}, tx.GasPrice, data, "SERO")
 	return msg, nil
 }
 
