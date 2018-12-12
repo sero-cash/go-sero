@@ -19,11 +19,12 @@ package state
 
 import (
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
 	"math/big"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
@@ -156,7 +157,6 @@ func (self *StateDB) GetPkgState() *pkgstate.PkgState {
 	}
 	return self.pkgState
 }
-
 
 func NewGenesis(root common.Hash, db Database) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)
@@ -803,6 +803,7 @@ func (self *StateDB) Snapshot() int {
 	id := self.nextRevisionId
 	self.nextRevisionId++
 	self.validRevisions = append(self.validRevisions, revision{id, self.journal.length()})
+	self.GetZState().Snapshot(id)
 	return id
 }
 
@@ -821,7 +822,7 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 	self.journal.revert(self, snapshot)
 	self.validRevisions = self.validRevisions[:idx]
 
-	self.GetZState().Revert()
+	self.GetZState().Revert(revid)
 }
 
 // GetRefund returns the current value of the refund counter.

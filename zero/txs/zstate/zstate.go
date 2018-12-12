@@ -49,7 +49,11 @@ func (self *ZState) Update() {
 	return
 }
 
-func (self *ZState) Revert() {
+func (self *ZState) Snapshot(revid int) {
+
+}
+
+func (self *ZState) Revert(revid int) {
 	self.State.Revert()
 	self.Pkgs.Revert()
 	return
