@@ -64,7 +64,7 @@ func NewTransaction(gasPrice *big.Int, data []byte) *Transaction {
 	return newTransaction(gasPrice, data)
 }
 
-func NewTxt(to *common.Address, value *big.Int, gasCurrency string, gasPrice *big.Int, gas uint64, z ztx.OutType, currency string, catg string, tkt *common.Hash) *ztx.T {
+func NewTxt(to *common.Address, value *big.Int, gasCurrency string, fee *big.Int, z ztx.OutType, currency string, catg string, tkt *common.Hash) *ztx.T {
 
 	outDatas := []ztx.Out{}
 	var token *assets.Token
@@ -100,7 +100,6 @@ func NewTxt(to *common.Address, value *big.Int, gasCurrency string, gasPrice *bi
 		}
 		outDatas = append(outDatas, outData)
 	}
-	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
 	tx := &ztx.T{
 		Fee: assets.Token{
 			utils.StringToUint256(gasCurrency),

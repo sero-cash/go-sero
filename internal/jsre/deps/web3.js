@@ -6136,6 +6136,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 outputFormatter: formatters.outputBalanceFormatter
             });
 
+            var getPackage = new Method({
+                name: 'getPackage',
+                call: 'sero_getPackage',
+                params: 2,
+                inputFormatter: [formatters.inputAddressFormatter,null],
+            });
+
             var getStorageAt = new Method({
                 name: 'getStorageAt',
                 call: 'sero_getStorageAt',
@@ -6313,6 +6320,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return [
                 isMineOAddr,
                 getBalance,
+                getPackage,
                 getStorageAt,
                 getCode,
                 getBlock,

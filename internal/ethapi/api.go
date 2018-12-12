@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/txs/lstate"
+
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
 
@@ -611,6 +613,19 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 
 }
 
+func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, address common.Address, packed bool) ([]*lstate.Pkg, error) {
+	// Look up the wallet containing the requested abi
+	account := accounts.Account{Address: address}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return []*lstate.Pkg{}, err
+	}
+	seed := wallet.Accounts()[0].Tk
+	pkgs := lstate.CurrentState1().GetPkgs(seed.ToUint512(), packed)
+	return pkgs, nil
+}
+
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
@@ -682,7 +697,7 @@ func (s *Smbol) IsNotEmpty() bool {
 }
 
 func (s *Smbol) IsSero() bool {
-	return (strings.ToUpper(strings.TrimSpace(string(*s))) == "SERO")
+	return (strings.ToUpper(strings.TrimSpace(string(*s))) == params.DefaultCurrency)
 }
 
 func (s *Smbol) IsNotSero() bool {
@@ -1249,6 +1264,10 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		*(*uint64)(args.Gas) = 90000
 	}
 
+	if args.GasCurrency.IsEmpty() {
+		args.GasCurrency = Smbol(params.DefaultCurrency)
+	}
+
 	state, _, err := b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
 		return err
@@ -1257,11 +1276,15 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		if args.GasCurrency.IsNotEmpty() && args.GasCurrency.IsNotSero() {
 			return errors.New(`GasCurrency must be null or SERO`)
 		}
+	} else {
+		if args.GasCurrency.IsNotSero() {
+			m, d := state.GetTokenRate(*args.To, string(args.GasCurrency))
+			if m == nil || d == nil {
+				return errors.New("the smart contract dose not support alternative payment!")
+			}
+		}
 	}
 
-	if args.GasCurrency.IsEmpty() {
-		args.GasCurrency = Smbol(params.DefaultCurrency)
-	}
 	if args.GasPrice == nil {
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
@@ -1309,6 +1332,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	to := args.To
 	rand := keys.RandUint128()
 	var z ztx.OutType
+	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	if to == nil {
 		copy(rand[:], *args.Data)
 		z = ztx.TYPE_N
@@ -1317,6 +1341,10 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 		if !args.Dynamic {
 			copy(rand[:], args.To.Data[:16])
 		}
+		if args.GasCurrency.IsNotSero() {
+			m, d := state.GetTokenRate(*args.To, string(args.GasCurrency))
+			fee = new(big.Int).Div(fee.Mul(fee, m), d)
+		}
 	} else {
 		z = ztx.TYPE_Z
 	}
@@ -1324,7 +1352,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 		input = *args.Data
 	}
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), input)
-	txt := types.NewTxt(to, (*big.Int)(args.Value), string(args.GasCurrency), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, string(args.Currency), string(args.Category), args.Tkt)
+	txt := types.NewTxt(to, (*big.Int)(args.Value), string(args.GasCurrency), fee, z, string(args.Currency), string(args.Category), args.Tkt)
 	txt.FromRnd = rand.ToUint256().NewRef()
 	return tx, txt, nil
 }
@@ -1471,6 +1499,7 @@ type UnpackPkgArgs struct {
 }
 
 func (args *UnpackPkgArgs) setDefaults(ctx context.Context, b Backend) error {
+
 	if args.Gas == nil {
 		args.Gas = new(hexutil.Uint64)
 		*(*uint64)(args.Gas) = 90000
@@ -1503,7 +1532,7 @@ func (args *UnpackPkgArgs) toTransaction(state *state.StateDB) (*types.Transacti
 	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	txt := &ztx.T{
 		Fee: assets.Token{
-			utils.StringToUint256("SERO"),
+			utils.StringToUint256(params.DefaultCurrency),
 			utils.U256(*fee),
 		},
 		PkgOpen: &ztx.PkgOpen{*args.PkgId, *args.Key},
@@ -1599,7 +1628,7 @@ func (args *ChangePkgArgs) toTransaction(state *state.StateDB) (*types.Transacti
 	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	txt := &ztx.T{
 		Fee: assets.Token{
-			utils.StringToUint256("SERO"),
+			utils.StringToUint256(params.DefaultCurrency),
 			utils.U256(*fee),
 		},
 		PkgChange: &ztx.PkgChange{*args.PkgId, keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())},

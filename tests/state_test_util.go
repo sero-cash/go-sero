@@ -241,7 +241,7 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 		Value:    utils.U256(*value),
 	},
 	}
-	msg := types.NewMessage(from, to, tx.Nonce, asset, gasLimit, tx.GasPrice, data, true)
+	msg := types.NewMessage(from, to, tx.Nonce, asset, gasLimit, tx.GasPrice, data, "SERO")
 	return msg, nil
 }
 
