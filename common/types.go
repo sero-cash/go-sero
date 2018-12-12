@@ -25,6 +25,7 @@ import (
 	"math/big"
 	"math/rand"
 	"reflect"
+	"strings"
 	"sync/atomic"
 
 	"github.com/sero-cash/go-sero/crypto/sha3"
@@ -217,6 +218,10 @@ func (a ContractAddress) MarshalText() ([]byte, error) {
 // UnmarshalText parses a hash in hex syntax.
 func (a *ContractAddress) UnmarshalText(input []byte) error {
 	return hexutil.UnmarshalFixedText("ContractAddress", input, a[:])
+}
+
+func BytesToString(b []byte) string {
+	return strings.Trim(string(b), string([]byte{0}))
 }
 
 // BytesToAddress returns Data with value b.

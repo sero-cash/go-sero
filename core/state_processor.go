@@ -17,17 +17,12 @@
 package core
 
 import (
-	"errors"
-	"github.com/sero-cash/go-sero/crypto"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/utils"
-	"math/big"
-
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/core/vm"
+	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/params"
 )
 
@@ -87,13 +82,9 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config) (*types.Receipt, uint64, error) {
-	msg, err := tx.AsMessage()
+	msg, err := tx.AsMessage(statedb)
 	if err != nil {
 		return nil, 0, err
-	}
-
-	if msg.Currency() != "SERO" && msg.To() != nil && !statedb.IsContract(*msg.To()) {
-		return nil, 0, errors.New("error")
 	}
 
 	// Create a new context to be used in the EVM environment
@@ -111,21 +102,6 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	if err != nil {
 		gp.AddGas(gas)
 		return nil, 0, err
-	}
-
-	if msg.Currency() != "SERO" {
-		tokes, tas := statedb.GetTokenRate(*msg.To(), "")
-		if tokes.Sign() != 0 && tas.Sign() != 0 {
-			remainingFee := new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()-gas), msg.GasPrice())
-			remainToken := new(big.Int).Div(new(big.Int).Mul(remainingFee, tokes), tas)
-			asset := assets.Asset{Tkn: &assets.Token{
-				Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
-				Value:    utils.U256(*remainToken),
-			},
-			}
-			statedb.GetZState().AddTxOut(msg.From(), asset)
-			statedb.SubBalance(*msg.To(), msg.Currency(), remainToken);
-		}
 	}
 
 	root := statedb.IntermediateRoot(true).Bytes()

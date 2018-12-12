@@ -764,7 +764,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 	pkr := keys.Addr2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
 	addr.SetBytes(pkr[:])
-	msg := types.NewMessage(addr, args.To, 0, asset, gas, gasPrice, args.Data, false)
+	msg := types.NewMessage(addr, args.To, 0, asset, assets.Token{}, gasPrice, args.Data, "SERO")
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.

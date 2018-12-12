@@ -17,6 +17,7 @@
 package types
 
 import (
+	"github.com/sero-cash/go-sero/core/state"
 	"math/big"
 	"sync/atomic"
 
@@ -27,14 +28,13 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"container/heap"
-	"io"
-
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/rlp"
 	zstx "github.com/sero-cash/go-sero/zero/txs/stx"
 	ztx "github.com/sero-cash/go-sero/zero/txs/tx"
 	"github.com/sero-cash/go-sero/zero/utils"
+	"io"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
@@ -269,14 +269,14 @@ func (tx *Transaction) Size() common.StorageSize {
 }
 
 // AsMessage returns the transaction as a core.Message.
-func (tx *Transaction) AsMessage() (Message, error) {
+func (tx *Transaction) AsMessage(statedb *state.StateDB) (Message, error) {
 	msg := Message{
-		from:       tx.From(),
-		gasLimit:   tx.Gas(),
-		gasPrice:   new(big.Int).Set(tx.data.Price),
-		to:         tx.To(),
-		data:       tx.data.Payload,
-		asset:      tx.Pkg(),
+		from:     tx.From(),
+		gasPrice: new(big.Int).Set(tx.data.Price),
+		to:       tx.To(),
+		data:     tx.data.Payload,
+		asset:    tx.Pkg(),
+		fee:      tx.Stxt().Fee,
 	}
 
 	return msg, nil
@@ -418,22 +418,22 @@ type Message struct {
 	from       common.Address
 	nonce      uint64
 	asset      assets.Asset
-	gasLimit   uint64
+	fee        assets.Token
 	gasPrice   *big.Int
 	data       []byte
 	currency string
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, asset assets.Asset, gasLimit uint64, gasPrice *big.Int, data []byte, currency string) Message {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, asset assets.Asset, fee assets.Token, gasPrice *big.Int, data []byte, currency string) Message {
 	message := Message{
-		from:       from,
-		to:         to,
-		nonce:      nonce,
-		gasLimit:   gasLimit,
-		gasPrice:   gasPrice,
-		data:       data,
+		from:     from,
+		to:       to,
+		nonce:    nonce,
+		fee:      fee,
+		gasPrice: gasPrice,
+		data:     data,
 		currency: currency,
-		asset:      asset,
+		asset:    asset,
 	}
 	return message
 }
@@ -441,9 +441,8 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, asset ass
 func (m Message) From() common.Address { return m.from }
 func (m Message) To() *common.Address  { return m.to }
 func (m Message) GasPrice() *big.Int   { return m.gasPrice }
-func (m Message) Gas() uint64          { return m.gasLimit }
 func (m Message) Data() []byte         { return m.data }
-func (m Message) Currency() string     { return m.currency }
+func (m Message) Fee() assets.Token    { return m.fee }
 func (m Message) Asset() assets.Asset {
 	return m.asset
 }
