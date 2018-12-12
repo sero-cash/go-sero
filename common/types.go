@@ -22,13 +22,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/sero-cash/go-sero/crypto/sha3"
 	"math/big"
 	"math/rand"
 	"reflect"
 	"strings"
-	"sync/atomic"
-
-	"github.com/sero-cash/go-sero/crypto/sha3"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/base58"
@@ -184,20 +182,13 @@ func keccak512(data ...[]byte) []byte {
 }
 
 // Data represents the 64 byte Data of an Ethereum account.
-type Address struct {
-	Data  [AddressLength]byte
-	caddr atomic.Value
-}
+type Address [AddressLength]byte
 
 type ContractAddress [20]byte
 
 func (a Address) ToCaddr() ContractAddress {
-	if sc := a.caddr.Load(); sc != nil {
-		return sc.(ContractAddress)
-	}
 	var addr ContractAddress
-	addr.SetBytes(LeftPadBytes(a.Data[len(a.Data)-20:], 32))
-	a.caddr.Store(addr)
+	addr.SetBytes(LeftPadBytes(a[len(a)-20:], 32))
 	return addr
 }
 
@@ -270,20 +261,20 @@ func IsBase58Address(s string) bool {
 }
 
 // Bytes gets the string representation of the underlying Data.
-func (a Address) Bytes() []byte { return a.Data[:] }
+func (a Address) Bytes() []byte { return a[:] }
 
 func (a Address) ToUint512() *keys.Uint512 {
 	pubKey := keys.Uint512{}
-	copy(pubKey[:], a.Data[:])
+	copy(pubKey[:], a[:])
 	return &pubKey
 }
 
 // Big converts an Data to a big integer.
-func (a Address) Big() *big.Int { return new(big.Int).SetBytes(a.Data[:]) }
+func (a Address) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
 
 // Base58 returns base58 string representation of the Data.
 func (a Address) Base58() string {
-	return base58.EncodeToString(a.Data[:])
+	return base58.EncodeToString(a[:])
 }
 
 // String implements fmt.Stringer.
@@ -294,31 +285,31 @@ func (a Address) String() string {
 // Format implements fmt.Formatter, forcing the byte slice to be formatted as is,
 // without going through the stringer interface used for logging.
 func (a Address) Format(s fmt.State, c rune) {
-	fmt.Fprintf(s, "%"+string(c), a.Data[:])
+	fmt.Fprintf(s, "%"+string(c), a[:])
 }
 
 // SetBytes sets the Data to the value of b.
 // If b is larger than len(a) it will panic.
 func (a *Address) SetBytes(b []byte) {
-	if len(b) > len(a.Data) {
+	if len(b) > len(a) {
 		b = b[len(b)-AddressLength:]
 	}
-	copy(a.Data[AddressLength-len(b):], b)
+	copy(a[AddressLength-len(b):], b)
 }
 
 // MarshalText returns the hex representation of a.
 func (a Address) MarshalText() ([]byte, error) {
-	return hexutil.Bytes(a.Data[:]).MarshalBase58Text()
+	return hexutil.Bytes(a[:]).MarshalBase58Text()
 }
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *Address) UnmarshalText(input []byte) error {
-	return hexutil.UnmarshalFixedBase58Text("Data", input, a.Data[:])
+	return hexutil.UnmarshalFixedBase58Text("Data", input, a[:])
 }
 
 // UnmarshalJSON parses a hash in hex syntax.
 func (a *Address) UnmarshalJSON(input []byte) error {
-	return hexutil.UnmarshalFixedBase58JSON(addressT, input, a.Data[:])
+	return hexutil.UnmarshalFixedBase58JSON(addressT, input, a[:])
 }
 
 // Scan implements Scanner for database/sql.
@@ -330,7 +321,7 @@ func (a *Address) Scan(src interface{}) error {
 	if len(srcB) != AddressLength {
 		return fmt.Errorf("can't scan []byte of len %d into Data, want %d", len(srcB), AddressLength)
 	}
-	copy(a.Data[:], srcB)
+	copy(a[:], srcB)
 	return nil
 }
 
@@ -340,7 +331,7 @@ func (a *Address) Scan(src interface{}) error {
 
 // Value implements valuer for database/sql.
 func (a Address) Value() (driver.Value, error) {
-	return a.Data[:], nil
+	return a[:], nil
 }
 
 type Addresses []Address
@@ -349,7 +340,7 @@ func (self Addresses) Len() int {
 	return len(self)
 }
 func (self Addresses) Less(i, j int) bool {
-	return bytes.Compare(self[i].Data[:], self[j].Data[:]) < 0
+	return bytes.Compare(self[i][:], self[j][:]) < 0
 }
 func (self Addresses) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
@@ -369,12 +360,12 @@ type UnprefixedAddress Address
 
 // UnmarshalText decodes the Data from hex. The 0x prefix is optional.
 func (a *UnprefixedAddress) UnmarshalText(input []byte) error {
-	return hexutil.UnmarshalFixedUnprefixedBase58Text("UnprefixedAddress", input, a.Data[:])
+	return hexutil.UnmarshalFixedUnprefixedBase58Text("UnprefixedAddress", input, a[:])
 }
 
 // MarshalText encodes the Data as hex.
 func (a UnprefixedAddress) MarshalText() ([]byte, error) {
-	return []byte(base58.EncodeToString(a.Data[:])), nil
+	return []byte(base58.EncodeToString(a[:])), nil
 }
 
 // MixedcaseAddress retains the original string, which may or may not be
@@ -400,7 +391,7 @@ func NewMixedcaseAddressFromString(hexaddr string) (*MixedcaseAddress, error) {
 
 // UnmarshalJSON parses MixedcaseAddress
 func (ma *MixedcaseAddress) UnmarshalJSON(input []byte) error {
-	if err := hexutil.UnmarshalFixedBase58JSON(addressT, input, ma.addr.Data[:]); err != nil {
+	if err := hexutil.UnmarshalFixedBase58JSON(addressT, input, ma.addr[:]); err != nil {
 		return err
 	}
 	return json.Unmarshal(input, &ma.original)

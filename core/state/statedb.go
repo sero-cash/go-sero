@@ -227,11 +227,11 @@ func (self *StateDB) registerAddressByState(name string, contractAddr common.Add
 	hashKey0 := crypto.Keccak256Hash(key0)
 	hashKey1 := crypto.Keccak256Hash(key1)
 	address := self.getAddressByState(hashKey0, hashKey1)
-	if address.Data == ([64]byte{}) {
+	if address == (common.Address{}) {
 		self.setAddressByState(hashKey0, hashKey1, contractAddr)
 		return true
 	} else {
-		return address.Data == contractAddr.Data
+		return address == contractAddr
 	}
 	return false
 }
@@ -289,14 +289,20 @@ func (self *StateDB) GetTokenRate(contractAddr common.Address, coinName string) 
 	return new(big.Int), new(big.Int)
 }
 
-func (self *StateDB) SetTokenRate(contractAddr common.Address, coinName string, tokens *big.Int, tas *big.Int) {
+func (self *StateDB) SetTokenRate(contractAddr common.Address, coinName string, tokens *big.Int, tas *big.Int) bool {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
+
+		if contractAddr != (self.GetContrctAddressByToken(coinName)) {
+			return false
+		}
 		bytes0, _ := rlp.EncodeToBytes([]interface{}{"RateToken", contractAddr, strings.ToUpper(coinName)})
 		stateObject.SetState(self.db, crypto.Keccak256Hash(bytes0), common.BigToHash(tokens))
 		bytes1, _ := rlp.EncodeToBytes([]interface{}{"RateTa", contractAddr, strings.ToUpper(coinName)})
 		stateObject.SetState(self.db, crypto.Keccak256Hash(bytes1), common.BigToHash(tokens))
+		return true
 	}
+	return false
 }
 
 //register

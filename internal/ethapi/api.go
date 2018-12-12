@@ -471,7 +471,7 @@ func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy 
 	}
 	contractAddress := state.GetContrctAddressByToken(cy)
 	empty := common.Address{}
-	if contractAddress.Data == empty.Data {
+	if contractAddress == empty {
 		return nil, errors.New(cy + "not exists!")
 	}
 	return &contractAddress, nil
@@ -774,7 +774,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		copy(rand[:], args.Data)
 	} else if state.IsContract(*args.To) {
 		if !args.Dynamic {
-			copy(rand[:], args.To.Data[:16])
+			copy(rand[:], args.To[:16])
 		}
 	}
 	pkr := keys.Addr2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
@@ -1033,7 +1033,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 
 	to := tx.To()
 
-	if to != nil && bytes.Equal(to.Data[:], (&common.Address{}).Data[:]) {
+	if to != nil && bytes.Equal(to[:], (&common.Address{})[:]) {
 		to = nil
 	}
 	result := &RPCTransaction{
@@ -1209,7 +1209,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 
 	to := tx.To()
 
-	if to != nil && bytes.Equal(to.Data[:], (&common.Address{}).Data[:]) {
+	if to != nil && bytes.Equal(to[:], (&common.Address{})[:]) {
 		to = nil
 	}
 
@@ -1339,7 +1339,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	} else if state.IsContract(*to) {
 		z = ztx.TYPE_N
 		if !args.Dynamic {
-			copy(rand[:], args.To.Data[:16])
+			copy(rand[:], args.To[:16])
 		}
 		if args.GasCurrency.IsNotSero() {
 			m, d := state.GetTokenRate(*args.To, string(args.GasCurrency))
