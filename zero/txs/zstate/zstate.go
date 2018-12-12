@@ -64,14 +64,14 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 		e = err
 		return
 	} else {
-		if st.Desc_Pkg.Pack != nil {
-			state.Pkgs.Force_addPkg(&st.From, st.Desc_Pkg.Pack)
+		if st.Desc_Pkg.Create != nil {
+			state.Pkgs.Force_add(&st.From, st.Desc_Pkg.Create)
 		}
-		if st.Desc_Pkg.Open != nil {
-			state.Pkgs.Force_delPkg(&st.Desc_Pkg.Open.Id)
+		if st.Desc_Pkg.Close != nil {
+			state.Pkgs.Force_del(&st.Desc_Pkg.Close.Id)
 		}
-		if st.Desc_Pkg.Change != nil {
-			state.Pkgs.Force_changePkr(&st.Desc_Pkg.Open.Id, &st.Desc_Pkg.Change.Pkr)
+		if st.Desc_Pkg.Transfer != nil {
+			state.Pkgs.Force_transfer(&st.Desc_Pkg.Close.Id, &st.Desc_Pkg.Transfer.PKr)
 		}
 	}
 	return

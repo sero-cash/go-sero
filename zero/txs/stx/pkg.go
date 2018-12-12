@@ -7,17 +7,17 @@ import (
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-type PkgOpen struct {
+type PkgClose struct {
 	Id   keys.Uint256
 	Sign keys.Uint256
 }
 
-func (this PkgOpen) ToRef() (ret *PkgOpen) {
+func (this PkgClose) ToRef() (ret *PkgClose) {
 	ret = &this
 	return
 }
 
-func (self *PkgOpen) ToHash() (ret keys.Uint256) {
+func (self *PkgClose) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Id[:])
 	d.Write(self.Sign[:])
@@ -25,46 +25,46 @@ func (self *PkgOpen) ToHash() (ret keys.Uint256) {
 	return ret
 }
 
-func (self *PkgOpen) Clone() (ret PkgOpen) {
+func (self *PkgClose) Clone() (ret PkgClose) {
 	utils.DeepCopy(&ret, self)
 	return
 }
 
-type PkgChange struct {
+type PkgTransfer struct {
 	Id  keys.Uint256
-	Pkr keys.Uint512
+	PKr keys.Uint512
 }
 
-func (this PkgChange) ToRef() (ret *PkgChange) {
+func (this PkgTransfer) ToRef() (ret *PkgTransfer) {
 	ret = &this
 	return
 }
 
-func (self *PkgChange) ToHash() (ret keys.Uint256) {
+func (self *PkgTransfer) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Id[:])
-	d.Write(self.Pkr[:])
+	d.Write(self.PKr[:])
 	copy(ret[:], d.Sum(nil))
 	return ret
 }
 
-func (self *PkgChange) Clone() (ret PkgChange) {
+func (self *PkgTransfer) Clone() (ret PkgTransfer) {
 	utils.DeepCopy(&ret, self)
 	return
 }
 
-type PkgPack struct {
+type PkgCreate struct {
 	Id  keys.Uint256
 	Pkr keys.Uint512
 	Pkg pkg.Pkg_Z
 }
 
-func (this PkgPack) ToRef() (ret *PkgPack) {
+func (this PkgCreate) ToRef() (ret *PkgCreate) {
 	ret = &this
 	return
 }
 
-func (self *PkgPack) ToHash() (ret keys.Uint256) {
+func (self *PkgCreate) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Id[:])
 	d.Write(self.Pkr[:])
@@ -73,15 +73,15 @@ func (self *PkgPack) ToHash() (ret keys.Uint256) {
 	return ret
 }
 
-func (self *PkgPack) Clone() (ret PkgPack) {
+func (self *PkgCreate) Clone() (ret PkgCreate) {
 	utils.DeepCopy(&ret, self)
 	return
 }
 
 type PkgDesc_Z struct {
-	Pack   *PkgPack   `rlp:"nil"`
-	Change *PkgChange `rlp:"nil"`
-	Open   *PkgOpen   `rlp:"nil"`
+	Create   *PkgCreate   `rlp:"nil"`
+	Transfer *PkgTransfer `rlp:"nil"`
+	Close    *PkgClose    `rlp:"nil"`
 }
 
 func (this PkgDesc_Z) ToRef() (ret *PkgDesc_Z) {
@@ -91,14 +91,14 @@ func (this PkgDesc_Z) ToRef() (ret *PkgDesc_Z) {
 
 func (self *PkgDesc_Z) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
-	if self.Pack != nil {
-		d.Write(self.Pack.ToHash().NewRef()[:])
+	if self.Create != nil {
+		d.Write(self.Create.ToHash().NewRef()[:])
 	}
-	if self.Change != nil {
-		d.Write(self.Change.ToHash().NewRef()[:])
+	if self.Transfer != nil {
+		d.Write(self.Transfer.ToHash().NewRef()[:])
 	}
-	if self.Open != nil {
-		d.Write(self.Open.ToHash().NewRef()[:])
+	if self.Close != nil {
+		d.Write(self.Close.ToHash().NewRef()[:])
 	}
 	copy(ret[:], d.Sum(nil))
 	return ret

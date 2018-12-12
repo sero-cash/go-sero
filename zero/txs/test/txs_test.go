@@ -185,7 +185,7 @@ func (self *user) Package(v int, fee int, u user) {
 	outs := self.GetOuts()
 	in := tx.In{}
 	in.Root = *outs[0].Pg.Root.ToUint256()
-	out0 := tx.PkgPack{}
+	out0 := tx.PkgCreate{}
 	out0.PKr = u.addr
 	out0.Pkg.Asset = assets.Asset{
 		&assets.Token{
@@ -210,7 +210,7 @@ func (self *user) Package(v int, fee int, u user) {
 	}
 	t.Ins = append(t.Ins, in)
 	t.Outs = append(t.Outs, out1)
-	t.PkgPack = &out0
+	t.PkgCreate = &out0
 
 	s, e := self.Gen(&self.seed, &t)
 	if e != nil {
@@ -315,7 +315,7 @@ func TestTxs(t *testing.T) {
 		t.Fail()
 	}
 
-	g_blocks.st.Pkgs.OpenPkg(&keys.Uint256{}, &user_a.addr, &keys.Uint256{})
+	g_blocks.st.Pkgs.Close(&keys.Uint256{}, &user_a.addr, &keys.Uint256{})
 	g_blocks.st.Update()
 	EndBlock()
 

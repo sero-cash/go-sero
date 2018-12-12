@@ -1535,7 +1535,7 @@ func (args *UnpackPkgArgs) toTransaction(state *state.StateDB) (*types.Transacti
 			utils.StringToUint256(params.DefaultCurrency),
 			utils.U256(*fee),
 		},
-		PkgOpen: &ztx.PkgOpen{*args.PkgId, *args.Key},
+		PkgClose: &ztx.PkgOpen{*args.PkgId, *args.Key},
 	}
 	txt.FromRnd = keys.RandUint256().NewRef()
 	return tx, txt, nil
@@ -1631,7 +1631,7 @@ func (args *ChangePkgArgs) toTransaction(state *state.StateDB) (*types.Transacti
 			utils.StringToUint256(params.DefaultCurrency),
 			utils.U256(*fee),
 		},
-		PkgChange: &ztx.PkgChange{*args.PkgId, keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())},
+		PkgTransfer: &ztx.PkgChange{*args.PkgId, keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())},
 	}
 	txt.FromRnd = keys.RandUint256().NewRef()
 	return tx, txt, nil

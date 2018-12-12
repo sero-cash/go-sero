@@ -76,9 +76,9 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 		}
 		if preTx.desc_pkg.open != nil {
 			open := preTx.desc_pkg.open
-			s.Desc_Pkg.Open = &stx.PkgOpen{
+			s.Desc_Pkg.Close = &stx.PkgClose{
 				open.opkg.Z.Pack.Id,
-				t.PkgOpen.Key,
+				t.PkgClose.Key,
 			}
 			{
 				asset := open.opkg.O.Asset.ToFlatAsset()
@@ -122,7 +122,7 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 
 		if preTx.desc_pkg.pack != nil {
 			pack := preTx.desc_pkg.pack
-			s.Desc_Pkg.Pack = &stx.PkgPack{
+			s.Desc_Pkg.Create = &stx.PkgCreate{
 				pack.pkg.Id,
 				pack.pkg.PKr,
 				pkg.EnPkg(&pack.pkg.Key, &pack.pkg.Pkg),
@@ -142,7 +142,7 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 
 		if preTx.desc_pkg.change != nil {
 			change := preTx.desc_pkg.change
-			s.Desc_Pkg.Change = &stx.PkgChange{
+			s.Desc_Pkg.Transfer = &stx.PkgTransfer{
 				change.zpkg.Pack.Id,
 				change.pkr,
 			}
@@ -274,9 +274,9 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		}
 	}
 
-	if s.Desc_Pkg.Open != nil {
-		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Open.Id); pg == nil {
-			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Change.Id[:]))
+	if s.Desc_Pkg.Close != nil {
+		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Close.Id); pg == nil {
+			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
 			return
 		} else {
 			asset := pg.Pack.Pkg.Temp.Asset
@@ -312,8 +312,8 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		}
 	}
 
-	if s.Desc_Pkg.Pack != nil {
-		out := s.Desc_Pkg.Pack.Pkg.Temp
+	if s.Desc_Pkg.Create != nil {
+		out := s.Desc_Pkg.Create.Pkg.Temp
 		if out.Asset.Tkn != nil {
 			if !CheckUint(&out.Asset.Tkn.Value) {
 				e = errors.New("txs.verify check balance too big")
@@ -334,9 +334,9 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		}
 	}
 
-	if s.Desc_Pkg.Change != nil {
-		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Change.Id); pg == nil {
-			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Change.Id[:]))
+	if s.Desc_Pkg.Transfer != nil {
+		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Transfer.Id); pg == nil {
+			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
 			return
 		} else {
 		}

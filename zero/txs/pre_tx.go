@@ -36,7 +36,7 @@ type preTxDesc struct {
 }
 
 type prePkgPack struct {
-	pkg tx.PkgPack
+	pkg tx.PkgCreate
 }
 
 type prePkgOpen struct {
@@ -105,23 +105,23 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 		}
 	}
 
-	if ts.PkgPack != nil {
-		if _, err := ck_state.AddOut(&ts.PkgPack.Pkg.Asset); err != nil {
+	if ts.PkgCreate != nil {
+		if _, err := ck_state.AddOut(&ts.PkgCreate.Pkg.Asset); err != nil {
 			e = err
 			return
 		} else {
 			p.desc_pkg.pack = &prePkgPack{}
-			p.desc_pkg.pack.pkg = *ts.PkgPack
+			p.desc_pkg.pack.pkg = *ts.PkgCreate
 		}
 	}
 
-	if ts.PkgOpen != nil {
-		if zpkg := state1.State.Pkgs.GetPkg(&ts.PkgOpen.Id); zpkg == nil {
-			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgOpen.Id[:]))
+	if ts.PkgClose != nil {
+		if zpkg := state1.State.Pkgs.GetPkg(&ts.PkgClose.Id); zpkg == nil {
+			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
 			return
 		} else {
-			if opkg, err := pkg.DePkg(&ts.PkgOpen.Key, &zpkg.Pack.Pkg); err != nil {
-				e = fmt.Errorf("Decode Pkg error %v", hex.EncodeToString(ts.PkgOpen.Id[:]))
+			if opkg, err := pkg.DePkg(&ts.PkgClose.Key, &zpkg.Pack.Pkg); err != nil {
+				e = fmt.Errorf("Decode Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
 				return
 			} else {
 				if _, err := ck_state.AddIn(&opkg.Asset); err != nil {
@@ -136,13 +136,13 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 		}
 	}
 
-	if ts.PkgChange != nil {
-		if zpkg := state1.State.Pkgs.GetPkg(&ts.PkgOpen.Id); zpkg == nil {
-			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgOpen.Id[:]))
+	if ts.PkgTransfer != nil {
+		if zpkg := state1.State.Pkgs.GetPkg(&ts.PkgClose.Id); zpkg == nil {
+			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
 			return
 		} else {
 			p.desc_pkg.change = &prePkgChange{}
-			p.desc_pkg.change.pkr = ts.PkgChange.PKr
+			p.desc_pkg.change.pkr = ts.PkgTransfer.PKr
 			p.desc_pkg.change.zpkg = *zpkg
 		}
 	}

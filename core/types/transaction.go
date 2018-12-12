@@ -142,7 +142,7 @@ func NewPackage(pkr *common.Address, value *big.Int, gasCurrency string, gasPric
 			utils.StringToUint256(gasCurrency),
 			utils.U256(*fee),
 		},
-		PkgPack: &ztx.PkgPack{PKr: *(pkr.ToUint512()),
+		PkgCreate: &ztx.PkgCreate{PKr: *(pkr.ToUint512()),
 			Pkg: pkg},
 	}
 	return tx

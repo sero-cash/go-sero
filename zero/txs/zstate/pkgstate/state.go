@@ -22,7 +22,7 @@ import (
 type ZPkg struct {
 	High uint64
 	From keys.Uint512
-	Pack stx.PkgPack
+	Pack stx.PkgCreate
 }
 
 func (self *ZPkg) Serial() (ret []byte, e error) {
@@ -125,13 +125,13 @@ func (self *PkgState) GetPkg(id *keys.Uint256) (pg *ZPkg) {
 	return self.getPkg(id)
 }
 
-func (self *PkgState) Force_delPkg(id *keys.Uint256) {
+func (self *PkgState) Force_del(id *keys.Uint256) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	self.del_pkg_dirty(id)
 }
 
-func (self *PkgState) Force_addPkg(from *keys.Uint512, pack *stx.PkgPack) {
+func (self *PkgState) Force_add(from *keys.Uint512, pack *stx.PkgCreate) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	zpkg := ZPkg{
@@ -142,7 +142,7 @@ func (self *PkgState) Force_addPkg(from *keys.Uint512, pack *stx.PkgPack) {
 	self.add_pkg_dirty(&zpkg)
 }
 
-func (self *PkgState) Force_changePkr(id *keys.Uint256, to *keys.Uint512) {
+func (self *PkgState) Force_transfer(id *keys.Uint256, to *keys.Uint512) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	if pg := self.getPkg(id); pg == nil {
@@ -159,7 +159,7 @@ type OPkg struct {
 	O pkg.Pkg_O
 }
 
-func (self *PkgState) OpenPkg(id *keys.Uint256, pkr *keys.Uint512, key *keys.Uint256) (ret OPkg, e error) {
+func (self *PkgState) Close(id *keys.Uint256, pkr *keys.Uint512, key *keys.Uint256) (ret OPkg, e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	if pg := self.getPkg(id); pg == nil {
@@ -181,7 +181,7 @@ func (self *PkgState) OpenPkg(id *keys.Uint256, pkr *keys.Uint512, key *keys.Uin
 	}
 }
 
-func (self *PkgState) ChangePKr(id *keys.Uint256, pkr *keys.Uint512, to *keys.Uint512) (e error) {
+func (self *PkgState) Transfer(id *keys.Uint256, pkr *keys.Uint512, to *keys.Uint512) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	if pg := self.getPkg(id); pg == nil {
