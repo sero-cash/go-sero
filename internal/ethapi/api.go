@@ -1357,7 +1357,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	return tx, txt, nil
 }
 
-func (args *SendTxArgs) toPackage(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
 
 	to := args.To
 	if state.IsContract(*args.To) {
@@ -1367,7 +1367,7 @@ func (args *SendTxArgs) toPackage(state *state.StateDB) (*types.Transaction, *zt
 		to.SetBytes(pkr[:])
 	}
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), nil)
-	txt := types.NewPackage(to, (*big.Int)(args.Value), string(args.GasCurrency), (*big.Int)(args.GasPrice), uint64(*args.Gas), string(args.Currency), string(args.Category), args.Tkt)
+	txt := types.NewPkg(to, (*big.Int)(args.Value), string(args.GasCurrency), (*big.Int)(args.GasPrice), uint64(*args.Gas), string(args.Currency), string(args.Category), args.Tkt)
 	txt.FromRnd = keys.RandUint256().NewRef()
 	return tx, txt, nil
 }
@@ -1440,7 +1440,7 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	return submitTransaction(ctx, s.b, encrypted)
 }
 
-func (s *PublicTransactionPoolAPI) PackPackage(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 	s.nonceLock.mu.Lock()
 	defer s.nonceLock.mu.Unlock()
 	// Look up the wallet containing the requested abi
@@ -1467,7 +1467,7 @@ func (s *PublicTransactionPoolAPI) PackPackage(ctx context.Context, args SendTxA
 	}
 
 	// Assemble the transaction and sign with the wallet
-	tx, txt, err := args.toPackage(state)
+	tx, txt, err := args.toPkg(state)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -1490,15 +1490,15 @@ func (s *PublicTransactionPoolAPI) PackPackage(ctx context.Context, args SendTxA
 	return submitTransaction(ctx, s.b, encrypted)
 }
 
-type UnpackPkgArgs struct {
-	From     common.Address  `json:"from"`
+type ClosePkgArgs struct {
+	From     *common.Address `json:"from"`
 	Gas      *hexutil.Uint64 `json:"gas"`
 	GasPrice *hexutil.Big    `json:"gasPrice"`
 	PkgId    *keys.Uint256   `json:"id"`
 	Key      *keys.Uint256   `json:"key"`
 }
 
-func (args *UnpackPkgArgs) setDefaults(ctx context.Context, b Backend) error {
+func (args *ClosePkgArgs) setDefaults(ctx context.Context, b Backend) error {
 
 	if args.Gas == nil {
 		args.Gas = new(hexutil.Uint64)
@@ -1527,7 +1527,7 @@ func (args *UnpackPkgArgs) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
-func (args *UnpackPkgArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+func (args *ClosePkgArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), nil)
 	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	txt := &ztx.T{
@@ -1535,17 +1535,17 @@ func (args *UnpackPkgArgs) toTransaction(state *state.StateDB) (*types.Transacti
 			utils.StringToUint256(params.DefaultCurrency),
 			utils.U256(*fee),
 		},
-		PkgClose: &ztx.PkgOpen{*args.PkgId, *args.Key},
+		PkgClose: &ztx.PkgClose{*args.PkgId, *args.Key},
 	}
 	txt.FromRnd = keys.RandUint256().NewRef()
 	return tx, txt, nil
 }
 
-func (s *PublicTransactionPoolAPI) UnpackPackage(ctx context.Context, args UnpackPkgArgs) (common.Hash, error) {
+func (s *PublicTransactionPoolAPI) ClosePkg(ctx context.Context, args ClosePkgArgs) (common.Hash, error) {
 	s.nonceLock.mu.Lock()
 	defer s.nonceLock.mu.Unlock()
 	// Look up the wallet containing the requested abi
-	account := accounts.Account{Address: args.From}
+	account := accounts.Account{Address: *args.From}
 
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
@@ -1587,15 +1587,15 @@ func (s *PublicTransactionPoolAPI) UnpackPackage(ctx context.Context, args Unpac
 	return submitTransaction(ctx, s.b, encrypted)
 }
 
-type ChangePkgArgs struct {
-	From     common.Address  `json:"from"`
+type TransferPkgArgs struct {
+	From     *common.Address `json:"from"`
 	Gas      *hexutil.Uint64 `json:"gas"`
 	GasPrice *hexutil.Big    `json:"gasPrice"`
 	PkgId    *keys.Uint256   `json:"id"`
 	To       *common.Address `json:"To"`
 }
 
-func (args *ChangePkgArgs) setDefaults(ctx context.Context, b Backend) error {
+func (args *TransferPkgArgs) setDefaults(ctx context.Context, b Backend) error {
 	if args.Gas == nil {
 		args.Gas = new(hexutil.Uint64)
 		*(*uint64)(args.Gas) = 90000
@@ -1623,7 +1623,7 @@ func (args *ChangePkgArgs) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
-func (args *ChangePkgArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+func (args *TransferPkgArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), nil)
 	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	txt := &ztx.T{
@@ -1631,17 +1631,17 @@ func (args *ChangePkgArgs) toTransaction(state *state.StateDB) (*types.Transacti
 			utils.StringToUint256(params.DefaultCurrency),
 			utils.U256(*fee),
 		},
-		PkgTransfer: &ztx.PkgChange{*args.PkgId, keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())},
+		PkgTransfer: &ztx.PkgTransfer{*args.PkgId, keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())},
 	}
 	txt.FromRnd = keys.RandUint256().NewRef()
 	return tx, txt, nil
 }
 
-func (s *PublicTransactionPoolAPI) ChangePackage(ctx context.Context, args UnpackPkgArgs) (common.Hash, error) {
+func (s *PublicTransactionPoolAPI) TransferPkg(ctx context.Context, args TransferPkgArgs) (common.Hash, error) {
 	s.nonceLock.mu.Lock()
 	defer s.nonceLock.mu.Unlock()
 	// Look up the wallet containing the requested abi
-	account := accounts.Account{Address: args.From}
+	account := accounts.Account{Address: *args.From}
 
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {

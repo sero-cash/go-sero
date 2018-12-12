@@ -111,7 +111,7 @@ func NewTxt(to *common.Address, value *big.Int, gasCurrency string, fee *big.Int
 
 }
 
-func NewPackage(pkr *common.Address, value *big.Int, gasCurrency string, gasPrice *big.Int, gas uint64, currency string, catg string, tkt *common.Hash) *ztx.T {
+func NewPkg(pkr *common.Address, value *big.Int, gasCurrency string, gasPrice *big.Int, gas uint64, currency string, catg string, tkt *common.Hash) *ztx.T {
 
 	var token *assets.Token
 	var ticket *assets.Ticket
