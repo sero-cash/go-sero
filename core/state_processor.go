@@ -82,7 +82,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config) (*types.Receipt, uint64, error) {
-	msg, err := tx.AsMessage(statedb)
+	msg, err := tx.AsMessage()
 	if err != nil {
 		return nil, 0, err
 	}
@@ -113,7 +113,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = gas
 	// if the transaction created a contract, store the creation address in the receipt.
-	if msg.To() == nil && !failed{
+	if msg.To() == nil && !failed {
 		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, statedb.GetContrctNonce(), msg.Data()[0:16])
 	}
 	// Set the receipt logs and create a bloom for filtering

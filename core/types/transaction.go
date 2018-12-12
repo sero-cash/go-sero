@@ -17,7 +17,6 @@
 package types
 
 import (
-	"github.com/sero-cash/go-sero/core/state"
 	"math/big"
 	"sync/atomic"
 
@@ -28,13 +27,14 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"container/heap"
+	"io"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/rlp"
 	zstx "github.com/sero-cash/go-sero/zero/txs/stx"
 	ztx "github.com/sero-cash/go-sero/zero/txs/tx"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"io"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
@@ -268,7 +268,7 @@ func (tx *Transaction) Size() common.StorageSize {
 }
 
 // AsMessage returns the transaction as a core.Message.
-func (tx *Transaction) AsMessage(statedb *state.StateDB) (Message, error) {
+func (tx *Transaction) AsMessage() (Message, error) {
 	msg := Message{
 		from:     tx.From(),
 		gasPrice: new(big.Int).Set(tx.data.Price),
@@ -413,13 +413,13 @@ func (t *TransactionsByPrice) Pop() *Transaction {
 //
 // NOTE: In a future PR this will be removed.
 type Message struct {
-	to         *common.Address
-	from       common.Address
-	nonce      uint64
-	asset      assets.Asset
-	fee        assets.Token
-	gasPrice   *big.Int
-	data       []byte
+	to       *common.Address
+	from     common.Address
+	nonce    uint64
+	asset    assets.Asset
+	fee      assets.Token
+	gasPrice *big.Int
+	data     []byte
 	currency string
 }
 

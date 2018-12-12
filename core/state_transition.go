@@ -138,7 +138,7 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) preCheck() error {
-	curency := strings.ToUpper(common.BytesToString(st.msg.Fee().Currency[:]))
+	curency := strings.ToUpper(common.BytesToString((st.msg.Fee().Currency).NewRef()[:]))
 	gas := uint64(0)
 	if curency != "SERO" {
 		to := st.msg.To()
@@ -147,15 +147,15 @@ func (st *StateTransition) preCheck() error {
 		if tokens.Sign() == 0 || tas.Sign() == 0 {
 			return errInsufficientBalanceForGas
 		}
-		taval := new(big.Int).Div(new(big.Int).Mul(st.msg.Fee().Value.ToIntRef(), tas), tokens)
+		taval := new(big.Int).Div(new(big.Int).Mul(st.msg.Fee().Value.ToRef().ToIntRef(), tas), tokens)
 		if st.state.GetBalance(*to, "SERO").Cmp(taval) < 0 {
 			return errInsufficientBalanceForGas
 		}
-		st.state.AddBalance(*to, curency, st.msg.Fee().Value.ToIntRef())
+		st.state.AddBalance(*to, curency, st.msg.Fee().Value.ToRef().ToRef().ToIntRef())
 		st.state.SubBalance(*to, "SERO", taval)
 		gas = new(big.Int).Div(taval, st.msg.GasPrice()).Uint64()
 	} else {
-		gas = new(big.Int).Div(st.msg.Fee().Value.ToIntRef(), st.msg.GasPrice()).Uint64()
+		gas = new(big.Int).Div(st.msg.Fee().Value.ToRef().ToIntRef(), st.msg.GasPrice()).Uint64()
 	}
 	if err := st.gp.SubGas(gas); err != nil {
 		return err
@@ -236,7 +236,7 @@ func (st *StateTransition) refundGas() {
 	// Return SERO for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
 
-	curency := strings.ToUpper(common.BytesToString(st.msg.Fee().Currency[:]))
+	curency := strings.ToUpper(common.BytesToString(st.msg.Fee().Currency.NewRef()[:]))
 	if curency != "SERO" {
 		st.state.AddBalance(*st.msg.To(), "SERO", remaining)
 		tokes, tas := st.state.GetTokenRate(*st.msg.To(), curency)
@@ -248,7 +248,7 @@ func (st *StateTransition) refundGas() {
 			},
 			}
 			st.state.GetZState().AddTxOut(st.msg.From(), asset)
-			st.state.SubBalance(*st.msg.To(), curency, remainToken);
+			st.state.SubBalance(*st.msg.To(), curency, remainToken)
 		}
 	} else {
 		asset := assets.Asset{Tkn: &assets.Token{
