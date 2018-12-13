@@ -177,11 +177,44 @@ func (b *bridge) SendTransaction(call otto.FunctionCall) (response otto.Value) {
 
 	finish := make(chan struct{})
 	progress := uiprogress.New()
-	bar := progress.AddBar(160).PrependElapsed()
+	bar := progress.AddBar(30).PrependElapsed()
 	progress.Start()
 	go progressBar(bar, finish)
 	// Send the request to the backend and return
 	val, err := call.Otto.Call("jeth.sendTransaction", nil, tx)
+
+	if err != nil {
+		progress.Stop()
+		finish <- struct{}{}
+		throwJSException(err.Error())
+	}
+	bar.Set(bar.Total)
+	progress.Stop()
+	finish <- struct{}{}
+
+	if fn := call.Argument(1); fn.Class() == "Function" {
+		fn.Call(otto.NullValue(), otto.NullValue(), val)
+		return otto.UndefinedValue()
+	}
+
+	return val
+}
+
+func (b *bridge) CreatePkg(call otto.FunctionCall) (response otto.Value) {
+	var (
+		args = call.Argument(0)
+	)
+	if !args.IsObject() {
+		throwJSException("first argument must be the pkg to send")
+	}
+
+	finish := make(chan struct{})
+	progress := uiprogress.New()
+	bar := progress.AddBar(30).PrependElapsed()
+	progress.Start()
+	go progressBar(bar, finish)
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.createPkg", nil, args)
 
 	if err != nil {
 		progress.Stop()
