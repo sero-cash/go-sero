@@ -1078,7 +1078,7 @@ func makeLog(size int) executionFunc {
 				return nil, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "illegal coinName")
 			}
 
-			if interpreter.evm.StateDB.SetTokenRate(contract.Address(), coinName, new(big.Int).SetBytes(d[0:32]), new(big.Int).SetBytes(d[32:64])) {
+			if interpreter.evm.StateDB.SetTokenRate(contract.Address(), coinName, new(big.Int).SetBytes(d[32:64]), new(big.Int).SetBytes(d[64:96])) {
 				memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
 			} else {
 				memory.Set(mStart.Uint64()+length-32, 32, hashFalse)

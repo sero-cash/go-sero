@@ -774,32 +774,18 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		Tkt: ticket,
 	}
 	rand := keys.RandUint128()
-	fee := new(big.Int).Mul(((*big.Int)(&args.GasPrice)), new(big.Int).SetUint64(uint64(args.Gas)))
-	if args.To == nil {
-		copy(rand[:], args.Data)
-		if args.GasCurrency.IsNotSero() {
+	if !args.Dynamic {
+		copy(rand[:], args.To[:16])
+	}
+
+	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
+	if args.To != nil && state.IsContract(*args.To) && args.GasCurrency.IsNotSero() {
+		m, d := state.GetTokenRate(*args.To, string(args.GasCurrency))
+		if m.Sign() == 0 || d.Sign() == 0 {
 			return nil, 0, false, errors.New("gasCurrency must be SERO or nil")
 		}
-	} else if state.IsContract(*args.To) {
-		if !args.Dynamic {
-			copy(rand[:], args.To[:16])
-		}
-		if args.GasCurrency.IsNotSero() {
-			m, d := state.GetTokenRate(*args.To, string(args.GasCurrency))
-			if m == nil || d == nil {
-				return nil, 0, false, errors.New("gasCurrency must be SERO or nil")
-			}
-			balances := state.Balances(*args.To)
-			seroBalance := balances["SERO"]
-			if seroBalance == nil || seroBalance.Cmp(fee) < 0 {
-				return nil, 0, false, errors.New("smart contract has no enough SERO")
-			}
-			fee = new(big.Int).Div(fee.Mul(fee, m), d)
-		}
-	} else {
-		if args.GasCurrency.IsNotSero() {
-			return nil, 0, false, errors.New("gasCurrency must be SERO or nil")
-		}
+		state.AddBalance(*args.To, "SERO", fee)
+		fee = new(big.Int).Div(fee.Mul(fee, m), d)
 	}
 	feeToken := assets.Token{
 		utils.StringToUint256(string(args.GasCurrency)),

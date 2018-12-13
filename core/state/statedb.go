@@ -299,7 +299,7 @@ func (self *StateDB) SetTokenRate(contractAddr common.Address, coinName string, 
 		bytes0, _ := rlp.EncodeToBytes([]interface{}{"RateToken", contractAddr, strings.ToUpper(coinName)})
 		stateObject.SetState(self.db, crypto.Keccak256Hash(bytes0), common.BigToHash(tokens))
 		bytes1, _ := rlp.EncodeToBytes([]interface{}{"RateTa", contractAddr, strings.ToUpper(coinName)})
-		stateObject.SetState(self.db, crypto.Keccak256Hash(bytes1), common.BigToHash(tokens))
+		stateObject.SetState(self.db, crypto.Keccak256Hash(bytes1), common.BigToHash(tas))
 		return true
 	}
 	return false
