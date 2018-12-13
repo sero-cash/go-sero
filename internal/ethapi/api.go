@@ -1369,7 +1369,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	fromRand := rand.ToUint256().NewRef()
 	ehash := tx.Ehash()
 	fee := assets.Token{
-		utils.StringToUint256(params.DefaultCurrency),
+		utils.StringToUint256(string(args.GasCurrency)),
 		utils.U256(*feevalue),
 	}
 	outData := types.NewTxtOut(to, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, z)
