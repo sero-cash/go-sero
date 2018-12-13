@@ -49,26 +49,69 @@ type Transaction struct {
 }
 
 type txdata struct {
-	Price   *big.Int `json:"gasPrice" gencodec:"required"`
-	Payload []byte   `json:"input"    gencodec:"required"`
-	Stxt    *zstx.T  `json:"stxt"    gencodec:"required"`
+	Price    *big.Int `json:"gasPrice" gencodec:"required"`
+	GasLimit uint64   `json:"gas"      gencodec:"required"`
+	Payload  []byte   `json:"input"    gencodec:"required"`
+	Stxt     *zstx.T  `json:"stxt"    gencodec:"required"`
 }
 
 type txdataMarshaling struct {
-	Price   *hexutil.Big
-	Payload hexutil.Bytes
-	Stxt    *zstx.T
+	Price    *hexutil.Big
+	GasLimit hexutil.Uint64
+	Payload  hexutil.Bytes
+	Stxt     *zstx.T
 }
 
-func NewTransaction(gasPrice *big.Int, data []byte) *Transaction {
-	return newTransaction(gasPrice, data)
+func NewTransaction(gasPrice *big.Int, gasLimit uint64, data []byte) *Transaction {
+	if len(data) > 0 {
+		data = common.CopyBytes(data)
+	}
+	d := txdata{
+		Payload:  data,
+		Price:    new(big.Int),
+		GasLimit: gasLimit,
+	}
+	if gasPrice != nil {
+		d.Price.Set(gasPrice)
+	}
+
+	tx := &Transaction{data: d}
+	return tx
 }
 
-func NewTxt(to *common.Address, value *big.Int, gasCurrency string, fee *big.Int, z ztx.OutType, currency string, catg string, tkt *common.Hash) *ztx.T {
+func (tx Transaction) Ehash() keys.Uint256 {
+	h := rlpHash([]interface{}{
+		&tx.data.Price,
+		tx.data.GasLimit,
+		tx.data.Payload,
+	})
+	r := keys.Uint256{}
+	copy(r[:], h[:])
+	return r
+}
+
+func NewTxt(fromRnd *keys.Uint256, ehash keys.Uint256, fee assets.Token, out *ztx.Out, pkgCreate *ztx.PkgCreate, pkgTransfer *ztx.PkgTransfer, pkgClose *ztx.PkgClose) *ztx.T {
 
 	outDatas := []ztx.Out{}
+	if out != nil {
+		outDatas = append(outDatas, *out)
+	}
+	txt := &ztx.T{
+		FromRnd:     fromRnd,
+		Ehash:       ehash,
+		Fee:         fee,
+		Outs:        outDatas,
+		PkgCreate:   pkgCreate,
+		PkgTransfer: pkgTransfer,
+		PkgClose:    pkgClose,
+	}
+	return txt
+}
+
+func NewTxtOut(to *common.Address, currency string, value *big.Int, catg string, tkt *common.Hash, z ztx.OutType) *ztx.Out {
 	var token *assets.Token
 	var ticket *assets.Ticket
+	var outData *ztx.Out
 	if value != nil {
 		token = &assets.Token{
 			Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256()),
@@ -87,32 +130,24 @@ func NewTxt(to *common.Address, value *big.Int, gasCurrency string, fee *big.Int
 		Tkt: ticket,
 	}
 	if to != nil {
-		outData := ztx.Out{
+		outData = &ztx.Out{
 			Addr:  *to.ToUint512(),
 			Asset: asset,
 			Z:     z,
 		}
-		outDatas = append(outDatas, outData)
 	} else {
-		outData := ztx.Out{
+		outData = &ztx.Out{
 			Asset: asset,
 			Z:     z,
 		}
-		outDatas = append(outDatas, outData)
+
 	}
-	tx := &ztx.T{
-		Fee: assets.Token{
-			utils.StringToUint256(gasCurrency),
-			utils.U256(*fee),
-		},
-		Outs: outDatas,
-	}
-	return tx
+
+	return outData
 
 }
 
-func NewPkg(pkr *common.Address, value *big.Int, gasCurrency string, gasPrice *big.Int, gas uint64, currency string, catg string, tkt *common.Hash) *ztx.T {
-
+func NewCreatePkg(pkr *common.Address, currency string, value *big.Int, catg string, tkt *common.Hash) *ztx.PkgCreate {
 	var token *assets.Token
 	var ticket *assets.Ticket
 	if value != nil {
@@ -136,32 +171,10 @@ func NewPkg(pkr *common.Address, value *big.Int, gasCurrency string, gasPrice *b
 	pkg := pkg.Pkg_O{
 		Asset: asset,
 	}
-	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
-	tx := &ztx.T{
-		Fee: assets.Token{
-			utils.StringToUint256(gasCurrency),
-			utils.U256(*fee),
-		},
-		PkgCreate: &ztx.PkgCreate{PKr: *(pkr.ToUint512()),
-			Pkg: pkg},
-	}
-	return tx
 
-}
+	return &ztx.PkgCreate{PKr: *(pkr.ToUint512()),
+		Pkg: pkg}
 
-func newTransaction(gasPrice *big.Int, data []byte) *Transaction {
-	if len(data) > 0 {
-		data = common.CopyBytes(data)
-	}
-	d := txdata{
-		Payload: data,
-		Price:   new(big.Int),
-	}
-	if gasPrice != nil {
-		d.Price.Set(gasPrice)
-	}
-
-	return &Transaction{data: d}
 }
 
 func (tx *Transaction) Pkg() assets.Asset {
@@ -207,9 +220,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 
 func (tx *Transaction) Data() []byte { return common.CopyBytes(tx.data.Payload) }
 func (tx *Transaction) Gas() uint64 {
-	fee := tx.data.Stxt.Fee
-	price := tx.data.Price
-	return new(big.Int).Div(fee.Value.ToIntRef(), price).Uint64()
+	return tx.data.GasLimit
 }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
 
@@ -261,7 +272,7 @@ func (tx *Transaction) Size() common.StorageSize {
 		return size.(common.StorageSize)
 	}
 	c := writeCounter(0)
-	//rlpData := []interface{}{tx.data.Currency, tx.data.Payload, tx.data.Price}
+	//rlpData := []interface{}{tx.data.Payload, tx.data.Price}
 	rlp.Encode(&c, &tx.data)
 	tx.size.Store(common.StorageSize(c))
 	return common.StorageSize(c)

@@ -26,9 +26,7 @@ import (
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
@@ -89,13 +87,6 @@ func (w *keystoreWallet) Derive(path accounts.DerivationPath, pin bool) (account
 // SelfDerive implements accounts.Wallet, but is a noop for plain wallets since
 // there is no notion of hierarchical account derivation for plain keystore accounts.
 func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain sero.ChainStateReader) {}
-
-func rlpHash(x interface{}) (h common.Hash) {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, x)
-	hw.Sum(h[:0])
-	return h
-}
 
 func (w *keystoreWallet) EncryptTx(account accounts.Account, tx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
 	// Make sure the requested account is contained within
@@ -179,12 +170,6 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 	}
 
 	txt.Ins = ins
-
-	Ehash := rlpHash([]interface{}{
-		btx.GasPrice(),
-		btx.Data(),
-	})
-	copy(txt.Ehash[:], Ehash[:])
 
 	log.Info("EncryptTxWithSeed : ", "in_num", len(txt.Ins), "out_num", len(txt.Outs))
 
