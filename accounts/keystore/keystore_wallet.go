@@ -164,7 +164,7 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 		selfOut := tx.Out{
 			Addr:  zpkg.Pack.Pkr,
 			Asset: pkg_o.Asset,
-			Z:     tx.TYPE_Z,
+			Z:     tx.TYPE_N,
 		}
 		txt.Outs = append(txt.Outs, selfOut)
 	}

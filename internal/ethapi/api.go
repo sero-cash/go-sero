@@ -614,6 +614,15 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 }
 
 func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, address common.Address, packed bool) ([]*lstate.Pkg, error) {
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return nil, err
+	}
+	if state.IsContract(address) {
+		return nil, errors.New("does not support contract address!")
+	}
+
 	// Look up the wallet containing the requested abi
 	account := accounts.Account{Address: address}
 
