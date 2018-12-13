@@ -1094,10 +1094,26 @@ func makeLog(size int) executionFunc {
 			if err != nil {
 				memory.Set(mStart.Uint64(), 128, make([]byte, 128))
 			} else {
-				memory.Set(mStart.Uint64(), 32, pkg.O.Asset.Tkn.Currency[:])
-				memory.Set(mStart.Uint64()+32, 32, pkg.O.Asset.Tkn.Value.ToIntRef().Bytes())
-				memory.Set(mStart.Uint64()+64, 32, pkg.O.Asset.Tkt.Category[:])
-				memory.Set(mStart.Uint64()+96, 32, pkg.O.Asset.Tkt.Value[:])
+				if pkg.O.Asset.Tkn != nil {
+					currency := common.BytesToString(pkg.O.Asset.Tkn.Currency[:])
+					amount := pkg.O.Asset.Tkn.Value.ToIntRef()
+					if len(currency) != 0 && amount.Sign() > 0 {
+						interpreter.evm.StateDB.AddBalance(contract.Address(), currency, amount)
+					}
+					memory.Set(mStart.Uint64(), 32, pkg.O.Asset.Tkn.Currency[:])
+					hash := common.BigToHash(pkg.O.Asset.Tkn.Value.ToIntRef())
+					memory.Set(mStart.Uint64()+32, 32, hash[:])
+				}
+
+				if pkg.O.Asset.Tkt != nil {
+					category := common.BytesToString(pkg.O.Asset.Tkt.Category[:])
+					ticket := common.BytesToHash(pkg.O.Asset.Tkt.Value[:])
+					if len(category) != 0 && ticket != (common.Hash{}) {
+						interpreter.evm.StateDB.AddTicket(contract.Address(), category, ticket)
+					}
+					memory.Set(mStart.Uint64()+64, 32, pkg.O.Asset.Tkt.Category[:])
+					memory.Set(mStart.Uint64()+96, 32, pkg.O.Asset.Tkt.Value[:])
+				}
 			}
 		} else if topics[0] == topic_transferPkg {
 			id := keys.Uint256{}
