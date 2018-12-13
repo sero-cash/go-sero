@@ -706,16 +706,17 @@ func (s *Smbol) IsNotSero() bool {
 
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	Gas      hexutil.Uint64  `json:"gas"`
-	GasPrice hexutil.Big     `json:"gasPrice"`
-	Value    hexutil.Big     `json:"value"`
-	Data     hexutil.Bytes   `json:"data"`
-	Currency Smbol           `json:"cy"`
-	Dynamic  bool            `json:"dy"` //contract address parameters are dynamically generated.
-	Category Smbol           `json:"catg"`
-	Tkt      *common.Hash    `json:"tkt"`
+	From        common.Address  `json:"from"`
+	To          *common.Address `json:"to"`
+	GasCurrency Smbol           `json:"gasCy"` //default SERO
+	Gas         hexutil.Uint64  `json:"gas"`
+	GasPrice    hexutil.Big     `json:"gasPrice"`
+	Value       hexutil.Big     `json:"value"`
+	Data        hexutil.Bytes   `json:"data"`
+	Currency    Smbol           `json:"cy"`
+	Dynamic     bool            `json:"dy"` //contract address parameters are dynamically generated.
+	Category    Smbol           `json:"catg"`
+	Tkt         *common.Hash    `json:"tkt"`
 }
 
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, bool, error) {
@@ -743,6 +744,10 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
 
+	if args.GasCurrency.IsEmpty() {
+		args.GasCurrency = Smbol(params.DefaultCurrency)
+	}
+
 	// Create new call message
 	//args.Data = args.Data[2:]
 	if args.Currency.IsEmpty() {
@@ -768,18 +773,41 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		Tkn: token,
 		Tkt: ticket,
 	}
-
 	rand := keys.RandUint128()
+	fee := new(big.Int).Mul(((*big.Int)(&args.GasPrice)), new(big.Int).SetUint64(uint64(args.Gas)))
 	if args.To == nil {
 		copy(rand[:], args.Data)
+		if args.GasCurrency.IsNotSero() {
+			return nil, 0, false, errors.New("gasCurrency must be SERO or nil")
+		}
 	} else if state.IsContract(*args.To) {
 		if !args.Dynamic {
 			copy(rand[:], args.To[:16])
 		}
+		if args.GasCurrency.IsNotSero() {
+			m, d := state.GetTokenRate(*args.To, string(args.GasCurrency))
+			if m == nil || d == nil {
+				return nil, 0, false, errors.New("gasCurrency must be SERO or nil")
+			}
+			balances := state.Balances(*args.To)
+			seroBalance := balances["SERO"]
+			if seroBalance == nil || seroBalance.Cmp(fee) < 0 {
+				return nil, 0, false, errors.New("smart contract has no enough SERO")
+			}
+			fee = new(big.Int).Div(fee.Mul(fee, m), d)
+		}
+	} else {
+		if args.GasCurrency.IsNotSero() {
+			return nil, 0, false, errors.New("gasCurrency must be SERO or nil")
+		}
+	}
+	feeToken := assets.Token{
+		utils.StringToUint256(string(args.GasCurrency)),
+		utils.U256(*fee),
 	}
 	pkr := keys.Addr2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
 	addr.SetBytes(pkr[:])
-	msg := types.NewMessage(addr, args.To, 0, asset, assets.Token{}, gasPrice, args.Data, "SERO")
+	msg := types.NewMessage(addr, args.To, 0, asset, feeToken, gasPrice, args.Data)
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.

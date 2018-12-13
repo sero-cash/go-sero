@@ -420,10 +420,9 @@ type Message struct {
 	fee      assets.Token
 	gasPrice *big.Int
 	data     []byte
-	currency string
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, asset assets.Asset, fee assets.Token, gasPrice *big.Int, data []byte, currency string) Message {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, asset assets.Asset, fee assets.Token, gasPrice *big.Int, data []byte) Message {
 	message := Message{
 		from:     from,
 		to:       to,
@@ -431,7 +430,6 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, asset ass
 		fee:      fee,
 		gasPrice: gasPrice,
 		data:     data,
-		currency: currency,
 		asset:    asset,
 	}
 	return message
