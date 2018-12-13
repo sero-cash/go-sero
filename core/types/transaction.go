@@ -172,8 +172,12 @@ func NewCreatePkg(pkr *common.Address, currency string, value *big.Int, catg str
 		Asset: asset,
 	}
 
-	return &ztx.PkgCreate{PKr: *(pkr.ToUint512()),
-		Pkg: pkg}
+	return &ztx.PkgCreate{
+		Id:  keys.RandUint256(),
+		PKr: *(pkr.ToUint512()),
+		Pkg: pkg,
+		Key: keys.RandUint256(),
+	}
 
 }
 
