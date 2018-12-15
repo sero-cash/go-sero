@@ -47,7 +47,7 @@ if [[ $# -gt 0 ]]; then
 		    cmd="$cmd --alpha";shift;;
         --rpc)
 		    localhost=$(hostname -I|awk -F ' ' '{print $1}')
-		    cmd="$cmd --rpc --rpcport $2 --rpcaddr $localhost --rpcapi 'personal,sero,web3' --rpccorsdomain '*'";shift 2;;
+		    cmd="$cmd --rpc --rpcport $2 --rpcaddr $localhost --rpcapi personal,sero,web3 --rpccorsdomain '*'";shift 2;;
         --port)
             cmd=${cmd/--port ${DEFAULT_PORT}/--port $2};shift 2;;
         --keystore)
