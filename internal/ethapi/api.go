@@ -1352,47 +1352,49 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 
 func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
 	var input []byte
+	var Pkr keys.Uint512
+	var isZ bool
 	to := args.To
-	rand := keys.RandUint128()
-	var z ztx.OutType
+	fromRand := keys.Uint256{}
 	feevalue := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	if to == nil {
-		copy(rand[:], *args.Data)
-		z = ztx.TYPE_N
+		copy(fromRand[:16], (*args.Data)[:16])
+		isZ = false
 	} else if state.IsContract(*to) {
-		z = ztx.TYPE_N
+		isZ = false
+		Pkr = *to.ToUint512()
 		if !args.Dynamic {
-			copy(rand[:], args.To[:16])
+			copy(fromRand[:16], args.To[:16])
 		}
 		if args.GasCurrency.IsNotSero() {
 			m, d := state.GetTokenRate(*args.To, string(args.GasCurrency))
 			feevalue = new(big.Int).Div(feevalue.Mul(feevalue, m), d)
 		}
 	} else {
-		z = ztx.TYPE_Z
+		fromRand = keys.RandUint256()
+		Pkr = keys.Addr2PKr(to.ToUint512(), keys.RandUint256().NewRef())
+		isZ = true
 	}
 	if args.Data != nil {
 		input = *args.Data
 	}
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), input)
-	fromRand := rand.ToUint256().NewRef()
 	ehash := tx.Ehash()
 	fee := assets.Token{
 		utils.StringToUint256(string(args.GasCurrency)),
 		utils.U256(*feevalue),
 	}
-	outData := types.NewTxtOut(to, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, z)
-	txt := types.NewTxt(fromRand, ehash, fee, outData, nil, nil, nil)
+	outData := types.NewTxtOut(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, isZ)
+	txt := types.NewTxt(fromRand.NewRef(), ehash, fee, outData, nil, nil, nil)
 	return tx, txt, nil
 }
 
 func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
-	to := args.To
+	var Pkr keys.Uint512
 	if state.IsContract(*args.To) {
-		to = args.To
+		Pkr = *(args.To.ToUint512())
 	} else {
-		pkr := keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())
-		to.SetBytes(pkr[:])
+		Pkr = keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())
 	}
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), nil)
 	fromRand := keys.RandUint256().NewRef()
@@ -1401,7 +1403,7 @@ func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T,
 		utils.StringToUint256(params.DefaultCurrency),
 		utils.U256(*new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))),
 	}
-	pkgCreate := types.NewCreatePkg(to, string(args.GasCurrency), (*big.Int)(args.Value), string(args.Category), args.Tkt)
+	pkgCreate := types.NewCreatePkg(Pkr, string(args.GasCurrency), (*big.Int)(args.Value), string(args.Category), args.Tkt)
 	txt := types.NewTxt(fromRand, ehash, fee, nil, pkgCreate, nil, nil)
 	txt.FromRnd = keys.RandUint256().NewRef()
 	return tx, txt, nil
@@ -1664,12 +1666,18 @@ func (args *TransferPkgArgs) toTransaction(state *state.StateDB) (*types.Transac
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), nil)
 	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	ehash := tx.Ehash()
+	var Pkr keys.Uint512
+	if state.IsContract(*args.To) {
+		Pkr = *(args.To.ToUint512())
+	} else {
+		Pkr = keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())
+	}
 	txt := &ztx.T{
 		Fee: assets.Token{
 			utils.StringToUint256(params.DefaultCurrency),
 			utils.U256(*fee),
 		},
-		PkgTransfer: &ztx.PkgTransfer{*args.PkgId, keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())},
+		PkgTransfer: &ztx.PkgTransfer{*args.PkgId, Pkr},
 	}
 	txt.Ehash = ehash
 	txt.FromRnd = keys.RandUint256().NewRef()

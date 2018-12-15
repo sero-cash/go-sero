@@ -108,7 +108,7 @@ func NewTxt(fromRnd *keys.Uint256, ehash keys.Uint256, fee assets.Token, out *zt
 	return txt
 }
 
-func NewTxtOut(to *common.Address, currency string, value *big.Int, catg string, tkt *common.Hash, z ztx.OutType) *ztx.Out {
+func NewTxtOut(Pkr keys.Uint512, currency string, value *big.Int, catg string, tkt *common.Hash, isZ bool) *ztx.Out {
 	var token *assets.Token
 	var ticket *assets.Ticket
 	var outData *ztx.Out
@@ -129,25 +129,16 @@ func NewTxtOut(to *common.Address, currency string, value *big.Int, catg string,
 		Tkn: token,
 		Tkt: ticket,
 	}
-	if to != nil {
-		outData = &ztx.Out{
-			Addr:  *to.ToUint512(),
-			Asset: asset,
-			Z:     z,
-		}
-	} else {
-		outData = &ztx.Out{
-			Asset: asset,
-			Z:     z,
-		}
-
+	outData = &ztx.Out{
+		Addr:  Pkr,
+		Asset: asset,
+		IsZ:   isZ,
 	}
-
 	return outData
 
 }
 
-func NewCreatePkg(pkr *common.Address, currency string, value *big.Int, catg string, tkt *common.Hash) *ztx.PkgCreate {
+func NewCreatePkg(Pkr keys.Uint512, currency string, value *big.Int, catg string, tkt *common.Hash) *ztx.PkgCreate {
 	var token *assets.Token
 	var ticket *assets.Ticket
 	if value != nil {
@@ -174,7 +165,7 @@ func NewCreatePkg(pkr *common.Address, currency string, value *big.Int, catg str
 
 	return &ztx.PkgCreate{
 		Id:  keys.RandUint256(),
-		PKr: *(pkr.ToUint512()),
+		PKr: Pkr,
 		Pkg: pkg,
 		Key: keys.RandUint256(),
 	}
