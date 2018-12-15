@@ -17,32 +17,12 @@
 package stx
 
 import (
-	"encoding/hex"
-
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-
-	"github.com/sero-cash/go-sero/zero/utils"
-
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/crypto/sha3"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 )
-
-type Proof [cpt.PROOF_WIDTH]byte
-
-func (b Proof) MarshalText() ([]byte, error) {
-	result := make([]byte, len(b)*2+2)
-	copy(result, `0x`)
-	hex.Encode(result[2:], b[:])
-	return result, nil
-}
-
-func (self *Proof) ToHash() (ret keys.Uint256) {
-	d := sha3.NewKeccak256()
-	d.Write(self[:])
-	copy(ret[:], d.Sum(nil))
-	return
-}
 
 type In_Z struct {
 	Anchor  keys.Uint256
@@ -53,6 +33,17 @@ type In_Z struct {
 }
 
 func (self *In_Z) ToHash() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.Anchor[:])
+	d.Write(self.Nil[:])
+	d.Write(self.Trace[:])
+	d.Write(self.AssetCM[:])
+	d.Write(self.Proof.ToHash().NewRef()[:])
+	copy(ret[:], d.Sum(nil))
+	return
+}
+
+func (self *In_Z) ToHash_for_sign() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Anchor[:])
 	d.Write(self.Nil[:])
@@ -93,6 +84,24 @@ func (self *Out_Z) ToHash() (ret keys.Uint256) {
 	return
 }
 
+func (self *Out_Z) ToHash_for_gen() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.PKr[:])
+	copy(ret[:], d.Sum(nil))
+	return
+}
+
+func (self *Out_Z) ToHash_for_sign() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.AssetCM[:])
+	d.Write(self.OutCM[:])
+	d.Write(self.EInfo[:])
+	d.Write(self.PKr[:])
+	d.Write(self.Proof.ToHash().NewRef()[:])
+	copy(ret[:], d.Sum(nil))
+	return
+}
+
 type Desc_Z struct {
 	Ins  []In_Z
 	Outs []Out_Z
@@ -110,6 +119,27 @@ func (self *Desc_Z) ToHash() (ret keys.Uint256) {
 	return
 }
 
+func (self *Desc_Z) ToHash_for_gen() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	for _, out := range self.Outs {
+		d.Write(out.ToHash_for_gen().NewRef()[:])
+	}
+	copy(ret[:], d.Sum(nil))
+	return
+}
+
+func (self *Desc_Z) ToHash_for_sign() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	for _, in := range self.Ins {
+		d.Write(in.ToHash_for_sign().NewRef()[:])
+	}
+	for _, out := range self.Outs {
+		d.Write(out.ToHash_for_sign().NewRef()[:])
+	}
+	copy(ret[:], d.Sum(nil))
+	return
+}
+
 type T struct {
 	Ehash    keys.Uint256
 	From     keys.Uint512
@@ -122,32 +152,41 @@ type T struct {
 	Desc_Pkg PkgDesc_Z
 }
 
-func (self *T) ToHash_for_z() (ret keys.Uint256) {
+func (self *T) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Ehash[:])
 	d.Write(self.From[:])
 	d.Write(self.Fee.ToHash().NewRef()[:])
-	d.Write(self.Desc_O.ToHash_for_z().NewRef()[:])
-	d.Write(self.Desc_Pkg.ToHash().NewRef()[:])
-	copy(ret[:], d.Sum(nil))
-	return
-}
-
-func (self *T) ToHash_for_o() (ret keys.Uint256) {
-	d := sha3.NewKeccak256()
-	d.Write(self.ToHash_for_z().NewRef()[:])
 	d.Write(self.Desc_Z.ToHash().NewRef()[:])
+	d.Write(self.Desc_O.ToHash().NewRef()[:])
+	d.Write(self.Desc_Pkg.ToHash().NewRef()[:])
+	d.Write(self.Sign[:])
+	d.Write(self.Bcr[:])
+	d.Write(self.Bsign[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
 
-func (self *T) ToHash() (ret keys.Uint256) {
+func (self *T) ToHash_for_gen() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
-	d.Write(self.ToHash_for_o().NewRef()[:])
-	d.Write(self.Sign[:])
-	for _, in := range self.Desc_O.Ins {
-		d.Write(in.Sign[:])
-	}
+	d.Write(self.Ehash[:])
+	d.Write(self.From[:])
+	d.Write(self.Fee.ToHash().NewRef()[:])
+	d.Write(self.Desc_Z.ToHash_for_gen().NewRef()[:])
+	d.Write(self.Desc_O.ToHash_for_gen().NewRef()[:])
+	d.Write(self.Desc_Pkg.ToHash_for_gen().NewRef()[:])
+	copy(ret[:], d.Sum(nil))
+	return
+}
+
+func (self *T) ToHash_for_sign() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.Ehash[:])
+	d.Write(self.From[:])
+	d.Write(self.Fee.ToHash().NewRef()[:])
+	d.Write(self.Desc_Z.ToHash_for_sign().NewRef()[:])
+	d.Write(self.Desc_O.ToHash_for_sign().NewRef()[:])
+	d.Write(self.Desc_Pkg.ToHash_for_sign().NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }

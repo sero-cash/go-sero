@@ -148,7 +148,7 @@ func (self *PkgState) Force_transfer(id *keys.Uint256, to *keys.Uint512) {
 	if pg := self.getPkg(id); pg == nil {
 		return
 	} else {
-		pg.Pack.Pkr = *to
+		pg.Pack.PKr = *to
 		self.add_pkg_dirty(pg)
 		return
 	}
@@ -166,7 +166,7 @@ func (self *PkgState) Close(id *keys.Uint256, pkr *keys.Uint512, key *keys.Uint2
 		e = fmt.Errorf("Pkg is nil: %v", hexutil.Encode(id[:]))
 		return
 	} else {
-		if pg.Pack.Pkr != *pkr {
+		if pg.Pack.PKr != *pkr {
 			e = fmt.Errorf("Pkg Owner Check Failed: %v", hexutil.Encode(id[:]))
 			return
 		} else {
@@ -188,11 +188,11 @@ func (self *PkgState) Transfer(id *keys.Uint256, pkr *keys.Uint512, to *keys.Uin
 		e = fmt.Errorf("Pkg is nil: %v", hexutil.Encode(id[:]))
 		return
 	} else {
-		if pg.Pack.Pkr != *pkr {
+		if pg.Pack.PKr != *pkr {
 			e = fmt.Errorf("Pkg Owner Check Failed: %v", hexutil.Encode(id[:]))
 			return
 		} else {
-			pg.Pack.Pkr = *to
+			pg.Pack.PKr = *to
 			self.add_pkg_dirty(pg)
 			return
 		}

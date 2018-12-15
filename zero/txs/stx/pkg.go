@@ -9,7 +9,7 @@ import (
 
 type PkgClose struct {
 	Id   keys.Uint256
-	Sign keys.Uint256
+	Sign keys.Uint512
 }
 
 func (this PkgClose) ToRef() (ret *PkgClose) {
@@ -25,14 +25,29 @@ func (self *PkgClose) ToHash() (ret keys.Uint256) {
 	return ret
 }
 
+func (self *PkgClose) ToHash_for_gen() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.Id[:])
+	copy(ret[:], d.Sum(nil))
+	return ret
+}
+
+func (self *PkgClose) ToHash_for_sign() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.Id[:])
+	copy(ret[:], d.Sum(nil))
+	return ret
+}
+
 func (self *PkgClose) Clone() (ret PkgClose) {
 	utils.DeepCopy(&ret, self)
 	return
 }
 
 type PkgTransfer struct {
-	Id  keys.Uint256
-	PKr keys.Uint512
+	Id   keys.Uint256
+	PKr  keys.Uint512
+	Sign keys.Uint512
 }
 
 func (this PkgTransfer) ToRef() (ret *PkgTransfer) {
@@ -41,6 +56,23 @@ func (this PkgTransfer) ToRef() (ret *PkgTransfer) {
 }
 
 func (self *PkgTransfer) ToHash() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.Id[:])
+	d.Write(self.PKr[:])
+	d.Write(self.Sign[:])
+	copy(ret[:], d.Sum(nil))
+	return ret
+}
+
+func (self *PkgTransfer) ToHash_for_gen() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.Id[:])
+	d.Write(self.PKr[:])
+	copy(ret[:], d.Sum(nil))
+	return ret
+}
+
+func (self *PkgTransfer) ToHash_for_sign() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Id[:])
 	d.Write(self.PKr[:])
@@ -55,7 +87,7 @@ func (self *PkgTransfer) Clone() (ret PkgTransfer) {
 
 type PkgCreate struct {
 	Id  keys.Uint256
-	Pkr keys.Uint512
+	PKr keys.Uint512
 	Pkg pkg.Pkg_Z
 }
 
@@ -67,7 +99,24 @@ func (this PkgCreate) ToRef() (ret *PkgCreate) {
 func (self *PkgCreate) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Id[:])
-	d.Write(self.Pkr[:])
+	d.Write(self.PKr[:])
+	d.Write(self.Pkg.ToHash().NewRef()[:])
+	copy(ret[:], d.Sum(nil))
+	return ret
+}
+
+func (self *PkgCreate) ToHash_for_gen() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.Id[:])
+	d.Write(self.PKr[:])
+	copy(ret[:], d.Sum(nil))
+	return ret
+}
+
+func (self *PkgCreate) ToHash_for_sign() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.Id[:])
+	d.Write(self.PKr[:])
 	d.Write(self.Pkg.ToHash().NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return ret
@@ -99,6 +148,36 @@ func (self *PkgDesc_Z) ToHash() (ret keys.Uint256) {
 	}
 	if self.Close != nil {
 		d.Write(self.Close.ToHash().NewRef()[:])
+	}
+	copy(ret[:], d.Sum(nil))
+	return ret
+}
+
+func (self *PkgDesc_Z) ToHash_for_gen() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	if self.Create != nil {
+		d.Write(self.Create.ToHash_for_gen().NewRef()[:])
+	}
+	if self.Transfer != nil {
+		d.Write(self.Transfer.ToHash_for_gen().NewRef()[:])
+	}
+	if self.Close != nil {
+		d.Write(self.Close.ToHash_for_gen().NewRef()[:])
+	}
+	copy(ret[:], d.Sum(nil))
+	return ret
+}
+
+func (self *PkgDesc_Z) ToHash_for_sign() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	if self.Create != nil {
+		d.Write(self.Create.ToHash_for_sign().NewRef()[:])
+	}
+	if self.Transfer != nil {
+		d.Write(self.Transfer.ToHash_for_sign().NewRef()[:])
+	}
+	if self.Close != nil {
+		d.Write(self.Close.ToHash_for_sign().NewRef()[:])
 	}
 	copy(ret[:], d.Sum(nil))
 	return ret

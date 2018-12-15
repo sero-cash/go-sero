@@ -76,10 +76,8 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 		}
 		if preTx.desc_pkg.open != nil {
 			open := preTx.desc_pkg.open
-			s.Desc_Pkg.Close = &stx.PkgClose{
-				open.opkg.Z.Pack.Id,
-				t.PkgClose.Key,
-			}
+			s.Desc_Pkg.Close = &stx.PkgClose{}
+			s.Desc_Pkg.Close.Id = open.opkg.Z.Pack.Id
 			{
 				asset := open.opkg.O.Asset.ToFlatAsset()
 				asset_desc := cpt.AssetDesc{
@@ -108,15 +106,7 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 				balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
 			}
 			s_out_o.Memo = out_o.Memo
-			switch out_o.Z {
-			case tx.TYPE_O:
-				pkr := keys.Addr2PKr(&out_o.Addr, keys.RandUint256().NewRef())
-				s_out_o.Addr = pkr
-			case tx.TYPE_N:
-				s_out_o.Addr = out_o.Addr
-			default:
-				panic("Gen desc_o out but z is type_z")
-			}
+			s_out_o.Addr = out_o.Addr
 			s.Desc_O.Outs = append(s.Desc_O.Outs, s_out_o)
 		}
 
@@ -142,10 +132,9 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 
 		if preTx.desc_pkg.change != nil {
 			change := preTx.desc_pkg.change
-			s.Desc_Pkg.Transfer = &stx.PkgTransfer{
-				change.zpkg.Pack.Id,
-				change.pkr,
-			}
+			s.Desc_Pkg.Transfer = &stx.PkgTransfer{}
+			s.Desc_Pkg.Transfer.Id = change.zpkg.Pack.Id
+			s.Desc_Pkg.Transfer.PKr = change.pkr
 		}
 
 		addr := keys.Seed2Addr(seed)
@@ -157,15 +146,15 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 		}
 		s.From = keys.Addr2PKr(&addr, &from_r)
 
-		hash_o := s.ToHash_for_z()
-		if desc_z, err := genDesc_Zs(seed, &preTx, &hash_o, &balance_desc); err != nil {
+		//hash_o := s.ToHash_for_gen()
+		if desc_z, err := genDesc_Zs(seed, &preTx, &balance_desc); err != nil {
 			e = err
 		} else {
 			s.Desc_Z = desc_z
 		}
 
 		{
-			hash_z := s.ToHash_for_o()
+			hash_z := s.ToHash_for_sign()
 			balance_desc.Hash = hash_z
 
 			if sign, err := keys.SignPKr(seed, &hash_z, &s.From); err != nil {
@@ -216,7 +205,7 @@ func Verify(s *stx.T, state *zstate.ZState) (e error) {
 func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	balance_desc := cpt.BalanceDesc{}
 
-	hash_z := s.ToHash_for_o()
+	hash_z := s.ToHash_for_sign()
 	balance_desc.Hash = hash_z
 
 	if !CheckUint(&s.Fee.Value) {

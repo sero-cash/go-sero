@@ -60,7 +60,7 @@ func (self *gen_output_desc) Run() bool {
 	}
 }
 
-func genDesc_Zs(seed *keys.Uint256, ptx *preTx, hash_o *keys.Uint256, balance_desc *cpt.BalanceDesc) (desc_z stx.Desc_Z, e error) {
+func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc) (desc_z stx.Desc_Z, e error) {
 	var gen_input_procs = gen_input_procs_pool.GetProcs()
 	defer gen_input_procs_pool.PutProcs(gen_input_procs)
 

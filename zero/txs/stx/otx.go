@@ -53,6 +53,26 @@ func (self *Out_O) ToHash() (ret keys.Uint256) {
 	return ret
 }
 
+func (self *Out_O) ToHash_for_gen() (ret keys.Uint256) {
+	hash := crypto.Keccak256(
+		self.Addr[:],
+		self.Asset.ToHash().NewRef()[:],
+		self.Memo[:],
+	)
+	copy(ret[:], hash)
+	return ret
+}
+
+func (self *Out_O) ToHash_for_sign() (ret keys.Uint256) {
+	hash := crypto.Keccak256(
+		self.Addr[:],
+		self.Asset.ToHash().NewRef()[:],
+		self.Memo[:],
+	)
+	copy(ret[:], hash)
+	return ret
+}
+
 type In_O struct {
 	Root keys.Uint256
 	Sign keys.Uint512
@@ -68,7 +88,18 @@ func (ino In_O) MarshalText() ([]byte, error) {
 	return result, nil
 }
 
-func (self *In_O) ToHash_for_z() (ret keys.Uint256) {
+func (self *In_O) ToHash() (ret keys.Uint256) {
+	copy(ret[:], self.Root[:])
+	copy(ret[:], self.Sign[:])
+	return ret
+}
+
+func (self *In_O) ToHash_for_gen() (ret keys.Uint256) {
+	copy(ret[:], self.Root[:])
+	return ret
+}
+
+func (self *In_O) ToHash_for_sign() (ret keys.Uint256) {
 	copy(ret[:], self.Root[:])
 	return ret
 }
@@ -78,13 +109,37 @@ type Desc_O struct {
 	Outs []Out_O
 }
 
-func (self *Desc_O) ToHash_for_z() (ret keys.Uint256) {
+func (self *Desc_O) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	for _, in := range self.Ins {
-		d.Write(in.ToHash_for_z().NewRef()[:])
+		d.Write(in.ToHash().NewRef()[:])
 	}
 	for _, out := range self.Outs {
 		d.Write(out.ToHash().NewRef()[:])
+	}
+	copy(ret[:], d.Sum(nil))
+	return
+}
+
+func (self *Desc_O) ToHash_for_gen() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	for _, in := range self.Ins {
+		d.Write(in.ToHash_for_gen().NewRef()[:])
+	}
+	for _, out := range self.Outs {
+		d.Write(out.ToHash_for_gen().NewRef()[:])
+	}
+	copy(ret[:], d.Sum(nil))
+	return
+}
+
+func (self *Desc_O) ToHash_for_sign() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	for _, in := range self.Ins {
+		d.Write(in.ToHash_for_sign().NewRef()[:])
+	}
+	for _, out := range self.Outs {
+		d.Write(out.ToHash_for_sign().NewRef()[:])
 	}
 	copy(ret[:], d.Sum(nil))
 	return

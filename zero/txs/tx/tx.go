@@ -31,7 +31,7 @@ type Out struct {
 	Addr  keys.Uint512
 	Asset assets.Asset
 	Memo  keys.Uint512
-	Z     OutType
+	IsZ   bool
 }
 
 type PkgCreate struct {
@@ -50,14 +50,6 @@ type PkgTransfer struct {
 	Id  keys.Uint256
 	PKr keys.Uint512
 }
-
-type OutType int
-
-const (
-	TYPE_N = OutType(0)
-	TYPE_O = OutType(1)
-	TYPE_Z = OutType(2)
-)
 
 type T struct {
 	FromRnd     *keys.Uint256

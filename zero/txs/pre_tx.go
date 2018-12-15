@@ -93,13 +93,10 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 			return
 		} else {
 			if added {
-				switch out.Z {
-				case tx.TYPE_N:
-					fallthrough
-				case tx.TYPE_O:
-					p.desc_o.outs = append(p.desc_o.outs, out)
-				default:
+				if out.IsZ {
 					p.desc_z.outs = append(p.desc_z.outs, out)
+				} else {
+					p.desc_o.outs = append(p.desc_o.outs, out)
 				}
 			}
 		}
