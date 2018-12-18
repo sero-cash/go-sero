@@ -348,6 +348,9 @@ func (state *State) GenState0Trees() (ret State0Trees) {
 		tree := state.Block.Tree.Clone()
 		ret.Start_index = uint64(state.Cur.Index - int64(len(state.Block.Commitments)) + 1)
 		for i, commitment := range state.Block.Commitments {
+			if tree.IsComplete() {
+				tree = merkle.Tree{}
+			}
 			tree.Append(merkle.Leaf(commitment))
 			ret.Trees[ret.Start_index+uint64(i)] = tree.Clone()
 			ret.Roots = append(ret.Roots, tree.RootKey())
