@@ -157,8 +157,8 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 	if roots[0] != out_leaf {
 		panic("gen path roots[0] != out leaf")
 	}
-	if pg.Index != os.Index {
-		panic("gen path index != os index")
+	if pg.Index != os.Index%(1<<cpt.DEPTH) {
+		panic(fmt.Sprintf("gen path index %v != os index %v", pg.Index, os.Index))
 	}
 
 	Debug_State1_addout_assert(self, os)
