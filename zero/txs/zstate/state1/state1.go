@@ -353,11 +353,11 @@ func (state *State1) del(del *keys.Uint256) (e error) {
 }
 
 func (state *State1) UpdateWitness(tks []keys.Uint512) {
-	trees, cms := state.State0.GenState0Trees()
+	trees := state.State0.GenState0Trees()
 	for _, del := range state.State0.Block.Dels {
 		state.del(&del)
 	}
-	for i, commitment := range cms {
+	for i, commitment := range state.State0.Block.Commitments {
 		t := utils.TR_enter("UpdateWitness---RootKey")
 		tree := trees.Trees[trees.Start_index+uint64(i)]
 		out := tree.RootKey()

@@ -333,7 +333,7 @@ type State0Trees struct {
 	Start_index uint64
 }
 
-func (state *State0) GenState0Trees() (ret State0Trees, cms []keys.Uint256) {
+func (state *State0) GenState0Trees() (ret State0Trees) {
 	state.rw.RLock()
 	defer state.rw.RUnlock()
 	if state.Cur.Index >= 0 {
@@ -341,13 +341,12 @@ func (state *State0) GenState0Trees() (ret State0Trees, cms []keys.Uint256) {
 		tree := state.Block.Tree.Clone()
 		ret.Start_index = uint64(state.Cur.Index - int64(len(state.Block.Commitments)) + 1)
 		for i, commitment := range state.Block.Commitments {
+			if tree.IsComplete() {
+				tree = merkle.Tree{}
+			}
 			tree.Append(merkle.Leaf(commitment))
 			ret.Trees[ret.Start_index+uint64(i)] = tree.Clone()
 			ret.Roots = append(ret.Roots, tree.RootKey())
-			cms = append(cms, commitment)
-			if tree.IsComplete() {
-				return
-			}
 		}
 	}
 	return
