@@ -189,7 +189,7 @@ func (b *bridge) SendTransaction(call otto.FunctionCall) (response otto.Value) {
 	//bar := progress.AddBar(120).PrependElapsed()
 	bar := progress.AddBar(120)
 	bar.PrependFunc(func(b *uiprogress.Bar) string {
-		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 5, ' ')
+		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 10, ' ')
 	})
 	progress.Start()
 	go progressBar(bar, finish)
@@ -226,7 +226,7 @@ func (b *bridge) CreatePkg(call otto.FunctionCall) (response otto.Value) {
 	//bar := progress.AddBar(120).PrependElapsed()
 	bar := progress.AddBar(120)
 	bar.PrependFunc(func(b *uiprogress.Bar) string {
-		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 5, ' ')
+		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 10, ' ')
 	})
 	progress.Start()
 	go progressBar(bar, finish)
