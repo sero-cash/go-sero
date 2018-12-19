@@ -269,11 +269,23 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 			return
 		} else {
 			asset := pg.Pack.Pkg.Temp.Asset
+			var tkn_currency keys.Uint256
+			var tkn_value keys.Uint256
+			var tkt_category keys.Uint256
+			var tkt_value keys.Uint256
+			if asset.Tkn != nil {
+				tkn_currency = asset.Tkn.Currency
+				tkn_value = asset.Tkn.Value.ToUint256()
+			}
+			if asset.Tkt != nil {
+				tkt_category = asset.Tkt.Category
+				tkt_value = asset.Tkt.Value
+			}
 			asset_desc := cpt.AssetDesc{
-				Tkn_currency: asset.Tkn.Currency,
-				Tkn_value:    asset.Tkn.Value.ToUint256(),
-				Tkt_category: asset.Tkt.Category,
-				Tkt_value:    asset.Tkt.Value,
+				Tkn_currency: tkn_currency,
+				Tkn_value:    tkn_value,
+				Tkt_category: tkt_category,
+				Tkt_value:    tkt_value,
 			}
 			cpt.GenAssetCC(&asset_desc)
 			balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)

@@ -1400,7 +1400,7 @@ func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T,
 	fromRand := keys.RandUint256().NewRef()
 	ehash := tx.Ehash()
 	fee := assets.Token{
-		utils.StringToUint256(params.DefaultCurrency),
+		utils.StringToUint256(string(args.GasCurrency)),
 		utils.U256(*new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))),
 	}
 	pkgCreate := types.NewCreatePkg(Pkr, string(args.GasCurrency), (*big.Int)(args.Value), string(args.Category), args.Tkt)
