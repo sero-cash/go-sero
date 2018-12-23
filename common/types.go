@@ -22,11 +22,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/sero-cash/go-sero/crypto/sha3"
 	"math/big"
 	"math/rand"
 	"reflect"
 	"strings"
+
+	"github.com/sero-cash/go-sero/crypto/sha3"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/base58"
@@ -38,7 +39,7 @@ const (
 	// HashLength is the expected length of the hash
 	HashLength = 32
 	// AddressLength is the expected length of the adddress
-	AddressLength = 64
+	AddressLength = 96
 )
 
 var (
@@ -263,8 +264,8 @@ func IsBase58Address(s string) bool {
 // Bytes gets the string representation of the underlying Data.
 func (a Address) Bytes() []byte { return a[:] }
 
-func (a Address) ToUint512() *keys.Uint512 {
-	pubKey := keys.Uint512{}
+func (a Address) ToPKr() *keys.PKr {
+	pubKey := keys.PKr{}
 	copy(pubKey[:], a[:])
 	return &pubKey
 }

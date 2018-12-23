@@ -44,7 +44,7 @@ type prePkgOpen struct {
 }
 
 type prePkgChange struct {
-	pkr  keys.Uint512
+	pkr  keys.PKr
 	zpkg pkgstate.ZPkg
 }
 

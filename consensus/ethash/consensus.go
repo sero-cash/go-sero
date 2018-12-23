@@ -169,7 +169,7 @@ func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 // stock Ethereum ethash engine.
 // See YP section 4.3.4. "Block Header Validity"
 func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, seal bool) error {
-	if !keys.CheckLICr(header.Coinbase.ToUint512(), &header.Licr) {
+	if !keys.CheckLICr(header.Coinbase.ToPKr(), &header.Licr) {
 		return fmt.Errorf("invalid Licr : pkr %v, licr %v", header.Coinbase, header.Licr)
 	}
 	// Ensure that the header's extra-data section is of a reasonable size
@@ -246,7 +246,7 @@ var (
 	big2          = big.NewInt(2)
 	big6          = big.NewInt(6)
 	big9          = big.NewInt(9)
-	bigMinus99 = big.NewInt(-99)
+	bigMinus99    = big.NewInt(-99)
 )
 
 // calcDifficultyAutumnTwilight is the difficulty adjustment algorithm. It returns
@@ -451,7 +451,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 	}
 
 	if poolBalance.Cmp(reward) < 0 {
-		reward = poolBalance;
+		reward = poolBalance
 	}
 	statedb.SubBalance(state.EmptyAddress, "SERO", reward)
 	log.Info(fmt.Sprintf("BlockNumber = %v, gasLimie = %v, gasUsed = %v, reward =%v", header.Number.Uint64(), header.GasLimit, header.GasUsed, reward))

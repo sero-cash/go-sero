@@ -46,7 +46,7 @@ func (self *PkgClose) Clone() (ret PkgClose) {
 
 type PkgTransfer struct {
 	Id   keys.Uint256
-	PKr  keys.Uint512
+	PKr  keys.PKr
 	Sign keys.Uint512
 }
 
@@ -87,7 +87,7 @@ func (self *PkgTransfer) Clone() (ret PkgTransfer) {
 
 type PkgCreate struct {
 	Id  keys.Uint256
-	PKr keys.Uint512
+	PKr keys.PKr
 	Pkg pkg.Pkg_Z
 }
 

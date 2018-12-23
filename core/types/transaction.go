@@ -108,7 +108,7 @@ func NewTxt(fromRnd *keys.Uint256, ehash keys.Uint256, fee assets.Token, out *zt
 	return txt
 }
 
-func NewTxtOut(Pkr keys.Uint512, currency string, value *big.Int, catg string, tkt *common.Hash, isZ bool) *ztx.Out {
+func NewTxtOut(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *common.Hash, isZ bool) *ztx.Out {
 	var token *assets.Token
 	var ticket *assets.Ticket
 	var outData *ztx.Out
@@ -138,7 +138,7 @@ func NewTxtOut(Pkr keys.Uint512, currency string, value *big.Int, catg string, t
 
 }
 
-func NewCreatePkg(Pkr keys.Uint512, currency string, value *big.Int, catg string, tkt *common.Hash) *ztx.PkgCreate {
+func NewCreatePkg(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *common.Hash) *ztx.PkgCreate {
 	var token *assets.Token
 	var ticket *assets.Ticket
 	if value != nil {
@@ -230,7 +230,7 @@ func (tx *Transaction) To() *common.Address {
 	}
 
 	for _, out := range tx.data.Stxt.Desc_O.Outs {
-		if out.Addr != (keys.Uint512{}) {
+		if out.Addr != (keys.PKr{}) {
 			addr := common.BytesToAddress(out.Addr[:])
 			return &addr
 		}

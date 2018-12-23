@@ -28,7 +28,7 @@ type In struct {
 }
 
 type Out struct {
-	Addr  keys.Uint512
+	Addr  keys.PKr
 	Asset assets.Asset
 	Memo  keys.Uint512
 	IsZ   bool
@@ -36,7 +36,7 @@ type Out struct {
 
 type PkgCreate struct {
 	Id  keys.Uint256
-	PKr keys.Uint512
+	PKr keys.PKr
 	Pkg pkg.Pkg_O
 	Key keys.Uint256
 }
@@ -48,7 +48,7 @@ type PkgClose struct {
 
 type PkgTransfer struct {
 	Id  keys.Uint256
-	PKr keys.Uint512
+	PKr keys.PKr
 }
 
 type T struct {

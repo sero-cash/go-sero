@@ -57,8 +57,9 @@ func (self *In_Z) ToHash_for_sign() (ret keys.Uint256) {
 type Out_Z struct {
 	AssetCM keys.Uint256
 	OutCM   keys.Uint256
+	RPK     keys.Uint256
 	EInfo   [cpt.INFO_WIDTH]byte `json:"-"`
-	PKr     keys.Uint512
+	PKr     keys.PKr
 	Proof   cpt.Proof
 }
 
@@ -142,7 +143,7 @@ func (self *Desc_Z) ToHash_for_sign() (ret keys.Uint256) {
 
 type T struct {
 	Ehash    keys.Uint256
-	From     keys.Uint512
+	From     keys.PKr
 	Fee      assets.Token
 	Sign     keys.Uint512
 	Bcr      keys.Uint256

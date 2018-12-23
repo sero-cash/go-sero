@@ -29,7 +29,7 @@ import (
 )
 
 type Out_O struct {
-	Addr  keys.Uint512
+	Addr  keys.PKr
 	Asset assets.Asset
 	Memo  keys.Uint512
 }

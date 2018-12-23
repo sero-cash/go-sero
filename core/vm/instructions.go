@@ -1067,7 +1067,7 @@ func makeLog(size int) executionFunc {
 			setCallValues(d, data, contract)
 		} else if topics[0] == topic_setTokenRate {
 			offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-			len := new(big.Int).SetBytes(data[offset:offset+32]).Uint64()
+			len := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
 			if len == 0 {
 				return nil, fmt.Errorf("setTokenRate error , contract : %s, error : %s", contract.Address(), "coinName len=0")
 			}
@@ -1090,7 +1090,7 @@ func makeLog(size int) executionFunc {
 
 			key := keys.Uint256{}
 			copy(key[:], d[32:64])
-			pkg, err := interpreter.evm.StateDB.GetPkgState().Close(&id, contract.Address().ToUint512(), &key)
+			pkg, err := interpreter.evm.StateDB.GetPkgState().Close(&id, contract.Address().ToPKr(), &key)
 			if err != nil {
 				memory.Set(mStart.Uint64(), 128, make([]byte, 128))
 			} else {
@@ -1123,7 +1123,7 @@ func makeLog(size int) executionFunc {
 			if toAddr == (common.Address{}) {
 				return nil, ErrToAddressError
 			}
-			if err := interpreter.evm.StateDB.GetPkgState().Transfer(&id, contract.Address().ToUint512(), toAddr.ToUint512()); err != nil {
+			if err := interpreter.evm.StateDB.GetPkgState().Transfer(&id, contract.Address().ToPKr(), toAddr.ToPKr()); err != nil {
 				memory.Set(mStart.Uint64()+length-32, 32, hashFalse)
 			} else {
 				memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
@@ -1146,14 +1146,14 @@ func makeLog(size int) executionFunc {
 
 func setCallValues(d []byte, data []byte, contract *Contract) {
 	currency_offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-	length := new(big.Int).SetBytes(data[currency_offset:currency_offset+32]).Uint64()
+	length := new(big.Int).SetBytes(data[currency_offset : currency_offset+32]).Uint64()
 	var currency string
 	if length != 0 {
 		currency = string(data[currency_offset+32 : currency_offset+32+length])
 	}
 	var category string
 	category_offset := new(big.Int).SetBytes(d[64:96]).Uint64()
-	length = new(big.Int).SetBytes(data[category_offset:category_offset+32]).Uint64()
+	length = new(big.Int).SetBytes(data[category_offset : category_offset+32]).Uint64()
 	if length != 0 {
 		category = string(data[category_offset+32 : category_offset+32+length])
 	}

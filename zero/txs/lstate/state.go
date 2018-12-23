@@ -271,27 +271,26 @@ func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, pg *witne
 				break
 			}
 
-			if out_o.Addr == (keys.Uint512{}) {
+			if out_o.Addr == (keys.PKr{}) {
 				break
 			}
 
-			if succ, rsk := keys.IsMyPKr(&tk, &out_o.Addr); succ {
+			if succ := keys.IsMyPKr(&tk, &out_o.Addr); succ {
 				out_z := &stx.Out_Z{}
 				{
-					desc_info := cpt.InfoDesc{}
-					desc_info.Ar = utils.NewU256(os.Index).ToRef().ToUint256()
-					desc_info.Rsk = rsk
+					desc_info := cpt.EncOutputInfo{}
+
 					asset := os.Out_O.Asset.ToFlatAsset()
 					desc_info.Tkn_currency = asset.Tkn.Currency
 					desc_info.Tkn_value = asset.Tkn.Value.ToUint256()
 					desc_info.Tkt_category = asset.Tkt.Category
 					desc_info.Tkt_value = asset.Tkt.Value
+					desc_info.Rsk = os.ToIndexRsk()
 					desc_info.Memo = os.Out_O.Memo
 					cpt.EncOutput(&desc_info)
 					out_z = &stx.Out_Z{}
 					out_z.PKr = os.Out_O.Addr
 					out_z.EInfo = desc_info.Einfo
-					out_z.AssetCM = desc_info.Asset_cm
 					out_z.OutCM = *os.ToOutCM()
 				}
 				root := pg.Root.ToUint256()
@@ -314,40 +313,42 @@ func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, pg *witne
 				break
 			}
 		} else {
-			if succ, rsk := keys.IsMyPKr(&tk, &os.Out_Z.PKr); succ {
+			if succ := keys.IsMyPKr(&tk, &os.Out_Z.PKr); succ {
 				info_desc := cpt.InfoDesc{}
-				info_desc.Rsk = rsk
+				info_desc.Tk = tk
+				info_desc.RPK = os.Out_Z.RPK
 				info_desc.Einfo = os.Out_Z.EInfo
-				if err := cpt.DecOutput(&info_desc, &os.Out_Z.AssetCM); err == nil {
-					root := pg.Root.ToUint256()
-					state.append_wout_dirty(root)
-					wos := OutState{}
-					wos.Pg = *pg
-					wos.Out_O.Addr = os.Out_Z.PKr
-					wos.Out_O.Asset = assets.NewAsset(
-						&assets.Token{
-							info_desc.Tkn_currency,
-							utils.NewU256_ByKey(&info_desc.Tkn_value),
-						},
-						&assets.Ticket{
-							info_desc.Tkt_category,
-							info_desc.Tkt_value,
-						},
-					)
-					wos.Out_O.Memo = info_desc.Memo
-					wos.Out_Z = os.Out_Z.Clone().ToRef()
-					wos.Tk = tk
-					wos.WitnessIndex = os.Index
-					wos.OutIndex = os.Index
-					wos.Z = true
-					if *pg.Leaf.ToUint256() != *os.ToRootCM() {
-						panic("add wouts but RootCM not match!")
-					}
-					wos.Trace = cpt.GenTil(&tk, pg.Leaf.ToUint256())
-					wos.Num = state.State.State.Num()
-					state.add_out_dirty(root, &wos)
-					state.add_out_dirty(&wos.Trace, &wos)
+
+				cpt.DecOutput(&info_desc)
+
+				root := pg.Root.ToUint256()
+				state.append_wout_dirty(root)
+				wos := OutState{}
+				wos.Pg = *pg
+				wos.Out_O.Addr = os.Out_Z.PKr
+				wos.Out_O.Asset = assets.NewAsset(
+					&assets.Token{
+						info_desc.Tkn_currency,
+						utils.NewU256_ByKey(&info_desc.Tkn_value),
+					},
+					&assets.Ticket{
+						info_desc.Tkt_category,
+						info_desc.Tkt_value,
+					},
+				)
+				wos.Out_O.Memo = info_desc.Memo
+				wos.Out_Z = os.Out_Z.Clone().ToRef()
+				wos.Tk = tk
+				wos.WitnessIndex = os.Index
+				wos.OutIndex = os.Index
+				wos.Z = true
+				if *pg.Leaf.ToUint256() != *os.ToRootCM() {
+					panic("add wouts but RootCM not match!")
 				}
+				wos.Trace = cpt.GenTil(&tk, pg.Leaf.ToUint256())
+				wos.Num = state.State.State.Num()
+				state.add_out_dirty(root, &wos)
+				state.add_out_dirty(&wos.Trace, &wos)
 			}
 		}
 	}

@@ -43,6 +43,10 @@ func (out *OutState) IsO() bool {
 	}
 }
 
+func (self *OutState) ToIndexRsk() (ret keys.Uint256) {
+	ret = utils.NewU256(self.Index).ToRef().ToUint256()
+	return
+}
 func (self *OutState) ToOutCM() *keys.Uint256 {
 	if self.IsO() {
 		asset := self.Out_O.Asset.ToFlatAsset()
@@ -53,7 +57,7 @@ func (self *OutState) ToOutCM() *keys.Uint256 {
 			asset.Tkt.Value.NewRef(),
 			&self.Out_O.Memo,
 			&self.Out_O.Addr,
-			utils.NewU256(self.Index).ToRef().ToUint256().NewRef(),
+			self.ToIndexRsk().NewRef(),
 		)
 		return &cm
 	} else {

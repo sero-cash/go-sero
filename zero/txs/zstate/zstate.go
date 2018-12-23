@@ -82,6 +82,6 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 }
 
 func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset) {
-	o := stx.Out_O{*addr.ToUint512(), asset, keys.Uint512{}}
+	o := stx.Out_O{*addr.ToPKr(), asset, keys.Uint512{}}
 	state.AddOut_O(&o)
 }

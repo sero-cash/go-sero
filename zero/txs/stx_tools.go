@@ -89,7 +89,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc) (
 		g.desc.Tkt_category = asset.Tkt.Category
 		g.desc.Tkt_value = asset.Tkt.Value
 		g.desc.Memo = out.Memo
-		g.desc.Pk = out.Addr
+		g.desc.Pkr = out.Addr
 
 		gen_output_procs.StartProc(&g)
 	}
@@ -113,7 +113,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc) (
 				out_z := stx.Out_Z{}
 				out_z.AssetCM = desc.Asset_cm_ret
 				out_z.OutCM = desc.Out_cm_ret
-				out_z.PKr = desc.Pkr_ret
+				out_z.RPK = desc.RPK_ret
 				out_z.EInfo = desc.Einfo_ret
 				out_z.Proof = desc.Proof_ret
 				desc_z.Outs = append(desc_z.Outs, out_z)
@@ -189,7 +189,7 @@ func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc) (e error) {
 
 		g := verify_output_desc{}
 		g.desc.AssetCM = out_z.AssetCM
-		g.desc.Pkr = out_z.PKr
+		g.desc.RPK = out_z.RPK
 		g.desc.OutCM = out_z.OutCM
 		g.desc.Proof = out_z.Proof
 
