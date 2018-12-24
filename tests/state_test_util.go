@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/sero-cash/go-czero-import/keys"
+
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
 
@@ -191,7 +193,7 @@ func (t *StateTest) genesis(config *params.ChainConfig) *core.Genesis {
 
 func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 	// Derive sender from private key if present.
-	var from common.Address
+	var from common.AccountAddress
 	if len(tx.PrivateKey) > 0 {
 		key, err := crypto.ToECDSA(tx.PrivateKey)
 		if err != nil {
@@ -202,10 +204,13 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 	// Parse recipient if present.
 	var to *common.Address
 	if tx.To != "" {
-		to = new(common.Address)
-		if err := to.UnmarshalText([]byte(tx.To)); err != nil {
+		toAccount := new(common.AccountAddress)
+		if err := toAccount.UnmarshalText([]byte(tx.To)); err != nil {
 			return nil, fmt.Errorf("invalid to address: %v", err)
 		}
+		toPkr := keys.Addr2PKr(toAccount.ToUint512(), keys.RandUint256().NewRef())
+		toAddr := common.BytesToAddress(toPkr[:])
+		to = &toAddr
 	}
 
 	// Get values specific to this post state.
@@ -241,7 +246,8 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 		Value:    utils.U256(*value),
 	},
 	}
-	msg := types.NewMessage(from, to, tx.Nonce, asset, assets.Token{}, tx.GasPrice, data)
+	pkr := keys.Addr2PKr(from.ToUint512(), keys.RandUint256().NewRef())
+	msg := types.NewMessage(common.BytesToAddress(pkr[:]), to, tx.Nonce, asset, assets.Token{}, tx.GasPrice, data)
 	return msg, nil
 }
 
