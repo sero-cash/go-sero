@@ -68,6 +68,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc) (
 		g := gen_input_desc{}
 		g.desc.Seed = *seed
 		g.desc.Pkr = in.Out_Z.PKr
+		g.desc.RPK = in.Out_Z.RPK
 		g.desc.Einfo = in.Out_Z.EInfo
 		g.desc.Index = in.OutIndex
 		_, g.desc.Position, g.desc.Path, g.desc.Anchor = in.ToWitness()
@@ -116,6 +117,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc) (
 				out_z.RPK = desc.RPK_ret
 				out_z.EInfo = desc.Einfo_ret
 				out_z.Proof = desc.Proof_ret
+				out_z.PKr = desc.Pkr
 				desc_z.Outs = append(desc_z.Outs, out_z)
 				balance_desc.Zout_acms = append(balance_desc.Zout_acms, desc.Asset_cm_ret[:]...)
 				balance_desc.Zout_ars = append(balance_desc.Zout_ars, desc.Ar_ret[:]...)

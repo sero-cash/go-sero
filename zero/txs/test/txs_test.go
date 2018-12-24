@@ -101,7 +101,7 @@ func newUser(i int) (ret user) {
 	return
 }
 
-func (self *user) getAR() (pkr keys.Uint512) {
+func (self *user) getAR() (pkr keys.PKr) {
 	pkr = keys.Addr2PKr(&self.addr, nil)
 	fmt.Printf("\nuser(%v):get pkr: ", self.i)
 	pkr.LogOut()
@@ -180,13 +180,14 @@ func (self *user) Logout() (ret uint64) {
 	return
 }
 
-func (self *user) Package(v int, fee int, u user) {
+func (self *user) Package(v int, fee int, u user) (ret keys.PKr) {
 	fmt.Printf("user(%v) send %v:%v to user(%v)\n", self.i, v, fee, u.i)
 	outs := self.GetOuts()
 	in := tx.In{}
 	in.Root = *outs[0].Pg.Root.ToUint256()
 	out0 := tx.PkgCreate{}
-	out0.PKr = u.addr
+	out0.PKr = u.getAR()
+	ret = out0.PKr
 	out0.Pkg.Asset = assets.Asset{
 		&assets.Token{
 			utils.StringToUint256("SERO"),
@@ -196,12 +197,12 @@ func (self *user) Package(v int, fee int, u user) {
 	}
 
 	out1 := tx.Out{}
-	out1.Addr = self.addr
+	out1.Addr = self.getAR()
 	out1.Asset = outs[0].Out_O.Asset.Clone()
 	out1.Asset.Tkn.Value.SubU(utils.NewU256(uint64(v)).ToRef())
 	out1.Asset.Tkn.Value.SubU(utils.NewU256(uint64(fee)).ToRef())
 
-	out1.Z = tx.TYPE_Z
+	out1.IsZ = true
 
 	t := tx.T{}
 	t.Fee = assets.Token{
@@ -224,6 +225,7 @@ func (self *user) Package(v int, fee int, u user) {
 	g_blocks.st.AddStx(&s)
 	g_blocks.st.Update()
 	EndBlock()
+	return
 }
 
 func (self *user) Send(v int, fee int, u user, z bool) {
@@ -232,7 +234,7 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 	in := tx.In{}
 	in.Root = *outs[0].Pg.Root.ToUint256()
 	out0 := tx.Out{}
-	out0.Addr = u.addr
+	out0.Addr = u.getAR()
 	out0.Asset = assets.Asset{
 		&assets.Token{
 			utils.StringToUint256("SERO"),
@@ -240,23 +242,15 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 		},
 		nil,
 	}
-	if z {
-		out0.Z = tx.TYPE_Z
-	} else {
-		out0.Z = tx.TYPE_O
-	}
+	out0.IsZ = z
 
 	out1 := tx.Out{}
-	out1.Addr = self.addr
+	out1.Addr = self.getAR()
 	out1.Asset = outs[0].Out_O.Asset.Clone()
 	out1.Asset.Tkn.Value.SubU(utils.NewU256(uint64(v)).ToRef())
 	out1.Asset.Tkn.Value.SubU(utils.NewU256(uint64(fee)).ToRef())
 
-	if z {
-		out1.Z = tx.TYPE_Z
-	} else {
-		out1.Z = tx.TYPE_O
-	}
+	out1.IsZ = z
 
 	t := tx.T{}
 	t.Fee = assets.Token{
@@ -287,6 +281,16 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
+func TestTx(t *testing.T) {
+	user_m := newUser(1)
+	user_a := newUser(2)
+	user_m.addOut(100)
+	user_m.Send(50, 10, user_a, true)
+	if user_m.Logout() != 40 {
+		t.Fail()
+	}
+}
+
 func TestTxs(t *testing.T) {
 	user_m := newUser(1)
 	user_a := newUser(2)
@@ -302,8 +306,7 @@ func TestTxs(t *testing.T) {
 		t.Fail()
 	}
 
-	//user_m.Send(50, 10, user_a, true)
-	user_m.Package(50, 10, user_a)
+	pkg_pkr := user_m.Package(50, 10, user_a)
 	if g_blocks.st.Pkgs.GetPkg(&keys.Uint256{}) == nil {
 		t.Fail()
 	}
@@ -315,7 +318,7 @@ func TestTxs(t *testing.T) {
 		t.Fail()
 	}
 
-	g_blocks.st.Pkgs.Close(&keys.Uint256{}, &user_a.addr, &keys.Uint256{})
+	g_blocks.st.Pkgs.Close(&keys.Uint256{}, &pkg_pkr, &keys.Uint256{})
 	g_blocks.st.Update()
 	EndBlock()
 
