@@ -301,10 +301,11 @@ func (a Address) Format(s fmt.State, c rune) {
 // SetBytes sets the Data to the value of b.
 // If b is larger than len(a) it will panic.
 func (a *Address) SetBytes(b []byte) {
-	if len(b) > len(a) {
-		b = b[len(b)-AddressLength:]
-	}
-	copy(a[AddressLength-len(b):], b)
+	copy(a[:], b)
+	//if len(b) > len(a) {
+	//	b = b[len(b)-AddressLength:]
+	//}
+	//copy(a[AddressLength-len(b):], b)
 }
 
 // MarshalText returns the hex representation of a.

@@ -25,9 +25,11 @@ import (
 )
 
 type OutState struct {
-	Index uint64
-	Out_O *stx.Out_O `rlp:"nil"`
-	Out_Z *stx.Out_Z `rlp:"nil"`
+	Index  uint64
+	Out_O  *stx.Out_O    `rlp:"nil"`
+	Out_Z  *stx.Out_Z    `rlp:"nil"`
+	OutCM  *keys.Uint256 `rlp:"nil"`
+	RootCM *keys.Uint256 `rlp:"nil"`
 }
 
 func (self *OutState) Clone() (ret OutState) {
@@ -49,26 +51,32 @@ func (self *OutState) ToIndexRsk() (ret keys.Uint256) {
 }
 func (self *OutState) ToOutCM() *keys.Uint256 {
 	if self.IsO() {
-		asset := self.Out_O.Asset.ToFlatAsset()
-		cm := cpt.GenOutCM(
-			asset.Tkn.Currency.NewRef(),
-			asset.Tkn.Value.ToUint256().NewRef(),
-			asset.Tkt.Category.NewRef(),
-			asset.Tkt.Value.NewRef(),
-			&self.Out_O.Memo,
-			&self.Out_O.Addr,
-			self.ToIndexRsk().NewRef(),
-		)
-		return &cm
+		if self.OutCM == nil {
+			asset := self.Out_O.Asset.ToFlatAsset()
+			cm := cpt.GenOutCM(
+				asset.Tkn.Currency.NewRef(),
+				asset.Tkn.Value.ToUint256().NewRef(),
+				asset.Tkt.Category.NewRef(),
+				asset.Tkt.Value.NewRef(),
+				&self.Out_O.Memo,
+				&self.Out_O.Addr,
+				self.ToIndexRsk().NewRef(),
+			)
+			self.OutCM = &cm
+		}
+		return self.OutCM
 	} else {
 		return self.Out_Z.OutCM.NewRef()
 	}
 }
 
 func (self *OutState) ToRootCM() *keys.Uint256 {
-	out_cm := self.ToOutCM()
-	cm := cpt.GenRootCM(self.Index, out_cm)
-	return &cm
+	if self.RootCM == nil {
+		out_cm := self.ToOutCM()
+		cm := cpt.GenRootCM(self.Index, out_cm)
+		self.RootCM = &cm
+	}
+	return self.RootCM
 }
 
 func (self *OutState) Serial() (ret []byte, e error) {

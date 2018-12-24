@@ -314,9 +314,10 @@ func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, pg *witne
 			}
 		} else {
 			if succ := keys.IsMyPKr(&tk, &os.Out_Z.PKr); succ {
+				key := keys.FetchKey(&tk, &os.Out_Z.RPK)
+
 				info_desc := cpt.InfoDesc{}
-				info_desc.Tk = tk
-				info_desc.RPK = os.Out_Z.RPK
+				info_desc.Key = key
 				info_desc.Einfo = os.Out_Z.EInfo
 
 				cpt.DecOutput(&info_desc)
