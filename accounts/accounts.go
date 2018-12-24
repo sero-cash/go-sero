@@ -18,7 +18,6 @@
 package accounts
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
 	sero "github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
@@ -31,7 +30,7 @@ import (
 // by the optional URL field.
 type Account struct {
 	Address common.Address `json:"address"` // Sero account address derived from the key
-	Tk      keys.Uint512   `json:"tk"`      // Sero account tk derived from the key
+	Tk      common.Address `json:"tk"`      // Sero account tk derived from the key
 	URL     URL            `json:"url"`     // Optional resource locator within a backend
 }
 

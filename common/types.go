@@ -270,6 +270,12 @@ func (a Address) ToPKr() *keys.PKr {
 	return &pubKey
 }
 
+func (a Address) ToUint512() *keys.Uint512 {
+	pubKey := keys.Uint512{}
+	copy(pubKey[:], a[:])
+	return &pubKey
+}
+
 // Big converts an Data to a big integer.
 func (a Address) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
 
