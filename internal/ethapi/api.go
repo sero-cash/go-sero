@@ -204,8 +204,8 @@ func NewPublicAccountAPI(am *accounts.Manager) *PublicAccountAPI {
 }
 
 // Accounts returns the collection of accounts this node manages
-func (s *PublicAccountAPI) Accounts() []common.Address {
-	addresses := make([]common.Address, 0) // return [] instead of nil if empty
+func (s *PublicAccountAPI) Accounts() []common.AccountAddress {
+	addresses := make([]common.AccountAddress, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
 		for _, account := range wallet.Accounts() {
 			addresses = append(addresses, account.Address)
@@ -250,8 +250,8 @@ func NewPrivateAccountAPI(b Backend, nonceLock *AddrLocker) *PrivateAccountAPI {
 }
 
 // ListAccounts will return a list of addresses for accounts this node manages.
-func (s *PrivateAccountAPI) ListAccounts() []common.Address {
-	addresses := make([]common.Address, 0) // return [] instead of nil if empty
+func (s *PrivateAccountAPI) ListAccounts() []common.AccountAddress {
+	addresses := make([]common.AccountAddress, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
 		for _, account := range wallet.Accounts() {
 			addresses = append(addresses, account.Address)
@@ -322,10 +322,10 @@ func (s *PrivateAccountAPI) DeriveAccount(url string, path string, pin *bool) (a
 }
 
 // NewAccount will create a new account and returns the address for the new account.
-func (s *PrivateAccountAPI) NewAccount(password string) (common.Address, error) {
+func (s *PrivateAccountAPI) NewAccount(password string) (common.AccountAddress, error) {
 	acc, err := fetchKeystore(s.am).NewAccount(password)
 	if err != nil {
-		return common.Address{}, err
+		return common.AccountAddress{}, err
 	}
 
 	if zconfig.Is_Dev() {
@@ -341,10 +341,10 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (common.Address, error) {
+func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (common.AccountAddress, error) {
 	key, err := crypto.HexToECDSA(privkey)
 	if err != nil {
-		return common.Address{}, err
+		return common.AccountAddress{}, err
 	}
 	acc, err := fetchKeystore(s.am).ImportECDSA(key, password)
 	return acc.Address, err
@@ -353,7 +353,7 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (commo
 // UnlockAccount will unlock the account associated with the given address with
 // the given password for duration seconds. If duration is nil it will use a
 // default of 300 seconds. It returns an indication if the account was unlocked.
-func (s *PrivateAccountAPI) UnlockAccount(addr common.Address, password string, duration *uint64) (bool, error) {
+func (s *PrivateAccountAPI) UnlockAccount(addr common.AccountAddress, password string, duration *uint64) (bool, error) {
 	const max = uint64(time.Duration(math.MaxInt64) / time.Second)
 	var d time.Duration
 	if duration == nil {
@@ -371,7 +371,7 @@ func (s *PrivateAccountAPI) UnlockAccount(addr common.Address, password string, 
 }
 
 // LockAccount will lock the account associated with the given address when it's unlocked.
-func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
+func (s *PrivateAccountAPI) LockAccount(addr common.AccountAddress) bool {
 	return fetchKeystore(s.am).Lock(addr) == nil
 }
 
@@ -478,11 +478,11 @@ func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy 
 }
 
 type ConvertAddress struct {
-	Addr map[common.Address]common.Address `json:"addr"`
-	Rand *keys.Uint128                     `json:"rand"`
+	Addr map[common.AccountAddress]common.Address `json:"addr"`
+	Rand *keys.Uint128                            `json:"rand"`
 }
 
-func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *keys.Uint128, addresses []common.Address, dy bool) (*ConvertAddress, error) {
+func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *keys.Uint128, addresses []common.AccountAddress, dy bool) (*ConvertAddress, error) {
 	empty := &keys.Uint128{}
 	if bytes.Equal(rand[:], empty[:]) {
 		randKey := keys.RandUint128()
@@ -493,7 +493,7 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *ke
 		return nil, err
 	}
 
-	addrMap := map[common.Address]common.Address{}
+	addrMap := map[common.AccountAddress]common.Address{}
 
 	randSeed := rand.ToUint256()
 
@@ -502,8 +502,8 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *ke
 		randSeed = (&randUint128).ToUint256()
 	}
 	for _, addr := range addresses {
-		if state.IsContract(addr) {
-			addrMap[addr] = addr
+		if state.IsContract(common.BytesToAddress(addr[:])) {
+			addrMap[addr] = common.BytesToAddress(addr[:])
 		} else {
 			pkr := keys.Addr2PKr(addr.ToUint512(), randSeed.NewRef())
 			onceAddr := common.Address{}
@@ -529,7 +529,7 @@ func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses
 		if len(wallets) > 0 {
 			for _, wallet := range wallets {
 				if wallet.IsMine(full) {
-					full = wallet.Accounts()[0].Address
+					full = common.BytesToAddress(wallet.Accounts()[0].Address[:])
 					break
 				}
 			}
@@ -548,7 +548,7 @@ type Balance struct {
 // GetBalance returns the amount of wei for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
-func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (Balance, error) {
+func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.AccountAddress, blockNr rpc.BlockNumber) (Balance, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 
 	if state == nil || err != nil {
@@ -564,8 +564,8 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 	//copy(t[:], keys.RandUint256().NewRef()[:])
 	//tkt["tktTest"] = append(tkt["tktTest"], &t)
 	//tkt["tktTest"] = append(tkt["tktTest"], &t)
-	if size := state.GetCodeSize(address); size > 0 {
-		balances := state.Balances(address)
+	if size := state.GetCodeSize(common.BytesToAddress(address[:])); size > 0 {
+		balances := state.Balances(common.BytesToAddress(address[:]))
 		for key, value := range balances {
 			tkn[key] = (*hexutil.Big)(value)
 		}
@@ -613,18 +613,18 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 
 }
 
-func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, address common.Address, packed bool) ([]*lstate.Pkg, error) {
+func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, accountAdress common.AccountAddress, packed bool) ([]*lstate.Pkg, error) {
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
 		return nil, err
 	}
-	if state.IsContract(address) {
+	if state.IsContract(common.BytesToAddress(accountAdress[:])) {
 		return nil, errors.New("does not support contract address!")
 	}
 
 	// Look up the wallet containing the requested abi
-	account := accounts.Account{Address: address}
+	account := accounts.Account{Address: accountAdress}
 
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
@@ -715,17 +715,17 @@ func (s *Smbol) IsNotSero() bool {
 
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
-	From        common.Address  `json:"from"`
-	To          *common.Address `json:"to"`
-	GasCurrency Smbol           `json:"gasCy"` //default SERO
-	Gas         hexutil.Uint64  `json:"gas"`
-	GasPrice    hexutil.Big     `json:"gasPrice"`
-	Value       hexutil.Big     `json:"value"`
-	Data        hexutil.Bytes   `json:"data"`
-	Currency    Smbol           `json:"cy"`
-	Dynamic     bool            `json:"dy"` //contract address parameters are dynamically generated.
-	Category    Smbol           `json:"catg"`
-	Tkt         *common.Hash    `json:"tkt"`
+	From        common.AccountAddress  `json:"from"`
+	To          *common.AccountAddress `json:"to"`
+	GasCurrency Smbol                  `json:"gasCy"` //default SERO
+	Gas         hexutil.Uint64         `json:"gas"`
+	GasPrice    hexutil.Big            `json:"gasPrice"`
+	Value       hexutil.Big            `json:"value"`
+	Data        hexutil.Bytes          `json:"data"`
+	Currency    Smbol                  `json:"cy"`
+	Dynamic     bool                   `json:"dy"` //contract address parameters are dynamically generated.
+	Category    Smbol                  `json:"catg"`
+	Tkt         *common.Hash           `json:"tkt"`
 }
 
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, bool, error) {
@@ -737,7 +737,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 	// Set sender address or use a default if none specified
 	addr := args.From
-	if addr == (common.Address{}) {
+	if addr == (common.AccountAddress{}) {
 		if wallets := s.b.AccountManager().Wallets(); len(wallets) > 0 {
 			if accounts := wallets[0].Accounts(); len(accounts) > 0 {
 				addr = accounts[0].Address
@@ -783,17 +783,28 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		Tkt: ticket,
 	}
 	rand := keys.RandUint128()
-	if !args.Dynamic {
+	var to *common.Address
+	if args.To != nil && state.IsContract(common.BytesToAddress(args.To[:])) && !args.Dynamic {
 		copy(rand[:], args.To[:16])
+	}
+	if args.To != nil {
+		var toAddress common.Address
+		if state.IsContract(common.BytesToAddress(args.To[:])) {
+			toAddress = common.BytesToAddress(args.To[:])
+		} else {
+			toPkr := keys.Addr2PKr(args.To.ToUint512(), rand.ToUint256().NewRef())
+			toAddress = common.BytesToAddress(toPkr[:])
+		}
+		to = &toAddress
 	}
 
 	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
-	if args.To != nil && state.IsContract(*args.To) && args.GasCurrency.IsNotSero() {
-		m, d := state.GetTokenRate(*args.To, string(args.GasCurrency))
+	if args.To != nil && state.IsContract(common.BytesToAddress(args.To[:])) && args.GasCurrency.IsNotSero() {
+		m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
 		if m.Sign() == 0 || d.Sign() == 0 {
 			return nil, 0, false, errors.New("gasCurrency must be SERO or nil")
 		}
-		state.AddBalance(*args.To, "SERO", fee)
+		state.AddBalance(common.BytesToAddress(args.To[:]), "SERO", fee)
 		fee = new(big.Int).Div(fee.Mul(fee, m), d)
 	}
 	feeToken := assets.Token{
@@ -801,8 +812,8 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		utils.U256(*fee),
 	}
 	pkr := keys.Addr2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
-	addr.SetBytes(pkr[:])
-	msg := types.NewMessage(addr, args.To, 0, asset, feeToken, gasPrice, args.Data)
+
+	msg := types.NewMessage(common.BytesToAddress(pkr[:]), to, 0, asset, feeToken, gasPrice, args.Data)
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.
@@ -1025,7 +1036,7 @@ func toPubAddress(onceAddress common.Address, wallets []accounts.Wallet) common.
 	}
 	for _, wallet := range wallets {
 		if wallet.IsMine(onceAddress) {
-			return wallet.Accounts()[0].Address
+			return common.BytesToAddress(wallet.Accounts()[0].Address[:])
 		}
 	}
 	return onceAddress
@@ -1267,17 +1278,17 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	From        common.Address  `json:"from"`
-	To          *common.Address `json:"to"`
-	Gas         *hexutil.Uint64 `json:"gas"`
-	GasCurrency Smbol           `json:"gasCy"` //default SERO
-	GasPrice    *hexutil.Big    `json:"gasPrice"`
-	Value       *hexutil.Big    `json:"value"`
-	Data        *hexutil.Bytes  `json:"data"`
-	Currency    Smbol           `json:"cy"`
-	Dynamic     bool            `json:"dy"` //contract address parameters are dynamically generated.
-	Category    Smbol           `json:"catg"`
-	Tkt         *common.Hash    `json:"tkt"`
+	From        common.AccountAddress  `json:"from"`
+	To          *common.AccountAddress `json:"to"`
+	Gas         *hexutil.Uint64        `json:"gas"`
+	GasCurrency Smbol                  `json:"gasCy"` //default SERO
+	GasPrice    *hexutil.Big           `json:"gasPrice"`
+	Value       *hexutil.Big           `json:"value"`
+	Data        *hexutil.Bytes         `json:"data"`
+	Currency    Smbol                  `json:"cy"`
+	Dynamic     bool                   `json:"dy"` //contract address parameters are dynamically generated.
+	Category    Smbol                  `json:"catg"`
+	Tkt         *common.Hash           `json:"tkt"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
@@ -1295,13 +1306,13 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	if err != nil {
 		return err
 	}
-	if args.To == nil || !state.IsContract(*args.To) {
+	if args.To == nil || !state.IsContract(common.BytesToAddress(args.To[:])) {
 		if args.GasCurrency.IsNotEmpty() && args.GasCurrency.IsNotSero() {
 			return errors.New(`GasCurrency must be null or SERO`)
 		}
 	} else {
 		if args.GasCurrency.IsNotSero() {
-			m, d := state.GetTokenRate(*args.To, string(args.GasCurrency))
+			m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
 			if m.Sign() == 0 || d.Sign() == 0 {
 				return errors.New("the smart contract dose not support alternative payment!")
 			}
@@ -1360,14 +1371,14 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	if to == nil {
 		copy(fromRand[:16], (*args.Data)[:16])
 		isZ = false
-	} else if state.IsContract(*to) {
+	} else if state.IsContract(common.BytesToAddress(args.To[:])) {
 		isZ = false
 		Pkr = *to.ToPKr()
 		if !args.Dynamic {
 			copy(fromRand[:16], args.To[:16])
 		}
 		if args.GasCurrency.IsNotSero() {
-			m, d := state.GetTokenRate(*args.To, string(args.GasCurrency))
+			m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
 			feevalue = new(big.Int).Div(feevalue.Mul(feevalue, m), d)
 		}
 	} else {
@@ -1391,7 +1402,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 
 func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
 	var Pkr keys.PKr
-	if state.IsContract(*args.To) {
+	if state.IsContract(common.BytesToAddress(args.To[:])) {
 		Pkr = *(args.To.ToPKr())
 	} else {
 		Pkr = keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())
@@ -1528,11 +1539,11 @@ func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArg
 }
 
 type ClosePkgArgs struct {
-	From     *common.Address `json:"from"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	PkgId    *keys.Uint256   `json:"id"`
-	Key      *keys.Uint256   `json:"key"`
+	From     *common.AccountAddress `json:"from"`
+	Gas      *hexutil.Uint64        `json:"gas"`
+	GasPrice *hexutil.Big           `json:"gasPrice"`
+	PkgId    *keys.Uint256          `json:"id"`
+	Key      *keys.Uint256          `json:"key"`
 }
 
 func (args *ClosePkgArgs) setDefaults(ctx context.Context, b Backend) error {
@@ -1627,11 +1638,11 @@ func (s *PublicTransactionPoolAPI) ClosePkg(ctx context.Context, args ClosePkgAr
 }
 
 type TransferPkgArgs struct {
-	From     *common.Address `json:"from"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	PkgId    *keys.Uint256   `json:"id"`
-	To       *common.Address `json:"To"`
+	From     *common.AccountAddress `json:"from"`
+	Gas      *hexutil.Uint64        `json:"gas"`
+	GasPrice *hexutil.Big           `json:"gasPrice"`
+	PkgId    *keys.Uint256          `json:"id"`
+	To       *common.AccountAddress `json:"To"`
 }
 
 func (args *TransferPkgArgs) setDefaults(ctx context.Context, b Backend) error {
@@ -1667,7 +1678,7 @@ func (args *TransferPkgArgs) toTransaction(state *state.StateDB) (*types.Transac
 	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	ehash := tx.Ehash()
 	var Pkr keys.PKr
-	if state.IsContract(*args.To) {
+	if state.IsContract(common.BytesToAddress(args.To[:])) {
 		Pkr = *(args.To.ToPKr())
 	} else {
 		Pkr = keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())

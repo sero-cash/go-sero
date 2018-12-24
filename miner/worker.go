@@ -108,7 +108,7 @@ type worker struct {
 	proc    core.Validator
 	chainDb serodb.Database
 
-	coinbase common.Address
+	coinbase common.AccountAddress
 	extra    []byte
 
 	currentMu sync.Mutex
@@ -125,7 +125,7 @@ type worker struct {
 	atWork int32
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, sero Backend, mux *event.TypeMux) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.AccountAddress, sero Backend, mux *event.TypeMux) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
@@ -155,7 +155,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	return worker
 }
 
-func (self *worker) setSerobase(addr common.Address) {
+func (self *worker) setSerobase(addr common.AccountAddress) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.coinbase = addr
@@ -261,11 +261,6 @@ func (self *worker) update() {
 				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
 				self.updateSnapshot()
 				self.currentMu.Unlock()
-			} else {
-				// If we're mining, but nothing is being processed, wake on new transactions
-				if self.config.Clique != nil && self.config.Clique.Period == 0 {
-					self.commitNewWork()
-				}
 			}
 
 			// System stopped

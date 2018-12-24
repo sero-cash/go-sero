@@ -21,17 +21,17 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-czero-import/keys"
 	"math/big"
 	"runtime"
 	"sync"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-czero-import/keys"
+
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus"
-	"github.com/sero-cash/go-sero/consensus/clique"
 	"github.com/sero-cash/go-sero/consensus/ethash"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/bloombits"
@@ -88,7 +88,7 @@ type Sero struct {
 
 	miner    *miner.Miner
 	gasPrice *big.Int
-	serobase common.Address
+	serobase common.AccountAddress
 
 	networkID     uint64
 	netRPCService *ethapi.PublicNetAPI
@@ -212,11 +212,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (serodb.Dat
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Sero service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chainConfig *params.ChainConfig, db serodb.Database) consensus.Engine {
-	// If proof-of-authority is requested, set it up
-	if chainConfig.Clique != nil {
-		return clique.New(chainConfig.Clique, db)
-	}
+func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chainConfig *params.ChainConfig, db serodb.Database) consensus.Engine { // If proof-of-authority is requested, set it up
 	// Otherwise assume proof-of-work
 	switch config.PowMode {
 	case ethash.ModeFake:
@@ -303,12 +299,12 @@ func (s *Sero) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *Sero) Serobase() (eb common.Address, err error) {
+func (s *Sero) Serobase() (eb common.AccountAddress, err error) {
 	s.lock.RLock()
 	serobase := s.serobase
 	s.lock.RUnlock()
 
-	if serobase != (common.Address{}) {
+	if serobase != (common.AccountAddress{}) {
 		return serobase, nil
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
@@ -323,11 +319,11 @@ func (s *Sero) Serobase() (eb common.Address, err error) {
 			return serobase, nil
 		}
 	}
-	return common.Address{}, fmt.Errorf("Serobase must be explicitly specified")
+	return common.AccountAddress{}, fmt.Errorf("Serobase must be explicitly specified")
 }
 
 // SetSerobase sets the mining reward address.
-func (s *Sero) SetSerobase(serobase common.Address) {
+func (s *Sero) SetSerobase(serobase common.AccountAddress) {
 	s.lock.Lock()
 	s.serobase = serobase
 	s.lock.Unlock()
@@ -342,13 +338,13 @@ func (s *Sero) StartMining(local bool) error {
 		return fmt.Errorf("serobase missing: %v", err)
 	}
 	pkr, lic, ret := keys.Addr2PKrAndLICr(eb.ToUint512())
-	ret=keys.CheckLICr(&pkr,&lic)
+	ret = keys.CheckLICr(&pkr, &lic)
 	if !ret {
-		lic_t:=keys.LICr{}
-		if bytes.Equal(lic[:32],lic_t[:32]) {
+		lic_t := keys.LICr{}
+		if bytes.Equal(lic[:32], lic_t[:32]) {
 			log.Error("Cannot start mining , miner license does not exists ", "", "")
 			return fmt.Errorf(" miner license does not exists")
-		}else {
+		} else {
 			log.Error("Cannot start mining ,invalid miner license", "", "")
 			return fmt.Errorf("invalid miner license: %v", common.Bytes2Hex(lic[:]))
 		}

@@ -353,15 +353,6 @@ func (self Addresses) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
 }
 
-type Seed [AddressLength]byte
-
-func (priv *Seed) SeedToUint256() *keys.Uint256 {
-	seed := keys.Uint256{}
-	copy(seed[:], priv[:])
-	return &seed
-
-}
-
 // UnprefixedAddress allows marshaling an Data without 0x prefix.
 type UnprefixedAddress Address
 

@@ -26,12 +26,12 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/tx"
 )
 
-// Account represents an Sero account located at a specific location defined
+// AccountAddress represents an Sero account located at a specific location defined
 // by the optional URL field.
 type Account struct {
-	Address common.Address `json:"address"` // Sero account address derived from the key
-	Tk      common.Address `json:"tk"`      // Sero account tk derived from the key
-	URL     URL            `json:"url"`     // Optional resource locator within a backend
+	Address common.AccountAddress `json:"address"` // Sero account address derived from the key
+	Tk      common.AccountAddress `json:"tk"`      // Sero account tk derived from the key
+	URL     URL                   `json:"url"`     // Optional resource locator within a backend
 }
 
 // Wallet represents a software or hardware wallet that might contain one or more

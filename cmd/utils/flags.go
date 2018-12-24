@@ -37,7 +37,7 @@ import (
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/fdlimit"
 	"github.com/sero-cash/go-sero/consensus"
-	"github.com/sero-cash/go-sero/consensus/clique"
+
 	"github.com/sero-cash/go-sero/consensus/ethash"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/state"
@@ -312,7 +312,7 @@ var (
 		Name:  "extradata",
 		Usage: "Block extra data set by the miner (default = client version)",
 	}
-	// Account settings
+	// AccountAddress settings
 	UnlockedAccountFlag = cli.StringFlag{
 		Name:  "unlock",
 		Usage: "Comma separated list of accounts to unlock",
@@ -743,7 +743,7 @@ func makeDatabaseHandles() int {
 func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
 	// If the specified account is a valid address, return it
 	if common.IsBase58Address(account) {
-		return accounts.Account{Address: common.Base58ToAddress(account)}, nil
+		return accounts.Account{Address: common.Base58ToAccount(account)}, nil
 	}
 	// Otherwise try to interpret the account as a keystore index
 	index, err := strconv.Atoi(account)
@@ -1135,20 +1135,17 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		Fatalf("%v", err)
 	}
 	var engine consensus.Engine
-	if config.Clique != nil {
-		engine = clique.New(config.Clique, chainDb)
-	} else {
-		engine = ethash.NewFaker()
-		if !ctx.GlobalBool(FakePoWFlag.Name) {
-			engine = ethash.New(ethash.Config{
-				CacheDir:       stack.ResolvePath(sero.DefaultConfig.Ethash.CacheDir),
-				CachesInMem:    sero.DefaultConfig.Ethash.CachesInMem,
-				CachesOnDisk:   sero.DefaultConfig.Ethash.CachesOnDisk,
-				DatasetDir:     stack.ResolvePath(sero.DefaultConfig.Ethash.DatasetDir),
-				DatasetsInMem:  sero.DefaultConfig.Ethash.DatasetsInMem,
-				DatasetsOnDisk: sero.DefaultConfig.Ethash.DatasetsOnDisk,
-			})
-		}
+
+	engine = ethash.NewFaker()
+	if !ctx.GlobalBool(FakePoWFlag.Name) {
+		engine = ethash.New(ethash.Config{
+			CacheDir:       stack.ResolvePath(sero.DefaultConfig.Ethash.CacheDir),
+			CachesInMem:    sero.DefaultConfig.Ethash.CachesInMem,
+			CachesOnDisk:   sero.DefaultConfig.Ethash.CachesOnDisk,
+			DatasetDir:     stack.ResolvePath(sero.DefaultConfig.Ethash.DatasetDir),
+			DatasetsInMem:  sero.DefaultConfig.Ethash.DatasetsInMem,
+			DatasetsOnDisk: sero.DefaultConfig.Ethash.DatasetsOnDisk,
+		})
 	}
 	//if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 	//	Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
