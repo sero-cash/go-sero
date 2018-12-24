@@ -189,7 +189,10 @@ type ContractAddress [20]byte
 
 func (a Address) ToCaddr() ContractAddress {
 	var addr ContractAddress
-	addr.SetBytes(LeftPadBytes(a[len(a)-20:], 32))
+	pkr := new(keys.PKr)
+	copy(pkr[:], a[:])
+	hash := keys.HashPKr(pkr)
+	addr.SetBytes(hash[:])
 	return addr
 }
 

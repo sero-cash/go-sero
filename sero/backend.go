@@ -349,14 +349,7 @@ func (s *Sero) StartMining(local bool) error {
 			return fmt.Errorf("invalid miner license: %v", common.Bytes2Hex(lic[:]))
 		}
 	}
-	if _, ok := s.engine.(*clique.Clique); ok {
-		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
-		if wallet == nil || err != nil {
-			log.Error("Serobase account unavailable locally", "err", err)
-			return fmt.Errorf("abi missing: %v", err)
-		}
-		//clique.Authorize(eb, wallet.SignHash)
-	}
+
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection
 		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous

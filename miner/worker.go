@@ -258,7 +258,16 @@ func (self *worker) update() {
 			if atomic.LoadInt32(&self.mining) == 0 {
 				self.currentMu.Lock()
 				txset := types.NewTransactionsByPrice(ev.Txs)
-				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
+				addr := common.Address{}
+				//pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
+				pkr, _, ret := keys.Addr2PKrAndLICr(self.coinbase.ToUint512())
+				if !ret {
+					log.Error("Failed to Addr2PKrAndLICr")
+					return
+				}
+				addr.SetBytes(pkr[:])
+
+				self.current.commitTransactions(self.mux, txset, self.chain, addr)
 				self.updateSnapshot()
 				self.currentMu.Unlock()
 			}

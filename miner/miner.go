@@ -62,7 +62,7 @@ func New(sero Backend, config *params.ChainConfig, mux *event.TypeMux, engine co
 		sero:     sero,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, common.Address{}, sero, mux),
+		worker:   newWorker(config, engine, common.AccountAddress{}, sero, mux),
 		canStart: 1,
 	}
 	miner.Register(NewCpuAgent(sero.BlockChain(), engine))

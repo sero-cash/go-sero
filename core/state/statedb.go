@@ -339,7 +339,7 @@ func (self *StateDB) getAddressByState(key0, key1, key2 common.Hash) common.Addr
 			return common.Address{}
 		}
 
-		h2 := stateObject.GetState(self.db, key1)
+		h2 := stateObject.GetState(self.db, key2)
 		if h2 == (common.Hash{}) {
 			return common.Address{}
 		}
