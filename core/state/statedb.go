@@ -223,12 +223,14 @@ func (self *StateDB) usedGasKey(number uint64) common.Hash {
 func (self *StateDB) registerAddressByState(name string, contractAddr common.Address, key string) bool {
 	key0, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{0}})
 	key1, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{1}})
+	key2, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{2}})
 
 	hashKey0 := crypto.Keccak256Hash(key0)
 	hashKey1 := crypto.Keccak256Hash(key1)
-	address := self.getAddressByState(hashKey0, hashKey1)
+	hashKey2 := crypto.Keccak256Hash(key2)
+	address := self.getAddressByState(hashKey0, hashKey1, hashKey2)
 	if address == (common.Address{}) {
-		self.setAddressByState(hashKey0, hashKey1, contractAddr)
+		self.setAddressByState(hashKey0, hashKey1, hashKey2, contractAddr)
 		return true
 	} else {
 		return address == contractAddr
@@ -317,24 +319,32 @@ func (self *StateDB) GetContrctAddressByToken(coinName string) common.Address {
 func (self *StateDB) getContrctAddress(name string, key string) common.Address {
 	key0, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{0}})
 	key1, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{1}})
+	key2, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{2}})
 
 	hashKey0 := crypto.Keccak256Hash(key0)
 	hashKey1 := crypto.Keccak256Hash(key1)
-	return self.getAddressByState(hashKey0, hashKey1)
+	hashKey2 := crypto.Keccak256Hash(key2)
+	return self.getAddressByState(hashKey0, hashKey1, hashKey2)
 }
 
-func (self *StateDB) getAddressByState(key0, key1 common.Hash) common.Address {
+func (self *StateDB) getAddressByState(key0, key1, key2 common.Hash) common.Address {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
-		h := stateObject.GetState(self.db, key0)
-		if h == (common.Hash{}) {
+		h0 := stateObject.GetState(self.db, key0)
+		if h0 == (common.Hash{}) {
 			return common.Address{}
 		}
-		l := stateObject.GetState(self.db, key1)
-		if l == (common.Hash{}) {
+		h1 := stateObject.GetState(self.db, key1)
+		if h1 == (common.Hash{}) {
 			return common.Address{}
 		}
-		return common.BytesToAddress(append(h[:], l[:]...))
+
+		h2 := stateObject.GetState(self.db, key1)
+		if h2 == (common.Hash{}) {
+			return common.Address{}
+		}
+
+		return common.BytesToAddress(append(append(h0[:], h1[:]...), h2[:]...))
 	}
 	return common.Address{}
 }
@@ -342,20 +352,23 @@ func (self *StateDB) getAddressByState(key0, key1 common.Hash) common.Address {
 func (self *StateDB) AddNonceAddress(key []byte, nonceAddr common.Address) {
 	key0 := crypto.Keccak256Hash(append([]byte("nonceAddr0"), key[:]...))
 	key1 := crypto.Keccak256Hash(append([]byte("nonceAddr1"), key[:]...))
-	self.setAddressByState(key0, key1, nonceAddr)
+	key2 := crypto.Keccak256Hash(append([]byte("nonceAddr2"), key[:]...))
+	self.setAddressByState(key0, key1, key2, nonceAddr)
 }
 
 func (self *StateDB) GetNonceAddress(key []byte) common.Address {
 	key0 := crypto.Keccak256Hash(append([]byte("nonceAddr0"), key[:]...))
 	key1 := crypto.Keccak256Hash(append([]byte("nonceAddr1"), key[:]...))
-	return self.getAddressByState(key0, key1)
+	key2 := crypto.Keccak256Hash(append([]byte("nonceAddr2"), key[:]...))
+	return self.getAddressByState(key0, key1, key2)
 }
 
-func (self *StateDB) setAddressByState(key0, key1 common.Hash, address common.Address) {
+func (self *StateDB) setAddressByState(key0, key1, key2 common.Hash, address common.Address) {
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
-		stateObject.SetState(self.db, key0, common.BytesToHash(address.Bytes()[:32]))
-		stateObject.SetState(self.db, key1, common.BytesToHash(address.Bytes()[32:]))
+		stateObject.SetState(self.db, key0, common.BytesToHash(address.Bytes()[0:32]))
+		stateObject.SetState(self.db, key1, common.BytesToHash(address.Bytes()[32:64]))
+		stateObject.SetState(self.db, key2, common.BytesToHash(address.Bytes()[64:96]))
 	}
 }
 
