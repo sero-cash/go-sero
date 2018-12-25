@@ -406,7 +406,7 @@ func (state *State) addPkg(tks []keys.Uint512, id *keys.Uint256, pg *pkgstate.ZP
 				if pkg_o, err := pkg.DePkg(&key, &pg.Pack.Pkg); err == nil {
 					p.Pkg.O = pkg_o
 					p.Key = key
-					fmt.Printf("PACKAGE KEY IS: %v:%v", hexutil.Encode(p.Pkg.Z.Pack.Id[:]), hexutil.Encode(key[:]))
+					fmt.Printf("PACKAGE KEY IS: %v:%v\n", hexutil.Encode(p.Pkg.Z.Pack.Id[:]), hexutil.Encode(key[:]))
 					inserted = true
 				}
 			}
@@ -470,7 +470,7 @@ func (state *State) UpdateWitness(tks []keys.Uint512) {
 		}
 		t.Leave()
 	}
-	for id := range state.State.Pkgs.G2pkgs_dirty {
+	for _, id := range state.State.Pkgs.Block.Pkgs {
 		pg := state.State.Pkgs.GetPkg(&id)
 		state.addPkg(tks, &id, pg)
 	}

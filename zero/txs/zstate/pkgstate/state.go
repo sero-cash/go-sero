@@ -53,11 +53,49 @@ func (self *PkgGet) Unserial(v []byte) (e error) {
 	}
 }
 
+type Block struct {
+	Pkgs []keys.Uint256
+}
+
+func pkgBlockName(num uint64) (ret []byte) {
+	ret = []byte(fmt.Sprintf("PKGSTATE_BLOCK_NAME_%d", num))
+	return
+}
+
+func (self *Block) Serial() (ret []byte, e error) {
+	return rlp.EncodeToBytes(self)
+}
+
+type BlockGet struct {
+	out *Block
+}
+
+func (self *BlockGet) Out() *Block {
+	return self.out
+}
+
+func (self *BlockGet) Unserial(v []byte) (e error) {
+	if len(v) < 2 {
+		self.out = nil
+		return
+	} else {
+		self.out = &Block{}
+		if err := rlp.DecodeBytes(v, &self.out); err != nil {
+			e = err
+			self.out = nil
+			return
+		} else {
+			return
+		}
+	}
+}
+
 type PkgState struct {
 	tri          tri.Tri
 	rw           *sync.RWMutex
 	num          uint64
 	G2pkgs       map[keys.Uint256]*ZPkg
+	Block        Block
 	G2pkgs_dirty map[keys.Uint256]bool
 }
 
@@ -65,7 +103,20 @@ func NewPkgState(tri tri.Tri, num uint64) (state PkgState) {
 	state = PkgState{tri: tri, num: num}
 	state.rw = new(sync.RWMutex)
 	state.clear()
+	state.load()
 	return
+}
+
+func (self *PkgState) load() {
+	get := BlockGet{}
+	tri.GetObj(
+		self.tri,
+		pkgBlockName(self.num),
+		&get,
+	)
+	if get.out != nil {
+		self.Block = *get.out
+	}
 }
 
 func (self *PkgState) Update() {
@@ -79,6 +130,9 @@ func (self *PkgState) Update() {
 		v := self.G2pkgs[k]
 		tri.UpdateObj(self.tri, pkgName(&k), v)
 	}
+	if len(self.Block.Pkgs) > 0 {
+		tri.UpdateObj(self.tri, pkgBlockName(self.num), &self.Block)
+	}
 	return
 }
 
@@ -89,17 +143,20 @@ func (self *PkgState) Revert() {
 
 func (state *PkgState) clear() {
 	state.G2pkgs = make(map[keys.Uint256]*ZPkg)
+	state.Block.Pkgs = []keys.Uint256{}
 	state.G2pkgs_dirty = make(map[keys.Uint256]bool)
 }
 
 func (state *PkgState) add_pkg_dirty(pkg *ZPkg) {
 	state.G2pkgs[pkg.Pack.Id] = pkg
 	state.G2pkgs_dirty[pkg.Pack.Id] = true
+	state.Block.Pkgs = append(state.Block.Pkgs, pkg.Pack.Id)
 }
 
 func (state *PkgState) del_pkg_dirty(id *keys.Uint256) {
 	state.G2pkgs[*id] = nil
 	state.G2pkgs_dirty[*id] = true
+	state.Block.Pkgs = append(state.Block.Pkgs, *id)
 }
 
 func pkgName(k *keys.Uint256) (ret []byte) {
