@@ -117,11 +117,13 @@ func (self *State) toData() {
 	for _, pkg := range self.G2pkgs_from {
 		pkgs_from = append(pkgs_from, pkg)
 	}
+	self.data.Pkgs_from = pkgs_from
 
 	pkgs_to := []*Pkg{}
 	for _, pkg := range self.G2pkgs_to {
 		pkgs_to = append(pkgs_to, pkg)
 	}
+	self.data.Pkgs_to = pkgs_to
 
 	self.data.Outs = outs
 }
