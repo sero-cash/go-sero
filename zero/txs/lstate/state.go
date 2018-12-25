@@ -393,6 +393,8 @@ func (state *State) addPkg(tks []keys.Uint512, id *keys.Uint256, pg *pkgstate.ZP
 	}
 
 	if pg != nil {
+		insert_from := false
+		insert_to := false
 		for _, tk := range tks {
 			p := &Pkg{
 				pkgstate.OPkg{
@@ -401,22 +403,25 @@ func (state *State) addPkg(tks []keys.Uint512, id *keys.Uint256, pg *pkgstate.ZP
 				},
 				keys.Empty_Uint256,
 			}
-			inserted := false
-			if keys.IsMyPKr(&tk, &pg.From) {
-				state.G2pkgs_from[*id] = p
-				key := pkg.GetKey(&pg.From, &tk)
-				if pkg_o, err := pkg.DePkg(&key, &pg.Pack.Pkg); err == nil {
-					p.Pkg.O = pkg_o
-					p.Key = key
-					fmt.Printf("PACKAGE KEY IS: %v:%v\n", hexutil.Encode(p.Pkg.Z.Pack.Id[:]), hexutil.Encode(key[:]))
-					inserted = true
+			if !insert_from {
+				if keys.IsMyPKr(&tk, &pg.From) {
+					state.G2pkgs_from[*id] = p
+					key := pkg.GetKey(&pg.From, &tk)
+					if pkg_o, err := pkg.DePkg(&key, &pg.Pack.Pkg); err == nil {
+						p.Pkg.O = pkg_o
+						p.Key = key
+						fmt.Printf("PACKAGE KEY IS: %v:%v\n", hexutil.Encode(p.Pkg.Z.Pack.Id[:]), hexutil.Encode(key[:]))
+						insert_from = true
+					}
 				}
 			}
-			if keys.IsMyPKr(&tk, &pg.Pack.PKr) {
-				state.G2pkgs_to[*id] = p
-				inserted = true
+			if !insert_to {
+				if keys.IsMyPKr(&tk, &pg.Pack.PKr) {
+					state.G2pkgs_to[*id] = p
+					insert_to = true
+				}
 			}
-			if inserted {
+			if insert_from && insert_to {
 				break
 			}
 		}
