@@ -145,7 +145,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc, t
 					},
 					desc.Proof_ret,
 				}
-				balance_desc.Oout_accs = append(balance_desc.Oout_accs, desc.Asset_cm_ret[:]...)
+				balance_desc.Zout_acms = append(balance_desc.Zout_acms, desc.Asset_cm_ret[:]...)
 				balance_desc.Zout_ars = append(balance_desc.Zout_ars, desc.Ar_ret[:]...)
 			}
 		} else {

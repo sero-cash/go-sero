@@ -160,8 +160,13 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 			}
 
 			cpt.SignBalance(&balance_desc)
-			s.Bcr = balance_desc.Bcr
-			s.Bsign = balance_desc.Bsign
+			if balance_desc.Bcr == keys.Empty_Uint256 {
+				e = errors.New("sign balance failed!!!")
+				return
+			} else {
+				s.Bcr = balance_desc.Bcr
+				s.Bsign = balance_desc.Bsign
+			}
 		}
 
 		for _, used_out := range preTx.uouts {
@@ -255,7 +260,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 			return
 		} else {
 			if keys.VerifyPKr(&hash_z, &s.Desc_Pkg.Close.Sign, &pg.Pack.PKr) {
-				balance_desc.Oin_accs = append(balance_desc.Oin_accs, pg.Pack.Pkg.AssetCM[:]...)
+				balance_desc.Zin_acms = append(balance_desc.Zin_acms, pg.Pack.Pkg.AssetCM[:]...)
 			} else {
 				e = fmt.Errorf("Can not verify pkg sign of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
 				return
