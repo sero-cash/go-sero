@@ -329,10 +329,10 @@ func loadAddress(evm *EVM, caller ContractRef, input []byte, contract *Contract,
 		if len(input) != 0 && (contractCreation || len(contract.Code) > 0) {
 			n := int(input[0])<<8 + int(input[1])
 			for i := 0; i < n; i++ {
-				addr := common.BytesToAddress(input[i*64+2 : i*64+66])
+				addr := common.BytesToAddress(input[i*96+2 : i*96+98])
 				contract.PutNonceAddress(evm.StateDB, addr)
 			}
-			input = input[n*64+2:]
+			input = input[n*96+2:]
 		}
 	}
 	return input

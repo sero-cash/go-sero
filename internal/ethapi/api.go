@@ -479,8 +479,9 @@ func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy 
 }
 
 type ConvertAddress struct {
-	Addr map[common.AccountAddress]common.Address `json:"addr"`
-	Rand *keys.Uint128                            `json:"rand"`
+	Addr      map[common.AccountAddress]common.Address  `json:"addr"`
+	ShortAddr map[common.Address]common.ContractAddress `json:"shortAddr"`
+	Rand      *keys.Uint128                             `json:"rand"`
 }
 
 func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *keys.Uint128, addresses []common.AccountAddress, dy bool) (*ConvertAddress, error) {
@@ -495,6 +496,7 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *ke
 	}
 
 	addrMap := map[common.AccountAddress]common.Address{}
+	shortAddrMap := map[common.Address]common.ContractAddress{}
 
 	randSeed := rand.ToUint256()
 
@@ -503,16 +505,18 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *ke
 		randSeed = (&randUint128).ToUint256()
 	}
 	for _, addr := range addresses {
+		onceAddr := common.Address{}
 		if state.IsContract(common.BytesToAddress(addr[:])) {
-			addrMap[addr] = common.BytesToAddress(addr[:])
+			onceAddr = common.BytesToAddress(addr[:])
 		} else {
 			pkr := keys.Addr2PKr(addr.ToUint512(), randSeed.NewRef())
-			onceAddr := common.Address{}
 			onceAddr.SetBytes(pkr[:])
-			addrMap[addr] = onceAddr
 		}
+		addrMap[addr] = onceAddr
+		shortAddr := keys.HashPKr(onceAddr.ToPKr())
+		shortAddrMap[onceAddr] = common.BytesToContractAddress(shortAddr[:])
 	}
-	return &ConvertAddress{addrMap, rand}, nil
+	return &ConvertAddress{addrMap, shortAddrMap, rand}, nil
 }
 
 func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses []common.ContractAddress) (map[common.ContractAddress]common.Address, error) {
