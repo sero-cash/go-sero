@@ -20,6 +20,8 @@ import (
 	"errors"
 	"runtime"
 
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -27,6 +29,22 @@ import (
 )
 
 var G_p_thread_num = runtime.NumCPU()
+
+var gen_pkg_procs_pool = utils.NewProcsPool(func() int { return G_p_thread_num })
+
+type gen_pkg_desc struct {
+	desc cpt.PkgDesc
+	e    error
+}
+
+func (self *gen_pkg_desc) Run() bool {
+	if err := cpt.GenPkgProof(&self.desc); err != nil {
+		self.e = err
+		return false
+	} else {
+		return true
+	}
+}
 
 var gen_input_procs_pool = utils.NewProcsPool(func() int { return G_p_thread_num })
 
@@ -60,7 +78,24 @@ func (self *gen_output_desc) Run() bool {
 	}
 }
 
-func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc) (desc_z stx.Desc_Z, e error) {
+func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc, tx *stx.T) (e error) {
+	var gen_pkg_procs = gen_pkg_procs_pool.GetProcs()
+	defer gen_pkg_procs_pool.PutProcs(gen_pkg_procs)
+	if ptx.desc_pkg.pack != nil {
+		asset := ptx.desc_pkg.pack.pkg.Pkg.Asset.ToFlatAsset()
+
+		g := gen_pkg_desc{}
+		g.desc.Tkn_currency = asset.Tkn.Currency
+		g.desc.Tkn_value = asset.Tkn.Value.ToUint256()
+		g.desc.Tkt_category = asset.Tkt.Category
+		g.desc.Tkt_value = asset.Tkt.Value
+		g.desc.Memo = ptx.desc_pkg.pack.pkg.Pkg.Memo
+		g.desc.Key = keys.Uint256{}
+
+		gen_pkg_procs.StartProc(&g)
+
+	}
+
 	var gen_input_procs = gen_input_procs_pool.GetProcs()
 	defer gen_input_procs_pool.PutProcs(gen_input_procs)
 
@@ -80,11 +115,10 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc) (
 	defer gen_output_procs_pool.PutProcs(gen_output_procs)
 
 	for _, out := range ptx.desc_z.outs {
+		asset := out.Asset.ToFlatAsset()
 
 		g := gen_output_desc{}
-
 		g.desc.Seed = *seed
-		asset := out.Asset.ToFlatAsset()
 		g.desc.Tkn_currency = asset.Tkn.Currency
 		g.desc.Tkn_value = asset.Tkn.Value.ToUint256()
 		g.desc.Tkt_category = asset.Tkt.Category
@@ -95,20 +129,33 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc) (
 		gen_output_procs.StartProc(&g)
 	}
 
-	if i_runs := gen_input_procs.Wait(); i_runs != nil {
-		if o_runs := gen_output_procs.Wait(); o_runs != nil {
-			for _, g := range i_runs {
-				desc := g.(*gen_input_desc).desc
-				in_z := stx.In_Z{}
-				in_z.Anchor = desc.Anchor
-				in_z.AssetCM = desc.Asset_cm_ret
-				in_z.Nil = desc.Nil_ret
-				in_z.Trace = desc.Til_ret
-				in_z.Proof = desc.Proof_ret
-				desc_z.Ins = append(desc_z.Ins, in_z)
-				balance_desc.Zin_acms = append(balance_desc.Zin_acms, desc.Asset_cm_ret[:]...)
-				balance_desc.Zin_ars = append(balance_desc.Zin_ars, desc.Ar_ret[:]...)
+	if gen_pkg_procs.HasProc() {
+		if pkg_runs := gen_pkg_procs.Wait(); pkg_runs != nil {
+			for _, g := range pkg_runs {
+				desc := g.(*gen_pkg_desc).desc
+				pack := ptx.desc_pkg.pack
+
+				tx.Desc_Pkg.Create = &stx.PkgCreate{
+					pack.pkg.Id,
+					pack.pkg.PKr,
+					pkg.Pkg_Z{
+						desc.Asset_cm_ret,
+						desc.Pkg_cm_ret,
+						desc.Einfo_ret,
+					},
+					desc.Proof_ret,
+				}
+				balance_desc.Oout_accs = append(balance_desc.Oout_accs, desc.Asset_cm_ret[:]...)
+				balance_desc.Zout_ars = append(balance_desc.Zout_ars, desc.Ar_ret[:]...)
 			}
+		} else {
+			e = errors.New("gen output desc_z failed!!!")
+			return
+		}
+	}
+
+	if gen_output_procs.HasProc() {
+		if o_runs := gen_output_procs.Wait(); o_runs != nil {
 			for _, g := range o_runs {
 				desc := g.(*gen_output_desc).desc
 				out_z := stx.Out_Z{}
@@ -118,7 +165,8 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc) (
 				out_z.EInfo = desc.Einfo_ret
 				out_z.Proof = desc.Proof_ret
 				out_z.PKr = desc.Pkr
-				desc_z.Outs = append(desc_z.Outs, out_z)
+
+				tx.Desc_Z.Outs = append(tx.Desc_Z.Outs, out_z)
 				balance_desc.Zout_acms = append(balance_desc.Zout_acms, desc.Asset_cm_ret[:]...)
 				balance_desc.Zout_ars = append(balance_desc.Zout_ars, desc.Ar_ret[:]...)
 			}
@@ -126,15 +174,50 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc) (
 			e = errors.New("gen output desc_z failed!!!")
 			return
 		}
-	} else {
-		e = errors.New("gen input desc_z failed!!!")
-		return
+	}
+
+	if gen_input_procs.HasProc() {
+		if i_runs := gen_input_procs.Wait(); i_runs != nil {
+			for _, g := range i_runs {
+				desc := g.(*gen_input_desc).desc
+				in_z := stx.In_Z{}
+				in_z.Anchor = desc.Anchor
+				in_z.AssetCM = desc.Asset_cm_ret
+				in_z.Nil = desc.Nil_ret
+				in_z.Trace = desc.Til_ret
+				in_z.Proof = desc.Proof_ret
+
+				tx.Desc_Z.Ins = append(tx.Desc_Z.Ins, in_z)
+				balance_desc.Zin_acms = append(balance_desc.Zin_acms, desc.Asset_cm_ret[:]...)
+				balance_desc.Zin_ars = append(balance_desc.Zin_ars, desc.Ar_ret[:]...)
+			}
+		} else {
+			e = errors.New("gen input desc_z failed!!!")
+			return
+		}
 	}
 
 	return
 }
 
 var G_v_thread_num = runtime.NumCPU()
+
+var verify_pkg_procs_pool = utils.NewProcsPool(func() int { return G_v_thread_num })
+
+type verify_pkg_desc struct {
+	desc cpt.PkgVerifyDesc
+	e    error
+}
+
+func (self *verify_pkg_desc) Run() bool {
+	if err := cpt.VerifyPkg(&self.desc); err != nil {
+		self.e = err
+		return false
+	} else {
+		return true
+	}
+}
+
 var verify_input_procs_pool = utils.NewProcsPool(func() int { return G_v_thread_num })
 
 type verify_input_desc struct {
@@ -168,6 +251,21 @@ func (self *verify_output_desc) Run() bool {
 }
 
 func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc) (e error) {
+	var verify_pkg_procs = verify_input_procs_pool.GetProcs()
+	defer verify_pkg_procs_pool.PutProcs(verify_pkg_procs)
+
+	if tx.Desc_Pkg.Create != nil {
+		create := tx.Desc_Pkg.Create
+		balance_desc.Zout_acms = append(balance_desc.Zout_acms, create.Pkg.AssetCM[:]...)
+
+		g := verify_pkg_desc{}
+		g.desc.AssetCM = create.Pkg.AssetCM
+		g.desc.PkgCM = create.Pkg.PkgCM
+		g.desc.Proof = create.Proof
+
+		verify_pkg_procs.StartProc(&g)
+	}
+
 	var verify_input_procs = verify_input_procs_pool.GetProcs()
 	defer verify_input_procs_pool.PutProcs(verify_input_procs)
 
@@ -197,15 +295,29 @@ func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc) (e error) {
 
 		verify_output_procs.StartProc(&g)
 	}
-	if i_runs := verify_input_procs.Wait(); i_runs != nil {
-		if o_runs := verify_output_procs.Wait(); o_runs != nil {
+
+	if verify_pkg_procs.HasProc() {
+		if p_runs := verify_pkg_procs.Wait(); p_runs != nil {
+		} else {
+			e = errors.New("verify pkg desc_z failed!!!")
 			return
+		}
+	}
+
+	if verify_output_procs.HasProc() {
+		if o_runs := verify_output_procs.Wait(); o_runs != nil {
 		} else {
 			e = errors.New("verify output desc_z failed!!!")
 			return
 		}
-	} else {
-		e = errors.New("verify input desc_z failed!!!")
-		return
 	}
+
+	if verify_input_procs.HasProc() {
+		if i_runs := verify_input_procs.Wait(); i_runs != nil {
+		} else {
+			e = errors.New("verify input desc_z failed!!!")
+			return
+		}
+	}
+	return
 }

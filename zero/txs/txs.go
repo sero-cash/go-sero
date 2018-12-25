@@ -26,8 +26,6 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
 
-	"github.com/sero-cash/go-sero/zero/txs/pkg"
-
 	"github.com/sero-cash/go-czero-import/cpt"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -78,17 +76,8 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 			open := preTx.desc_pkg.open
 			s.Desc_Pkg.Close = &stx.PkgClose{}
 			s.Desc_Pkg.Close.Id = open.opkg.Z.Pack.Id
-			{
-				asset := open.opkg.O.Asset.ToFlatAsset()
-				asset_desc := cpt.AssetDesc{
-					Tkn_currency: asset.Tkn.Currency,
-					Tkn_value:    asset.Tkn.Value.ToUint256(),
-					Tkt_category: asset.Tkt.Category,
-					Tkt_value:    asset.Tkt.Value,
-				}
-				cpt.GenAssetCC(&asset_desc)
-				balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
-			}
+			balance_desc.Zin_acms = append(balance_desc.Zin_acms, open.opkg.Z.Pack.Pkg.AssetCM[:]...)
+			balance_desc.Zin_ars = append(balance_desc.Zin_ars, open.opkg.O.Ar[:]...)
 		}
 
 		for _, out_o := range preTx.desc_o.outs {
@@ -110,26 +99,6 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 			s.Desc_O.Outs = append(s.Desc_O.Outs, s_out_o)
 		}
 
-		if preTx.desc_pkg.pack != nil {
-			pack := preTx.desc_pkg.pack
-			s.Desc_Pkg.Create = &stx.PkgCreate{
-				pack.pkg.Id,
-				pack.pkg.PKr,
-				pkg.EnPkg(&pack.pkg.Key, &pack.pkg.Pkg),
-			}
-			{
-				asset := preTx.desc_pkg.pack.pkg.Pkg.Asset.ToFlatAsset()
-				asset_desc := cpt.AssetDesc{
-					Tkn_currency: asset.Tkn.Currency,
-					Tkn_value:    asset.Tkn.Value.ToUint256(),
-					Tkt_category: asset.Tkt.Category,
-					Tkt_value:    asset.Tkt.Value,
-				}
-				cpt.GenAssetCC(&asset_desc)
-				balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
-			}
-		}
-
 		if preTx.desc_pkg.change != nil {
 			change := preTx.desc_pkg.change
 			s.Desc_Pkg.Transfer = &stx.PkgTransfer{}
@@ -147,10 +116,9 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 		s.From = keys.Addr2PKr(&addr, &from_r)
 
 		//hash_o := s.ToHash_for_gen()
-		if desc_z, err := genDesc_Zs(seed, &preTx, &balance_desc); err != nil {
+		if err := genDesc_Zs(seed, &preTx, &balance_desc, &s); err != nil {
 			e = err
 		} else {
-			s.Desc_Z = desc_z
 		}
 
 		{
@@ -162,6 +130,24 @@ func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *lstate.State) (s stx.T, e erro
 				return
 			} else {
 				s.Sign = sign
+			}
+
+			if preTx.desc_pkg.change != nil {
+				if sign, err := keys.SignPKr(seed, &hash_z, &preTx.desc_pkg.change.pkr); err != nil {
+					e = err
+					return
+				} else {
+					s.Desc_Pkg.Transfer.Sign = sign
+				}
+			}
+
+			if preTx.desc_pkg.open != nil {
+				if sign, err := keys.SignPKr(seed, &hash_z, &preTx.desc_pkg.open.opkg.Z.Pack.PKr); err != nil {
+					e = err
+					return
+				} else {
+					s.Desc_Pkg.Close.Sign = sign
+				}
 			}
 
 			for i, s_in_o := range preTx.desc_o.ins {
@@ -268,27 +254,12 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
 			return
 		} else {
-			asset := pg.Pack.Pkg.Temp.Asset
-			var tkn_currency keys.Uint256
-			var tkn_value keys.Uint256
-			var tkt_category keys.Uint256
-			var tkt_value keys.Uint256
-			if asset.Tkn != nil {
-				tkn_currency = asset.Tkn.Currency
-				tkn_value = asset.Tkn.Value.ToUint256()
+			if keys.VerifyPKr(&hash_z, &s.Desc_Pkg.Close.Sign, &pg.Pack.PKr) {
+				balance_desc.Oin_accs = append(balance_desc.Oin_accs, pg.Pack.Pkg.AssetCM[:]...)
+			} else {
+				e = fmt.Errorf("Can not verify pkg sign of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
+				return
 			}
-			if asset.Tkt != nil {
-				tkt_category = asset.Tkt.Category
-				tkt_value = asset.Tkt.Value
-			}
-			asset_desc := cpt.AssetDesc{
-				Tkn_currency: tkn_currency,
-				Tkn_value:    tkn_value,
-				Tkt_category: tkt_category,
-				Tkt_value:    tkt_value,
-			}
-			cpt.GenAssetCC(&asset_desc)
-			balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
 		}
 	}
 
@@ -313,33 +284,16 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		}
 	}
 
-	if s.Desc_Pkg.Create != nil {
-		out := s.Desc_Pkg.Create.Pkg.Temp
-		if out.Asset.Tkn != nil {
-			if !CheckUint(&out.Asset.Tkn.Value) {
-				e = errors.New("txs.verify check balance too big")
-				return
-			} else {
-				{
-					asset := out.Asset.ToFlatAsset()
-					asset_desc := cpt.AssetDesc{
-						Tkn_currency: asset.Tkn.Currency,
-						Tkn_value:    asset.Tkn.Value.ToUint256(),
-						Tkt_category: asset.Tkt.Category,
-						Tkt_value:    asset.Tkt.Value,
-					}
-					cpt.GenAssetCC(&asset_desc)
-					balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
-				}
-			}
-		}
-	}
-
 	if s.Desc_Pkg.Transfer != nil {
 		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Transfer.Id); pg == nil {
 			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
 			return
 		} else {
+			if keys.VerifyPKr(&hash_z, &s.Desc_Pkg.Transfer.Sign, &pg.Pack.PKr) {
+			} else {
+				e = fmt.Errorf("Can not verify pkg sign of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
+				return
+			}
 		}
 	}
 

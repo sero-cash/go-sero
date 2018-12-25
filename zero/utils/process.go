@@ -28,6 +28,14 @@ func NewProcs(num int) (ret Procs) {
 	return
 }
 
+func (self *Procs) HasProc() bool {
+	if len(self.Runs) > 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
 func (self *Procs) StartProc(run Proc) {
 	self.Runs = append(self.Runs, run)
 	if cpt.Is_czero_debug() {

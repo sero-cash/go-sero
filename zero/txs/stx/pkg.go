@@ -1,6 +1,7 @@
 package stx
 
 import (
+	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
@@ -86,9 +87,10 @@ func (self *PkgTransfer) Clone() (ret PkgTransfer) {
 }
 
 type PkgCreate struct {
-	Id  keys.Uint256
-	PKr keys.PKr
-	Pkg pkg.Pkg_Z
+	Id    keys.Uint256
+	PKr   keys.PKr
+	Pkg   pkg.Pkg_Z
+	Proof cpt.Proof
 }
 
 func (this PkgCreate) ToRef() (ret *PkgCreate) {

@@ -180,6 +180,44 @@ func (self *user) Logout() (ret uint64) {
 	return
 }
 
+func (self *user) Close(id *keys.Uint256, v int) {
+	fmt.Printf("user(%v) close pkg %v\n", self.i, id)
+	t := tx.T{}
+	t.Fee = assets.Token{
+		utils.StringToUint256("SERO"),
+		utils.NewU256(uint64(0)),
+	}
+	t.PkgClose = &tx.PkgClose{}
+	t.PkgClose.Key = keys.Uint256{}
+	t.PkgClose.Id = *id
+
+	out1 := tx.Out{}
+	out1.Asset = assets.Asset{
+		&assets.Token{
+			utils.StringToUint256("SERO"),
+			utils.NewU256(uint64(v)),
+		},
+		nil,
+	}
+	out1.IsZ = true
+	out1.Addr = self.getAR()
+	t.Outs = append(t.Outs, out1)
+
+	s, e := self.Gen(&self.seed, &t)
+	if e != nil {
+		fmt.Printf("user(%v) send gen error: %v", self.i, e)
+	}
+
+	if e := self.Verify(&s); e != nil {
+		fmt.Printf("user(%v) send verify error: %v", self.i, e)
+	}
+
+	g_blocks.st.AddStx(&s)
+	g_blocks.st.Update()
+	EndBlock()
+	return
+}
+
 func (self *user) Package(v int, fee int, u user) (ret keys.PKr) {
 	fmt.Printf("user(%v) send %v:%v to user(%v)\n", self.i, v, fee, u.i)
 	outs := self.GetOuts()
@@ -291,6 +329,20 @@ func TestTx(t *testing.T) {
 	}
 }
 
+func TestPkg(t *testing.T) {
+	user_m := newUser(1)
+	user_a := newUser(2)
+	user_m.addOut(100)
+	user_m.Package(50, 10, user_a)
+	if user_m.Logout() != 40 {
+		t.FailNow()
+	}
+	user_a.Close(&keys.Uint256{}, 50)
+	if user_a.Logout() != 50 {
+		t.FailNow()
+	}
+}
+
 func TestTxs(t *testing.T) {
 	user_m := newUser(1)
 	user_a := newUser(2)
@@ -303,19 +355,19 @@ func TestTxs(t *testing.T) {
 	user_m.addOut(100)
 
 	if user_m.Logout() != 400 {
-		t.Fail()
+		t.FailNow()
 	}
 
 	pkg_pkr := user_m.Package(50, 10, user_a)
 	if g_blocks.st.Pkgs.GetPkg(&keys.Uint256{}) == nil {
-		t.Fail()
+		t.FailNow()
 	}
 
 	if pkgs := user_m.GetPkgs(true); len(pkgs) == 0 {
-		t.Fail()
+		t.FailNow()
 	}
 	if pkgs := user_a.GetPkgs(false); len(pkgs) == 0 {
-		t.Fail()
+		t.FailNow()
 	}
 
 	g_blocks.st.Pkgs.Close(&keys.Uint256{}, &pkg_pkr, &keys.Uint256{})
@@ -323,13 +375,13 @@ func TestTxs(t *testing.T) {
 	EndBlock()
 
 	if g_blocks.st.Pkgs.GetPkg(&keys.Uint256{}) != nil {
-		t.Fail()
+		t.FailNow()
 	}
 	if pkgs := user_m.GetPkgs(true); len(pkgs) != 0 {
-		t.Fail()
+		t.FailNow()
 	}
 	if pkgs := user_a.GetPkgs(false); len(pkgs) != 0 {
-		t.Fail()
+		t.FailNow()
 	}
 
 	EndBlock()
@@ -337,36 +389,36 @@ func TestTxs(t *testing.T) {
 	user_a.addOut(50)
 
 	if user_m.Logout() != 340 {
-		t.Fail()
+		t.FailNow()
 	}
 	if user_a.Logout() != 50 {
-		t.Fail()
+		t.FailNow()
 	}
 
 	user_m.addOut(100)
 
 	if user_m.Logout() != 440 {
-		t.Fail()
+		t.FailNow()
 	}
 	if user_a.Logout() != 50 {
-		t.Fail()
+		t.FailNow()
 	}
 
 	user_a.Send(20, 5, user_b, true)
 
 	if user_a.Logout() != 25 {
-		t.Fail()
+		t.FailNow()
 	}
 	if user_b.Logout() != 20 {
-		t.Fail()
+		t.FailNow()
 	}
 
 	user_b.Send(10, 5, user_c, true)
 
 	if user_b.Logout() != 5 {
-		t.Fail()
+		t.FailNow()
 	}
 	if user_c.Logout() != 10 {
-		t.Fail()
+		t.FailNow()
 	}
 }
