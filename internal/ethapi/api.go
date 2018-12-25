@@ -464,7 +464,7 @@ func (s *PublicBlockChainAPI) BlockNumber() hexutil.Uint64 {
 	return hexutil.Uint64(header.Number.Uint64())
 }
 
-func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy string) (*common.Address, error) {
+func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy string) (*common.AccountAddress, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
 		return nil, err
@@ -474,7 +474,8 @@ func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy 
 	if contractAddress == empty {
 		return nil, errors.New(cy + "not exists!")
 	}
-	return &contractAddress, nil
+	contractAddr := common.BytesToAccount(contractAddress[:64])
+	return &contractAddr, nil
 }
 
 type ConvertAddress struct {
@@ -1024,22 +1025,9 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 	if err != nil {
 		return nil, err
 	}
-	fields["miner"] = toPubAddress(fields["miner"].(common.Address), s.b.AccountManager().Wallets())
+	fields["isMine"] = isMine(s.b.AccountManager().Wallets(), fields["miner"].(common.Address))
 	fields["totalDifficulty"] = (*hexutil.Big)(s.b.GetTd(b.Hash()))
 	return fields, err
-}
-
-func toPubAddress(onceAddress common.Address, wallets []accounts.Wallet) common.Address {
-
-	if len(wallets) == 0 {
-		return onceAddress
-	}
-	for _, wallet := range wallets {
-		if wallet.IsMine(onceAddress) {
-			return common.BytesToAddress(wallet.Accounts()[0].Address[:])
-		}
-	}
-	return onceAddress
 }
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
@@ -1271,7 +1259,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 	}
 	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
 	if receipt.ContractAddress != (common.Address{}) {
-		fields["contractAddress"] = receipt.ContractAddress
+		fields["contractAddress"] = common.BytesToAccount(receipt.ContractAddress[:64])
 	}
 	return fields, nil
 }
