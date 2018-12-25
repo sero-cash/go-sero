@@ -618,7 +618,14 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Acc
 
 }
 
-func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, accountAdress common.AccountAddress, packed bool) ([]*lstate.Pkg, error) {
+type RPCPackage struct {
+	Id     keys.Uint256  `json:"id"`
+	Key    *keys.Uint256 `json:"key"`
+	Packed bool          `json:"packed"`
+	Asset  *assets.Asset `json:"asset"`
+}
+
+func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, accountAdress common.AccountAddress, packed bool) ([]RPCPackage, error) {
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
@@ -633,11 +640,25 @@ func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, accountAdress comm
 
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
-		return []*lstate.Pkg{}, err
+		return nil, err
 	}
 	seed := wallet.Accounts()[0].Tk
 	pkgs := lstate.CurrentState1().GetPkgs(seed.ToUint512(), packed)
-	return pkgs, nil
+	if len(pkgs) > 0 {
+		result := []RPCPackage{}
+		for _, p := range pkgs {
+			pkg := RPCPackage{}
+			pkg.Id = p.Pkg.Z.Pack.Id
+			pkg.Packed = packed
+			if (p.Key != keys.Uint256{}) {
+				pkg.Key = &p.Key
+				pkg.Asset = &p.Pkg.O.Asset
+			}
+			result = append(result, pkg)
+		}
+		return result, nil
+	}
+	return nil, nil
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
