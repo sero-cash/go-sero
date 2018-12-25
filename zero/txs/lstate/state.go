@@ -23,6 +23,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/sero-cash/go-sero/common/hexutil"
+
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
@@ -404,6 +406,7 @@ func (state *State) addPkg(tks []keys.Uint512, id *keys.Uint256, pg *pkgstate.ZP
 				if pkg_o, err := pkg.DePkg(&key, &pg.Pack.Pkg); err == nil {
 					p.Pkg.O = pkg_o
 					p.Key = key
+					fmt.Printf("PACKAGE KEY IS: %v", hexutil.Encode(key[:]))
 					inserted = true
 				}
 			}
