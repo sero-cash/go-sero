@@ -435,7 +435,13 @@ func (state *State) GetPkgs(tk *keys.Uint512, is_from bool) (ret []*Pkg) {
 	}
 	for _, v := range pkgs {
 		if tk != nil {
-			if keys.IsMyPKr(tk, &v.Pkg.Z.Pack.PKr) {
+			var pkr keys.PKr
+			if is_from {
+				pkr = v.Pkg.Z.From
+			} else {
+				pkr = v.Pkg.Z.Pack.PKr
+			}
+			if keys.IsMyPKr(tk, &pkr) {
 				ret = append(ret, v)
 			}
 		} else {
