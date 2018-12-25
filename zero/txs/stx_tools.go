@@ -90,7 +90,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc, t
 		g.desc.Tkt_category = asset.Tkt.Category
 		g.desc.Tkt_value = asset.Tkt.Value
 		g.desc.Memo = ptx.desc_pkg.pack.pkg.Pkg.Memo
-		g.desc.Key = keys.Uint256{}
+		g.desc.Key = pkg.GetKey(&tx.From, keys.Seed2Tk(seed).NewRef())
 
 		gen_pkg_procs.StartProc(&g)
 

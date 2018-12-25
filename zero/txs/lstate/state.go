@@ -377,7 +377,7 @@ func (state *State) del(del *keys.Uint256) (e error) {
 	return
 }
 
-func (state *State) addPkg(id *keys.Uint256, pg *pkgstate.ZPkg) {
+func (state *State) addPkg(tks []keys.Uint512, id *keys.Uint256, pg *pkgstate.ZPkg) {
 	state.mu.Lock()
 	defer state.mu.Unlock()
 
@@ -389,14 +389,32 @@ func (state *State) addPkg(id *keys.Uint256, pg *pkgstate.ZPkg) {
 	}
 
 	if pg != nil {
-		p := &Pkg{
-			pkgstate.OPkg{
-				*pg,
-				pkg.Pkg_O{},
-			},
+		for _, tk := range tks {
+			p := &Pkg{
+				pkgstate.OPkg{
+					*pg,
+					pkg.Pkg_O{},
+				},
+				keys.Empty_Uint256,
+			}
+			inserted := false
+			if keys.IsMyPKr(&tk, &pg.From) {
+				state.G2pkgs_from[*id] = p
+				key := pkg.GetKey(&pg.From, &tk)
+				if pkg_o, err := pkg.DePkg(&key, &pg.Pack.Pkg); err == nil {
+					p.Pkg.O = pkg_o
+					p.Key = key
+					inserted = true
+				}
+			}
+			if keys.IsMyPKr(&tk, &pg.Pack.PKr) {
+				state.G2pkgs_to[*id] = p
+				inserted = true
+			}
+			if inserted {
+				break
+			}
 		}
-		state.G2pkgs_from[*id] = p
-		state.G2pkgs_to[*id] = p
 	}
 }
 
@@ -411,7 +429,13 @@ func (state *State) GetPkgs(tk *keys.Uint512, is_from bool) (ret []*Pkg) {
 		pkgs = state.G2pkgs_to
 	}
 	for _, v := range pkgs {
-		ret = append(ret, v)
+		if tk != nil {
+			if keys.IsMyPKr(tk, &v.Pkg.Z.Pack.PKr) {
+				ret = append(ret, v)
+			}
+		} else {
+			ret = append(ret, v)
+		}
 	}
 	return
 }
@@ -445,7 +469,7 @@ func (state *State) UpdateWitness(tks []keys.Uint512) {
 	}
 	for id := range state.State.Pkgs.G2pkgs_dirty {
 		pg := state.State.Pkgs.GetPkg(&id)
-		state.addPkg(&id, pg)
+		state.addPkg(tks, &id, pg)
 	}
 	return
 }

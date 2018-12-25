@@ -167,7 +167,6 @@ func NewCreatePkg(Pkr keys.PKr, currency string, value *big.Int, catg string, tk
 		Id:  keys.RandUint256(),
 		PKr: Pkr,
 		Pkg: pkg,
-		Key: keys.RandUint256(),
 	}
 
 }

@@ -180,7 +180,7 @@ func (self *user) Logout() (ret uint64) {
 	return
 }
 
-func (self *user) Close(id *keys.Uint256, v int) {
+func (self *user) Close(id *keys.Uint256, v int, key *keys.Uint256) {
 	fmt.Printf("user(%v) close pkg %v\n", self.i, id)
 	t := tx.T{}
 	t.Fee = assets.Token{
@@ -188,7 +188,7 @@ func (self *user) Close(id *keys.Uint256, v int) {
 		utils.NewU256(uint64(0)),
 	}
 	t.PkgClose = &tx.PkgClose{}
-	t.PkgClose.Key = keys.Uint256{}
+	t.PkgClose.Key = *key
 	t.PkgClose.Id = *id
 
 	out1 := tx.Out{}
@@ -337,7 +337,7 @@ func TestPkg(t *testing.T) {
 	if user_m.Logout() != 40 {
 		t.FailNow()
 	}
-	user_a.Close(&keys.Uint256{}, 50)
+	user_a.Close(&keys.Uint256{}, 50, &g_blocks.st1.GetPkgs(nil, true)[0].Key)
 	if user_a.Logout() != 50 {
 		t.FailNow()
 	}

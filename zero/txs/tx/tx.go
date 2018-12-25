@@ -38,7 +38,6 @@ type PkgCreate struct {
 	Id  keys.Uint256
 	PKr keys.PKr
 	Pkg pkg.Pkg_O
-	Key keys.Uint256
 }
 
 type PkgClose struct {
