@@ -1406,7 +1406,7 @@ func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T,
 		utils.StringToUint256(string(args.GasCurrency)),
 		utils.U256(*new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))),
 	}
-	pkgCreate := types.NewCreatePkg(Pkr, string(args.GasCurrency), (*big.Int)(args.Value), string(args.Category), args.Tkt)
+	pkgCreate := types.NewCreatePkg(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt)
 	txt := types.NewTxt(fromRand, ehash, fee, nil, pkgCreate, nil, nil)
 	txt.FromRnd = keys.RandUint256().NewRef()
 	return tx, txt, nil
