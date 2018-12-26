@@ -618,14 +618,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Acc
 
 }
 
-type RPCPackage struct {
-	Id     keys.Uint256  `json:"id"`
-	Key    *keys.Uint256 `json:"key"`
-	Packed bool          `json:"packed"`
-	Asset  *assets.Asset `json:"asset"`
-}
-
-func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, accountAdress common.AccountAddress, packed bool) ([]RPCPackage, error) {
+func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, accountAdress common.AccountAddress, packed bool) ([]map[string]interface{}, error) {
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
@@ -645,14 +638,28 @@ func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, accountAdress comm
 	seed := wallet.Accounts()[0].Tk
 	pkgs := lstate.CurrentState1().GetPkgs(seed.ToUint512(), packed)
 	if len(pkgs) > 0 {
-		result := []RPCPackage{}
+		result := []map[string]interface{}{}
 		for _, p := range pkgs {
-			pkg := RPCPackage{}
-			pkg.Id = p.Pkg.Z.Pack.Id
-			pkg.Packed = packed
+			pkg := map[string]interface{}{}
+			pkg["id"] = p.Pkg.Z.Pack.Id
+			pkg["packed"] = packed
 			if (p.Key != keys.Uint256{}) {
-				pkg.Key = &p.Key
-				pkg.Asset = &p.Pkg.O.Asset
+				pkg["key"] = p.Key
+				asset := map[string]interface{}{}
+				if p.Pkg.O.Asset.Tkn != nil {
+					tkn := map[string]interface{}{}
+					tkn["currency"] = strings.Trim(string(p.Pkg.O.Asset.Tkn.Currency[:]), zerobyte)
+					tkn["value"] = p.Pkg.O.Asset.Tkn.Value
+					asset["tkn"] = tkn
+				}
+				if p.Pkg.O.Asset.Tkt != nil {
+					tkt := map[string]interface{}{}
+					tkt["category"] = strings.Trim(string(p.Pkg.O.Asset.Tkt.Category[:]), zerobyte)
+					tkt["value"] = p.Pkg.O.Asset.Tkt.Value
+					asset["tkt"] = tkt
+				}
+
+				pkg["asset"] = asset
 			}
 			result = append(result, pkg)
 		}
