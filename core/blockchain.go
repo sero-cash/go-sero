@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
+	"github.com/sero-cash/go-sero/zero/txs/verify"
 
 	"github.com/hashicorp/golang-lru"
 
@@ -47,7 +48,6 @@ import (
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/trie"
-	stx "github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
@@ -1204,7 +1204,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		}
 
 		for _, tx := range block.Transactions() {
-			err := stx.Verify(tx.GetZZSTX(), state.GetZState())
+			err := verify.Verify(tx.GetZZSTX(), state.GetZState())
 			if err != nil {
 				return i, events, coalescedLogs, err
 			}

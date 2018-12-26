@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -49,7 +50,6 @@ import (
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/rpc"
-	"github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	ztx "github.com/sero-cash/go-sero/zero/txs/tx"
 	"github.com/sero-cash/go-sero/zero/zconfig"

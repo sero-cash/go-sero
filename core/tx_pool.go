@@ -31,7 +31,7 @@ import (
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/metrics"
 	"github.com/sero-cash/go-sero/params"
-	stx "github.com/sero-cash/go-sero/zero/txs"
+	"github.com/sero-cash/go-sero/zero/txs/verify"
 )
 
 const (
@@ -425,7 +425,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrGasLimit
 	}
 
-	err := stx.Verify(tx.GetZZSTX(), pool.currentState.GetZState())
+	err := verify.Verify(tx.GetZZSTX(), pool.currentState.GetZState())
 	if err != nil {
 		return ErrVerifyError
 	}

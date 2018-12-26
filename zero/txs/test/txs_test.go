@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
+	"github.com/sero-cash/go-sero/zero/txs/generate"
+	"github.com/sero-cash/go-sero/zero/txs/verify"
 
-	"github.com/sero-cash/go-sero/zero/txs"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
 
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
 
@@ -157,11 +158,11 @@ func (self *user) GetPkgs(is_from bool) (ret []*lstate.Pkg) {
 }
 
 func (self *user) Gen(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
-	return txs.Gen_state1(seed, t, g_blocks.st1)
+	return generate.Gen_lstate(g_blocks.st1, seed, t)
 }
 
 func (self *user) Verify(t *stx.T) (e error) {
-	return txs.Verify_state1(t, g_blocks.st1.State)
+	return verify.Verify_state1(t, g_blocks.st1.State)
 }
 
 func (self *user) Logout() (ret uint64) {

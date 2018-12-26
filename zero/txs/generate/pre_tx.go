@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package txs
+package generate
 
 import (
 	"encoding/hex"
@@ -35,23 +35,23 @@ type preTxDesc struct {
 	outs []tx.Out
 }
 
-type prePkgPack struct {
+type prePkgCreate struct {
 	pkg tx.PkgCreate
 }
 
-type prePkgOpen struct {
+type prePkgClose struct {
 	opkg pkgstate.OPkg
 }
 
-type prePkgChange struct {
+type prePkgTransfer struct {
 	pkr  keys.PKr
 	zpkg pkgstate.ZPkg
 }
 
 type prePkgDesc struct {
-	pack   *prePkgPack
-	change *prePkgChange
-	open   *prePkgOpen
+	create   *prePkgCreate
+	transfer *prePkgTransfer
+	close    *prePkgClose
 }
 
 type preTx struct {
@@ -107,8 +107,8 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 			e = err
 			return
 		} else {
-			p.desc_pkg.pack = &prePkgPack{}
-			p.desc_pkg.pack.pkg = *ts.PkgCreate
+			p.desc_pkg.create = &prePkgCreate{}
+			p.desc_pkg.create.pkg = *ts.PkgCreate
 		}
 	}
 
@@ -125,9 +125,9 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 					e = err
 					return
 				} else {
-					p.desc_pkg.open = &prePkgOpen{}
-					p.desc_pkg.open.opkg.O = opkg
-					p.desc_pkg.open.opkg.Z = *zpkg
+					p.desc_pkg.close = &prePkgClose{}
+					p.desc_pkg.close.opkg.O = opkg
+					p.desc_pkg.close.opkg.Z = *zpkg
 				}
 			}
 		}
@@ -138,9 +138,9 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgTransfer.Id[:]))
 			return
 		} else {
-			p.desc_pkg.change = &prePkgChange{}
-			p.desc_pkg.change.pkr = ts.PkgTransfer.PKr
-			p.desc_pkg.change.zpkg = *zpkg
+			p.desc_pkg.transfer = &prePkgTransfer{}
+			p.desc_pkg.transfer.pkr = ts.PkgTransfer.PKr
+			p.desc_pkg.transfer.zpkg = *zpkg
 		}
 	}
 

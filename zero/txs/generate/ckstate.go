@@ -1,4 +1,4 @@
-package txs
+package generate
 
 import (
 	"fmt"

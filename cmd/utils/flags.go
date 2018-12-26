@@ -28,7 +28,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sero-cash/go-sero/zero/txs"
+	"github.com/sero-cash/go-sero/zero/txs/generate"
+	"github.com/sero-cash/go-sero/zero/txs/verify"
 
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
@@ -1008,8 +1009,8 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
 	}
 
-	txs.G_p_thread_num = ctx.GlobalInt(PThreadsFlag.Name)
-	txs.G_v_thread_num = ctx.GlobalInt(VThreadsFlag.Name)
+	generate.G_p_thread_num = ctx.GlobalInt(PThreadsFlag.Name)
+	verify.G_v_thread_num = ctx.GlobalInt(VThreadsFlag.Name)
 
 	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
 		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)

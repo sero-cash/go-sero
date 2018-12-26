@@ -44,6 +44,7 @@ func Uint256SliceCut(is []keys.Uint256, l int) (ret []keys.Uint256) {
 }
 
 func DeepCopy(dst, src interface{}) {
+	//deepcopy.Copy(dst, src)
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
 		panic(fmt.Sprintf("deepCopy encode error for : %v", src))

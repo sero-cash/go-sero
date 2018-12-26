@@ -19,6 +19,9 @@ package keystore
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/zero/txs"
+	"github.com/sero-cash/go-sero/zero/txs/generate"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/accounts"
@@ -27,7 +30,6 @@ import (
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
@@ -180,7 +182,7 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 		log.Info("    ctx_out : ", "index", i, "to", hexutil.Encode(out.Addr[:]))
 	}
 
-	stx, err := txs.Gen(seed.SeedToUint256(), txt)
+	stx, err := generate.Gen(seed.SeedToUint256(), txt)
 	if err != nil {
 		return nil, err
 	}
