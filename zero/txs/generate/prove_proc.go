@@ -19,6 +19,8 @@ package generate
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/zero/txs/lstate"
+
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -77,7 +79,7 @@ func (self *gen_output_desc) Run() bool {
 	}
 }
 
-func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc, tx *stx.T) (e error) {
+func genDesc_Zs(state *lstate.State, seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc, tx *stx.T) (e error) {
 	var gen_pkg_procs = gen_pkg_procs_pool.GetProcs()
 	defer gen_pkg_procs_pool.PutProcs(gen_pkg_procs)
 	if ptx.desc_pkg.create != nil {
@@ -105,9 +107,14 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc, t
 		g.desc.RPK = in.Out_Z.RPK
 		g.desc.Einfo = in.Out_Z.EInfo
 		g.desc.Index = in.OutIndex
-		_, g.desc.Position, g.desc.Path, g.desc.Anchor = in.ToWitness()
-		g.index = i
+		pos, paths, anchor := state.State.State.MTree.GetPaths(in.RootCM)
+		g.desc.Position = uint32(pos)
+		g.desc.Anchor = anchor
+		for i, path := range paths {
+			copy(g.desc.Path[len(g.desc.Path)-32-(i*32):], path[:])
+		}
 
+		g.index = i
 		gen_input_procs.StartProc(&g)
 	}
 

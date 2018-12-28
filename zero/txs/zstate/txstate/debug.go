@@ -33,32 +33,6 @@ func Need_debug() bool {
 	}
 }
 
-func Debug_State0_addout_assert(state *State, os *OutState) {
-	if Need_debug() {
-		trees := state.GenState0Trees()
-		leaf := os.ToRootCM()
-		tree := trees.Trees[os.Index]
-		root := tree.RootKey()
-		if out, err := state.GetOut(&root); err != nil {
-			Debug_Weak_panic("Debug: add out get out by root err: %v", err)
-		} else {
-			if out != nil {
-				Debug_Weak_panic("Debug: add out get out by root is not nil: %v\n%v\n", out, os)
-			} else {
-			}
-		}
-
-		if out, err := state.GetOut(leaf); err != nil {
-			Debug_Weak_panic("get out by leaf err: %v", err)
-		} else {
-			if out != nil {
-				Debug_Weak_panic("get out by leaf is not nil: %v\n%v\n", out, os)
-			} else {
-			}
-		}
-	}
-}
-
 func Debug_Weak_panic(msg string, ctx ...interface{}) {
 	if Need_debug() {
 		log.Debug(">========debug_painc:=======>"+msg, ctx...)

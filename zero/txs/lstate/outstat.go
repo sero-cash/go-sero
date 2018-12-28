@@ -83,8 +83,8 @@ func (self OutStats) Less(i, j int) bool {
 	if left.stat.Z != right.stat.Z {
 		return !left.stat.Z
 	}
-	if left.out.Pg.Index != right.out.Pg.Index {
-		return left.out.Pg.Index < right.out.Pg.Index
+	if left.out.OutIndex != right.out.OutIndex {
+		return left.out.OutIndex < right.out.OutIndex
 	}
 	return false
 }
@@ -107,15 +107,15 @@ func UpdateOutStat(st *txstate.State, out *OutState) {
 		os.Value = utils.U256_0
 	}
 	os.Time = time.Now().UnixNano()
-	tri.UpdateGlobalObj(st.Tri(), outStatName(out.Pg.Root.ToUint256()), &os)
+	tri.UpdateGlobalObj(st.Tri(), outStatName(&out.Root), &os)
 }
 
 func SortOutStats(st *txstate.State, outs []*OutState) {
 	wraps := OutStats{}
 	for _, out := range outs {
-		out_root := out.Pg.Root.ToUint256()
+		out_root := out.Root
 		get := OutStatGet{}
-		tri.GetGlobalObj(st.Tri(), outStatName(out_root), &get)
+		tri.GetGlobalObj(st.Tri(), outStatName(&out_root), &get)
 		if get.out != nil {
 			wraps = append(
 				wraps,

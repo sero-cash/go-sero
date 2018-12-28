@@ -64,8 +64,6 @@ func NewBlock() {
 		g_blocks.st0 = &g_blocks.st.State
 	} else {
 		g_blocks.st0.Block = txstate.StateBlock{}
-		g_blocks.st0.Block.Tree = g_blocks.st0.Cur.Tree.Clone().ToRef()
-
 	}
 }
 
@@ -170,11 +168,11 @@ func (self *user) Logout() (ret uint64) {
 	outs := self.GetOuts()
 	for _, out := range outs {
 		if out.Out_O.Asset.Tkn != nil {
-			fmt.Printf("TKN: (%v:%v)---%v-----%v\n", out.Pg.Anchor[1], out.Pg.Index, out.Out_O.Asset.Tkn.Currency[0], out.Out_O.Asset.Tkn.Value.ToIntRef().Int64())
+			fmt.Printf("TKN: (%v:%v)---%v-----%v\n", out.Root[1], out.OutIndex, out.Out_O.Asset.Tkn.Currency[0], out.Out_O.Asset.Tkn.Value.ToIntRef().Int64())
 			ret += out.Out_O.Asset.Tkn.Value.ToIntRef().Uint64()
 		}
 		if out.Out_O.Asset.Tkt != nil {
-			fmt.Printf("TKT: (%v:%v)---%v-----%v\n", out.Pg.Anchor[1], out.Pg.Index, out.Out_O.Asset.Tkt.Category[0], out.Out_O.Asset.Tkt.Value)
+			fmt.Printf("TKT: (%v:%v)---%v-----%v\n", out.Root[1], out.OutIndex, out.Out_O.Asset.Tkt.Category[0], out.Out_O.Asset.Tkt.Value)
 		}
 	}
 	fmt.Printf("===========user(%v)============\n\n", self.i)
@@ -223,7 +221,7 @@ func (self *user) Package(v int, fee int, u user) (ret keys.PKr) {
 	fmt.Printf("user(%v) send %v:%v to user(%v)\n", self.i, v, fee, u.i)
 	outs := self.GetOuts()
 	in := tx.In{}
-	in.Root = *outs[0].Pg.Root.ToUint256()
+	in.Root = outs[0].Root
 	out0 := tx.PkgCreate{}
 	out0.PKr = u.getAR()
 	ret = out0.PKr
@@ -271,7 +269,7 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 	fmt.Printf("user(%v) send %v:%v to user(%v)\n", self.i, v, fee, u.i)
 	outs := self.GetOuts()
 	in := tx.In{}
-	in.Root = *outs[0].Pg.Root.ToUint256()
+	in.Root = outs[0].Root
 	out0 := tx.Out{}
 	out0.Addr = u.getAR()
 	out0.Asset = assets.Asset{
@@ -324,8 +322,14 @@ func TestTx(t *testing.T) {
 	user_m := newUser(1)
 	user_a := newUser(2)
 	user_m.addOut(100)
+	user_m.addOut(100)
+	user_m.addOut(100)
+	user_m.addOut(100)
 	user_m.Send(50, 10, user_a, true)
-	if user_m.Logout() != 40 {
+	user_m.Send(50, 10, user_a, true)
+	user_m.Send(50, 10, user_a, true)
+	user_m.Send(50, 10, user_a, true)
+	if user_m.Logout() != 160 {
 		t.Fail()
 	}
 }
@@ -431,16 +435,27 @@ func TestStrTree(t *testing.T) {
 
 	outState := txstate.NewMerkleTree(g_blocks.st.Tri)
 
-	cm := keys.Uint256{1}
-	outState.AppendLeaf(cm)
-	pos, path := outState.GetPaths(cm)
-	cm[0]++
-	outState.AppendLeaf(cm)
-	pos, path = outState.GetPaths(cm)
-	cm[0]++
-	outState.AppendLeaf(cm)
-	pos, path = outState.GetPaths(cm)
-	cm[0]++
+	cm1 := keys.Uint256{1}
+	outState.AppendLeaf(cm1)
+
+	cm2 := keys.Uint256{2}
+	outState.AppendLeaf(cm2)
+
+	cm3 := keys.Uint256{3}
+	outState.AppendLeaf(cm3)
+
+	cm4 := keys.Uint256{4}
+	rt4 := outState.AppendLeaf(cm4)
+
+	pos, path, anchor := outState.GetPaths(cm3)
+	rt := txstate.CalcRoot(&cm3, pos, &path)
+
+	if rt != rt4 {
+		t.FailNow()
+	}
+	if rt != anchor {
+		t.FailNow()
+	}
 
 	fmt.Print(pos, path)
 }

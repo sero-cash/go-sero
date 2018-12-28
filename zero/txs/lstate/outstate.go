@@ -17,23 +17,21 @@
 package lstate
 
 import (
-	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/witness"
 )
 
 type OutState struct {
-	Pg           witness.PathGen
-	WitnessIndex uint64
-	OutIndex     uint64
-	Num          uint64
-	Tk           keys.Uint512
-	Out_O        stx.Out_O
-	Out_Z        *stx.Out_Z `rlp:"nil"`
-	Trace        keys.Uint256
-	Z            bool
+	Root     keys.Uint256
+	RootCM   keys.Uint256
+	OutIndex uint64
+	Num      uint64
+	Tk       keys.Uint512
+	Out_O    stx.Out_O
+	Out_Z    *stx.Out_Z `rlp:"nil"`
+	Trace    keys.Uint256
+	Z        bool
 }
 
 func (self *OutState) IsMine(tk *keys.Uint512) bool {
@@ -54,16 +52,4 @@ func (self *OutState) Unserial(v []byte) (*OutState, error) {
 	} else {
 		return &out, nil
 	}
-}
-func (self *OutState) ToWitness() (commitment keys.Uint256, index uint32, path [cpt.DEPTH * 32]byte, anchor keys.Uint256) {
-	el := self.Pg.Leaf
-	commitment = *el.ToUint256()
-	path_temp, index_temp := self.Pg.Path, self.Pg.Index
-	index = uint32(index_temp)
-	for i, p := range path_temp {
-		copy(path[i*32:], p[:])
-	}
-	anchor_temp := self.Pg.Anchor
-	copy(anchor[:], anchor_temp[:])
-	return
 }

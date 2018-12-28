@@ -87,20 +87,35 @@ func (self *MerkleTree) AppendLeaf(value keys.Uint256) keys.Uint256 {
 	return current_value
 }
 
-func (self *MerkleTree) GetPaths(value keys.Uint256) (pos uint64, paths [DEPTH]keys.Uint256) {
+func CalcRoot(value *keys.Uint256, pos uint64, paths *[DEPTH]keys.Uint256) (ret keys.Uint256) {
+	ret = *value
+	for _, path := range paths {
+		if pos%2 == 0 {
+			ret = Combine(&ret, &path)
+		} else {
+			ret = Combine(&path, &ret)
+		}
+		pos >>= 1
+	}
+	return
+}
+
+func (self *MerkleTree) GetPaths(value keys.Uint256) (pos uint64, paths [DEPTH]keys.Uint256, anchor keys.Uint256) {
 	leafIndex := keys.Uint256_To_Uint64(self.db.GetState(leafKey(value).NewRef()).NewRef())
 	if leafIndex == 0 {
 		panic(fmt.Errorf("leaf index can not be 0"))
 	}
+	cur_leafIndex := self.getCurrentLeafIndex() - 1
 	treeIndex := keys.Uint256_To_Uint64(self.db.GetState(treeKey(value).NewRef()).NewRef())
 
+	anchor = self.db.GetState(indexPathKey(1, treeIndex).NewRef())
 	pos = leafIndex - startIndex
 
 	depth := toDepth(leafIndex)
 	for leafIndex != 1 {
 		brotherIndex := brother(leafIndex)
 		var brotherValue keys.Uint256
-		if brotherIndex > leafIndex {
+		if brotherIndex > cur_leafIndex {
 			brotherValue = cpt.EmptyRoots()[depth]
 		} else {
 			brotherValue = self.db.GetState(indexPathKey(brotherIndex, treeIndex).NewRef())
@@ -110,6 +125,7 @@ func (self *MerkleTree) GetPaths(value keys.Uint256) (pos uint64, paths [DEPTH]k
 		}
 		paths[depth] = brotherValue
 		leafIndex = parent(leafIndex)
+		cur_leafIndex = parent(cur_leafIndex)
 		depth++
 	}
 	return

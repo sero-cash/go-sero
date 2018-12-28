@@ -121,7 +121,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 
 		state := bc.NewState(&current_hash)
 
-		current_cm_count += len(state.State.Block.Commitments)
+		current_cm_count += len(state.State.Block.Roots)
 
 		t.Renter("PARSE_BLOCK_CHAIN----LoadState")
 
@@ -132,7 +132,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			st1.State = state
 		}
 
-		commitment_len := len(st1.State.State.Block.Commitments)
+		commitment_len := len(st1.State.State.Block.Roots)
 		t.Renter(fmt.Sprintf("PARSE_BLOCK_CHAIN----UpdateWiteness(count=%d)", commitment_len))
 		st1.UpdateWitness(tks)
 		current_state1 = st1

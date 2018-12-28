@@ -55,15 +55,13 @@ type prePkgDesc struct {
 }
 
 type preTx struct {
-	last_anchor keys.Uint256
-	uouts       []lstate.OutState
-	desc_o      preTxDesc
-	desc_z      preTxDesc
-	desc_pkg    prePkgDesc
+	uouts    []lstate.OutState
+	desc_o   preTxDesc
+	desc_z   preTxDesc
+	desc_pkg prePkgDesc
 }
 
 func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
-	p.last_anchor = state1.State.State.Cur.Tree.RootKey()
 	ck_state := NewCKState(&ts.Fee)
 
 	for _, in := range ts.Ins {

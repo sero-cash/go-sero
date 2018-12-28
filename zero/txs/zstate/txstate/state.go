@@ -89,13 +89,6 @@ func (state *State) append_commitment_dirty(commitment *keys.Uint256) {
 
 	state.Cur.Index = state.Cur.Index + int64(1)
 
-	if !state.Cur.Tree.IsComplete() {
-		state.Cur.Tree = state.Cur.Tree.Clone()
-	} else {
-		state.Cur.Tree = merkle.Tree{}
-	}
-	state.Cur.Tree.Append(merkle.Leaf(*commitment))
-	state.Block.Commitments = append(state.Block.Commitments, *commitment)
 	state.last_out_dirty = true
 }
 
@@ -107,6 +100,7 @@ func (state *State) add_in_dirty(in *keys.Uint256) {
 func (state *State) add_out_dirty(k *keys.Uint256, out *OutState) {
 	state.G2outs[*k] = out
 	state.g2outs_dirty[*k] = true
+	state.Block.Roots = append(state.Block.Roots, *k)
 }
 
 const LAST_OUTSTATE0_NAME = tri.KEY_NAME("ZState0_Cur")
@@ -134,11 +128,6 @@ func (self *State) load() {
 		&blockget,
 	)
 	self.Block = blockget.out
-	if self.Block.Tree == nil {
-		tree := self.Cur.Tree.Clone()
-		self.Block.Tree = &tree
-		self.last_out_dirty = true
-	}
 }
 
 func inName(k *keys.Uint256) (ret []byte) {
@@ -166,15 +155,6 @@ func (self *State) Update() {
 			self.Name2BKey(BLOCK_NAME, self.num),
 			&self.Block,
 		)
-
-		blockget := State0BlockGet{}
-		tri.GetObj(
-			self.tri,
-			self.Name2BKey(BLOCK_NAME, self.num),
-			&blockget,
-		)
-		i := 0
-		i++
 	}
 
 	g2ins_dirty := utils.Uint256s{}
@@ -245,13 +225,8 @@ func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint25
 		panic("add out but cur.index < 0")
 	}
 
-	Debug_State0_addout_assert(state, &os)
+	root = state.MTree.AppendLeaf(*commitment)
 
-	root = state.Cur.Tree.RootKey()
-	mroot := state.MTree.AppendLeaf(*commitment)
-	if root != mroot {
-		panic("")
-	}
 	state.add_out_dirty(&root, &os)
 	return
 }
@@ -344,24 +319,4 @@ type State0Trees struct {
 	Trees       map[uint64]merkle.Tree
 	Roots       []keys.Uint256
 	Start_index uint64
-}
-
-func (state *State) GenState0Trees() (ret State0Trees) {
-	state.rw.RLock()
-	defer state.rw.RUnlock()
-	if state.Cur.Index >= 0 {
-		ret.Trees = make(map[uint64]merkle.Tree)
-		tree := state.Block.Tree.Clone()
-		ret.Start_index = uint64(state.Cur.Index - int64(len(state.Block.Commitments)) + 1)
-		for i, commitment := range state.Block.Commitments {
-			if tree.IsComplete() {
-				tree = merkle.Tree{}
-			}
-			tree.Append(merkle.Leaf(commitment))
-			ret.Trees[ret.Start_index+uint64(i)] = tree.Clone()
-			ret.Roots = append(ret.Roots, tree.RootKey())
-		}
-	}
-	return
-
 }

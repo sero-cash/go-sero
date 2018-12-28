@@ -19,13 +19,12 @@ package txstate
 import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
-	"github.com/sero-cash/go-sero/zero/witness/merkle"
 )
 
 type StateBlock struct {
-	Tree        *merkle.Tree `rlp:"nil"`
-	Commitments []keys.Uint256
-	Dels        []keys.Uint256
+	//Tree        *merkle.Tree `rlp:"nil"`
+	Roots []keys.Uint256
+	Dels  []keys.Uint256
 }
 
 func (self *StateBlock) Serial() (ret []byte, e error) {

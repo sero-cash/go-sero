@@ -18,12 +18,10 @@ package txstate
 
 import (
 	"github.com/sero-cash/go-sero/rlp"
-	"github.com/sero-cash/go-sero/zero/witness/merkle"
 )
 
 type Current struct {
 	Index int64
-	Tree  merkle.Tree
 }
 
 func NewCur() (ret Current) {

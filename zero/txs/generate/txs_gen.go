@@ -43,7 +43,7 @@ func (self *gen_ctx) setData() {
 	{
 		for _, in_o := range self.p.desc_o.ins {
 			s_in_o := stx.In_O{}
-			s_in_o.Root = *in_o.Pg.Root.ToUint256()
+			s_in_o.Root = in_o.Root
 			self.s.Desc_O.Ins = append(self.s.Desc_O.Ins, s_in_o)
 			{
 				asset := in_o.Out_O.Asset.ToFlatAsset()
@@ -100,9 +100,8 @@ func (self *gen_ctx) setData() {
 		}
 	}
 	{
-		for _, in_z := range self.p.desc_z.ins {
+		for i := 0; i < len(self.p.desc_z.ins); i++ {
 			in := stx.In_Z{}
-			in.Anchor = *in_z.Pg.Anchor.ToUint256()
 			self.s.Desc_Z.Ins = append(self.s.Desc_Z.Ins, in)
 		}
 		for _, out_z := range self.p.desc_z.outs {
@@ -124,7 +123,7 @@ func (self *gen_ctx) setData() {
 }
 
 func (self *gen_ctx) proveTx() (e error) {
-	if err := genDesc_Zs(self.seed, &self.p, &self.balance_desc, &self.s); err != nil {
+	if err := genDesc_Zs(self.st, self.seed, &self.p, &self.balance_desc, &self.s); err != nil {
 		e = err
 		return
 	} else {
