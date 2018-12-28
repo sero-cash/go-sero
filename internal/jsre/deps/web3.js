@@ -717,7 +717,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var solidityTypes = this.getSolidityTypes(types);
             var addressParams = [];
             solidityTypes.map(function (solidityType, index) {
-                if (solidityType instanceof SolidityTypeAddress){
+                if (solidityType instanceof SolidityTypeAddress &&params[index]&&(params[index]!="")){
                     addressParams = addressParams.concat(solidityType.address(params[index], types[index],false));
                 }
             });
@@ -2935,7 +2935,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
     },{"./base58":17,"./sha3.js":20,"bignumber.js":"bignumber.js","utf8":85}],22:[function(require,module,exports){
         module.exports={
-            "version": "0.2.6"
+            "version": "0.2.15"
         }
 
     },{}],23:[function(require,module,exports){
@@ -3307,15 +3307,32 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
         var opArgs = function (abi, params,rand,sero,dy,callback) {
-            return abi.filter(function (json) {
-                return json.type === 'constructor' && json.inputs.length === params.length;
-            }).map(function (json) {
-                return json.inputs.map(function (input) {
-                    return input.type;
+            if (callback){
+                var types = abi.filter(function (json) {
+                    return json.type === 'constructor' && json.inputs.length === params.length;
+                }).map(function (json) {
+                    return json.inputs.map(function (input) {
+                        return input.type;
+                    });
                 });
-            }).map(function (types) {
-                return coder.opParams(types, params,rand,sero,dy,callback);
-            })[0] || coder.opParams([], [],rand,sero,dy,callback);
+                if (types&&types[0]){
+                    coder.opParams(types[0], params,rand,sero,dy,callback);
+                }else {
+                    coder.opParams([], [],rand,sero,dy,callback)
+                }
+
+            }else{
+                return abi.filter(function (json) {
+                    return json.type === 'constructor' && json.inputs.length === params.length;
+                }).map(function (json) {
+                    return json.inputs.map(function (input) {
+                        return input.type;
+                    });
+                }).map(function (types) {
+                    return coder.opParams(types, params,rand,sero,dy);
+                })[0] || coder.opParams([], [],rand,sero,dy);
+            }
+
         };
 
 
@@ -4710,7 +4727,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     throw errors.InvalidResponse(err);
                 }
                 args = result.params;
-                options.data = coder.addressPrefix(self._inputTypes,args,rand) + self.signature()+ coder.encodeParams(self._inputTypes, args);
+                options.data = coder.addressPrefix(self._inputTypes,args,rand) + self.signature()+ coder.encodeParams(self._inputTypes, args,result.shortAddr);
                 callback(options)
             }
             coder.opParams(this._inputTypes,args,rand,this._sero,dy,cb);
@@ -6237,7 +6254,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
             var currencyToContractAddress = new Method({
                 name: 'cyToContractAddress',
-                call: 'sero_cyToContractAddress',
+                call: 'sero_currencyToContractAddress',
                 params: 1,
             });
 
