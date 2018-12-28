@@ -97,7 +97,7 @@ func GetTknRoots(outs []*lstate.OutState, v *utils.U256, currency *keys.Uint256)
 						tkts[out_o.Asset.Tkt.Category] = []keys.Uint256{out_o.Asset.Tkt.Value}
 					}
 				}
-				if value.Cmp(out_o.Asset.Tkn.Value.ToI256().ToRef()) < 0 {
+				if value.Cmp(out_o.Asset.Tkn.Value.ToI256().ToRef()) <= 0 {
 					value = utils.NewI256(0)
 					break
 				} else {
