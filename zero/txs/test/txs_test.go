@@ -426,3 +426,21 @@ func TestTxs(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestStrTree(t *testing.T) {
+
+	outState := txstate.NewMerkleTree(g_blocks.st.Tri)
+
+	cm := keys.Uint256{1}
+	outState.AppendLeaf(cm)
+	pos, path := outState.GetPaths(cm)
+	cm[0]++
+	outState.AppendLeaf(cm)
+	pos, path = outState.GetPaths(cm)
+	cm[0]++
+	outState.AppendLeaf(cm)
+	pos, path = outState.GetPaths(cm)
+	cm[0]++
+
+	fmt.Print(pos, path)
+}

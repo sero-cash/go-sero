@@ -70,7 +70,6 @@ type StateDB struct {
 	stateObjects      map[common.Address]*stateObject
 	stateObjectsDirty map[common.Address]struct{}
 	zstate            *zstate.ZState
-	pkgState          *pkgstate.PkgState
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are
@@ -119,6 +118,7 @@ type StateDbPut interface {
 	Put(key, value []byte) error
 }
 type StateTri struct {
+	db    *StateDB
 	Tri   Trie
 	Dbget StateDbGet
 	Dbput StateDbPut
@@ -132,6 +132,15 @@ func (self *StateTri) TryUpdate(key, value []byte) error {
 	return self.Tri.TryUpdate(key, value)
 }
 
+func (self *StateTri) SetState(key *keys.Uint256, value *keys.Uint256) {
+	self.db.SetState(EmptyAddress, common.Hash(*key), common.Hash(*value))
+}
+func (self *StateTri) GetState(key *keys.Uint256) (ret keys.Uint256) {
+	v := self.db.GetState(EmptyAddress, common.Hash(*key))
+	ret = keys.Uint256(v)
+	return
+}
+
 func (self *StateTri) TryGlobalGet(key []byte) ([]byte, error) {
 	return self.Dbget.Get(key)
 }
@@ -141,21 +150,20 @@ func (self *StateTri) TryGlobalPut(key, value []byte) error {
 }
 
 func (self *StateDB) GetZState() *zstate.ZState {
-
 	if self.zstate == nil {
-		st := StateTri{self.trie, self.db.TrieDB().DiskDB(), self.db.TrieDB().WDiskDB()}
+		st := StateTri{
+			self,
+			self.trie,
+			self.db.TrieDB().DiskDB(),
+			self.db.TrieDB().WDiskDB(),
+		}
 		self.zstate = zstate.NewState(&st, self.number)
 	}
 	return self.zstate
 }
 
 func (self *StateDB) GetPkgState() *pkgstate.PkgState {
-	if self.pkgState == nil {
-		st := StateTri{self.trie, self.db.TrieDB().DiskDB(), self.db.TrieDB().WDiskDB()}
-		state := pkgstate.NewPkgState(&st, self.number)
-		self.pkgState = &state
-	}
-	return self.pkgState
+	return &self.GetZState().Pkgs
 }
 
 func NewGenesis(root common.Hash, db Database) (*StateDB, error) {

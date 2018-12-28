@@ -30,9 +30,10 @@ import (
 )
 
 type State struct {
-	tri tri.Tri
-	rw  *sync.RWMutex
-	num uint64
+	tri   tri.Tri
+	rw    *sync.RWMutex
+	num   uint64
+	MTree MerkleTree
 
 	Cur    Current
 	Block  StateBlock
@@ -55,6 +56,7 @@ func (self *State) Num() uint64 {
 func NewState(tri tri.Tri, num uint64) (state State) {
 	state = State{tri: tri, num: num}
 	state.rw = new(sync.RWMutex)
+	state.MTree = NewMerkleTree(tri)
 	state.clear()
 	state.load()
 	return
@@ -246,6 +248,10 @@ func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint25
 	Debug_State0_addout_assert(state, &os)
 
 	root = state.Cur.Tree.RootKey()
+	mroot := state.MTree.AppendLeaf(*commitment)
+	if root != mroot {
+		panic("")
+	}
 	state.add_out_dirty(&root, &os)
 	return
 }

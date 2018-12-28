@@ -23,6 +23,8 @@ import (
 type Tri interface {
 	TryGet(key []byte) ([]byte, error)
 	TryUpdate(key, value []byte) error
+	SetState(key *keys.Uint256, value *keys.Uint256)
+	GetState(key *keys.Uint256) (ret keys.Uint256)
 	TryGlobalGet(key []byte) ([]byte, error)
 	TryGlobalPut(key, value []byte) error
 }

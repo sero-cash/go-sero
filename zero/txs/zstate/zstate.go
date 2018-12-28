@@ -28,12 +28,14 @@ import (
 )
 
 type ZState struct {
+	Tri   tri.Tri
 	State txstate.State
 	Pkgs  pkgstate.PkgState
 }
 
 func NewState(tri0 tri.Tri, num uint64) (state *ZState) {
 	state = &ZState{}
+	state.Tri = tri0
 	state.State = txstate.NewState(tri0, num)
 	state.Pkgs = pkgstate.NewPkgState(tri0, num)
 	return
