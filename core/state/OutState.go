@@ -2,14 +2,15 @@ package state
 
 import (
 	"fmt"
+	math2 "math"
+	"math/big"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/rlp"
-	math2 "math"
-	"math/big"
 )
 
 const DEPTH = cpt.DEPTH + 1
@@ -31,7 +32,7 @@ type OutState struct {
 	db *StateDB
 }
 
-func NewOutStete(db *StateDB) OutState {
+func NewOutState(db *StateDB) OutState {
 	return OutState{db}
 }
 
@@ -43,7 +44,7 @@ func (self *OutState) AppendLeaf(value keys.Uint256) keys.Uint256 {
 	self.db.SetState(EmptyAddress, indexPathKey(leafIndex, treeIndex), common.Hash(value))
 
 	current_value := value
-	for ; leafIndex != 1; {
+	for leafIndex != 1 {
 		brotherValue := self.db.GetState(EmptyAddress, indexPathKey(brother(leafIndex), treeIndex))
 		if brotherValue == (common.Hash{}) {
 			brotherValue = common.Hash{uint8(math2.Log2(float64(leafIndex)))}
@@ -107,10 +108,10 @@ func (self *OutState) geCurrentTreeIndex() uint64 {
 func paths(index uint64) []uint64 {
 	paths := []uint64{}
 	if index == 0 {
-		return paths;
+		return paths
 	}
 
-	for ; index != 1; {
+	for index != 1 {
 		paths = append(paths, brother(index))
 		index = parent(index)
 	}

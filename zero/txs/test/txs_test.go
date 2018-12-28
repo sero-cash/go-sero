@@ -364,14 +364,17 @@ func TestTxs(t *testing.T) {
 		t.FailNow()
 	}
 
+	var key keys.Uint256
 	if pkgs := user_m.GetPkgs(true); len(pkgs) == 0 {
 		t.FailNow()
+	} else {
+		key = pkgs[0].Key
 	}
 	if pkgs := user_a.GetPkgs(false); len(pkgs) == 0 {
 		t.FailNow()
 	}
 
-	g_blocks.st.Pkgs.Close(&keys.Uint256{}, &pkg_pkr, &keys.Uint256{})
+	g_blocks.st.Pkgs.Close(&keys.Uint256{}, &pkg_pkr, &key)
 	g_blocks.st.Update()
 	EndBlock()
 

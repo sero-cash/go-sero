@@ -37,3 +37,17 @@ func GetKey(pkr *keys.PKr, tk *keys.Uint512) (ret keys.Uint256) {
 	copy(ret[:], d.Sum(nil))
 	return
 }
+
+func ConfirmPkg(o *Pkg_O, z *Pkg_Z) (e error) {
+	asset := o.Asset.ToFlatAsset()
+	desc := cpt.ConfirmPkgDesc{}
+	desc.Tkn_currency = asset.Tkn.Currency
+	desc.Tkn_value = asset.Tkn.Value.ToUint256()
+	desc.Tkt_category = asset.Tkt.Category
+	desc.Tkt_value = asset.Tkt.Value
+	desc.Memo = o.Memo
+	desc.Ar_ret = o.Ar
+	desc.Pkg_cm = z.PkgCM
+	e = cpt.ConfirmPkg(&desc)
+	return
+}

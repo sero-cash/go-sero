@@ -231,8 +231,12 @@ func (self *PkgState) Close(id *keys.Uint256, pkr *keys.PKr, key *keys.Uint256) 
 				return
 			} else {
 				ret.Z = *pg
-				self.del_pkg_dirty(id)
-				return
+				if e = pkg.ConfirmPkg(&ret.O, &ret.Z.Pack.Pkg); e != nil {
+					return
+				} else {
+					self.del_pkg_dirty(id)
+					return
+				}
 			}
 		}
 	}

@@ -23,13 +23,16 @@ import (
 	"os"
 	"sync"
 
+	"github.com/sero-cash/go-sero/log"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
 
-	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
 
@@ -326,34 +329,38 @@ func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, pg *witne
 
 				cpt.DecOutput(&info_desc)
 
-				root := pg.Root.ToUint256()
-				state.append_wout_dirty(root)
-				wos := OutState{}
-				wos.Pg = *pg
-				wos.Out_O.Addr = os.Out_Z.PKr
-				wos.Out_O.Asset = assets.NewAsset(
-					&assets.Token{
-						info_desc.Tkn_currency,
-						utils.NewU256_ByKey(&info_desc.Tkn_value),
-					},
-					&assets.Ticket{
-						info_desc.Tkt_category,
-						info_desc.Tkt_value,
-					},
-				)
-				wos.Out_O.Memo = info_desc.Memo
-				wos.Out_Z = os.Out_Z.Clone().ToRef()
-				wos.Tk = tk
-				wos.WitnessIndex = os.Index
-				wos.OutIndex = os.Index
-				wos.Z = true
-				if *pg.Leaf.ToUint256() != *os.ToRootCM() {
-					panic("add wouts but RootCM not match!")
+				if e := stx.ConfirmOut_Z(&info_desc, os.Out_Z); e == nil {
+					root := pg.Root.ToUint256()
+					state.append_wout_dirty(root)
+					wos := OutState{}
+					wos.Pg = *pg
+					wos.Out_O.Addr = os.Out_Z.PKr
+					wos.Out_O.Asset = assets.NewAsset(
+						&assets.Token{
+							info_desc.Tkn_currency,
+							utils.NewU256_ByKey(&info_desc.Tkn_value),
+						},
+						&assets.Ticket{
+							info_desc.Tkt_category,
+							info_desc.Tkt_value,
+						},
+					)
+					wos.Out_O.Memo = info_desc.Memo
+					wos.Out_Z = os.Out_Z.Clone().ToRef()
+					wos.Tk = tk
+					wos.WitnessIndex = os.Index
+					wos.OutIndex = os.Index
+					wos.Z = true
+					if *pg.Leaf.ToUint256() != *os.ToRootCM() {
+						panic("add wouts but RootCM not match!")
+					}
+					wos.Trace = cpt.GenTil(&tk, pg.Leaf.ToUint256())
+					wos.Num = state.State.State.Num()
+					state.add_out_dirty(root, &wos)
+					state.add_out_dirty(&wos.Trace, &wos)
+				} else {
+					log.Error("My out_z confirm error", "root", hexutil.Encode(os.ToRootCM()[:]))
 				}
-				wos.Trace = cpt.GenTil(&tk, pg.Leaf.ToUint256())
-				wos.Num = state.State.State.Num()
-				state.add_out_dirty(root, &wos)
-				state.add_out_dirty(&wos.Trace, &wos)
 			}
 		}
 	}

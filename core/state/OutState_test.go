@@ -2,20 +2,21 @@ package state
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/serodb"
-	"testing"
 )
 
 func TestOutTree(t *testing.T) {
 	// Create an empty state database
-	cpt.ZeroInit(0)
+	cpt.ZeroInit("", 0)
 	db := serodb.NewMemDatabase()
 	statedb, _ := New(common.Hash{}, NewDatabase(db), 0)
 
-	outState := NewOutStete(statedb)
+	outState := NewOutState(statedb)
 
 	for i := 1; i <= 15; i++ {
 		uint256s := keys.Uint256{uint8(i)}
@@ -46,7 +47,5 @@ func TestOutTree(t *testing.T) {
 		}
 		fmt.Println(current)
 	}
-
-
 
 }

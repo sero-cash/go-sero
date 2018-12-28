@@ -121,13 +121,16 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 				e = fmt.Errorf("Decode Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
 				return
 			} else {
-				if _, err := ck_state.AddIn(&opkg.Asset); err != nil {
-					e = err
+				if e = pkg.ConfirmPkg(&opkg, &zpkg.Pack.Pkg); e != nil {
 					return
 				} else {
-					p.desc_pkg.close = &prePkgClose{}
-					p.desc_pkg.close.opkg.O = opkg
-					p.desc_pkg.close.opkg.Z = *zpkg
+					if _, e = ck_state.AddIn(&opkg.Asset); e != nil {
+						return
+					} else {
+						p.desc_pkg.close = &prePkgClose{}
+						p.desc_pkg.close.opkg.O = opkg
+						p.desc_pkg.close.opkg.Z = *zpkg
+					}
 				}
 			}
 		}
