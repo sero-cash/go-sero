@@ -53,16 +53,28 @@ func NewCKState(fee *assets.Token) (ret CKState) {
 func (self *CKState) AddIn(asset *assets.Asset) (added bool, e error) {
 	added = false
 	if asset.Tkn != nil {
-		self.cy.add(&asset.Tkn.Currency, &asset.Tkn.Value)
-		added = true
+		if asset.Tkn.Currency != keys.Empty_Uint256 {
+			if asset.Tkn.Value.ToUint256() != keys.Empty_Uint256 {
+				self.cy.add(&asset.Tkn.Currency, &asset.Tkn.Value)
+				added = true
+			}
+		}
 	}
 	if asset.Tkt != nil {
-		if _, ok := self.tk[asset.Tkt.Value]; !ok {
-			added = true
-			self.tk[asset.Tkt.Value] = 1
-			return
+		if asset.Tkt.Category != keys.Empty_Uint256 {
+			if asset.Tkt.Value != keys.Empty_Uint256 {
+				if _, ok := self.tk[asset.Tkt.Value]; !ok {
+					added = true
+					self.tk[asset.Tkt.Value] = 1
+					return
+				} else {
+					e = fmt.Errorf("in tkt duplicate: %v", asset.Tkt.Value)
+					return
+				}
+			} else {
+				return
+			}
 		} else {
-			e = fmt.Errorf("in tkt duplicate: %v", asset.Tkt.Value)
 			return
 		}
 	} else {
