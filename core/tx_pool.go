@@ -427,6 +427,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 	err := verify.Verify(tx.GetZZSTX(), pool.currentState.GetZState())
 	if err != nil {
+		log.Error("validateTx", "verify stx err", err)
 		return ErrVerifyError
 	}
 

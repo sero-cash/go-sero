@@ -3,10 +3,20 @@ package txs
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
+
+func WatchPkg(id *keys.Uint256, key *keys.Uint256) (ret pkg.Pkg_O, pkr keys.PKr, e error) {
+	st1 := lstate.CurrentState1()
+	pg := st1.State.Pkgs.GetPkg(id)
+	pkr = pg.Pack.PKr
+	ret, e = pkg.DePkg(key, &pg.Pack.Pkg)
+	return
+}
 
 func GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error) {
 	st1 := lstate.CurrentState1()

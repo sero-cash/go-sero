@@ -141,13 +141,13 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 
 	if s.Desc_Pkg.Close != nil {
 		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Close.Id); pg == nil {
-			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
+			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Close.Id[:]))
 			return
 		} else {
 			if keys.VerifyPKr(&hash_z, &s.Desc_Pkg.Close.Sign, &pg.Pack.PKr) {
 				balance_desc.Zin_acms = append(balance_desc.Zin_acms, pg.Pack.Pkg.AssetCM[:]...)
 			} else {
-				e = fmt.Errorf("Can not verify pkg sign of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
+				e = fmt.Errorf("Can not verify pkg sign of the id %v", hexutil.Encode(s.Desc_Pkg.Close.Id[:]))
 				return
 			}
 		}

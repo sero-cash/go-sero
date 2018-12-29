@@ -6173,11 +6173,17 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 outputFormatter: formatters.outputBalanceFormatter
             });
 
-            var getPackage = new Method({
-                name: 'getPackage',
-                call: 'sero_getPackage',
+            var getPkg = new Method({
+                name: 'getPkg',
+                call: 'sero_getPkg',
                 params: 2,
                 inputFormatter: [formatters.inputAddressFormatter,null],
+            });
+
+            var watchPkg = new Method({
+                name: 'watchPkg',
+                call: 'sero_watchPkg',
+                params: 2,
             });
 
             var getStorageAt = new Method({
@@ -6357,7 +6363,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return [
                 isMineOAddr,
                 getBalance,
-                getPackage,
+                getPkg,
+                watchPkg,
                 getStorageAt,
                 getCode,
                 getBlock,

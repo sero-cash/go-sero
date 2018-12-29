@@ -216,19 +216,23 @@ func (s *PublicAccountAPI) Accounts() []common.AccountAddress {
 
 func (s *PublicAccountAPI) IsMineOAddr(onceAddress common.Address) bool {
 	wallets := s.am.Wallets()
-	return isMine(wallets, onceAddress)
+	addr := getAddressByPkr(wallets, onceAddress)
+	if addr != nil {
+		return true
+	}
+	return false
 }
 
-func isMine(wallets []accounts.Wallet, onceAddress common.Address) bool {
+func getAddressByPkr(wallets []accounts.Wallet, onceAddress common.Address) *common.AccountAddress {
 	if len(wallets) == 0 {
-		return false
+		return nil
 	}
 	for _, wallet := range wallets {
 		if wallet.IsMine(onceAddress) {
-			return true
+			return &wallet.Accounts()[0].Address
 		}
 	}
-	return false
+	return nil
 }
 
 // PrivateAccountAPI provides an API to access accounts managed by this node.
@@ -618,7 +622,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Acc
 
 }
 
-func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, accountAdress common.AccountAddress, packed bool) ([]map[string]interface{}, error) {
+func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, accountAdress common.AccountAddress, packed bool) ([]map[string]interface{}, error) {
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
@@ -630,7 +634,7 @@ func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, accountAdress comm
 
 	// Look up the wallet containing the requested abi
 	account := accounts.Account{Address: accountAdress}
-
+	wallets := s.b.AccountManager().Wallets()
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
 		return nil, err
@@ -643,6 +647,10 @@ func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, accountAdress comm
 			pkg := map[string]interface{}{}
 			pkg["id"] = p.Pkg.Z.Pack.Id
 			pkg["packed"] = packed
+			to := getAddressByPkr(wallets, common.BytesToAddress(p.Pkg.Z.Pack.PKr[:]))
+			if to != nil {
+				pkg["to_addr"] = to
+			}
 			if (p.Key != keys.Uint256{}) {
 				pkg["key"] = p.Key
 				asset := map[string]interface{}{}
@@ -660,12 +668,46 @@ func (s *PublicBlockChainAPI) GetPackage(ctx context.Context, accountAdress comm
 				}
 
 				pkg["asset"] = asset
+
 			}
 			result = append(result, pkg)
 		}
 		return result, nil
 	}
 	return nil, nil
+}
+
+func (s *PublicBlockChainAPI) WatchPkg(ctx context.Context, id keys.Uint256, key keys.Uint256) (map[string]interface{}, error) {
+
+	pkg_o, pkr, err := txs.WatchPkg(&id, &key)
+	if err != nil {
+		return nil, err
+	}
+	wallets := s.b.AccountManager().Wallets()
+	pkg := map[string]interface{}{}
+	pkg["id"] = id
+	pkg["key"] = key
+	to := getAddressByPkr(wallets, common.BytesToAddress(pkr[:]))
+	if to != nil {
+		pkg["to"] = to
+	}
+	asset := map[string]interface{}{}
+	if pkg_o.Asset.Tkn != nil {
+		tkn := map[string]interface{}{}
+		tkn["currency"] = strings.Trim(string(pkg_o.Asset.Tkn.Currency[:]), zerobyte)
+		tkn["value"] = pkg_o.Asset.Tkn.Value
+		asset["tkn"] = tkn
+	}
+	if pkg_o.Asset.Tkt != nil {
+		tkt := map[string]interface{}{}
+		tkt["category"] = strings.Trim(string(pkg_o.Asset.Tkt.Category[:]), zerobyte)
+		tkt["value"] = pkg_o.Asset.Tkt.Value
+		asset["tkt"] = tkt
+	}
+
+	pkg["asset"] = asset
+
+	return pkg, nil
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
@@ -1057,7 +1099,10 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 	if err != nil {
 		return nil, err
 	}
-	fields["isMine"] = isMine(s.b.AccountManager().Wallets(), fields["miner"].(common.Address))
+	miner_addr := getAddressByPkr(s.b.AccountManager().Wallets(), fields["miner"].(common.Address))
+	if miner_addr != nil {
+		fields["miner_addr"] = miner_addr
+	}
 	fields["totalDifficulty"] = (*hexutil.Big)(s.b.GetTd(b.Hash()))
 	return fields, err
 }
@@ -1833,7 +1878,7 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]*RPCTransaction, err
 	}
 	transactions := make([]*RPCTransaction, 0, len(pending))
 	for _, tx := range pending {
-		if isMine(s.b.AccountManager().Wallets(), tx.From()) {
+		if fromAddr := getAddressByPkr(s.b.AccountManager().Wallets(), tx.From()); fromAddr != nil {
 			transactions = append(transactions, newRPCPendingTransaction(tx))
 		}
 	}
