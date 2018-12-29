@@ -83,10 +83,10 @@ func GetTknRoots(outs []*lstate.OutState, v *utils.U256, currency *keys.Uint256)
 	tkts = make(map[keys.Uint256][]keys.Uint256)
 	value := v.ToI256()
 	for _, out := range outs {
-		root := out.Pg.Root.ToUint256()
+		root := out.Root
 		if out.Out_O.Asset.Tkn != nil {
 			if out.Out_O.Asset.Tkn.Currency == *currency {
-				roots = append(roots, *root)
+				roots = append(roots, root)
 				amount.AddU(&out.Out_O.Asset.Tkn.Value)
 				out_o := out.Out_O
 				if out_o.Asset.Tkt != nil {
@@ -120,12 +120,12 @@ func GeTktRoots(outs []*lstate.OutState, categroy *keys.Uint256, tkts []keys.Uin
 	tkns = map[keys.Uint256]utils.U256{}
 	tktSize := len(tkts)
 	for _, out := range outs {
-		root := out.Pg.Root.ToUint256()
+		root := out.Root
 		if categroy != nil && tktSize > 0 {
 			if out.Out_O.Asset.Tkt != nil {
 				if out.Out_O.Asset.Tkt.Category == *categroy {
 					if uint256Contains(tkts, out.Out_O.Asset.Tkt.Value) {
-						if !uint256Contains(exits, *root) {
+						if !uint256Contains(exits, root) {
 							if out.Out_O.Asset.Tkn != nil {
 								if tkn, ok := tkns[out.Out_O.Asset.Tkn.Currency]; ok {
 									tkn.AddU(&out.Out_O.Asset.Tkn.Value)
@@ -135,7 +135,7 @@ func GeTktRoots(outs []*lstate.OutState, categroy *keys.Uint256, tkts []keys.Uin
 								}
 
 							}
-							roots = append(roots, *root)
+							roots = append(roots, root)
 						}
 						tktSize--
 					}
