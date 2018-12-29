@@ -84,6 +84,23 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 }
 
 func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset) {
-	o := stx.Out_O{*addr.ToPKr(), asset, keys.Uint512{}}
-	state.AddOut_O(&o)
+	need_add := false
+	if asset.Tkn != nil {
+		if asset.Tkn.Currency != keys.Empty_Uint256 {
+			if asset.Tkn.Value.ToUint256() != keys.Empty_Uint256 {
+				need_add = true
+			}
+		}
+	}
+	if asset.Tkt != nil {
+		if asset.Tkt.Category != keys.Empty_Uint256 {
+			if asset.Tkt.Value != keys.Empty_Uint256 {
+				need_add = true
+			}
+		}
+	}
+	if need_add {
+		o := stx.Out_O{*addr.ToPKr(), asset, keys.Uint512{}}
+		state.AddOut_O(&o)
+	}
 }
