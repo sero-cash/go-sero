@@ -62,6 +62,60 @@ func TestUpdateLeaks(t *testing.T) {
 	}
 }
 
+// Tests that no intermediate state of an object is stored into the database,
+// only the one right before the commit.
+func TestIntermediateLeaks(t *testing.T) {
+	// Create two state databases, one transitioning to the final state, the other final from the beginning
+	transDb := serodb.NewMemDatabase()
+	finalDb := serodb.NewMemDatabase()
+	transState, _ := New(common.Hash{}, NewDatabase(transDb), 0)
+	finalState, _ := New(common.Hash{}, NewDatabase(finalDb), 0)
+
+	modify := func(state *StateDB, addr common.Address, i, tweak byte) {
+		state.SetBalance(addr, "sero", big.NewInt(int64(11*i)+int64(tweak)))
+		if i%2 == 0 {
+			state.SetState(addr, common.Hash{i, i, i, 0}, common.Hash{})
+			state.SetState(addr, common.Hash{i, i, i, tweak}, common.Hash{i, i, i, i, tweak})
+		}
+		if i%3 == 0 {
+			state.SetCode(addr, []byte{i, i, i, i, i, tweak})
+		}
+	}
+
+	// Modify the transient state.
+	for i := byte(0); i < 255; i++ {
+		modify(transState, common.BytesToAddress([]byte{byte(i)}), i, 0)
+	}
+	// Write modifications to trie.
+	transState.IntermediateRoot(false)
+
+	// Overwrite all the data with new values in the transient database.
+	for i := byte(0); i < 255; i++ {
+		modify(transState, common.BytesToAddress([]byte{byte(i)}), i, 99)
+		modify(finalState, common.BytesToAddress([]byte{byte(i)}), i, 99)
+	}
+
+	// Commit and cross check the databases.
+	if _, err := transState.Commit(false); err != nil {
+		t.Fatalf("failed to commit transition state: %v", err)
+	}
+	if _, err := finalState.Commit(false); err != nil {
+		t.Fatalf("failed to commit final state: %v", err)
+	}
+	for _, key := range finalDb.Keys() {
+		if _, err := transDb.Get(key); err != nil {
+			val, _ := finalDb.Get(key)
+			t.Errorf("entry missing from the transition database: %x -> %x", key, val)
+		}
+	}
+	for _, key := range transDb.Keys() {
+		if _, err := finalDb.Get(key); err != nil {
+			val, _ := transDb.Get(key)
+			t.Errorf("extra entry in the transition database: %x -> %x", key, val)
+		}
+	}
+}
+
 // TestCopy tests that copying a statedb object indeed makes the original and
 // the copy independent of each other. This test is a regression test against
 // https://github.com/sero-cash/go-sero/pull/15549.
@@ -234,9 +288,10 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 func (*snapshotTest) Generate(r *rand.Rand, size int) reflect.Value {
 	// Generate random actions.
 	addrs := make([]common.Address, 50)
-	//for i := range addrs {
-	//addrs[i] = common.Address{Data: [64]byte{byte(i)}}
-	//}
+
+	for i := range addrs {
+		addrs[i] = common.BytesToAddress([]byte{byte(i)})
+	}
 	actions := make([]testAction, size)
 	for i := range actions {
 		addr := addrs[r.Intn(len(addrs))]

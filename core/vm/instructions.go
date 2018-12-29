@@ -894,14 +894,9 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 		value = crypto.Keccak256Hash(bytes)
 		evm.StateDB.AddTicket(contract.Address(), categoryName, value)
 	}
-	//else {
-	//	if !evm.StateDB.RemoveTicket(contract.Address(), categoryName, common.BytesToHash(value[:])) {
-	//		return common.Hash{}, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "The ticket does not belong to you.")
-	//	}
-	//}
 
 	toAddr := evm.StateDB.GetNonceAddress(d[44:64])
-	if toAddr != contract.Address() {
+	if toAddr != (common.Address{}) && toAddr != contract.Address() {
 		asset := assets.Asset{
 			Tkt: &assets.Ticket{
 				Category: *common.BytesToHash(common.LeftPadBytes([]byte(categoryName), 32)).HashToUint256(),
@@ -912,7 +907,9 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 		gas := evm.callGasTemp + params.CallStipend
 		_, returnGas, err := evm.Call(contract, toAddr, nil, gas, asset)
 		contract.Gas += returnGas
-		return value, err
+		if err != nil {
+			return common.Hash{}, err
+		}
 	}
 
 	return value, nil

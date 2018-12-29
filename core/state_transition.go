@@ -236,27 +236,29 @@ func (st *StateTransition) refundGas() {
 	// Return SERO for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
 
-	curency := strings.ToUpper(common.BytesToString(st.msg.Fee().Currency.NewRef()[:]))
-	if curency != "SERO" {
-		st.state.AddBalance(*st.msg.To(), "SERO", remaining)
-		tokes, tas := st.state.GetTokenRate(*st.msg.To(), curency)
-		if tokes.Sign() != 0 && tas.Sign() != 0 {
-			remainToken := new(big.Int).Div(new(big.Int).Mul(remaining, tokes), tas)
+	if remaining.Sign() > 0 {
+		curency := strings.ToUpper(common.BytesToString(st.msg.Fee().Currency.NewRef()[:]))
+		if curency != "SERO" {
+			st.state.AddBalance(*st.msg.To(), "SERO", remaining)
+			tokes, tas := st.state.GetTokenRate(*st.msg.To(), curency)
+			if tokes.Sign() != 0 && tas.Sign() != 0 {
+				remainToken := new(big.Int).Div(new(big.Int).Mul(remaining, tokes), tas)
+				asset := assets.Asset{Tkn: &assets.Token{
+					Currency: *common.BytesToHash(common.LeftPadBytes([]byte(curency), 32)).HashToUint256(),
+					Value:    utils.U256(*remainToken),
+				},
+				}
+				st.state.GetZState().AddTxOut(st.msg.From(), asset)
+				st.state.SubBalance(*st.msg.To(), curency, remainToken)
+			}
+		} else {
 			asset := assets.Asset{Tkn: &assets.Token{
-				Currency: *common.BytesToHash(common.LeftPadBytes([]byte(curency), 32)).HashToUint256(),
-				Value:    utils.U256(*remainToken),
+				Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+				Value:    utils.U256(*remaining),
 			},
 			}
 			st.state.GetZState().AddTxOut(st.msg.From(), asset)
-			st.state.SubBalance(*st.msg.To(), curency, remainToken)
 		}
-	} else {
-		asset := assets.Asset{Tkn: &assets.Token{
-			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
-			Value:    utils.U256(*remaining),
-		},
-		}
-		st.state.GetZState().AddTxOut(st.msg.From(), asset)
 	}
 
 	// Also return remaining gas to the block gas counter so it is
