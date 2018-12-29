@@ -77,7 +77,7 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 			state.Pkgs.Force_del(&st.Desc_Pkg.Close.Id)
 		}
 		if st.Desc_Pkg.Transfer != nil {
-			state.Pkgs.Force_transfer(&st.Desc_Pkg.Close.Id, &st.Desc_Pkg.Transfer.PKr)
+			state.Pkgs.Force_transfer(&st.Desc_Pkg.Transfer.Id, &st.Desc_Pkg.Transfer.PKr)
 		}
 	}
 	return

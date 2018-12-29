@@ -152,7 +152,7 @@ func (self *gen_ctx) signTx() (e error) {
 	}
 
 	if self.p.desc_pkg.transfer != nil {
-		if sign, err := keys.SignPKr(self.seed, &hash_z, &self.p.desc_pkg.transfer.pkr); err != nil {
+		if sign, err := keys.SignPKr(self.seed, &hash_z, &self.p.desc_pkg.transfer.zpkg.Pack.PKr); err != nil {
 			e = err
 			return
 		} else {
