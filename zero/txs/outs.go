@@ -12,6 +12,10 @@ import (
 
 func WatchPkg(id *keys.Uint256, key *keys.Uint256) (ret pkg.Pkg_O, pkr keys.PKr, e error) {
 	st1 := lstate.CurrentState1()
+	if st1 == nil {
+		e = errors.New("Watch Pkg but lstate is nil")
+		return
+	}
 	pg := st1.State.Pkgs.GetPkg(id)
 	pkr = pg.Pack.PKr
 	ret, e = pkg.DePkg(key, &pg.Pack.Pkg)
@@ -20,6 +24,10 @@ func WatchPkg(id *keys.Uint256, key *keys.Uint256) (ret pkg.Pkg_O, pkr keys.PKr,
 
 func GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error) {
 	st1 := lstate.CurrentState1()
+	if st1 == nil {
+		e = errors.New("Get outs but lstate is nil")
+		return
+	}
 	return st1.GetOuts(tk)
 }
 

@@ -35,14 +35,8 @@ type State struct {
 	num   uint64
 	MTree MerkleTree
 
-	Cur    Current
-	Block  StateBlock
-	G2ins  map[keys.Uint256]bool
-	G2outs map[keys.Uint256]*OutState
-
-	last_out_dirty bool
-	g2ins_dirty    map[keys.Uint256]bool
-	g2outs_dirty   map[keys.Uint256]bool
+	Data
+	snapshots utils.Snapshots
 }
 
 func (self *State) Tri() tri.Tri {
@@ -62,25 +56,12 @@ func NewState(tri tri.Tri, num uint64) (state State) {
 	return
 }
 
-func (state *State) clear_dirty() {
-	state.last_out_dirty = false
-	state.g2ins_dirty = make(map[keys.Uint256]bool)
-	state.g2outs_dirty = make(map[keys.Uint256]bool)
-}
-func (state *State) clear() {
-	state.Cur = NewCur()
-	state.G2ins = make(map[keys.Uint256]bool)
-	state.G2outs = make(map[keys.Uint256]*OutState)
-	state.Block = StateBlock{}
-	state.clear_dirty()
-}
-
 func (state *State) append_del_dirty(del *keys.Uint256) {
 	if del == nil {
 		panic("set_last_out but del is nil")
 	}
 	state.Block.Dels = append(state.Block.Dels, *del)
-	state.last_out_dirty = true
+	state.Dirty_last_out = true
 }
 func (state *State) append_commitment_dirty(commitment *keys.Uint256) {
 	if commitment == nil {
@@ -89,17 +70,17 @@ func (state *State) append_commitment_dirty(commitment *keys.Uint256) {
 
 	state.Cur.Index = state.Cur.Index + int64(1)
 
-	state.last_out_dirty = true
+	state.Dirty_last_out = true
 }
 
 func (state *State) add_in_dirty(in *keys.Uint256) {
 	state.G2ins[*in] = true
-	state.g2ins_dirty[*in] = true
+	state.Dirty_G2ins[*in] = true
 }
 
 func (state *State) add_out_dirty(k *keys.Uint256, out *OutState) {
 	state.G2outs[*k] = out
-	state.g2outs_dirty[*k] = true
+	state.Dirty_G2outs[*k] = true
 	state.Block.Roots = append(state.Block.Roots, *k)
 }
 
@@ -148,7 +129,7 @@ func pkgName0(k uint64) (ret []byte) {
 func (self *State) Update() {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if self.last_out_dirty {
+	if self.Dirty_last_out {
 		tri.UpdateObj(self.tri, LAST_OUTSTATE0_NAME.Bytes(), &self.Cur)
 		tri.UpdateObj(
 			self.tri,
@@ -158,7 +139,7 @@ func (self *State) Update() {
 	}
 
 	g2ins_dirty := utils.Uint256s{}
-	for k := range self.g2ins_dirty {
+	for k := range self.Dirty_G2ins {
 		g2ins_dirty = append(g2ins_dirty, k)
 	}
 	sort.Sort(g2ins_dirty)
@@ -172,7 +153,7 @@ func (self *State) Update() {
 	}
 
 	g2outs_dirty := utils.Uint256s{}
-	for k := range self.g2outs_dirty {
+	for k := range self.Dirty_G2outs {
 		g2outs_dirty = append(g2outs_dirty, k)
 	}
 	sort.Sort(g2outs_dirty)
@@ -189,10 +170,13 @@ func (self *State) Update() {
 	return
 }
 
-func (self *State) Revert() {
-	self.clear()
-	self.load()
-	return
+func (self *State) Snapshot(revid int) {
+	self.snapshots.Push(revid, &self.Data)
+}
+
+func (self *State) Revert(revid int) {
+	self.Data.clear()
+	self.Data = *self.snapshots.Revert(revid).(*Data)
 }
 
 func (state *State) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
@@ -269,6 +253,7 @@ func (state *State) addIn(root *keys.Uint256) (e error) {
 func (state *State) AddStx(st *stx.T) (e error) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
+	t := utils.TR_enter("AddStx---ins")
 	for _, in := range st.Desc_O.Ins {
 		if err := state.addIn(&in.Root); err != nil {
 			e = err
@@ -281,6 +266,7 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	//	state.AddOut(out.Clone().ToRef(), nil)
 	//}
 
+	t.Renter("AddStx---z_ins")
 	for _, in := range st.Desc_Z.Ins {
 		if err := state.addIn(&in.Nil); err != nil {
 			e = err
@@ -291,9 +277,12 @@ func (state *State) AddStx(st *stx.T) (e error) {
 		}
 	}
 
+	t.Renter("AddStx---z_outs")
 	for _, out := range st.Desc_Z.Outs {
 		state.addOut(nil, &out)
 	}
+
+	t.Leave()
 
 	return
 }

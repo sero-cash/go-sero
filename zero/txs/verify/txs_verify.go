@@ -45,6 +45,9 @@ func Verify(s *stx.T, state *zstate.ZState) (e error) {
 	return Verify_state1(s, state)
 }
 func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
+
+	t := utils.TR_enter("Miner-Verify-----Pre")
+
 	balance_desc := cpt.BalanceDesc{}
 
 	hash_z := s.ToHash_for_sign()
@@ -70,6 +73,8 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		e = errors.New("txs.verify from verify failed")
 		return
 	}
+
+	t.Renter("Miner-Verify-----o_ins")
 
 	for _, in_o := range s.Desc_O.Ins {
 		if ok := state.State.HasIn(&in_o.Root); ok {
@@ -105,6 +110,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		}
 	}
 
+	t.Renter("Miner-Verify-----o_outs")
 	for _, out_o := range s.Desc_O.Outs {
 		if out_o.Asset.Tkn != nil {
 			if !CheckUint(&out_o.Asset.Tkn.Value) {
@@ -126,6 +132,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		}
 	}
 
+	t.Renter("Miner-Verify-----pkgs")
 	if s.Desc_Pkg.Transfer != nil {
 		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Transfer.Id); pg == nil {
 			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
@@ -153,6 +160,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		}
 	}
 
+	t.Renter("Miner-Verify-----z_ins")
 	for _, in_z := range s.Desc_Z.Ins {
 		if ok := state.State.HasIn(&in_z.Nil); ok {
 			e = errors.New("txs.verify in already in nils")
@@ -170,18 +178,21 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		}
 	}
 
+	t.Renter("Miner-Verify-----desc_zs")
 	if err := verifyDesc_Zs(s, &balance_desc); err != nil {
 		e = err
 		return
 	} else {
 	}
 
+	t.Renter("Miner-Verify-----balance_desc")
 	balance_desc.Bcr = s.Bcr
 	balance_desc.Bsign = s.Bsign
 	if err := cpt.VerifyBalance(&balance_desc); err != nil {
 		e = err
 		return
 	} else {
+		t.Leave()
 		return
 	}
 }

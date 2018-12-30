@@ -20,6 +20,7 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
@@ -52,12 +53,15 @@ func (self *ZState) Update() {
 }
 
 func (self *ZState) Snapshot(revid int) {
-
+	t := utils.TR_enter("Snapshot")
+	self.State.Snapshot(revid)
+	self.Pkgs.Snapshot(revid)
+	t.Leave()
 }
 
 func (self *ZState) Revert(revid int) {
-	self.State.Revert()
-	self.Pkgs.Revert()
+	self.State.Revert(revid)
+	self.Pkgs.Revert(revid)
 	return
 }
 
@@ -84,6 +88,7 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 }
 
 func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset) {
+	t := utils.TR_enter("AddTxOut-----")
 	need_add := false
 	if asset.Tkn != nil {
 		if asset.Tkn.Currency != keys.Empty_Uint256 {
@@ -103,4 +108,5 @@ func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset) {
 		o := stx.Out_O{*addr.ToPKr(), asset, keys.Uint512{}}
 		state.AddOut_O(&o)
 	}
+	t.Leave()
 }

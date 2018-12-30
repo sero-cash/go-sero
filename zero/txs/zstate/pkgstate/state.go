@@ -91,12 +91,12 @@ func (self *BlockGet) Unserial(v []byte) (e error) {
 }
 
 type PkgState struct {
-	tri          tri.Tri
-	rw           *sync.RWMutex
-	num          uint64
-	G2pkgs       map[keys.Uint256]*ZPkg
-	Block        Block
-	G2pkgs_dirty map[keys.Uint256]bool
+	tri tri.Tri
+	rw  *sync.RWMutex
+	num uint64
+
+	Data
+	snapshots utils.Snapshots
 }
 
 func NewPkgState(tri tri.Tri, num uint64) (state PkgState) {
@@ -121,7 +121,7 @@ func (self *PkgState) load() {
 
 func (self *PkgState) Update() {
 	G2pkgs_dirty := utils.Uint256s{}
-	for k := range self.G2pkgs_dirty {
+	for k := range self.Dirty_G2pkgs {
 		G2pkgs_dirty = append(G2pkgs_dirty, k)
 	}
 	sort.Sort(G2pkgs_dirty)
@@ -136,26 +136,24 @@ func (self *PkgState) Update() {
 	return
 }
 
-func (self *PkgState) Revert() {
-	self.clear()
-	return
+func (self *PkgState) Snapshot(revid int) {
+	self.snapshots.Push(revid, &self.Data)
 }
-
-func (state *PkgState) clear() {
-	state.G2pkgs = make(map[keys.Uint256]*ZPkg)
-	state.Block.Pkgs = []keys.Uint256{}
-	state.G2pkgs_dirty = make(map[keys.Uint256]bool)
+func (self *PkgState) Revert(revid int) {
+	self.clear()
+	self.Data = *self.snapshots.Revert(revid).(*Data)
+	return
 }
 
 func (state *PkgState) add_pkg_dirty(pkg *ZPkg) {
 	state.G2pkgs[pkg.Pack.Id] = pkg
-	state.G2pkgs_dirty[pkg.Pack.Id] = true
+	state.Dirty_G2pkgs[pkg.Pack.Id] = true
 	state.Block.Pkgs = append(state.Block.Pkgs, pkg.Pack.Id)
 }
 
 func (state *PkgState) del_pkg_dirty(id *keys.Uint256) {
 	state.G2pkgs[*id] = nil
-	state.G2pkgs_dirty[*id] = true
+	state.Dirty_G2pkgs[*id] = true
 	state.Block.Pkgs = append(state.Block.Pkgs, *id)
 }
 
