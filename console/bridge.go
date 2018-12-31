@@ -250,6 +250,80 @@ func (b *bridge) CreatePkg(call otto.FunctionCall) (response otto.Value) {
 	return val
 }
 
+func (b *bridge) TransferPkg(call otto.FunctionCall) (response otto.Value) {
+	var (
+		args = call.Argument(0)
+	)
+	if !args.IsObject() {
+		throwJSException("first argument must be the transfer pkg to send")
+	}
+
+	finish := make(chan struct{})
+	progress := uiprogress.New()
+	//bar := progress.AddBar(120).PrependElapsed()
+	bar := progress.AddBar(120)
+	bar.PrependFunc(func(b *uiprogress.Bar) string {
+		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 10, ' ')
+	})
+	progress.Start()
+	go progressBar(bar, finish)
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.transferPkg", nil, args)
+
+	if err != nil {
+		progress.Stop()
+		finish <- struct{}{}
+		throwJSException(err.Error())
+	}
+	bar.Set(bar.Total)
+	progress.Stop()
+	finish <- struct{}{}
+
+	if fn := call.Argument(1); fn.Class() == "Function" {
+		fn.Call(otto.NullValue(), otto.NullValue(), val)
+		return otto.UndefinedValue()
+	}
+
+	return val
+}
+
+func (b *bridge) ClosePkg(call otto.FunctionCall) (response otto.Value) {
+	var (
+		args = call.Argument(0)
+	)
+	if !args.IsObject() {
+		throwJSException("first argument must be the close pkg to send")
+	}
+
+	finish := make(chan struct{})
+	progress := uiprogress.New()
+	//bar := progress.AddBar(120).PrependElapsed()
+	bar := progress.AddBar(120)
+	bar.PrependFunc(func(b *uiprogress.Bar) string {
+		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 10, ' ')
+	})
+	progress.Start()
+	go progressBar(bar, finish)
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.closePkg", nil, args)
+
+	if err != nil {
+		progress.Stop()
+		finish <- struct{}{}
+		throwJSException(err.Error())
+	}
+	bar.Set(bar.Total)
+	progress.Stop()
+	finish <- struct{}{}
+
+	if fn := call.Argument(1); fn.Class() == "Function" {
+		fn.Call(otto.NullValue(), otto.NullValue(), val)
+		return otto.UndefinedValue()
+	}
+
+	return val
+}
+
 // Sleep will block the console for the specified number of seconds.
 func (b *bridge) Sleep(call otto.FunctionCall) (response otto.Value) {
 	if call.Argument(0).IsNumber() {

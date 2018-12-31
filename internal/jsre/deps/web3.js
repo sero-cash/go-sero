@@ -3394,7 +3394,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 if (!e && !callbackFired) {
 
                     count++;
-                    console.log("checkForContractAddress ccount =" + count)
                     // stop watching after 50 blocks (timeout)
                     if (count > 50) {
 
