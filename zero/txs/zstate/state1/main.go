@@ -2,6 +2,7 @@ package state1
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	"github.com/pkg/errors"
 
@@ -50,6 +51,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("parse block chain error : ", "recover", r)
+			debug.PrintStack()
 			e = errors.Errorf("parse block chain error %v", r)
 		}
 	}()

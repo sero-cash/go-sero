@@ -32,6 +32,10 @@ import (
 
 func Gen(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
 	st1 := state1.CurrentState1()
+	if st1 == nil {
+		e = errors.New("state1 is nil")
+		return
+	}
 	return Gen_state1(seed, t, st1)
 }
 func Gen_state1(seed *keys.Uint256, t *tx.T, st1 *state1.State1) (s stx.T, e error) {
@@ -286,6 +290,10 @@ func Verify_state1(s *stx.T, state *zstate.State0) (e error) {
 
 func GetOuts(tk *keys.Uint512) (outs []*state1.OutState1, e error) {
 	st1 := state1.CurrentState1()
+	if st1 == nil {
+		e = errors.New("state1 is nil")
+		return
+	}
 	return st1.GetOuts(tk)
 }
 
