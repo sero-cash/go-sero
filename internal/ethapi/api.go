@@ -442,7 +442,7 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return submitTransaction(ctx, s.b, signed)
+	return submitTransaction(ctx, s.b, signed, args.To)
 }
 
 // SignAndSendTransaction was renamed to SendTransaction. This method is deprecated
@@ -699,7 +699,7 @@ func (s *PublicBlockChainAPI) WatchPkg(ctx context.Context, id keys.Uint256, key
 	pkg["key"] = key
 	to := getAddressByPkr(wallets, common.BytesToAddress(pkr[:]))
 	if to != nil {
-		pkg["to"] = to
+		pkg["to_addr"] = to
 	}
 	asset := map[string]interface{}{}
 	if pkg_o.Asset.Tkn != nil {
@@ -1496,7 +1496,7 @@ func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T,
 }
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
-func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
+func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction, to *common.AccountAddress) (common.Hash, error) {
 	if err := b.SendTx(ctx, tx); err != nil {
 		return common.Hash{}, err
 	}
@@ -1510,7 +1510,7 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 		//addr := crypto.CreateAddress(from, tx.Nonce())
 		log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex())
 	} else {
-		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
+		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", to)
 	}
 	return tx.Hash(), nil
 }
@@ -1560,7 +1560,7 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return submitTransaction(ctx, s.b, encrypted)
+	return submitTransaction(ctx, s.b, encrypted, args.To)
 }
 
 func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArgs) (common.Hash, error) {
@@ -1610,7 +1610,7 @@ func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArg
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return submitTransaction(ctx, s.b, encrypted)
+	return submitTransaction(ctx, s.b, encrypted, args.To)
 }
 
 type ClosePkgArgs struct {
@@ -1709,7 +1709,7 @@ func (s *PublicTransactionPoolAPI) ClosePkg(ctx context.Context, args ClosePkgAr
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return submitTransaction(ctx, s.b, encrypted)
+	return submitTransaction(ctx, s.b, encrypted, nil)
 }
 
 type TransferPkgArgs struct {
@@ -1813,7 +1813,7 @@ func (s *PublicTransactionPoolAPI) TransferPkg(ctx context.Context, args Transfe
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return submitTransaction(ctx, s.b, encrypted)
+	return submitTransaction(ctx, s.b, encrypted, args.To)
 }
 
 // EncryptTransactionResult represents a RLP encoded signed transaction.
