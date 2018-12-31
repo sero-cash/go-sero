@@ -161,8 +161,6 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 		panic(fmt.Sprintf("gen path index %v != os index %v", pg.Index, os.Index))
 	}
 
-	Debug_State1_addout_assert(self, os)
-
 	t.Renter("ADD_OUT----MAX_NUM")
 
 	for _, wout := range self.G2wouts {
@@ -211,8 +209,6 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 			}
 		}
 	}
-
-	Debug_State1_addout_end_assert(self, os)
 
 	t.Renter("ADD_OUT----ADD_WOUTS")
 	self.addWouts(tks, os, &pg)
