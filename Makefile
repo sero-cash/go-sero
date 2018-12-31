@@ -62,6 +62,7 @@ gero-linux: gero-linux-amd640-v3 gero-linux-amd64-v4
 
 gero-linux-amd64-v3:
 	build/env.sh linux-v3 go run build/ci.go xgo -- --go=$(GO) --out=gero-v3 --targets=linux/amd64 -v ./cmd/gero
+	build/env.sh linux-v3 go run build/ci.go xgo -- --go=$(GO) --out=bootnode-v3 --targets=linux/amd64 -v ./cmd/bootnode
 	@echo "Linux centos amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/gero-v3-linux-* | grep amd64
 
