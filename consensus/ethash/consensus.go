@@ -412,9 +412,9 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 	}
 
 	difficulty := big.NewInt(1717986918)
-	if config.ChainID.Uint64() == 3 {
+	if config.ChainID == params.AlphanetChainConfig.ChainID {
 		difficulty = big.NewInt(51485767)
-	} else if config.ChainID.Uint64() == 4 {
+	} else if config.ChainID == params.DevnetChainConfig.ChainID {
 		difficulty = big.NewInt(1048576)
 	}
 

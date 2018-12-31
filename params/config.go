@@ -32,21 +32,21 @@ var (
 var (
 	// BetanetChainConfig is the chain parameters to run a node on the main network.
 	BetanetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(1),
+		ChainID:             big.NewInt(2019),
 		AutumnTwilightBlock: big.NewInt(0),
 		Ethash:              new(EthashConfig),
 	}
 
 	// AlphanetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	AlphanetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(3),
+		ChainID:             big.NewInt(1000),
 		AutumnTwilightBlock: big.NewInt(0),
 		Ethash:              new(EthashConfig),
 	}
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
 	DevnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(4),
+		ChainID:             big.NewInt(1024),
 		AutumnTwilightBlock: big.NewInt(0),
 		Ethash:              new(EthashConfig),
 	}
