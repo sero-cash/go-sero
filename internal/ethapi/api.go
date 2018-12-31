@@ -622,7 +622,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Acc
 
 }
 
-func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, accountAdress common.AccountAddress, packed bool) ([]map[string]interface{}, error) {
+func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, accountAdress common.AccountAddress, packed bool, id *keys.Uint256) (interface{}, error) {
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
@@ -645,6 +645,7 @@ func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, accountAdress common.A
 		result := []map[string]interface{}{}
 		for _, p := range pkgs {
 			pkg := map[string]interface{}{}
+
 			pkg["id"] = p.Pkg.Z.Pack.Id
 			pkg["packed"] = packed
 			to := getAddressByPkr(wallets, common.BytesToAddress(p.Pkg.Z.Pack.PKr[:]))
@@ -670,7 +671,16 @@ func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, accountAdress common.A
 				pkg["asset"] = asset
 
 			}
-			result = append(result, pkg)
+			if id != nil {
+				if p.Pkg.Z.Pack.Id == *id {
+					return pkg, nil
+				} else {
+					continue
+				}
+			} else {
+				result = append(result, pkg)
+			}
+
 		}
 		return result, nil
 	}

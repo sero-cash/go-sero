@@ -6175,8 +6175,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var getPkg = new Method({
                 name: 'getPkg',
                 call: 'sero_getPkg',
-                params: 2,
-                inputFormatter: [formatters.inputAddressFormatter,null],
+                params: 3,
+                inputFormatter: [formatters.inputAddressFormatter,null,null],
             });
 
             var watchPkg = new Method({
