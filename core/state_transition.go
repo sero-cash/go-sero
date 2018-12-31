@@ -211,7 +211,9 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		if vmerr == vm.ErrInsufficientBalance {
 			return nil, 0, false, vmerr
 		}
-		st.state.GetZState().AddTxOut(msg.From(), *msg.Asset())
+		if msg.Asset() != nil {
+			st.state.GetZState().AddTxOut(msg.From(), *msg.Asset())
+		}
 	}
 
 	st.refundGas()
