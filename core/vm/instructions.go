@@ -1041,21 +1041,21 @@ func makeLog(size int) executionFunc {
 				memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
 			}
 		} else if topics[0] == topic_currency {
-			if contract.asset.Tkn != nil {
+			if contract.asset != nil && contract.asset.Tkn != nil {
 				currency := strings.Trim(string(contract.asset.Tkn.Currency[:]), string([]byte{0}))
 				memory.Set(mStart.Uint64(), 32, []byte(currency))
 			} else {
 				memory.Set(mStart.Uint64(), 32, []byte{})
 			}
 		} else if topics[0] == topic_category {
-			if contract.asset.Tkt != nil {
+			if contract.asset != nil && contract.asset.Tkt != nil {
 				category := strings.Trim(string(contract.asset.Tkt.Category[:]), string([]byte{0}))
 				memory.Set(mStart.Uint64(), 32, []byte(category))
 			} else {
 				memory.Set(mStart.Uint64(), 32, []byte{})
 			}
 		} else if topics[0] == topic_ticket {
-			if contract.asset.Tkt != nil {
+			if contract.asset != nil && contract.asset.Tkt != nil {
 				memory.Set(mStart.Uint64(), 32, contract.asset.Tkt.Value[:])
 			} else {
 				memory.Set(mStart.Uint64(), 32, []byte{})

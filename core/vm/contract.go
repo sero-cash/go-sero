@@ -169,7 +169,7 @@ func (c *Contract) Address() common.Address {
 
 // Value returns the contracts value (sent to it from it's caller)
 func (c *Contract) Value() *big.Int {
-	if c.asset.Tkn != nil {
+	if c.asset != nil && c.asset.Tkn != nil {
 		value := big.Int(c.asset.Tkn.Value)
 		return &value
 	} else {
@@ -178,7 +178,7 @@ func (c *Contract) Value() *big.Int {
 }
 
 func (c *Contract) Currency() string {
-	if c.asset.Tkn != nil {
+	if c.asset != nil && c.asset.Tkn != nil {
 		return strings.TrimSpace(string(c.asset.Tkn.Currency[:]))
 	} else {
 		return "SERO"
