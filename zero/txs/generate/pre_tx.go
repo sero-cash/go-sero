@@ -20,11 +20,11 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
+
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
 
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
-
-	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
@@ -85,6 +85,30 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 		}
 	}
 
+	if ts.PkgClose != nil {
+		if zpkg := state1.State.Pkgs.GetPkg(&ts.PkgClose.Id); zpkg == nil {
+			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
+			return
+		} else {
+			if opkg, err := pkg.DePkg(&ts.PkgClose.Key, &zpkg.Pack.Pkg); err != nil {
+				e = fmt.Errorf("Decode Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
+				return
+			} else {
+				if e = pkg.ConfirmPkg(&opkg, &zpkg.Pack.Pkg); e != nil {
+					return
+				} else {
+					if _, e = ck_state.AddIn(&opkg.Asset); e != nil {
+						return
+					} else {
+						p.desc_pkg.close = &prePkgClose{}
+						p.desc_pkg.close.opkg.O = opkg
+						p.desc_pkg.close.opkg.Z = *zpkg
+					}
+				}
+			}
+		}
+	}
+
 	for _, out := range ts.Outs {
 		if added, err := ck_state.AddOut(&out.Asset); err != nil {
 			e = err
@@ -107,30 +131,6 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 		} else {
 			p.desc_pkg.create = &prePkgCreate{}
 			p.desc_pkg.create.pkg = *ts.PkgCreate
-		}
-	}
-
-	if ts.PkgClose != nil {
-		if zpkg := state1.State.Pkgs.GetPkg(&ts.PkgClose.Id); zpkg == nil {
-			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
-			return
-		} else {
-			if opkg, err := pkg.DePkg(&ts.PkgClose.Key, &zpkg.Pack.Pkg); err != nil {
-				e = fmt.Errorf("Decode Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
-				return
-			} else {
-				if e = pkg.ConfirmPkg(&opkg, &zpkg.Pack.Pkg); e != nil {
-					return
-				} else {
-					if _, e = ck_state.AddIn(&opkg.Asset); e != nil {
-						return
-					} else {
-						p.desc_pkg.close = &prePkgClose{}
-						p.desc_pkg.close.opkg.O = opkg
-						p.desc_pkg.close.opkg.Z = *zpkg
-					}
-				}
-			}
 		}
 	}
 
