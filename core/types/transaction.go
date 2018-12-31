@@ -171,11 +171,11 @@ func NewCreatePkg(Pkr keys.PKr, currency string, value *big.Int, catg string, tk
 
 }
 
-func (tx *Transaction) Pkg() assets.Asset {
+func (tx *Transaction) Pkg() *assets.Asset {
 	for _, desc_o := range tx.data.Stxt.Desc_O.Outs {
-		return desc_o.Asset
+		return &desc_o.Asset
 	}
-	return assets.Asset{}
+	return nil
 }
 
 // EncodeRLP implements rlp.Encoder
@@ -223,11 +223,6 @@ func (tx *Transaction) GetZZSTX() *zstx.T {
 }
 
 func (tx *Transaction) To() *common.Address {
-
-	if len(tx.data.Stxt.Desc_O.Ins) == 0 && len(tx.data.Stxt.Desc_O.Outs) == 0 {
-		return &common.Address{}
-	}
-
 	for _, out := range tx.data.Stxt.Desc_O.Outs {
 		if out.Addr != (keys.PKr{}) {
 			addr := common.BytesToAddress(out.Addr[:])
@@ -421,7 +416,7 @@ type Message struct {
 	to       *common.Address
 	from     common.Address
 	nonce    uint64
-	asset    assets.Asset
+	asset    *assets.Asset
 	fee      assets.Token
 	gasPrice *big.Int
 	data     []byte
@@ -435,7 +430,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, asset ass
 		fee:      fee,
 		gasPrice: gasPrice,
 		data:     data,
-		asset:    asset,
+		asset:    &asset,
 	}
 	return message
 }
@@ -445,6 +440,6 @@ func (m Message) To() *common.Address  { return m.to }
 func (m Message) GasPrice() *big.Int   { return m.gasPrice }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) Fee() assets.Token    { return m.fee }
-func (m Message) Asset() assets.Asset {
+func (m Message) Asset() *assets.Asset {
 	return m.asset
 }

@@ -721,7 +721,7 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 		gas += params.CallStipend
 	}
 
-	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, *asset)
+	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, asset)
 	contract.SetCallMsg(nil)
 	if err != nil {
 		stack.push(interpreter.intPool.getZero())
@@ -765,7 +765,7 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 		gas += params.CallStipend
 	}
 
-	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, *asset)
+	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, asset)
 	contract.SetCallMsg(nil)
 	if err != nil {
 		stack.push(interpreter.intPool.getZero())
@@ -905,7 +905,7 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 		}
 
 		gas := evm.callGasTemp + params.CallStipend
-		_, returnGas, err := evm.Call(contract, toAddr, nil, gas, asset)
+		_, returnGas, err := evm.Call(contract, toAddr, nil, gas, &asset)
 		contract.Gas += returnGas
 		if err != nil {
 			return common.Hash{}, err
@@ -992,7 +992,7 @@ func handleSend(d []byte, evm *EVM, contract *Contract, mem []byte) ([]byte, uin
 
 	asset := assets.Asset{Tkn: token, Tkt: ticket}
 	gas := evm.callGasTemp + params.CallStipend
-	return evm.Call(contract, toAddr, nil, gas, asset)
+	return evm.Call(contract, toAddr, nil, gas, &asset)
 }
 
 func makeLog(size int) executionFunc {

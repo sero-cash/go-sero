@@ -100,7 +100,7 @@ type StateDB struct {
 }
 
 func (self *StateDB) IsContract(addr common.Address) bool {
-	return self.GetCode(addr) != nil
+	return self.getStateObject(addr) != nil
 }
 
 func (self *StateDB) GetSeeds() []keys.Uint512 {

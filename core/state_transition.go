@@ -41,7 +41,7 @@ type StateTransition struct {
 	gas        uint64
 	gasPrice   *big.Int
 	initialGas uint64
-	asset      assets.Asset
+	asset      *assets.Asset
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
@@ -54,7 +54,7 @@ type Message interface {
 	To() *common.Address
 
 	GasPrice() *big.Int
-	Asset() assets.Asset
+	Asset() *assets.Asset
 
 	//Nonce() uint64
 
@@ -176,7 +176,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	msg := st.msg
 	sender := vm.AccountRef(msg.From())
 
-	contractCreation := msg.To() == nil
+	contractCreation := msg.To() == nil && len(st.data) > 0
 
 	// Pay intrinsic gas
 	gas, err := IntrinsicGas(st.data, contractCreation)
@@ -211,7 +211,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		if vmerr == vm.ErrInsufficientBalance {
 			return nil, 0, false, vmerr
 		}
-		st.state.GetZState().AddTxOut(msg.From(), msg.Asset())
+		st.state.GetZState().AddTxOut(msg.From(), *msg.Asset())
 	}
 
 	st.refundGas()

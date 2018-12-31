@@ -23,7 +23,7 @@ func (self *Snapshots) Revert(id int) (to interface{}) {
 	var temp []*Snapshot
 	var max_temp *Snapshot
 	for _, s := range self.objs {
-		if s.id < id {
+		if s.id <= id {
 			temp = append(temp, s)
 			if max_temp == nil {
 				max_temp = s
