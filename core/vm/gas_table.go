@@ -20,6 +20,7 @@ import (
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/params"
+	"math/big"
 )
 
 // memoryGasCosts calculates the quadratic gas for memory expansion. It does so
@@ -163,6 +164,15 @@ func makeGasLog(n uint64) gasFunc {
 		if gas, overflow = math.SafeAdd(gas, memorySizeGas); overflow {
 			return 0, errGasUintOverflow
 		}
+
+		evm.callGasTemp, err = callGas(gt, contract.Gas, gas, new(big.Int).SetUint64(math.MaxUint64))
+		if err != nil {
+			return 0, err
+		}
+		if gas, overflow = math.SafeAdd(gas, evm.callGasTemp); overflow {
+			return 0, errGasUintOverflow
+		}
+
 		return gas, nil
 	}
 }
