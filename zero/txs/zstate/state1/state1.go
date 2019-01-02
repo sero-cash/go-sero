@@ -173,7 +173,7 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 
 	t.Renter("ADD_OUT----MAX_NUM")
 
-	for _, wout := range self.G2wouts {
+	/*for _, wout := range self.G2wouts {
 		if src, err := self.GetOut(&wout); err != nil {
 			panic("gen witness wout can not find src")
 			return
@@ -220,7 +220,7 @@ func (self *State1) addOut(tks []keys.Uint512, os *zstate.OutState0, os_tree *me
 		}
 	}
 
-	t.Renter("ADD_OUT----ADD_WOUTS")
+	t.Renter("ADD_OUT----ADD_WOUTS")*/
 	self.addWouts(tks, os, &pg)
 	t.Leave()
 	return
