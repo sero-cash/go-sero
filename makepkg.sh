@@ -62,6 +62,7 @@ for os in ${os_version[@]}
         mv $BUILD_PATH/bin/gero-v3* $BUILD_PATH/geropkg/bin/gero
         cp -rf  $CZERO_PATH/czero/lib_LINUX_AMD64_V3/* $SERO_PATH/build/geropkg/czero/lib/
       elif [ $os == "linux-amd64-v4" ];then
+        mv $BUILD_PATH/bin/bootnode-v4*  $BUILD_PATH/geropkg/bin/bootnode
         mv $BUILD_PATH/bin/gero-v4* $BUILD_PATH/geropkg/bin/gero
         cp -rf  $CZERO_PATH/czero/lib_LINUX_AMD64_V4/* $SERO_PATH/build/geropkg/czero/lib/
       else

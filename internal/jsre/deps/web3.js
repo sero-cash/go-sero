@@ -6157,11 +6157,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         var methods = function () {
 
-            var isMineOAddr = new Method({
-                name: 'isMineOAddr',
-                call: 'sero_isMineOAddr',
-                params: 1,
-                inputFormatter: [formatters.inputAddressFormatter]
+            var isMinePKr = new Method({
+                name: 'isMinePKr',
+                call: 'sero_isMinePKr',
+                params: 1
             });
 
             var getBalance = new Method({
@@ -6360,7 +6359,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             });
 
             return [
-                isMineOAddr,
+                isMinePKr,
                 getBalance,
                 getPkg,
                 watchPkg,
