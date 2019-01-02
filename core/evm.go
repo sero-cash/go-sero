@@ -91,6 +91,9 @@ func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash
 // This does not take the necessary gas in to account to make the transfer valid.
 func CanTransfer(db vm.StateDB, addr common.Address, asset *assets.Asset) bool {
 	flag := true
+	if asset == nil {
+		return flag
+	}
 	if asset.Tkn != nil {
 		amount := big.Int(asset.Tkn.Value)
 		flag = db.GetBalance(addr, strings.Trim(string(asset.Tkn.Currency[:]), string([]byte{0}))).Cmp(&amount) >= 0

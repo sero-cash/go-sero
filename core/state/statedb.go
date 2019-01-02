@@ -301,7 +301,7 @@ func (self *StateDB) SetTokenRate(contractAddr common.Address, coinName string, 
 	stateObject := self.GetOrNewStateObject(EmptyAddress)
 	if stateObject != nil {
 
-		if contractAddr != (self.GetContrctAddressByToken(coinName)) {
+		if (common.Address{}) != (self.GetContrctAddressByToken(coinName)) {
 			return false
 		}
 		bytes0, _ := rlp.EncodeToBytes([]interface{}{"RateToken", contractAddr, strings.ToUpper(coinName)})
