@@ -61,7 +61,7 @@ func Remove_State1_dir_files(height int) {
 			}
 			if len(is) > 35 {
 				sort.Sort(is)
-				is = is[:35]
+				is = is[:len(is)-35]
 				for _, i := range is {
 					os.Remove(i2files[i])
 				}

@@ -21,9 +21,9 @@ func TR_enter(name string) (tr TimeRecord) {
 func (tr *TimeRecord) Renter(name string) {
 	if TR_enable {
 		td := time.Since(tr.start)
+		fmt.Printf("TR-----("+tr.name+")     s=%v\n", td)
 		tr.name = name
 		tr.start = time.Now()
-		fmt.Printf("TR-----("+tr.name+")     s=%v\n", td)
 	}
 }
 
