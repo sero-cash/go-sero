@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 )
 
@@ -48,14 +49,21 @@ func Remove_State1_dir_files(height int) {
 		if files, err := ioutil.ReadDir(state1_dir); err != nil {
 			panic(err)
 		} else {
+			i2files := make(map[int]string)
+			is := sort.IntSlice{}
 			for _, file := range files {
 				name := file.Name()
 				var index int
 				fmt.Sscanf(name, "%d.", &index)
-				if height-index > 35 {
-					path := filepath.Join(state1_dir, name)
-					os.Remove(path)
-					//fmt.Printf("remove state1 file: %s\n", name)
+				path := filepath.Join(state1_dir, name)
+				i2files[index] = path
+				is = append(is, index)
+			}
+			if len(is) > 35 {
+				sort.Sort(is)
+				is = is[len(is)-35:]
+				for _, i := range is {
+					os.Remove(i2files[i])
 				}
 			}
 		}
