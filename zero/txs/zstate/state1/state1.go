@@ -77,6 +77,16 @@ func (state *State1) clear_dirty() {
 }
 
 func (self *State1) load(loadName string) {
+	defer func() {
+		if r := recover(); r != nil {
+			if loadName != "" {
+				current_file := zconfig.State1_file(loadName)
+				os.Remove(current_file)
+				panic(r)
+			}
+		}
+	}()
+
 	self.G2outs = make(map[keys.Uint256]*OutState1)
 	self.G2wouts = []keys.Uint256{}
 	self.clear_dirty()

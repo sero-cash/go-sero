@@ -19,6 +19,8 @@ package witness
 import (
 	"testing"
 
+	"github.com/sero-cash/go-czero-import/cpt"
+
 	"github.com/sero-cash/go-sero/zero/witness/merkle"
 )
 
@@ -162,4 +164,9 @@ func TestMerkle(t *testing.T) {
 	p, index := w.Path()
 	t.Logf("path:%v", p)
 	t.Logf("index:%v", index)
+}
+
+func TestMain(m *testing.M) {
+	cpt.ZeroInit("", cpt.NET_Dev)
+	m.Run()
 }

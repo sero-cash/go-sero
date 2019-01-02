@@ -104,6 +104,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 	}
 
 	var st1 *State1
+	parse_count := 0
 	for i := len(need_load) - 1; i >= 0; i-- {
 
 		header := need_load[i]
@@ -140,12 +141,18 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 		current_state1 = st1
 
 		t.Renter("PARSE_BLOCK_CHAIN----Finalize")
-		if i < 30 {
+		if parse_count%2000 == 0 {
 			st1.Finalize(saved_name)
 			st1 = nil
+		} else {
+			if i < 30 {
+				st1.Finalize(saved_name)
+				st1 = nil
+			}
 		}
 		td := t.Leave()
 		progress.Tick(current_num, "len", commitment_len, "d", td)
+		parse_count++
 	}
 
 	if current_state1 == nil {
