@@ -435,7 +435,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 		} else if ratio >= 20 {
 			reward = reward.Mul(reward, big.NewInt(1)).Div(reward, big.NewInt(5))
 		} else {
-			reward = oneSero
+			reward = big.NewInt(0).Set(oneSero)
 		}
 	}
 
@@ -447,11 +447,11 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 	}
 
 	if reward.Cmp(oneSero) < 0 {
-		reward = oneSero
+		reward = big.NewInt(0).Set(oneSero)
 	}
 
 	if poolBalance.Cmp(reward) < 0 {
-		reward = poolBalance
+		reward = big.NewInt(0).Set(poolBalance)
 	}
 	statedb.SubBalance(state.EmptyAddress, "SERO", reward)
 	log.Info(fmt.Sprintf("BlockNumber = %v, gasLimie = %v, gasUsed = %v, reward =%v", header.Number.Uint64(), header.GasLimit, header.GasUsed, reward))
