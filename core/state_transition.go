@@ -171,6 +171,7 @@ func (st *StateTransition) preCheck() error {
 // An error indicates a consensus issue.
 func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bool, err error) {
 	if err = st.preCheck(); err != nil {
+		log.Error("TransitionDb", "preCheck err", err)
 		return
 	}
 	msg := st.msg
