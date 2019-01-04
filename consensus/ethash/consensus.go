@@ -373,9 +373,9 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 
 // Finalize implements consensus.Engine, accumulating the block rewards,
 // setting the final state and assembling the block.
-func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
+func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt, gasReward uint64) (*types.Block, error) {
 	// Accumulate any block rewards and commit the final state root
-	accumulateRewards(chain.Config(), state, header)
+	accumulateRewards(chain.Config(), state, header, gasReward)
 
 	header.Root = state.IntermediateRoot(true)
 
@@ -404,7 +404,7 @@ var (
 
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward .
-func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, header *types.Header) {
+func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, header *types.Header, gasReward uint64) {
 	// Select the correct block reward based on chain progression
 	poolBalance := statedb.GetBalance(state.EmptyAddress, "SERO")
 	if poolBalance.Sign() <= 0 {
@@ -455,6 +455,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 	}
 	statedb.SubBalance(state.EmptyAddress, "SERO", reward)
 	log.Info(fmt.Sprintf("BlockNumber = %v, gasLimie = %v, gasUsed = %v, reward =%v", header.Number.Uint64(), header.GasLimit, header.GasUsed, reward))
+	reward.Add(reward, new(big.Int).SetUint64(gasReward))
 	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 		Value:    utils.U256(*reward),

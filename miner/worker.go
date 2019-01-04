@@ -76,6 +76,8 @@ type Work struct {
 	createdAt time.Time
 
 	handledTxs []*types.Transaction
+
+	gasReward uint64
 }
 
 type Result struct {
@@ -455,7 +457,7 @@ func (self *worker) commitNewWork() {
 	log.Info(fmt.Sprintf("commitTransactions %v tx done in %v", len(pending), time.Since(tstart)))
 
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts, work.gasReward); err != nil {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
 	}
@@ -547,11 +549,13 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vm.Config{})
+	receipt, gas, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vm.Config{})
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		return err, nil
 	}
+
+	env.gasReward += new(big.Int).Mul(new(big.Int).SetUint64(gas), tx.GasPrice()).Uint64()
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
 
