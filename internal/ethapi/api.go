@@ -1500,18 +1500,7 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction, to
 	if err := b.SendTx(ctx, tx); err != nil {
 		return common.Hash{}, err
 	}
-	if tx.To() == nil {
-		//abi := types.MakeSigner(b.ChainConfig(), b.CurrentBlock().Number())
-		//from, err := types.Sender(abi, tx)
-		//from := tx.From()
-		//if err != nil {
-		//	return common.Hash{}, err
-		//}
-		//addr := crypto.CreateAddress(from, tx.Nonce())
-		log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex())
-	} else {
-		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", to)
-	}
+	log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", to)
 	return tx.Hash(), nil
 }
 
