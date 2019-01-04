@@ -1033,7 +1033,7 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	switch {
 	case ctx.GlobalBool(AlphanetFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 3
+			cfg.NetworkId = 1000
 		}
 		cfg.Genesis = core.DefaultAlphanetGenesisBlock()
 	case ctx.GlobalBool(DeveloperFlag.Name):
