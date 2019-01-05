@@ -51,16 +51,21 @@ var commandRegister = cli.Command{
 			utils.Fatalf("Failed to read the keyfile at '%s': %v", keyfilepath, err)
 		}
 
-		// Decrypt key with passphrase.
-		passphrase := getPassphrase(ctx)
-		key, err := keystore.DecryptKey(keyjson, passphrase)
+		// Get Address from keyjson
+		kstr, err := keystore.GetAddress(keyjson)
 		if err != nil {
-			utils.Fatalf("Error decrypting key: %v", err)
+			utils.Fatalf("Failed to get address '%v'", err)
+		}
+
+		address := keys.Uint512{}
+
+		if err := cpt.Base58Decode(&kstr, address[:]); err != nil {
+			utils.Fatalf("Failed to decode address '%v'", err)
 		}
 
 		// Output all relevant information we can retrieve.
 		r := keys.RandUint256()
-		pkr := keys.Addr2PKr(key.Address.ToUint512(), &r)
+		pkr := keys.Addr2PKr(&address, &r)
 		out := outputRegister{
 			*cpt.Base58Encode(pkr[:]),
 		}

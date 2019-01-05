@@ -214,7 +214,9 @@ func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, root *key
 				break
 			}
 
+			t := utils.TR_enter("addWouts---IsMyPKr")
 			if succ := keys.IsMyPKr(&tk, &out_o.Addr); succ {
+				t.Renter("addWouts---EncOutput")
 				out_z := &stx.Out_Z{}
 				{
 					desc_info := cpt.EncOutputInfo{}
@@ -245,7 +247,10 @@ func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, root *key
 				wos.Num = state.State.State.Num()
 				state.add_out_dirty(root, &wos)
 				state.add_out_dirty(&wos.Trace, &wos)
+				t.Leave()
 				break
+			} else {
+				t.Leave()
 			}
 		} else {
 			if succ := keys.IsMyPKr(&tk, &os.Out_Z.PKr); succ {

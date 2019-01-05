@@ -173,6 +173,20 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 	return json.Marshal(encryptedKeyJSONV3)
 }
 
+func GetAddress(keyjson []byte) (string, error) {
+	// Parse the json into a simple map to fetch the key version
+	m := make(map[string]interface{})
+	if err := json.Unmarshal(keyjson, &m); err != nil {
+		return "", err
+	}
+	k := new(encryptedKeyJSONV1)
+	if err := json.Unmarshal(keyjson, k); err != nil {
+		return "", err
+	} else {
+		return k.Address, nil
+	}
+}
+
 // DecryptKey decrypts a key from a json blob, returning the private key itself.
 func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	// Parse the json into a simple map to fetch the key version
