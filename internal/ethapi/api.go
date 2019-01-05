@@ -1364,6 +1364,7 @@ type SendTxArgs struct {
 	Dynamic     bool                   `json:"dy"` //contract address parameters are dynamically generated.
 	Category    Smbol                  `json:"catg"`
 	Tkt         *common.Hash           `json:"tkt"`
+	Memo        string                 `json:"Memo"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
@@ -1375,6 +1376,13 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 
 	if args.GasCurrency.IsEmpty() {
 		args.GasCurrency = Smbol(params.DefaultCurrency)
+	}
+
+	if strings.Trim(args.Memo, "") != "" {
+		b := []byte(args.Memo)
+		if len(b) > 64 {
+			return errors.New("args memo is too long,it's limited 64 bytes")
+		}
 	}
 
 	state, _, err := b.StateAndHeaderByNumber(ctx, -1)
@@ -1470,7 +1478,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 		utils.StringToUint256(string(args.GasCurrency)),
 		utils.U256(*feevalue),
 	}
-	outData := types.NewTxtOut(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, isZ)
+	outData := types.NewTxtOut(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, args.Memo, isZ)
 	txt := types.NewTxt(fromRand.NewRef(), ehash, fee, outData, nil, nil, nil)
 	return tx, txt, nil
 }
@@ -1489,7 +1497,7 @@ func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T,
 		utils.StringToUint256(string(args.GasCurrency)),
 		utils.U256(*new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))),
 	}
-	pkgCreate := types.NewCreatePkg(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt)
+	pkgCreate := types.NewCreatePkg(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, args.Memo)
 	txt := types.NewTxt(fromRand, ehash, fee, nil, pkgCreate, nil, nil)
 	txt.FromRnd = keys.RandUint256().NewRef()
 	return tx, txt, nil

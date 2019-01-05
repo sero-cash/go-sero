@@ -108,7 +108,7 @@ func NewTxt(fromRnd *keys.Uint256, ehash keys.Uint256, fee assets.Token, out *zt
 	return txt
 }
 
-func NewTxtOut(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *common.Hash, isZ bool) *ztx.Out {
+func NewTxtOut(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *common.Hash, memo string, isZ bool) *ztx.Out {
 	var token *assets.Token
 	var ticket *assets.Ticket
 	var outData *ztx.Out
@@ -132,13 +132,24 @@ func NewTxtOut(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *
 	outData = &ztx.Out{
 		Addr:  Pkr,
 		Asset: asset,
+		Memo:  stringToUint512(memo),
 		IsZ:   isZ,
 	}
 	return outData
 
 }
 
-func NewCreatePkg(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *common.Hash) *ztx.PkgCreate {
+func stringToUint512(str string) keys.Uint512 {
+	var ret keys.Uint512
+	b := []byte(str)
+	if len(b) > len(ret) {
+		b = b[len(b)-len(ret):]
+	}
+	copy(ret[len(ret)-len(b):], b)
+	return ret
+}
+
+func NewCreatePkg(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *common.Hash, memo string) *ztx.PkgCreate {
 	var token *assets.Token
 	var ticket *assets.Ticket
 	if value != nil {
@@ -161,6 +172,7 @@ func NewCreatePkg(Pkr keys.PKr, currency string, value *big.Int, catg string, tk
 
 	pkg := pkg.Pkg_O{
 		Asset: asset,
+		Memo:  stringToUint512(memo),
 	}
 
 	return &ztx.PkgCreate{
