@@ -1121,6 +1121,10 @@ func makeLog(size int) executionFunc {
 				from := common.BytesToAddress(pkg.Z.From[:]).ToCaddr()
 				memory.Set(mStart.Uint64()+128, 32, common.LeftPadBytes(from[:], 32))
 				memory.Set(mStart.Uint64()+160, 32, common.LeftPadBytes(big.NewInt(0).SetUint64(pkg.Z.High).Bytes(), 32))
+				if len(pkg.O.Memo) > 0 {
+					memory.Set(mStart.Uint64()+192, 32, pkg.O.Memo[0:32])
+					memory.Set(mStart.Uint64()+224, 32, pkg.O.Memo[32:64])
+				}
 			}
 			contract.Gas += interpreter.evm.callGasTemp
 		} else if topics[0] == topic_transferPkg {

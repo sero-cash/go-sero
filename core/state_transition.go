@@ -18,6 +18,7 @@ package core
 
 import (
 	"errors"
+	"github.com/sero-cash/go-sero/common/log"
 	"math"
 	"math/big"
 	"strings"
@@ -176,7 +177,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	}
 	msg := st.msg
 	sender := vm.AccountRef(msg.From())
-
 	contractCreation := msg.To() == nil && len(st.data) > 0
 
 	// Pay intrinsic gas
@@ -196,6 +196,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		vmerr error
 	)
 
+	commonlog.Start()
+
 	if contractCreation {
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, msg.Asset())
 	} else {
@@ -204,6 +206,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		}
 		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, msg.Asset())
 	}
+	commonlog.End()
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
 		// The only possible consensus-error would be if there wasn't
