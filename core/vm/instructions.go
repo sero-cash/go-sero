@@ -873,7 +873,7 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 	}
 
 	categoryName := string(mem[offset+32 : offset+32+len])
-	match, err := regexp.Match("^([a-zA-Z]_{0,1}){1,7}[a-zA-Z]$", []byte(categoryName))
+	match, err := regexp.Match("^[A-Z0-9_]{1,32}$", []byte(categoryName))
 	if err != nil || !match {
 		return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "illegal categoryName")
 	}
@@ -954,7 +954,7 @@ func handleIssueToken(d []byte, evm *EVM, contract *Contract, mem []byte) (bool,
 	}
 
 	coinName := string(mem[offset+32 : offset+32+len])
-	match, err := regexp.Match("^([a-zA-Z]_{0,1}){1,7}[a-zA-Z]$", []byte(coinName))
+	match, err := regexp.Match("^[A-Z0-9_]{1,32}$", []byte(coinName))
 	if err != nil || !match {
 		return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "illegal coinName")
 	}
@@ -1128,7 +1128,7 @@ func makeLog(size int) executionFunc {
 			}
 
 			coinName := string(data[offset+32 : offset+32+len])
-			match, err := regexp.Match("^([a-zA-Z]_{0,1}){1,7}[a-zA-Z]$", []byte(coinName))
+			match, err := regexp.Match("^[A-Z0-9_]{1,32}$", []byte(coinName))
 			if err != nil || !match {
 				return nil, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "illegal coinName")
 			}
