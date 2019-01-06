@@ -970,7 +970,7 @@ func handleIssueToken(d []byte, evm *EVM, contract *Contract, mem []byte) (bool,
 		} else {
 			if evm.chainConfig.ChainID.Uint64() == 2019 {
 				fee := tokenFee(coinName)
-				if evm.StateDB.GetBalance(contract.Address(), "SERO").Cmp(fee) > 0 {
+				if evm.StateDB.GetBalance(contract.Address(), "SERO").Cmp(fee) >= 0 {
 					evm.StateDB.SubBalance(contract.Address(), "SERO", fee)
 					asset := assets.Asset{Tkn: &assets.Token{
 						Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),

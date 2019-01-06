@@ -327,9 +327,9 @@ func DefaultGenesisBlock() *Genesis {
 		Config:     params.BetanetChainConfig,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		GasLimit:   5000000,
-		Difficulty: big.NewInt(1717986918),
+		Difficulty: big.NewInt(1024),
 
-		Alloc:      decodePrealloc(mainnetAllocData),
+		Alloc:      decodePreAlloc(mainnetAllocData),
 		Coinbase:   common.Base58ToAddress("1111111111111111111111111111111111111111111111111111111111111111"),
 		ParentHash: common.Hash{},
 		Mixhash:    common.Hash{},
