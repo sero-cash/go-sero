@@ -111,23 +111,28 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 
 	t.Renter("Miner-Verify-----o_outs")
 	for _, out_o := range s.Desc_O.Outs {
-		if out_o.Asset.Tkn != nil {
-			if !CheckUint(&out_o.Asset.Tkn.Value) {
-				e = errors.New("txs.verify check balance too big")
-				return
-			} else {
-				{
-					asset := out_o.Asset.ToFlatAsset()
-					asset_desc := cpt.AssetDesc{
-						Tkn_currency: asset.Tkn.Currency,
-						Tkn_value:    asset.Tkn.Value.ToUint256(),
-						Tkt_category: asset.Tkt.Category,
-						Tkt_value:    asset.Tkt.Value,
+		if keys.PKrValid(&out_o.Addr) {
+			if out_o.Asset.Tkn != nil {
+				if !CheckUint(&out_o.Asset.Tkn.Value) {
+					e = errors.New("txs.verify check balance too big")
+					return
+				} else {
+					{
+						asset := out_o.Asset.ToFlatAsset()
+						asset_desc := cpt.AssetDesc{
+							Tkn_currency: asset.Tkn.Currency,
+							Tkn_value:    asset.Tkn.Value.ToUint256(),
+							Tkt_category: asset.Tkt.Category,
+							Tkt_value:    asset.Tkt.Value,
+						}
+						cpt.GenAssetCC(&asset_desc)
+						balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
 					}
-					cpt.GenAssetCC(&asset_desc)
-					balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
 				}
 			}
+		} else {
+			e = errors.New("out_o pkr is invalid !")
+			return
 		}
 	}
 

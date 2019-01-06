@@ -3,6 +3,8 @@ package verify
 import (
 	"errors"
 
+	"github.com/sero-cash/go-czero-import/keys"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -44,15 +46,21 @@ var verify_output_procs_pool = utils.NewProcsPool(func() int { return G_v_thread
 
 type verify_output_desc struct {
 	desc cpt.OutputVerifyDesc
+	pkr  keys.PKr
 	e    error
 }
 
 func (self *verify_output_desc) Run() bool {
-	if err := cpt.VerifyOutput(&self.desc); err != nil {
-		self.e = err
-		return false
+	if keys.PKrValid(&self.pkr) {
+		if err := cpt.VerifyOutput(&self.desc); err != nil {
+			self.e = err
+			return false
+		} else {
+			return true
+		}
 	} else {
-		return true
+		self.e = errors.New("z_out pkr is invalid !")
+		return false
 	}
 }
 
@@ -96,6 +104,7 @@ func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc) (e error) {
 		g := verify_output_desc{}
 		g.desc.AssetCM = out_z.AssetCM
 		g.desc.RPK = out_z.RPK
+		g.pkr = out_z.PKr
 		g.desc.OutCM = out_z.OutCM
 		g.desc.Proof = out_z.Proof
 
