@@ -103,7 +103,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 		}
 	}
 
-	var st1 *State1
+	var st1 *State
 	parse_count := 0
 	for i := len(need_load) - 1; i >= 0; i-- {
 
