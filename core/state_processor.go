@@ -90,6 +90,11 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 		return nil, 0, err
 	}
 
+	err = statedb.GetZState().AddStx(tx.GetZZSTX())
+	if err != nil {
+		return nil, 0, err
+	}
+
 	// Create a new context to be used in the EVM environment
 	context := NewEVMContext(msg, header, bc, author)
 	// Create a new environment which holds all relevant information
@@ -97,10 +102,6 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
-
-	if err == nil {
-		err = statedb.GetZState().AddStx(tx.GetZZSTX())
-	}
 
 	if err != nil {
 		gp.AddGas(gas)
