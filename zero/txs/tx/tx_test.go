@@ -26,3 +26,14 @@ func TestT_TokenCost(t *testing.T) {
 	fmt.Printf("%t", ret)
 
 }
+
+func Test_ReservedTree(t *testing.T) {
+	reserveds := NewReserveds(10240)
+
+	reserveds.Insert(1025)
+	reserveds.Insert(1023)
+	reserveds.Insert(1000)
+	reserveds.Insert(900)
+	reserveds.Insert(500)
+
+}

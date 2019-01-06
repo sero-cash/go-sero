@@ -163,7 +163,7 @@ func (self *State) Finalize(saveName string) {
 		panic(err)
 	} else {
 	}
-	zconfig.Remove_State1_dir_files(int(self.State.State.Num()))
+	zconfig.Remove_State1_dir_files(self.State.State.Num())
 	return
 }
 
