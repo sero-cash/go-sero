@@ -64,6 +64,11 @@ type preTx struct {
 func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 	ck_state := NewCKState(&ts.Fee)
 
+	force_O := false
+	if len(ts.Ins) > 10 {
+		force_O = true
+	}
+
 	for _, in := range ts.Ins {
 		if src, err := state1.GetOut(&in.Root); err == nil {
 			if added, err := ck_state.AddIn(&src.Out_O.Asset); err != nil {
@@ -71,8 +76,12 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 				return
 			} else {
 				if added {
-					if in.IsO {
-						p.desc_o.ins = append(p.desc_o.ins, *src)
+					if in.IsO || force_O {
+						if src.Z {
+							p.desc_z.ins = append(p.desc_z.ins, *src)
+						} else {
+							p.desc_o.ins = append(p.desc_o.ins, *src)
+						}
 					} else {
 						p.desc_z.ins = append(p.desc_z.ins, *src)
 					}

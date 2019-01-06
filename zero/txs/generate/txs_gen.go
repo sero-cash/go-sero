@@ -45,6 +45,17 @@ func (self *gen_ctx) setData() {
 			s_in_o := stx.In_S{}
 			s_in_o.Root = in_o.Root
 			self.s.Desc_O.Ins = append(self.s.Desc_O.Ins, s_in_o)
+			{
+				asset := in_o.Out_O.Asset.ToFlatAsset()
+				asset_desc := cpt.AssetDesc{
+					Tkn_currency: asset.Tkn.Currency,
+					Tkn_value:    asset.Tkn.Value.ToUint256(),
+					Tkt_category: asset.Tkt.Category,
+					Tkt_value:    asset.Tkt.Value,
+				}
+				cpt.GenAssetCC(&asset_desc)
+				self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
+			}
 		}
 	}
 	{
@@ -136,21 +147,16 @@ func (self *gen_ctx) signTx() (e error) {
 		g.Ehash = hash_z
 		g.Seed = *self.seed
 		g.Pkr = s_in_o.Out_Z.PKr
-		g.RPK = s_in_o.Out_Z.RPK
-		g.Einfo = s_in_o.Out_Z.EInfo
-		g.Index = uint64(i)
+		g.RootCM = s_in_o.RootCM
 		if err := cpt.GenInputSProof(&g); err != nil {
 			e = err
 			return
 		} else {
 			in := stx.In_S{}
 			in.Sign = g.Sign_ret
-			in.AssetCM = g.Asset_cm_ret
 			in.Nil = g.Nil_ret
 			in.Root = s_in_o.Root
 			self.s.Desc_O.Ins[i] = in
-			self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, g.Asset_cm_ret[:]...)
-			self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, g.Ar_ret[:]...)
 		}
 	}
 

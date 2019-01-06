@@ -93,7 +93,15 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 				e = errors.New("txs.Verify: in_o verify failed!")
 				return
 			} else {
-				balance_desc.Zin_acms = append(balance_desc.Zin_acms, in_o.AssetCM[:]...)
+				asset := src.Out_O.Asset.ToFlatAsset()
+				asset_desc := cpt.AssetDesc{
+					Tkn_currency: asset.Tkn.Currency,
+					Tkn_value:    asset.Tkn.Value.ToUint256(),
+					Tkt_category: asset.Tkt.Category,
+					Tkt_value:    asset.Tkt.Value,
+				}
+				cpt.GenAssetCC(&asset_desc)
+				balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
 			}
 		} else {
 			e = err

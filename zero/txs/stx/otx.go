@@ -105,17 +105,15 @@ func (self *In_O) ToHash_for_sign() (ret keys.Uint256) {
 }
 
 type In_S struct {
-	Root    keys.Uint256
-	Nil     keys.Uint256
-	AssetCM keys.Uint256
-	Sign    keys.Uint512
+	Root keys.Uint256
+	Nil  keys.Uint256
+	Sign keys.Uint512
 }
 
 func (self *In_S) ToHash() (ret keys.Uint256) {
 	hash := crypto.Keccak256(
 		self.Root[:],
 		self.Nil[:],
-		self.AssetCM[:],
 		self.Sign[:],
 	)
 	copy(ret[:], hash)
