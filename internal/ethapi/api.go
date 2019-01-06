@@ -214,13 +214,9 @@ func (s *PublicAccountAPI) Accounts() []common.AccountAddress {
 	return addresses
 }
 
-func (s *PublicAccountAPI) IsMinePKr(pkr common.Address) bool {
+func (s *PublicAccountAPI) IsMinePKr(pkr common.Address) *common.AccountAddress {
 	wallets := s.am.Wallets()
-	addr := getAddressByPkr(wallets, pkr)
-	if addr != nil {
-		return true
-	}
-	return false
+	return getAddressByPkr(wallets, pkr)
 }
 
 func getAddressByPkr(wallets []accounts.Wallet, onceAddress common.Address) *common.AccountAddress {
