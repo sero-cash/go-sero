@@ -20,8 +20,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/sero-cash/go-czero-import/cpt"
-	"gopkg.in/check.v1"
 	"math"
 	"math/big"
 	"math/rand"
@@ -29,6 +27,9 @@ import (
 	"strings"
 	"testing"
 	"testing/quick"
+
+	"github.com/sero-cash/go-czero-import/cpt"
+	"gopkg.in/check.v1"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
@@ -83,15 +84,15 @@ func TestIntermediateLeaks(t *testing.T) {
 
 	// Modify the transient state.
 	for i := byte(0); i < 255; i++ {
-		modify(transState, common.Address{Data:[64]byte{byte(i)}}, i, 0)
+		modify(transState, common.BytesToAddress([]byte{byte(i)}), i, 0)
 	}
 	// Write modifications to trie.
 	transState.IntermediateRoot(false)
 
 	// Overwrite all the data with new values in the transient database.
 	for i := byte(0); i < 255; i++ {
-		modify(transState, common.Address{Data:[64]byte{byte(i)}}, i, 99)
-		modify(finalState, common.Address{Data:[64]byte{byte(i)}}, i, 99)
+		modify(transState, common.BytesToAddress([]byte{byte(i)}), i, 99)
+		modify(finalState, common.BytesToAddress([]byte{byte(i)}), i, 99)
 	}
 
 	// Commit and cross check the databases.
@@ -136,8 +137,8 @@ func TestCopy(t *testing.T) {
 		origObj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		copyObj := copy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 
-		origObj.AddBalance("sero", big.NewInt(2 * int64(i)))
-		copyObj.AddBalance("sero", big.NewInt(3 * int64(i)))
+		origObj.AddBalance("sero", big.NewInt(2*int64(i)))
+		copyObj.AddBalance("sero", big.NewInt(3*int64(i)))
 
 		orig.updateStateObject(origObj)
 		copy.updateStateObject(copyObj)
@@ -166,7 +167,7 @@ func TestCopy(t *testing.T) {
 }
 
 func TestSnapshotRandom(t *testing.T) {
-	cpt.ZeroInit(cpt.NET_Alpha)
+	cpt.ZeroInit("", cpt.NET_Alpha)
 	config := &quick.Config{MaxCount: 1000}
 	err := quick.Check((*snapshotTest).run, config)
 	if cerr, ok := err.(*quick.CheckError); ok {
@@ -287,8 +288,9 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 func (*snapshotTest) Generate(r *rand.Rand, size int) reflect.Value {
 	// Generate random actions.
 	addrs := make([]common.Address, 50)
+
 	for i := range addrs {
-		addrs[i] = common.Address{Data:[64]byte{byte(i)}}
+		addrs[i] = common.BytesToAddress([]byte{byte(i)})
 	}
 	actions := make([]testAction, size)
 	for i := range actions {

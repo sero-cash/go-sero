@@ -17,6 +17,7 @@
 package ethash
 
 import (
+	"crypto"
 	"encoding/binary"
 	"hash"
 	"math/big"
@@ -27,9 +28,10 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/sero-cash/go-czero-import/cpt"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/bitutil"
-	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/log"
 )
@@ -301,7 +303,8 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 			defer pend.Done()
 
 			// Create a hasher to reuse between invocations
-			keccak512 := makeHasher(sha3.NewKeccak512())
+			//keccak512 := makeHasher(sha3.NewKeccak512())
+			keccak512 := makeHasher(crypto.BLAKE2b_512.New())
 
 			// Calculate the data segment this thread should generate
 			batch := uint32((size + hashBytes*uint64(threads) - 1) / (hashBytes * uint64(threads)))
@@ -340,7 +343,8 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 	copy(seed, hash)
 	binary.LittleEndian.PutUint64(seed[32:], nonce)
 
-	seed = crypto.Keccak512(seed)
+	//seed = crypto.Keccak512(seed)
+	seed = cpt.Miner_Hash_0(seed)
 	seedHead := binary.LittleEndian.Uint32(seed)
 
 	// Start the mix with replicated seed
@@ -368,14 +372,15 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 	for i, val := range mix {
 		binary.LittleEndian.PutUint32(digest[i*4:], val)
 	}
-	return digest, crypto.Keccak256(append(seed, digest...))
+	//return digest, crypto.Keccak256(append(seed, digest...))
+	return digest, cpt.Miner_Hash_1(append(seed, digest...))
 }
 
 // hashimotoLight aggregates data from the full dataset (using only a small
 // in-memory cache) in order to produce our final value for a particular header
 // hash and nonce.
 func hashimotoLight(size uint64, cache []uint32, hash []byte, nonce uint64) ([]byte, []byte) {
-	keccak512 := makeHasher(sha3.NewKeccak512())
+	keccak512 := makeHasher(crypto.BLAKE2b_512.New())
 
 	lookup := func(index uint32) []uint32 {
 		rawData := generateDatasetItem(cache, index, keccak512)

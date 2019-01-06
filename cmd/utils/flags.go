@@ -28,7 +28,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sero-cash/go-sero/zero/txs"
+	"github.com/sero-cash/go-sero/zero/txs/generate"
+	"github.com/sero-cash/go-sero/zero/txs/verify"
 
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
@@ -37,7 +38,7 @@ import (
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/fdlimit"
 	"github.com/sero-cash/go-sero/consensus"
-	"github.com/sero-cash/go-sero/consensus/clique"
+
 	"github.com/sero-cash/go-sero/consensus/ethash"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/state"
@@ -312,7 +313,7 @@ var (
 		Name:  "extradata",
 		Usage: "Block extra data set by the miner (default = client version)",
 	}
-	// Account settings
+	// AccountAddress settings
 	UnlockedAccountFlag = cli.StringFlag{
 		Name:  "unlock",
 		Usage: "Comma separated list of accounts to unlock",
@@ -426,7 +427,7 @@ var (
 	ListenPortFlag = cli.IntFlag{
 		Name:  "port",
 		Usage: "Network listening port",
-		Value: 60603,
+		Value: 53717,
 	}
 	BootnodesFlag = cli.StringFlag{
 		Name:  "bootnodes",
@@ -743,7 +744,7 @@ func makeDatabaseHandles() int {
 func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
 	// If the specified account is a valid address, return it
 	if common.IsBase58Address(account) {
-		return accounts.Account{Address: common.Base58ToAddress(account)}, nil
+		return accounts.Account{Address: common.Base58ToAccount(account)}, nil
 	}
 	// Otherwise try to interpret the account as a keystore index
 	index, err := strconv.Atoi(account)
@@ -855,7 +856,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 	if ctx.GlobalBool(DeveloperFlag.Name) {
 		// --dev mode can't use p2p networking.
-		cfg.MaxPeers = 0
+		//cfg.MaxPeers = 0
 		cfg.ListenAddr = ":0"
 		cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
@@ -1008,8 +1009,8 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
 	}
 
-	txs.G_p_thread_num = ctx.GlobalInt(PThreadsFlag.Name)
-	txs.G_v_thread_num = ctx.GlobalInt(VThreadsFlag.Name)
+	generate.G_p_thread_num = ctx.GlobalInt(PThreadsFlag.Name)
+	verify.G_v_thread_num = ctx.GlobalInt(VThreadsFlag.Name)
 
 	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
 		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)
@@ -1032,7 +1033,7 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	switch {
 	case ctx.GlobalBool(AlphanetFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 3
+			cfg.NetworkId = 1000
 		}
 		cfg.Genesis = core.DefaultAlphanetGenesisBlock()
 	case ctx.GlobalBool(DeveloperFlag.Name):
@@ -1135,20 +1136,17 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		Fatalf("%v", err)
 	}
 	var engine consensus.Engine
-	if config.Clique != nil {
-		engine = clique.New(config.Clique, chainDb)
-	} else {
-		engine = ethash.NewFaker()
-		if !ctx.GlobalBool(FakePoWFlag.Name) {
-			engine = ethash.New(ethash.Config{
-				CacheDir:       stack.ResolvePath(sero.DefaultConfig.Ethash.CacheDir),
-				CachesInMem:    sero.DefaultConfig.Ethash.CachesInMem,
-				CachesOnDisk:   sero.DefaultConfig.Ethash.CachesOnDisk,
-				DatasetDir:     stack.ResolvePath(sero.DefaultConfig.Ethash.DatasetDir),
-				DatasetsInMem:  sero.DefaultConfig.Ethash.DatasetsInMem,
-				DatasetsOnDisk: sero.DefaultConfig.Ethash.DatasetsOnDisk,
-			})
-		}
+
+	engine = ethash.NewFaker()
+	if !ctx.GlobalBool(FakePoWFlag.Name) {
+		engine = ethash.New(ethash.Config{
+			CacheDir:       stack.ResolvePath(sero.DefaultConfig.Ethash.CacheDir),
+			CachesInMem:    sero.DefaultConfig.Ethash.CachesInMem,
+			CachesOnDisk:   sero.DefaultConfig.Ethash.CachesOnDisk,
+			DatasetDir:     stack.ResolvePath(sero.DefaultConfig.Ethash.DatasetDir),
+			DatasetsInMem:  sero.DefaultConfig.Ethash.DatasetsInMem,
+			DatasetsOnDisk: sero.DefaultConfig.Ethash.DatasetsOnDisk,
+		})
 	}
 	//if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 	//	Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)

@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/sero-cash/go-czero-import/cpt"
+
 	"github.com/sero-cash/go-sero/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -39,6 +41,7 @@ func init() {
 		commandGenerate,
 		commandInspect,
 		commandChangePassphrase,
+		commandRegister,
 	}
 }
 
@@ -55,6 +58,7 @@ var (
 )
 
 func main() {
+	cpt.ZeroInit("", cpt.NET_Beta)
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

@@ -78,7 +78,7 @@ type keyStorePassphrase struct {
 	scryptP     int
 }
 
-func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) (*Key, error) {
+func (ks keyStorePassphrase) GetKey(addr common.AccountAddress, filename, auth string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 
 	keyjson, err := ioutil.ReadFile(filename)
@@ -98,7 +98,7 @@ func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) 
 }
 
 // StoreKey generates a key, encrypts with 'auth' and stores in the given directory
-func StoreKey(dir, auth string, scryptN, scryptP int) (common.Address, error) {
+func StoreKey(dir, auth string, scryptN, scryptP int) (common.AccountAddress, error) {
 	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP}, rand.Reader, auth)
 	return a.Address, err
 }
@@ -171,6 +171,20 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 		version,
 	}
 	return json.Marshal(encryptedKeyJSONV3)
+}
+
+func GetAddress(keyjson []byte) (string, error) {
+	// Parse the json into a simple map to fetch the key version
+	m := make(map[string]interface{})
+	if err := json.Unmarshal(keyjson, &m); err != nil {
+		return "", err
+	}
+	k := new(encryptedKeyJSONV1)
+	if err := json.Unmarshal(keyjson, k); err != nil {
+		return "", err
+	} else {
+		return k.Address, nil
+	}
 }
 
 // DecryptKey decrypts a key from a json blob, returning the private key itself.

@@ -17,8 +17,10 @@
 package core
 
 import (
+	"errors"
 	"math"
 	"math/big"
+	"strings"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -29,13 +31,17 @@ import (
 	"github.com/sero-cash/go-sero/params"
 )
 
+var (
+	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
+)
+
 type StateTransition struct {
 	gp         *GasPool
 	msg        Message
 	gas        uint64
 	gasPrice   *big.Int
 	initialGas uint64
-	asset      assets.Asset
+	asset      *assets.Asset
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
@@ -48,11 +54,12 @@ type Message interface {
 	To() *common.Address
 
 	GasPrice() *big.Int
-	Gas() uint64
-	Asset() assets.Asset
+	Asset() *assets.Asset
 
-	Nonce() uint64
-	CheckNonce() bool
+	//Nonce() uint64
+
+	Fee() assets.Token
+
 	Data() []byte
 }
 
@@ -131,11 +138,31 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) preCheck() error {
-	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
+	curency := strings.ToUpper(common.BytesToString((st.msg.Fee().Currency).NewRef()[:]))
+	gas := uint64(0)
+	if curency != "SERO" {
+		to := st.msg.To()
+
+		tokens, tas := st.state.GetTokenRate(*to, curency)
+		if tokens.Sign() == 0 || tas.Sign() == 0 {
+			return errInsufficientBalanceForGas
+		}
+		taval := new(big.Int).Div(new(big.Int).Mul(st.msg.Fee().Value.ToRef().ToIntRef(), tas), tokens)
+		if st.state.GetBalance(*to, "SERO").Cmp(taval) < 0 {
+			return errInsufficientBalanceForGas
+		}
+		st.state.AddBalance(*to, curency, st.msg.Fee().Value.ToRef().ToRef().ToIntRef())
+		st.state.SubBalance(*to, "SERO", taval)
+		gas = new(big.Int).Div(taval, st.msg.GasPrice()).Uint64()
+	} else {
+		gas = new(big.Int).Div(st.msg.Fee().Value.ToRef().ToIntRef(), st.msg.GasPrice()).Uint64()
+	}
+	if err := st.gp.SubGas(gas); err != nil {
 		return err
 	}
-	st.gas += st.msg.Gas()
-	st.initialGas = st.msg.Gas()
+
+	st.gas += gas
+	st.initialGas = gas
 	return nil
 }
 
@@ -144,12 +171,12 @@ func (st *StateTransition) preCheck() error {
 // An error indicates a consensus issue.
 func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bool, err error) {
 	if err = st.preCheck(); err != nil {
+		log.Error("TransitionDb", "preCheck err", err)
 		return
 	}
 	msg := st.msg
 	sender := vm.AccountRef(msg.From())
-
-	contractCreation := msg.To() == nil
+	contractCreation := msg.To() == nil && len(st.data) > 0
 
 	// Pay intrinsic gas
 	gas, err := IntrinsicGas(st.data, contractCreation)
@@ -184,16 +211,18 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		if vmerr == vm.ErrInsufficientBalance {
 			return nil, 0, false, vmerr
 		}
-		st.state.GetZState().AddTxOut(msg.From(), msg.Asset())
+		if msg.Asset() != nil {
+			st.state.GetZState().AddTxOut(msg.From(), *msg.Asset())
+		}
 	}
 
 	st.refundGas()
-	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
-		Value:    utils.U256(*new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)),
-	},
-	}
-	st.state.GetZState().AddTxOut(st.evm.Coinbase, asset)
+	//asset := assets.Asset{Tkn: &assets.Token{
+	//	Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+	//	Value:    utils.U256(*new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)),
+	//},
+	//}
+	//st.state.GetZState().AddTxOut(st.evm.Coinbase, asset)
 
 	return ret, st.gasUsed(), vmerr != nil, err
 }
@@ -206,14 +235,33 @@ func (st *StateTransition) refundGas() {
 	}
 	st.gas += refund
 
-	// Return ETH for remaining gas, exchanged at the original rate.
+	// Return SERO for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
-		Value:    utils.U256(*remaining),
-	},
+
+	if remaining.Sign() > 0 {
+		curency := strings.ToUpper(common.BytesToString(st.msg.Fee().Currency.NewRef()[:]))
+		if curency != "SERO" {
+			st.state.AddBalance(*st.msg.To(), "SERO", remaining)
+			tokes, tas := st.state.GetTokenRate(*st.msg.To(), curency)
+			if tokes.Sign() != 0 && tas.Sign() != 0 {
+				remainToken := new(big.Int).Div(new(big.Int).Mul(remaining, tokes), tas)
+				asset := assets.Asset{Tkn: &assets.Token{
+					Currency: *common.BytesToHash(common.LeftPadBytes([]byte(curency), 32)).HashToUint256(),
+					Value:    utils.U256(*remainToken),
+				},
+				}
+				st.state.GetZState().AddTxOut(st.msg.From(), asset)
+				st.state.SubBalance(*st.msg.To(), curency, remainToken)
+			}
+		} else {
+			asset := assets.Asset{Tkn: &assets.Token{
+				Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+				Value:    utils.U256(*remaining),
+			},
+			}
+			st.state.GetZState().AddTxOut(st.msg.From(), asset)
+		}
 	}
-	st.state.GetZState().AddTxOut(st.msg.From(), asset)
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.

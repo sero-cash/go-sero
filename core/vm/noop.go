@@ -48,7 +48,7 @@ type NoopStateDB struct{}
 
 func (NoopStateDB) GetAndIndNonce() uint64                                             { return 0 }
 func (NoopStateDB) CreateAccount(common.Address)                                       {}
-func (NoopStateDB) GetZState() *zstate.State                                           { return nil }
+func (NoopStateDB) GetZState() *zstate.ZState                                          { return nil }
 func (NoopStateDB) SubBalance(common.Address, common.Hash, *big.Int)                   {}
 func (NoopStateDB) AddBalance(common.Address, common.Hash, *big.Int)                   {}
 func (NoopStateDB) GetBalance(common.Address) *big.Int                                 { return nil }

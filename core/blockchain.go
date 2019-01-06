@@ -27,8 +27,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/txs/lstate"
+	"github.com/sero-cash/go-sero/zero/txs/verify"
+
 	"github.com/hashicorp/golang-lru"
-	"github.com/sero-cash/go-sero/zero/txs/zstate/state1"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
@@ -46,7 +48,6 @@ import (
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/trie"
-	stx "github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
@@ -199,7 +200,7 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	// Take ownership of this particular state
 	go bc.update()
 
-	state1.Run(
+	lstate.Run(
 		&State1BlockChain{
 			bc: bc,
 		},
@@ -271,7 +272,7 @@ func (self *State1BlockChain) GetCurrenHeader() *types.Header {
 func (self *State1BlockChain) GetHeader(hash *common.Hash) *types.Header {
 	return self.bc.GetHeaderByHash(*hash)
 }
-func (self *State1BlockChain) NewState(hash *common.Hash) *zstate.State {
+func (self *State1BlockChain) NewState(hash *common.Hash) *zstate.ZState {
 	header := self.bc.GetHeaderByHash(*hash)
 	num := header.Number.Uint64()
 	var st *state.StateDB
@@ -1203,7 +1204,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		}
 
 		for _, tx := range block.Transactions() {
-			err := stx.Verify(tx.GetZZSTX(), &state.GetZState().State0)
+			err := verify.Verify(tx.GetZZSTX(), state.GetZState())
 			if err != nil {
 				return i, events, coalescedLogs, err
 			}

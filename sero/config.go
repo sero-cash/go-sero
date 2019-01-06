@@ -43,7 +43,7 @@ var DefaultConfig = Config{
 		DatasetsInMem:  1,
 		DatasetsOnDisk: 2,
 	},
-	NetworkId:     1,
+	NetworkId:     2019,
 	LightPeers:    100,
 	DatabaseCache: 768,
 	TrieCache:     256,
@@ -95,9 +95,9 @@ type Config struct {
 	TrieTimeout        time.Duration
 
 	// Mining-related options
-	Serobase     common.Address `toml:",omitempty"`
-	MinerThreads int            `toml:",omitempty"`
-	ExtraData    []byte         `toml:",omitempty"`
+	Serobase     common.AccountAddress `toml:",omitempty"`
+	MinerThreads int                   `toml:",omitempty"`
+	ExtraData    []byte                `toml:",omitempty"`
 	GasPrice     *big.Int
 
 	// Ethash options

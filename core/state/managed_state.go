@@ -61,7 +61,7 @@ func ManageState(statedb *StateDB) *ManagedState {
 	}
 }
 
-func (ms *ManagedState) GetZState() *zstate.State {
+func (ms *ManagedState) GetZState() *zstate.ZState {
 	if ms.StateDB == nil {
 		return nil
 	}

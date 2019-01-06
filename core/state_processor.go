@@ -17,14 +17,14 @@
 package core
 
 import (
-	"github.com/sero-cash/go-sero/crypto"
-
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/core/vm"
+	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/params"
+	"math/big"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -63,17 +63,19 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	)
 
 	// Iterate over and process the individual transactions
+	gasReward := uint64(0)
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		receipt, _, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, usedGas, cfg)
+		receipt, gas, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, usedGas, cfg)
 		if err != nil {
 			return nil, nil, 0, err
 		}
+		gasReward += new(big.Int).Mul(new(big.Int).SetUint64(gas), tx.GasPrice()).Uint64()
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
-	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), receipts)
+	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), receipts, gasReward)
 
 	return receipts, allLogs, *usedGas, nil
 }
@@ -87,6 +89,12 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	if err != nil {
 		return nil, 0, err
 	}
+
+	err = statedb.GetZState().AddStx(tx.GetZZSTX())
+	if err != nil {
+		return nil, 0, err
+	}
+
 	// Create a new context to be used in the EVM environment
 	context := NewEVMContext(msg, header, bc, author)
 	// Create a new environment which holds all relevant information
@@ -94,10 +102,6 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
-
-	if err == nil {
-		err = statedb.GetZState().AddStx(tx.GetZZSTX())
-	}
 
 	if err != nil {
 		gp.AddGas(gas)
@@ -113,7 +117,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = gas
 	// if the transaction created a contract, store the creation address in the receipt.
-	if msg.To() == nil && !failed{
+	if msg.To() == nil && len(msg.Data()) > 0 && !failed {
 		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, statedb.GetContrctNonce(), msg.Data()[0:16])
 	}
 	// Set the receipt logs and create a bloom for filtering

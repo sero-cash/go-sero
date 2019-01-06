@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gosuri/uiprogress/util/strutil"
+
 	"github.com/gosuri/uiprogress"
 
 	"github.com/robertkrimen/otto"
@@ -167,6 +169,13 @@ func (b *bridge) Sign(call otto.FunctionCall) (response otto.Value) {
 	return val
 }
 
+func prettyTime(t time.Duration) string {
+	if t == 0 {
+		return "---"
+	}
+	return (t - (t % time.Millisecond)).String()
+}
+
 func (b *bridge) SendTransaction(call otto.FunctionCall) (response otto.Value) {
 	var (
 		tx = call.Argument(0)
@@ -177,11 +186,126 @@ func (b *bridge) SendTransaction(call otto.FunctionCall) (response otto.Value) {
 
 	finish := make(chan struct{})
 	progress := uiprogress.New()
-	bar := progress.AddBar(160).PrependElapsed()
+	//bar := progress.AddBar(120).PrependElapsed()
+	bar := progress.AddBar(120)
+	bar.PrependFunc(func(b *uiprogress.Bar) string {
+		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 10, ' ')
+	})
 	progress.Start()
 	go progressBar(bar, finish)
 	// Send the request to the backend and return
 	val, err := call.Otto.Call("jeth.sendTransaction", nil, tx)
+
+	if err != nil {
+		progress.Stop()
+		finish <- struct{}{}
+		throwJSException(err.Error())
+	}
+	bar.Set(bar.Total)
+	progress.Stop()
+	finish <- struct{}{}
+
+	if fn := call.Argument(1); fn.Class() == "Function" {
+		fn.Call(otto.NullValue(), otto.NullValue(), val)
+		return otto.UndefinedValue()
+	}
+
+	return val
+}
+
+func (b *bridge) CreatePkg(call otto.FunctionCall) (response otto.Value) {
+	var (
+		args = call.Argument(0)
+	)
+	if !args.IsObject() {
+		throwJSException("first argument must be the pkg to send")
+	}
+
+	finish := make(chan struct{})
+	progress := uiprogress.New()
+	//bar := progress.AddBar(120).PrependElapsed()
+	bar := progress.AddBar(120)
+	bar.PrependFunc(func(b *uiprogress.Bar) string {
+		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 10, ' ')
+	})
+	progress.Start()
+	go progressBar(bar, finish)
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.createPkg", nil, args)
+
+	if err != nil {
+		progress.Stop()
+		finish <- struct{}{}
+		throwJSException(err.Error())
+	}
+	bar.Set(bar.Total)
+	progress.Stop()
+	finish <- struct{}{}
+
+	if fn := call.Argument(1); fn.Class() == "Function" {
+		fn.Call(otto.NullValue(), otto.NullValue(), val)
+		return otto.UndefinedValue()
+	}
+
+	return val
+}
+
+func (b *bridge) TransferPkg(call otto.FunctionCall) (response otto.Value) {
+	var (
+		args = call.Argument(0)
+	)
+	if !args.IsObject() {
+		throwJSException("first argument must be the transfer pkg to send")
+	}
+
+	finish := make(chan struct{})
+	progress := uiprogress.New()
+	//bar := progress.AddBar(120).PrependElapsed()
+	bar := progress.AddBar(120)
+	bar.PrependFunc(func(b *uiprogress.Bar) string {
+		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 10, ' ')
+	})
+	progress.Start()
+	go progressBar(bar, finish)
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.transferPkg", nil, args)
+
+	if err != nil {
+		progress.Stop()
+		finish <- struct{}{}
+		throwJSException(err.Error())
+	}
+	bar.Set(bar.Total)
+	progress.Stop()
+	finish <- struct{}{}
+
+	if fn := call.Argument(1); fn.Class() == "Function" {
+		fn.Call(otto.NullValue(), otto.NullValue(), val)
+		return otto.UndefinedValue()
+	}
+
+	return val
+}
+
+func (b *bridge) ClosePkg(call otto.FunctionCall) (response otto.Value) {
+	var (
+		args = call.Argument(0)
+	)
+	if !args.IsObject() {
+		throwJSException("first argument must be the close pkg to send")
+	}
+
+	finish := make(chan struct{})
+	progress := uiprogress.New()
+	//bar := progress.AddBar(120).PrependElapsed()
+	bar := progress.AddBar(120)
+	bar.PrependFunc(func(b *uiprogress.Bar) string {
+		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 10, ' ')
+	})
+	progress.Start()
+	go progressBar(bar, finish)
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.closePkg", nil, args)
 
 	if err != nil {
 		progress.Stop()
@@ -362,13 +486,13 @@ func progressBar(bar *uiprogress.Bar, finish chan struct{}) {
 			break
 		case <-t.C:
 			count++
-			if count > 3 {
+			if count > 6 {
 				break
 			}
 			bar.Total = bar.Total * 2
 			t.Reset(time.Duration(uint64(startTotal/(2*count))) * time.Second)
 		default:
-			time.Sleep(time.Millisecond * time.Duration(500))
+			time.Sleep(time.Millisecond * time.Duration(100))
 			enable := bar.Incr()
 			if !enable {
 				count++

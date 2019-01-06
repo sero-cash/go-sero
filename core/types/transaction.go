@@ -20,13 +20,14 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
+
 	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"container/heap"
 	"io"
-	"strings"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -49,24 +50,106 @@ type Transaction struct {
 
 type txdata struct {
 	Price    *big.Int `json:"gasPrice" gencodec:"required"`
+	GasLimit uint64   `json:"gas"      gencodec:"required"`
 	Payload  []byte   `json:"input"    gencodec:"required"`
-	Currency string   `json:"currency"    gencodec:"required"`
 	Stxt     *zstx.T  `json:"stxt"    gencodec:"required"`
 }
 
 type txdataMarshaling struct {
-	Price   *hexutil.Big
-	Payload hexutil.Bytes
-	Stxt    *zstx.T
+	Price    *hexutil.Big
+	GasLimit hexutil.Uint64
+	Payload  hexutil.Bytes
+	Stxt     *zstx.T
 }
 
-func NewTransaction(gasPrice *big.Int, data []byte, currency string) *Transaction {
-	return newTransaction(gasPrice, data, currency)
+func NewTransaction(gasPrice *big.Int, gasLimit uint64, data []byte) *Transaction {
+	if len(data) > 0 {
+		data = common.CopyBytes(data)
+	}
+	d := txdata{
+		Payload:  data,
+		Price:    new(big.Int),
+		GasLimit: gasLimit,
+	}
+	if gasPrice != nil {
+		d.Price.Set(gasPrice)
+	}
+
+	tx := &Transaction{data: d}
+	return tx
 }
 
-func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z ztx.OutType, currency string, catg string, tkt *common.Hash) *ztx.T {
+func (tx Transaction) Ehash() keys.Uint256 {
+	h := rlpHash([]interface{}{
+		&tx.data.Price,
+		tx.data.GasLimit,
+		tx.data.Payload,
+	})
+	r := keys.Uint256{}
+	copy(r[:], h[:])
+	return r
+}
+
+func NewTxt(fromRnd *keys.Uint256, ehash keys.Uint256, fee assets.Token, out *ztx.Out, pkgCreate *ztx.PkgCreate, pkgTransfer *ztx.PkgTransfer, pkgClose *ztx.PkgClose) *ztx.T {
 
 	outDatas := []ztx.Out{}
+	if out != nil {
+		outDatas = append(outDatas, *out)
+	}
+	txt := &ztx.T{
+		FromRnd:     fromRnd,
+		Ehash:       ehash,
+		Fee:         fee,
+		Outs:        outDatas,
+		PkgCreate:   pkgCreate,
+		PkgTransfer: pkgTransfer,
+		PkgClose:    pkgClose,
+	}
+	return txt
+}
+
+func NewTxtOut(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *common.Hash, memo string, isZ bool) *ztx.Out {
+	var token *assets.Token
+	var ticket *assets.Ticket
+	var outData *ztx.Out
+	if value != nil {
+		token = &assets.Token{
+			Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256()),
+			Value:    *utils.U256(*value).ToRef(),
+		}
+	}
+	if tkt != nil {
+		ticket = &assets.Ticket{
+			Category: *(common.BytesToHash(common.LeftPadBytes([]byte(catg), 32)).HashToUint256()),
+			Value:    *tkt.HashToUint256(),
+		}
+
+	}
+	asset := assets.Asset{
+		Tkn: token,
+		Tkt: ticket,
+	}
+	outData = &ztx.Out{
+		Addr:  Pkr,
+		Asset: asset,
+		Memo:  stringToUint512(memo),
+		IsZ:   isZ,
+	}
+	return outData
+
+}
+
+func stringToUint512(str string) keys.Uint512 {
+	var ret keys.Uint512
+	b := []byte(str)
+	if len(b) > len(ret) {
+		b = b[len(b)-len(ret):]
+	}
+	copy(ret[len(ret)-len(b):], b)
+	return ret
+}
+
+func NewCreatePkg(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *common.Hash, memo string) *ztx.PkgCreate {
 	var token *assets.Token
 	var ticket *assets.Ticket
 	if value != nil {
@@ -86,50 +169,25 @@ func NewTxt(to *common.Address, value *big.Int, gasPrice *big.Int, gas uint64, z
 		Tkn: token,
 		Tkt: ticket,
 	}
-	if to != nil {
-		outData := ztx.Out{
-			Addr:  *to.ToUint512(),
-			Asset: asset,
-			Z:     z,
-		}
-		outDatas = append(outDatas, outData)
-	} else {
-		outData := ztx.Out{
-			Asset: asset,
-			Z:     z,
-		}
-		outDatas = append(outDatas, outData)
+
+	pkg := pkg.Pkg_O{
+		Asset: asset,
+		Memo:  stringToUint512(memo),
 	}
-	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
-	tx := &ztx.T{
-		Fee:  utils.U256(*fee),
-		Outs: outDatas,
+
+	return &ztx.PkgCreate{
+		Id:  keys.RandUint256(),
+		PKr: Pkr,
+		Pkg: pkg,
 	}
-	return tx
 
 }
 
-func newTransaction(gasPrice *big.Int, data []byte, currency string) *Transaction {
-	if len(data) > 0 {
-		data = common.CopyBytes(data)
-	}
-	d := txdata{
-		Payload:  data,
-		Price:    new(big.Int),
-		Currency: currency,
-	}
-	if gasPrice != nil {
-		d.Price.Set(gasPrice)
-	}
-
-	return &Transaction{data: d}
-}
-
-func (tx *Transaction) Pkg() assets.Asset {
+func (tx *Transaction) Pkg() *assets.Asset {
 	for _, desc_o := range tx.data.Stxt.Desc_O.Outs {
-		return desc_o.Asset
+		return &desc_o.Asset
 	}
-	return assets.Asset{}
+	return nil
 }
 
 // EncodeRLP implements rlp.Encoder
@@ -168,9 +226,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 
 func (tx *Transaction) Data() []byte { return common.CopyBytes(tx.data.Payload) }
 func (tx *Transaction) Gas() uint64 {
-	fee := tx.data.Stxt.Fee
-	price := tx.data.Price
-	return new(big.Int).Div(fee.ToIntRef(), price).Uint64()
+	return tx.data.GasLimit
 }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
 
@@ -179,13 +235,8 @@ func (tx *Transaction) GetZZSTX() *zstx.T {
 }
 
 func (tx *Transaction) To() *common.Address {
-
-	if len(tx.data.Stxt.Desc_O.Ins) == 0 && len(tx.data.Stxt.Desc_O.Outs) == 0 {
-		return &common.Address{}
-	}
-
 	for _, out := range tx.data.Stxt.Desc_O.Outs {
-		if out.Addr != (keys.Uint512{}) {
+		if out.Addr != (keys.PKr{}) {
 			addr := common.BytesToAddress(out.Addr[:])
 			return &addr
 		}
@@ -222,29 +273,21 @@ func (tx *Transaction) Size() common.StorageSize {
 		return size.(common.StorageSize)
 	}
 	c := writeCounter(0)
-	//rlpData := []interface{}{tx.data.Currency, tx.data.Payload, tx.data.Price}
+	//rlpData := []interface{}{tx.data.Payload, tx.data.Price}
 	rlp.Encode(&c, &tx.data)
 	tx.size.Store(common.StorageSize(c))
 	return common.StorageSize(c)
 }
 
-func (tx *Transaction) Currency() string {
-	if strings.TrimSpace(tx.data.Currency) == "" {
-		return "sero"
-	}
-	return tx.data.Currency
-}
-
 // AsMessage returns the transaction as a core.Message.
 func (tx *Transaction) AsMessage() (Message, error) {
 	msg := Message{
-		from:       tx.From(),
-		gasLimit:   tx.Gas(),
-		gasPrice:   new(big.Int).Set(tx.data.Price),
-		to:         tx.To(),
-		data:       tx.data.Payload,
-		checkNonce: true,
-		asset:        tx.Pkg(),
+		from:     tx.From(),
+		gasPrice: new(big.Int).Set(tx.data.Price),
+		to:       tx.To(),
+		data:     tx.data.Payload,
+		asset:    tx.Pkg(),
+		fee:      tx.Stxt().Fee,
 	}
 
 	return msg, nil
@@ -382,26 +425,24 @@ func (t *TransactionsByPrice) Pop() *Transaction {
 //
 // NOTE: In a future PR this will be removed.
 type Message struct {
-	to         *common.Address
-	from       common.Address
-	nonce      uint64
-	asset        assets.Asset
-	gasLimit   uint64
-	gasPrice   *big.Int
-	data       []byte
-	checkNonce bool
+	to       *common.Address
+	from     common.Address
+	nonce    uint64
+	asset    *assets.Asset
+	fee      assets.Token
+	gasPrice *big.Int
+	data     []byte
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, asset assets.Asset, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, asset assets.Asset, fee assets.Token, gasPrice *big.Int, data []byte) Message {
 	message := Message{
-		from:       from,
-		to:         to,
-		nonce:      nonce,
-		gasLimit:   gasLimit,
-		gasPrice:   gasPrice,
-		data:       data,
-		checkNonce: checkNonce,
-		asset:        asset,
+		from:     from,
+		to:       to,
+		nonce:    nonce,
+		fee:      fee,
+		gasPrice: gasPrice,
+		data:     data,
+		asset:    &asset,
 	}
 	return message
 }
@@ -409,10 +450,8 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, asset ass
 func (m Message) From() common.Address { return m.from }
 func (m Message) To() *common.Address  { return m.to }
 func (m Message) GasPrice() *big.Int   { return m.gasPrice }
-func (m Message) Gas() uint64          { return m.gasLimit }
-func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
-func (m Message) CheckNonce() bool     { return m.checkNonce }
-func (m Message) Asset() assets.Asset {
+func (m Message) Fee() assets.Token    { return m.fee }
+func (m Message) Asset() *assets.Asset {
 	return m.asset
 }

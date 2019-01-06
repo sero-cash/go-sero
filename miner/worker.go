@@ -76,6 +76,8 @@ type Work struct {
 	createdAt time.Time
 
 	handledTxs []*types.Transaction
+
+	gasReward uint64
 }
 
 type Result struct {
@@ -108,7 +110,7 @@ type worker struct {
 	proc    core.Validator
 	chainDb serodb.Database
 
-	coinbase common.Address
+	coinbase common.AccountAddress
 	extra    []byte
 
 	currentMu sync.Mutex
@@ -125,7 +127,7 @@ type worker struct {
 	atWork int32
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, sero Backend, mux *event.TypeMux) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.AccountAddress, sero Backend, mux *event.TypeMux) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
@@ -155,7 +157,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	return worker
 }
 
-func (self *worker) setSerobase(addr common.Address) {
+func (self *worker) setSerobase(addr common.AccountAddress) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.coinbase = addr
@@ -258,14 +260,18 @@ func (self *worker) update() {
 			if atomic.LoadInt32(&self.mining) == 0 {
 				self.currentMu.Lock()
 				txset := types.NewTransactionsByPrice(ev.Txs)
-				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
+				addr := common.Address{}
+				//pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
+				pkr, _, ret := keys.Addr2PKrAndLICr(self.coinbase.ToUint512())
+				if !ret {
+					log.Error("Failed to Addr2PKrAndLICr")
+					return
+				}
+				addr.SetBytes(pkr[:])
+
+				self.current.commitTransactions(self.mux, txset, self.chain, addr)
 				self.updateSnapshot()
 				self.currentMu.Unlock()
-			} else {
-				// If we're mining, but nothing is being processed, wake on new transactions
-				if self.config.Clique != nil && self.config.Clique.Period == 0 {
-					self.commitNewWork()
-				}
 			}
 
 			// System stopped
@@ -451,7 +457,7 @@ func (self *worker) commitNewWork() {
 	log.Info(fmt.Sprintf("commitTransactions %v tx done in %v", len(pending), time.Since(tstart)))
 
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts, work.gasReward); err != nil {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
 	}
@@ -543,11 +549,13 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vm.Config{})
+	receipt, gas, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vm.Config{})
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		return err, nil
 	}
+
+	env.gasReward += new(big.Int).Mul(new(big.Int).SetUint64(gas), tx.GasPrice()).Uint64()
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
 

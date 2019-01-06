@@ -19,40 +19,52 @@ package tx
 import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type In struct {
 	Root keys.Uint256
+	IsO  bool
 }
 
 type Out struct {
-	Addr  keys.Uint512
+	Addr  keys.PKr
 	Asset assets.Asset
 	Memo  keys.Uint512
-	Z     OutType
+	IsZ   bool
 }
 
-type OutType int
+type PkgCreate struct {
+	Id  keys.Uint256
+	PKr keys.PKr
+	Pkg pkg.Pkg_O
+}
 
-const (
-	TYPE_N = OutType(0)
-	TYPE_O = OutType(1)
-	TYPE_Z = OutType(2)
-)
+type PkgClose struct {
+	Id  keys.Uint256
+	Key keys.Uint256
+}
+
+type PkgTransfer struct {
+	Id  keys.Uint256
+	PKr keys.PKr
+}
 
 type T struct {
-	FromRnd *keys.Uint256
-	Ehash   keys.Uint256
-	Fee     utils.U256
-	Ins     []In
-	Outs    []Out
+	FromRnd     *keys.Uint256
+	Ehash       keys.Uint256
+	Fee         assets.Token
+	Ins         []In
+	Outs        []Out
+	PkgCreate   *PkgCreate
+	PkgTransfer *PkgTransfer
+	PkgClose    *PkgClose
 }
 
 func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
 	ret = make(map[keys.Uint256]utils.U256)
-	seroCy := utils.StringToUint256("SERO")
-	ret[seroCy] = self.Fee
+	ret[self.Fee.Currency] = self.Fee.Value
 	if len(self.Outs) > 0 {
 		for _, out := range self.Outs {
 			if out.Asset.Tkn != nil {
@@ -62,6 +74,17 @@ func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
 				} else {
 					ret[out.Asset.Tkn.Currency] = out.Asset.Tkn.Value
 				}
+			}
+		}
+	}
+	if self.PkgCreate != nil {
+		asset := self.PkgCreate.Pkg.Asset
+		if asset.Tkn != nil {
+			if cost, ok := ret[asset.Tkn.Currency]; ok {
+				cost.AddU(&asset.Tkn.Value)
+				ret[asset.Tkn.Currency] = cost
+			} else {
+				ret[asset.Tkn.Currency] = asset.Tkn.Value
 			}
 		}
 	}
@@ -79,6 +102,17 @@ func (self *T) TikectCost() (ret map[keys.Uint256][]keys.Uint256) {
 				} else {
 					ret[out.Asset.Tkt.Category] = []keys.Uint256{out.Asset.Tkt.Value}
 				}
+			}
+		}
+	}
+	if self.PkgCreate != nil {
+		asset := self.PkgCreate.Pkg.Asset
+		if asset.Tkt != nil {
+			if tkts, ok := ret[asset.Tkt.Category]; ok {
+				tkts = append(tkts, asset.Tkt.Value)
+				ret[asset.Tkt.Category] = tkts
+			} else {
+				ret[asset.Tkt.Category] = []keys.Uint256{asset.Tkt.Value}
 			}
 		}
 	}

@@ -48,7 +48,7 @@ type Miner struct {
 
 	worker *worker
 
-	coinbase common.Address
+	coinbase common.AccountAddress
 	mining   int32
 	sero     Backend
 	engine   consensus.Engine
@@ -62,7 +62,7 @@ func New(sero Backend, config *params.ChainConfig, mux *event.TypeMux, engine co
 		sero:     sero,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, common.Address{}, sero, mux),
+		worker:   newWorker(config, engine, common.AccountAddress{}, sero, mux),
 		canStart: 1,
 	}
 	miner.Register(NewCpuAgent(sero.BlockChain(), engine))
@@ -103,7 +103,7 @@ out:
 	}
 }
 
-func (self *Miner) Start(coinbase common.Address) {
+func (self *Miner) Start(coinbase common.AccountAddress) {
 	atomic.StoreInt32(&self.shouldStart, 1)
 	self.SetSerobase(coinbase)
 
@@ -184,7 +184,7 @@ func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
 }
 
-func (self *Miner) SetSerobase(addr common.Address) {
+func (self *Miner) SetSerobase(addr common.AccountAddress) {
 	self.coinbase = addr
 	self.worker.setSerobase(addr)
 }

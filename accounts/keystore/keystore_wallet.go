@@ -17,6 +17,11 @@
 package keystore
 
 import (
+	"errors"
+
+	"github.com/sero-cash/go-sero/zero/txs"
+	"github.com/sero-cash/go-sero/zero/txs/generate"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/accounts"
@@ -24,11 +29,10 @@ import (
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/rlp"
-	"github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txs/lstate"
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
 )
 
@@ -86,13 +90,6 @@ func (w *keystoreWallet) Derive(path accounts.DerivationPath, pin bool) (account
 // there is no notion of hierarchical account derivation for plain keystore accounts.
 func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain sero.ChainStateReader) {}
 
-func rlpHash(x interface{}) (h common.Hash) {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, x)
-	hw.Sum(h[:0])
-	return h
-}
-
 func (w *keystoreWallet) EncryptTx(account accounts.Account, tx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
 	// Make sure the requested account is contained within
 	if account.Address != w.account.Address {
@@ -132,9 +129,9 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 			Tkn: token,
 		}
 		selfOut := tx.Out{
-			Addr:  keys.Seed2Addr(seed.SeedToUint256()),
+			Addr:  keys.Addr2PKr(keys.Seed2Addr(seed.SeedToUint256()).NewRef(), keys.RandUint256().NewRef()),
 			Asset: asset,
-			Z:     tx.TYPE_Z,
+			IsZ:   true,
 		}
 		txt.Outs = append(txt.Outs, selfOut)
 	}
@@ -148,23 +145,33 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 				Tkt: ticket,
 			}
 			selfOut := tx.Out{
-				Addr:  keys.Seed2Addr(seed.SeedToUint256()),
+				Addr:  keys.Addr2PKr(keys.Seed2Addr(seed.SeedToUint256()).NewRef(), keys.RandUint256().NewRef()),
 				Asset: asset,
-				Z:     tx.TYPE_Z,
+				IsZ:   true,
 			}
 			txt.Outs = append(txt.Outs, selfOut)
 		}
 
 	}
 
-	txt.Ins = ins
+	if txt.PkgClose != nil {
+		zpkg := lstate.CurrentState1().State.Pkgs.GetPkg(&txt.PkgClose.Id)
+		if zpkg == nil {
+			return nil, errors.New("PkgClose Id is not exists!")
+		}
+		pkg_o, err := pkg.DePkg(&txt.PkgClose.Key, &zpkg.Pack.Pkg)
+		if err != nil {
+			return nil, err
+		}
+		selfOut := tx.Out{
+			Addr:  zpkg.Pack.PKr,
+			Asset: pkg_o.Asset,
+			IsZ:   true,
+		}
+		txt.Outs = append(txt.Outs, selfOut)
+	}
 
-	Ehash := rlpHash([]interface{}{
-		btx.GasPrice(),
-		btx.Data(),
-		btx.Currency(),
-	})
-	copy(txt.Ehash[:], Ehash[:])
+	txt.Ins = ins
 
 	log.Info("EncryptTxWithSeed : ", "in_num", len(txt.Ins), "out_num", len(txt.Outs))
 
@@ -175,7 +182,7 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 		log.Info("    ctx_out : ", "index", i, "to", hexutil.Encode(out.Addr[:]))
 	}
 
-	stx, err := txs.Gen(seed.SeedToUint256(), txt)
+	stx, err := generate.Gen(seed.SeedToUint256(), txt)
 	if err != nil {
 		return nil, err
 	}
@@ -217,6 +224,6 @@ func (w *keystoreWallet) EncryptTxWithPassphrase(account accounts.Account, passp
 
 func (w *keystoreWallet) IsMine(onceAddress common.Address) bool {
 	tk := w.account.Tk.ToUint512()
-	succ, _ := keys.IsMyPKr(tk, onceAddress.ToUint512())
+	succ := keys.IsMyPKr(tk, onceAddress.ToPKr())
 	return succ
 }

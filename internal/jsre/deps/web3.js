@@ -531,6 +531,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             this._inputFormatter = f.formatInputAddress;
             this._outputFormatter = f.formatOutputAddress;
             this._inputSeroAddressFormatter = f.formatInputFullAddress;
+            this._inputSeroShortAddrFormatter = f.formtInputShortAddress;
             this._outSeroAddressFormatter = f.formatOutputAddress;
         };
 
@@ -690,11 +691,11 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {Array} params
          * @return {String} encoded list of params
          */
-        SolidityCoder.prototype.encodeParams = function (types, params) {
+        SolidityCoder.prototype.encodeParams = function (types, params,shortAddrMap) {
             var solidityTypes = this.getSolidityTypes(types);
 
             var encodeds = solidityTypes.map(function (solidityType, index) {
-                return solidityType.encode(params[index], types[index]);
+                return solidityType.encode(params[index], types[index],shortAddrMap);
             });
 
             var dynamicOffset = solidityTypes.reduce(function (acc, solidityType, index) {
@@ -716,7 +717,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var solidityTypes = this.getSolidityTypes(types);
             var addressParams = [];
             solidityTypes.map(function (solidityType, index) {
-                if (solidityType instanceof SolidityTypeAddress){
+                if (solidityType instanceof SolidityTypeAddress &&params[index]&&(params[index]!="")){
                     addressParams = addressParams.concat(solidityType.address(params[index], types[index],false));
                 }
             });
@@ -749,6 +750,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                         }
                         var paramsresult ={};
                         paramsresult.params = params;
+                        paramsresult.shortAddr = result.shortAddr;
                         paramsresult.rand = rand;
                         callback(null,paramsresult);
                     }
@@ -767,6 +769,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 }
                 var result ={};
                 result.params = params;
+                result.shortAddr = convertResult.shortAddr;
                 result.rand = rand;
                 return result;
             }
@@ -1103,6 +1106,15 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return new SolidityParam(result);
         };
 
+
+        var formtInputShortAddress = function (value) {
+            var result = value.substr(2);
+            result = utils.padLeft(result, 64);
+            return new SolidityParam(result);
+        };
+
+
+
         /**
          * Formats input value to byte representation of show address
          *
@@ -1251,6 +1263,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             formatInputReal: formatInputReal,
             formatInputAddress: formatInputAddress,
             formatInputFullAddress: formatInputFullAddress,
+            formtInputShortAddress:formtInputShortAddress,
             formatOutputInt: formatOutputInt,
             formatOutputUInt: formatOutputUInt,
             formatOutputReal: formatOutputReal,
@@ -1668,7 +1681,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {String} name
          * @return {String} encoded value
          */
-        SolidityType.prototype.encode = function (value, name) {
+        SolidityType.prototype.encode = function (value, name,shortAddrMap) {
             var self = this;
             if (this.isDynamicArray(name)) {
 
@@ -1702,7 +1715,11 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
             }
 
-            return this._inputFormatter(value, name).encode();
+            if (this._inputSeroShortAddrFormatter && shortAddrMap) {
+                return this._inputSeroShortAddrFormatter(shortAddrMap[value], name).encode();
+            }else {
+                return this._inputFormatter(value, name).encode();
+            }
         };
 
         /**
@@ -2918,7 +2935,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
     },{"./base58":17,"./sha3.js":20,"bignumber.js":"bignumber.js","utf8":85}],22:[function(require,module,exports){
         module.exports={
-            "version": "0.2.6"
+            "version": "0.2.15"
         }
 
     },{}],23:[function(require,module,exports){
@@ -3265,7 +3282,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {Array} abi
          * @param {Array} constructor params
          */
-        var encodeConstructorParams = function (abi, params) {
+        var encodeConstructorParams = function (abi, params,shortAddrMap) {
             return abi.filter(function (json) {
                 return json.type === 'constructor' && json.inputs.length === params.length;
             }).map(function (json) {
@@ -3273,7 +3290,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     return input.type;
                 });
             }).map(function (types) {
-                return coder.encodeParams(types, params);
+                return coder.encodeParams(types, params,shortAddrMap);
             })[0] || '';
         };
 
@@ -3290,15 +3307,32 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
         var opArgs = function (abi, params,rand,sero,dy,callback) {
-            return abi.filter(function (json) {
-                return json.type === 'constructor' && json.inputs.length === params.length;
-            }).map(function (json) {
-                return json.inputs.map(function (input) {
-                    return input.type;
+            if (callback){
+                var types = abi.filter(function (json) {
+                    return json.type === 'constructor' && json.inputs.length === params.length;
+                }).map(function (json) {
+                    return json.inputs.map(function (input) {
+                        return input.type;
+                    });
                 });
-            }).map(function (types) {
-                return coder.opParams(types, params,rand,sero,dy,callback);
-            })[0] || coder.opParams([], [],rand,sero,dy,callback);
+                if (types&&types[0]){
+                    coder.opParams(types[0], params,rand,sero,dy,callback);
+                }else {
+                    coder.opParams([], [],rand,sero,dy,callback)
+                }
+
+            }else{
+                return abi.filter(function (json) {
+                    return json.type === 'constructor' && json.inputs.length === params.length;
+                }).map(function (json) {
+                    return json.inputs.map(function (input) {
+                        return input.type;
+                    });
+                }).map(function (types) {
+                    return coder.opParams(types, params,rand,sero,dy);
+                })[0] || coder.opParams([], [],rand,sero,dy);
+            }
+
         };
 
 
@@ -3360,7 +3394,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 if (!e && !callbackFired) {
 
                     count++;
-                    console.log("checkForContractAddress ccount =" + count)
                     // stop watching after 50 blocks (timeout)
                     if (count > 50) {
 
@@ -3471,7 +3504,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 var argsResult = opArgs(this.abi,args,rand,this.sero,false);
                 args = argsResult.params;
                 rand = argsResult.rand;
-                var bytes = encodeConstructorParams(this.abi, args);
+                var shortAddrMap = argsResult.shortAddr;
+                var bytes = encodeConstructorParams(this.abi, args,shortAddrMap);
                 options.data += bytes;
                 var prefix = encodeConstructorPrefix(this.abi,args,rand);
                 options.data = prefix +options.data.substr(2);
@@ -3569,7 +3603,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     }
                     args = result.params;
                     rand = result.rand;
-                    var bytes = encodeConstructorParams(self.abi, args);
+                    var shortAddrMap = result.shortAddr;
+                    var bytes = encodeConstructorParams(self.abi, args,shortAddrMap);
                     options.data += bytes;
                     var prefix = encodeConstructorPrefix(self.abi,args,rand);
                     options.data = prefix +options.data.substr(2);
@@ -3582,7 +3617,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 argsResult = opArgs(self.abi,args,rand,self.sero,false);
                 args = argsResult.params;
                 rand = argsResult.rand;
-                var bytes = encodeConstructorParams(self.abi, args);
+                var shortAddrMap = result.shortAddr;
+                var bytes = encodeConstructorParams(self.abi, args,shortAddrMap);
                 options.data += bytes;
                 var prefix = encodeConstructorPrefix(self.abi,args,rand);
                 options.data = prefix +options.data.substr(2);
@@ -4668,7 +4704,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var rand = utils.bytesToHex(utils.base58ToBytes(this._address).slice(0,16));
             var convertResult = coder.opParams(this._inputTypes,args,rand,this._sero,dy);
             args = convertResult.params;
-            options.data = coder.addressPrefix(this._inputTypes,args,rand) + this.signature()+ coder.encodeParams(this._inputTypes, args);
+            options.data = coder.addressPrefix(this._inputTypes,args,rand) + this.signature()+ coder.encodeParams(this._inputTypes, args,convertResult.shortAddr);
             return options;
         };
 
@@ -4690,7 +4726,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     throw errors.InvalidResponse(err);
                 }
                 args = result.params;
-                options.data = coder.addressPrefix(self._inputTypes,args,rand) + self.signature()+ coder.encodeParams(self._inputTypes, args);
+                options.data = coder.addressPrefix(self._inputTypes,args,rand) + self.signature()+ coder.encodeParams(self._inputTypes, args,result.shortAddr);
                 callback(options)
             }
             coder.opParams(this._inputTypes,args,rand,this._sero,dy,cb);
@@ -6121,11 +6157,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         var methods = function () {
 
-            var isMineOAddr = new Method({
-                name: 'isMineOAddr',
-                call: 'sero_isMineOAddr',
-                params: 1,
-                inputFormatter: [formatters.inputAddressFormatter]
+            var isMinePKr = new Method({
+                name: 'isMinePKr',
+                call: 'sero_isMinePKr',
+                params: 1
             });
 
             var getBalance = new Method({
@@ -6134,6 +6169,19 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 2,
                 inputFormatter: [formatters.inputAddressFormatter,formatters.inputDefaultBlockNumberFormatter],
                 outputFormatter: formatters.outputBalanceFormatter
+            });
+
+            var getPkg = new Method({
+                name: 'getPkg',
+                call: 'sero_getPkg',
+                params: 3,
+                inputFormatter: [formatters.inputAddressFormatter,null,null],
+            });
+
+            var watchPkg = new Method({
+                name: 'watchPkg',
+                call: 'sero_watchPkg',
+                params: 2,
             });
 
             var getStorageAt = new Method({
@@ -6210,7 +6258,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
             var currencyToContractAddress = new Method({
                 name: 'cyToContractAddress',
-                call: 'sero_cyToContractAddress',
+                call: 'sero_currencyToContractAddress',
                 params: 1,
             });
 
@@ -6240,6 +6288,27 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var sendTransaction = new Method({
                 name: 'sendTransaction',
                 call: 'sero_sendTransaction',
+                params: 1,
+                inputFormatter: [formatters.inputTransactionFormatter]
+            });
+
+            var createPkg = new Method({
+                name: 'createPkg',
+                call: 'sero_createPkg',
+                params: 1,
+                inputFormatter: [formatters.inputTransactionFormatter]
+            });
+
+            var closePkg = new Method({
+                name: 'closePkg',
+                call: 'sero_closePkg',
+                params: 1,
+                inputFormatter: [formatters.inputTransactionFormatter]
+            });
+
+            var transferPkg = new Method({
+                name: 'transferPkg',
+                call: 'sero_transferPkg',
                 params: 1,
                 inputFormatter: [formatters.inputTransactionFormatter]
             });
@@ -6290,8 +6359,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             });
 
             return [
-                isMineOAddr,
+                isMinePKr,
                 getBalance,
+                getPkg,
+                watchPkg,
                 getStorageAt,
                 getCode,
                 getBlock,
@@ -6306,6 +6377,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 call,
                 estimateGas,
                 sendTransaction,
+                createPkg,
+                closePkg,
+                transferPkg,
                 convertAddressParams,
                 getFullAddress,
                 currencyToContractAddress,

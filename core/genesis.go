@@ -26,9 +26,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/utils"
-
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/common/math"
@@ -39,6 +36,8 @@ import (
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -58,8 +57,6 @@ type Genesis struct {
 	Mixhash    common.Hash    `json:"mixHash"`
 	Coinbase   common.Address `json:"coinbase"`
 	Alloc      GenesisAlloc   `json:"alloc"      gencodec:"required"`
-
-	AvgUsedGas uint64 `json:"avgUsedGas"      gencodec:"required"`
 
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
@@ -85,11 +82,10 @@ func (ga *GenesisAlloc) UnmarshalJSON(data []byte) error {
 
 // GenesisAccount is an account in the state of the genesis block.
 type GenesisAccount struct {
-	Code       []byte                      `json:"code,omitempty"`
-	Storage    map[common.Hash]common.Hash `json:"storage,omitempty"`
-	Balance    *big.Int                    `json:"balance" gencodec:"required"`
-	Nonce      uint64                      `json:"nonce,omitempty"`
-	PrivateKey []byte                      `json:"secretKey,omitempty"` // for tests
+	Code    []byte                      `json:"code,omitempty"`
+	Storage map[common.Hash]common.Hash `json:"storage,omitempty"`
+	Balance *big.Int                    `json:"balance" gencodec:"required"`
+	Nonce   uint64                      `json:"nonce,omitempty"`
 }
 
 // field type overrides for gencodec
@@ -232,7 +228,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 	}
 	statedb, _ := state.NewGenesis(common.Hash{}, state.NewDatabase(db))
 	statedb.RegisterToken(state.EmptyAddress, "SERO")
-	statedb.AddBalance(state.EmptyAddress, "SERO", new(big.Int).Mul(big.NewInt(50000000), big.NewInt(1e+18)))
+	statedb.AddBalance(state.EmptyAddress, "SERO", new(big.Int).Mul(big.NewInt(250000000), big.NewInt(1e+18)))
 
 	sero := common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32))
 	var keys common.Addresses
@@ -242,26 +238,25 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 	sort.Sort(keys)
 	for _, addr := range keys {
 		account := g.Alloc[addr]
-		if account.Code != nil && len(account.Code) > 0 {
-			statedb.AddBalance(addr, "SERO", account.Balance)
+		if addr == state.EmptyAddress {
+		} else if account.Code != nil && len(account.Code) > 0 {
+			if account.Balance != nil && account.Balance.Sign() > 0 {
+				statedb.AddBalance(addr, "SERO", account.Balance)
+			}
 			statedb.SetCode(addr, account.Code)
 		} else {
-			asset := assets.Asset{Tkn: &assets.Token{
-				Currency: *sero.HashToUint256(),
-				Value:    utils.U256(*account.Balance),
-			},
+			if account.Balance != nil && account.Balance.Sign() > 0 {
+				asset := assets.Asset{Tkn: &assets.Token{
+					Currency: *sero.HashToUint256(),
+					Value:    utils.U256(*account.Balance),
+				},
+				}
+				statedb.GetZState().AddTxOut(addr, asset)
 			}
-			statedb.GetZState().AddTxOut(addr, asset)
 		}
 		for key, value := range account.Storage {
 			statedb.SetState(addr, key, value)
 		}
-	}
-
-	if g.AvgUsedGas != 0 {
-		statedb.SetAvgUsedGas(0, new(big.Int).SetUint64(g.AvgUsedGas))
-	} else {
-		statedb.SetAvgUsedGas(0, params.GenesisAvgUsedGas)
 	}
 
 	root := statedb.IntermediateRoot(false)
@@ -329,7 +324,8 @@ func DefaultGenesisBlock() *Genesis {
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		GasLimit:   5000000,
 		Difficulty: big.NewInt(1717986918),
-		//Alloc:      decodePrealloc(mainnetAllocData),
+
+		Alloc:      decodePreAlloc(mainnetAllocData),
 		Coinbase:   common.Base58ToAddress("1111111111111111111111111111111111111111111111111111111111111111"),
 		ParentHash: common.Hash{},
 		Mixhash:    common.Hash{},
@@ -344,7 +340,7 @@ func DefaultAlphanetGenesisBlock() *Genesis {
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
 		GasLimit:   5000000,
 		Difficulty: big.NewInt(51485767),
-		Alloc:      decodePrealloc(testnetAllocData),
+		//Alloc:      decodePrealloc(testnetAllocData),
 	}
 }
 
@@ -353,10 +349,11 @@ func DeveloperGenesisBlock() *Genesis {
 	return &Genesis{
 		Config: params.DevnetChainConfig,
 		//Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x52657370656374206d7920617574686f7269746168207e452e436172746d616e42eb768f2244c8811c63729a21a3569731535f067ffc57839b00206d1ad20c69a1981b489f772031b279182d99e65703f0076e4812653aab85fca0f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-		GasLimit:   5000000,
-		Difficulty: big.NewInt(1048576),
-		//Alloc:      decodePrealloc(testnetAllocData),
+		ExtraData: hexutil.MustDecode("0x52657370656374206d7920617574686f7269746168207e452e436172746d616e42eb768f2244c8811c63729a21a3569731535f067ffc57839b00206d1ad20c69a1981b489f772031b279182d99e65703f0076e4812653aab85fca0f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:  5000000,
+
+		Difficulty: big.NewInt(1),
+		//Alloc:      decodePreAlloc(testnetAllocData),
 	}
 }
 
@@ -368,6 +365,42 @@ func decodePrealloc(data string) GenesisAlloc {
 	ga := make(GenesisAlloc, len(p))
 	for _, account := range p {
 		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}
+	}
+	return ga
+}
+
+type Storage struct {
+	Key   common.Hash
+	Value common.Hash
+}
+
+type AllocItem struct {
+	Addr     common.Address
+	Balance  *big.Int
+	Code     []byte
+	Storages []Storage
+}
+
+func decodePreAlloc(data string) GenesisAlloc {
+	var p []AllocItem
+	if len(strings.TrimSpace(data)) == 0 {
+		return GenesisAlloc{}
+	}
+
+	if err := rlp.NewStream(strings.NewReader(data), 0).Decode(&p); err != nil {
+		panic(err)
+	}
+	ga := make(GenesisAlloc, len(p))
+	for _, allocItem := range p {
+		account := GenesisAccount{Code: allocItem.Code, Balance: allocItem.Balance}
+		if len(allocItem.Storages) > 0 {
+			s := map[common.Hash]common.Hash{}
+			for _, each := range allocItem.Storages {
+				s[each.Key] = each.Value
+			}
+			account.Storage = s
+		}
+		ga[allocItem.Addr] = account
 	}
 	return ga
 }

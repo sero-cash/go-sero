@@ -29,7 +29,7 @@ import (
 )
 
 type Out_O struct {
-	Addr  keys.Uint512
+	Addr  keys.PKr
 	Asset assets.Asset
 	Memo  keys.Uint512
 }
@@ -44,6 +44,26 @@ func (this Out_O) ToRef() (ret *Out_O) {
 }
 
 func (self *Out_O) ToHash() (ret keys.Uint256) {
+	hash := crypto.Keccak256(
+		self.Addr[:],
+		self.Asset.ToHash().NewRef()[:],
+		self.Memo[:],
+	)
+	copy(ret[:], hash)
+	return ret
+}
+
+func (self *Out_O) ToHash_for_gen() (ret keys.Uint256) {
+	hash := crypto.Keccak256(
+		self.Addr[:],
+		self.Asset.ToHash().NewRef()[:],
+		self.Memo[:],
+	)
+	copy(ret[:], hash)
+	return ret
+}
+
+func (self *Out_O) ToHash_for_sign() (ret keys.Uint256) {
 	hash := crypto.Keccak256(
 		self.Addr[:],
 		self.Asset.ToHash().NewRef()[:],
@@ -68,23 +88,91 @@ func (ino In_O) MarshalText() ([]byte, error) {
 	return result, nil
 }
 
-func (self *In_O) ToHash_for_z() (ret keys.Uint256) {
+func (self *In_O) ToHash() (ret keys.Uint256) {
+	copy(ret[:], self.Root[:])
+	copy(ret[:], self.Sign[:])
+	return ret
+}
+
+func (self *In_O) ToHash_for_gen() (ret keys.Uint256) {
 	copy(ret[:], self.Root[:])
 	return ret
 }
 
+func (self *In_O) ToHash_for_sign() (ret keys.Uint256) {
+	copy(ret[:], self.Root[:])
+	return ret
+}
+
+type In_S struct {
+	Root keys.Uint256
+	Nil  keys.Uint256
+	Sign keys.Uint512
+}
+
+func (self *In_S) ToHash() (ret keys.Uint256) {
+	hash := crypto.Keccak256(
+		self.Root[:],
+		self.Nil[:],
+		self.Sign[:],
+	)
+	copy(ret[:], hash)
+	return ret
+}
+
+func (self *In_S) ToHash_for_gen() (ret keys.Uint256) {
+	hash := crypto.Keccak256(
+		self.Root[:],
+	)
+	copy(ret[:], hash)
+	return ret
+}
+
+func (self *In_S) ToHash_for_sign() (ret keys.Uint256) {
+	hash := crypto.Keccak256(
+		self.Root[:],
+	)
+	copy(ret[:], hash)
+	return ret
+}
+
 type Desc_O struct {
-	Ins  []In_O
+	//Ins  []In_O
+	Ins  []In_S
 	Outs []Out_O
 }
 
-func (self *Desc_O) ToHash_for_z() (ret keys.Uint256) {
+func (self *Desc_O) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	for _, in := range self.Ins {
-		d.Write(in.ToHash_for_z().NewRef()[:])
+		d.Write(in.ToHash().NewRef()[:])
 	}
 	for _, out := range self.Outs {
 		d.Write(out.ToHash().NewRef()[:])
+	}
+	copy(ret[:], d.Sum(nil))
+	return
+}
+
+func (self *Desc_O) ToHash_for_gen() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	for _, in := range self.Ins {
+		d.Write(in.ToHash_for_gen().NewRef()[:])
+	}
+	for _, out := range self.Outs {
+		d.Write(out.ToHash_for_gen().NewRef()[:])
+	}
+	copy(ret[:], d.Sum(nil))
+	return
+}
+
+func (self *Desc_O) ToHash_for_sign() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	for _, in := range self.Ins {
+		d.Write(in.ToHash_for_sign().NewRef()[:])
+	}
+	for _, out := range self.Outs {
+		d.Write(out.ToHash_for_sign().NewRef()[:])
 	}
 	copy(ret[:], d.Sum(nil))
 	return

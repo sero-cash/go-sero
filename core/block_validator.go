@@ -105,13 +105,14 @@ func CalcGasLimit(parent *types.Block) uint64 {
 		divisor = uint64(128)
 	}
 
-	limit := parent.GasLimit() - parent.GasLimit()/divisor + contrib/divisor
+	decav := parent.GasLimit()/divisor - 1
+	limit := parent.GasLimit() - decav + contrib/divisor
 	if limit < params.MinGasLimit {
 		limit = params.MinGasLimit
 	}
 
 	if limit < params.TargetGasLimit {
-		limit = parent.GasLimit() + parent.GasLimit()/divisor
+		limit = parent.GasLimit() + decav
 		if limit > params.TargetGasLimit {
 			limit = params.TargetGasLimit
 		}

@@ -59,7 +59,7 @@ func (self Storage) Copy() Storage {
 //
 // The usage pattern is as follows:
 // First you need to obtain a state object.
-// Account values can be accessed and modified through the object.
+// AccountAddress values can be accessed and modified through the object.
 // Finally, call CommitTrie to write the modified storage trie into a database.
 type stateObject struct {
 	address  common.Address
@@ -100,7 +100,7 @@ type Book struct {
 	Currency string
 }
 
-// Account is the Ethereum consensus representation of accounts.
+// AccountAddress is the Ethereum consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account struct {
 	TicketNonce uint64
@@ -376,7 +376,7 @@ func (self *stateObject) Balances() map[string]*big.Int {
 }
 
 // Never called, but must be present to allow stateObject to be used
-// as a vm.Account interface that also satisfies the vm.ContractRef
+// as a vm.AccountAddress interface that also satisfies the vm.ContractRef
 // interface. Interfaces are awesome.
 func (self *stateObject) Value() *big.Int {
 	panic("Value on stateObject should never be called")

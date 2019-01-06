@@ -25,6 +25,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/txs"
+	"github.com/sero-cash/go-sero/zero/txs/lstate"
+
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
 
@@ -47,7 +50,6 @@ import (
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/rpc"
-	"github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	ztx "github.com/sero-cash/go-sero/zero/txs/tx"
 	"github.com/sero-cash/go-sero/zero/zconfig"
@@ -202,8 +204,8 @@ func NewPublicAccountAPI(am *accounts.Manager) *PublicAccountAPI {
 }
 
 // Accounts returns the collection of accounts this node manages
-func (s *PublicAccountAPI) Accounts() []common.Address {
-	addresses := make([]common.Address, 0) // return [] instead of nil if empty
+func (s *PublicAccountAPI) Accounts() []common.AccountAddress {
+	addresses := make([]common.AccountAddress, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
 		for _, account := range wallet.Accounts() {
 			addresses = append(addresses, account.Address)
@@ -212,21 +214,21 @@ func (s *PublicAccountAPI) Accounts() []common.Address {
 	return addresses
 }
 
-func (s *PublicAccountAPI) IsMineOAddr(onceAddress common.Address) bool {
+func (s *PublicAccountAPI) IsMinePKr(pkr common.Address) *common.AccountAddress {
 	wallets := s.am.Wallets()
-	return isMine(wallets, onceAddress)
+	return getAddressByPkr(wallets, pkr)
 }
 
-func isMine(wallets []accounts.Wallet, onceAddress common.Address) bool {
+func getAddressByPkr(wallets []accounts.Wallet, onceAddress common.Address) *common.AccountAddress {
 	if len(wallets) == 0 {
-		return false
+		return nil
 	}
 	for _, wallet := range wallets {
 		if wallet.IsMine(onceAddress) {
-			return true
+			return &wallet.Accounts()[0].Address
 		}
 	}
-	return false
+	return nil
 }
 
 // PrivateAccountAPI provides an API to access accounts managed by this node.
@@ -248,8 +250,8 @@ func NewPrivateAccountAPI(b Backend, nonceLock *AddrLocker) *PrivateAccountAPI {
 }
 
 // ListAccounts will return a list of addresses for accounts this node manages.
-func (s *PrivateAccountAPI) ListAccounts() []common.Address {
-	addresses := make([]common.Address, 0) // return [] instead of nil if empty
+func (s *PrivateAccountAPI) ListAccounts() []common.AccountAddress {
+	addresses := make([]common.AccountAddress, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
 		for _, account := range wallet.Accounts() {
 			addresses = append(addresses, account.Address)
@@ -320,10 +322,10 @@ func (s *PrivateAccountAPI) DeriveAccount(url string, path string, pin *bool) (a
 }
 
 // NewAccount will create a new account and returns the address for the new account.
-func (s *PrivateAccountAPI) NewAccount(password string) (common.Address, error) {
+func (s *PrivateAccountAPI) NewAccount(password string) (common.AccountAddress, error) {
 	acc, err := fetchKeystore(s.am).NewAccount(password)
 	if err != nil {
-		return common.Address{}, err
+		return common.AccountAddress{}, err
 	}
 
 	if zconfig.Is_Dev() {
@@ -339,10 +341,10 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (common.Address, error) {
+func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (common.AccountAddress, error) {
 	key, err := crypto.HexToECDSA(privkey)
 	if err != nil {
-		return common.Address{}, err
+		return common.AccountAddress{}, err
 	}
 	acc, err := fetchKeystore(s.am).ImportECDSA(key, password)
 	return acc.Address, err
@@ -351,7 +353,7 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (commo
 // UnlockAccount will unlock the account associated with the given address with
 // the given password for duration seconds. If duration is nil it will use a
 // default of 300 seconds. It returns an indication if the account was unlocked.
-func (s *PrivateAccountAPI) UnlockAccount(addr common.Address, password string, duration *uint64) (bool, error) {
+func (s *PrivateAccountAPI) UnlockAccount(addr common.AccountAddress, password string, duration *uint64) (bool, error) {
 	const max = uint64(time.Duration(math.MaxInt64) / time.Second)
 	var d time.Duration
 	if duration == nil {
@@ -369,7 +371,7 @@ func (s *PrivateAccountAPI) UnlockAccount(addr common.Address, password string, 
 }
 
 // LockAccount will lock the account associated with the given address when it's unlocked.
-func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
+func (s *PrivateAccountAPI) LockAccount(addr common.AccountAddress) bool {
 	return fetchKeystore(s.am).Lock(addr) == nil
 }
 
@@ -436,7 +438,7 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return submitTransaction(ctx, s.b, signed)
+	return submitTransaction(ctx, s.b, signed, args.To)
 }
 
 // SignAndSendTransaction was renamed to SendTransaction. This method is deprecated
@@ -462,25 +464,34 @@ func (s *PublicBlockChainAPI) BlockNumber() hexutil.Uint64 {
 	return hexutil.Uint64(header.Number.Uint64())
 }
 
-func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy string) (*common.Address, error) {
+func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy string) (*common.AccountAddress, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
 		return nil, err
 	}
+	if cy == "" {
+		return nil, errors.New("cy can not be empty!")
+	} else {
+		if cy == "sero" || cy == "SERO" {
+			return nil, nil
+		}
+	}
 	contractAddress := state.GetContrctAddressByToken(cy)
 	empty := common.Address{}
-	if contractAddress.Data == empty.Data {
+	if contractAddress == empty {
 		return nil, errors.New(cy + "not exists!")
 	}
-	return &contractAddress, nil
+	contractAddr := common.BytesToAccount(contractAddress[:64])
+	return &contractAddr, nil
 }
 
 type ConvertAddress struct {
-	Addr map[common.Address]common.Address `json:"addr"`
-	Rand *keys.Uint128                     `json:"rand"`
+	Addr      map[common.AccountAddress]common.Address  `json:"addr"`
+	ShortAddr map[common.Address]common.ContractAddress `json:"shortAddr"`
+	Rand      *keys.Uint128                             `json:"rand"`
 }
 
-func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *keys.Uint128, addresses []common.Address, dy bool) (*ConvertAddress, error) {
+func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *keys.Uint128, addresses []common.AccountAddress, dy bool) (*ConvertAddress, error) {
 	empty := &keys.Uint128{}
 	if bytes.Equal(rand[:], empty[:]) {
 		randKey := keys.RandUint128()
@@ -491,7 +502,8 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *ke
 		return nil, err
 	}
 
-	addrMap := map[common.Address]common.Address{}
+	addrMap := map[common.AccountAddress]common.Address{}
+	shortAddrMap := map[common.Address]common.ContractAddress{}
 
 	randSeed := rand.ToUint256()
 
@@ -500,16 +512,18 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *ke
 		randSeed = (&randUint128).ToUint256()
 	}
 	for _, addr := range addresses {
-		if state.IsContract(addr) {
-			addrMap[addr] = addr
+		onceAddr := common.Address{}
+		if state.IsContract(common.BytesToAddress(addr[:])) {
+			onceAddr = common.BytesToAddress(addr[:])
 		} else {
 			pkr := keys.Addr2PKr(addr.ToUint512(), randSeed.NewRef())
-			onceAddr := common.Address{}
 			onceAddr.SetBytes(pkr[:])
-			addrMap[addr] = onceAddr
 		}
+		addrMap[addr] = onceAddr
+		shortAddr := keys.HashPKr(onceAddr.ToPKr())
+		shortAddrMap[onceAddr] = common.BytesToContractAddress(shortAddr[:])
 	}
-	return &ConvertAddress{addrMap, rand}, nil
+	return &ConvertAddress{addrMap, shortAddrMap, rand}, nil
 }
 
 func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses []common.ContractAddress) (map[common.ContractAddress]common.Address, error) {
@@ -527,7 +541,7 @@ func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses
 		if len(wallets) > 0 {
 			for _, wallet := range wallets {
 				if wallet.IsMine(full) {
-					full = wallet.Accounts()[0].Address
+					full = common.BytesToAddress(wallet.Accounts()[0].Address[:])
 					break
 				}
 			}
@@ -546,7 +560,7 @@ type Balance struct {
 // GetBalance returns the amount of wei for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
-func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (Balance, error) {
+func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.AccountAddress, blockNr rpc.BlockNumber) (Balance, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 
 	if state == nil || err != nil {
@@ -562,8 +576,8 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 	//copy(t[:], keys.RandUint256().NewRef()[:])
 	//tkt["tktTest"] = append(tkt["tktTest"], &t)
 	//tkt["tktTest"] = append(tkt["tktTest"], &t)
-	if size := state.GetCodeSize(address); size > 0 {
-		balances := state.Balances(address)
+	if size := state.GetCodeSize(common.BytesToAddress(address[:])); size > 0 {
+		balances := state.Balances(common.BytesToAddress(address[:]))
 		for key, value := range balances {
 			tkn[key] = (*hexutil.Big)(value)
 		}
@@ -609,6 +623,104 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 		return result, state.Error()
 	}
 
+}
+
+func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, accountAdress common.AccountAddress, packed bool, id *keys.Uint256) (interface{}, error) {
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return nil, err
+	}
+	if state.IsContract(common.BytesToAddress(accountAdress[:])) {
+		return nil, errors.New("does not support contract address!")
+	}
+
+	// Look up the wallet containing the requested abi
+	account := accounts.Account{Address: accountAdress}
+	wallets := s.b.AccountManager().Wallets()
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return nil, err
+	}
+	seed := wallet.Accounts()[0].Tk
+	pkgs := lstate.CurrentState1().GetPkgs(seed.ToUint512(), packed)
+	if len(pkgs) > 0 {
+		result := []map[string]interface{}{}
+		for _, p := range pkgs {
+			pkg := map[string]interface{}{}
+
+			pkg["id"] = p.Pkg.Z.Pack.Id
+			pkg["packed"] = packed
+			to := getAddressByPkr(wallets, common.BytesToAddress(p.Pkg.Z.Pack.PKr[:]))
+			if to != nil {
+				pkg["to_addr"] = to
+			}
+			if (p.Key != keys.Uint256{}) {
+				pkg["key"] = p.Key
+				asset := map[string]interface{}{}
+				if p.Pkg.O.Asset.Tkn != nil {
+					tkn := map[string]interface{}{}
+					tkn["currency"] = strings.Trim(string(p.Pkg.O.Asset.Tkn.Currency[:]), zerobyte)
+					tkn["value"] = p.Pkg.O.Asset.Tkn.Value
+					asset["tkn"] = tkn
+				}
+				if p.Pkg.O.Asset.Tkt != nil {
+					tkt := map[string]interface{}{}
+					tkt["category"] = strings.Trim(string(p.Pkg.O.Asset.Tkt.Category[:]), zerobyte)
+					tkt["value"] = p.Pkg.O.Asset.Tkt.Value
+					asset["tkt"] = tkt
+				}
+
+				pkg["asset"] = asset
+
+			}
+			if id != nil {
+				if p.Pkg.Z.Pack.Id == *id {
+					return pkg, nil
+				} else {
+					continue
+				}
+			} else {
+				result = append(result, pkg)
+			}
+
+		}
+		return result, nil
+	}
+	return nil, nil
+}
+
+func (s *PublicBlockChainAPI) WatchPkg(ctx context.Context, id keys.Uint256, key keys.Uint256) (map[string]interface{}, error) {
+
+	pkg_o, pkr, err := txs.WatchPkg(&id, &key)
+	if err != nil {
+		return nil, err
+	}
+	wallets := s.b.AccountManager().Wallets()
+	pkg := map[string]interface{}{}
+	pkg["id"] = id
+	pkg["key"] = key
+	to := getAddressByPkr(wallets, common.BytesToAddress(pkr[:]))
+	if to != nil {
+		pkg["to_addr"] = to
+	}
+	asset := map[string]interface{}{}
+	if pkg_o.Asset.Tkn != nil {
+		tkn := map[string]interface{}{}
+		tkn["currency"] = strings.Trim(string(pkg_o.Asset.Tkn.Currency[:]), zerobyte)
+		tkn["value"] = pkg_o.Asset.Tkn.Value
+		asset["tkn"] = tkn
+	}
+	if pkg_o.Asset.Tkt != nil {
+		tkt := map[string]interface{}{}
+		tkt["category"] = strings.Trim(string(pkg_o.Asset.Tkt.Category[:]), zerobyte)
+		tkt["value"] = pkg_o.Asset.Tkt.Value
+		asset["tkt"] = tkt
+	}
+
+	pkg["asset"] = asset
+
+	return pkg, nil
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
@@ -677,18 +789,31 @@ func (s *Smbol) IsEmpty() bool {
 	return (strings.TrimSpace(string(*s)) == "")
 }
 
+func (s *Smbol) IsNotEmpty() bool {
+	return !s.IsEmpty()
+}
+
+func (s *Smbol) IsSero() bool {
+	return (strings.ToUpper(strings.TrimSpace(string(*s))) == params.DefaultCurrency)
+}
+
+func (s *Smbol) IsNotSero() bool {
+	return !s.IsSero()
+}
+
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	Gas      hexutil.Uint64  `json:"gas"`
-	GasPrice hexutil.Big     `json:"gasPrice"`
-	Value    hexutil.Big     `json:"value"`
-	Data     hexutil.Bytes   `json:"data"`
-	Currency Smbol           `json:"cy"`
-	Dynamic  bool            `json:"dy"` //contract address parameters are dynamically generated.
-	Category Smbol           `json:"catg"`
-	Tkt      *common.Hash    `json:"tkt"`
+	From        common.AccountAddress  `json:"from"`
+	To          *common.AccountAddress `json:"to"`
+	GasCurrency Smbol                  `json:"gasCy"` //default SERO
+	Gas         hexutil.Uint64         `json:"gas"`
+	GasPrice    hexutil.Big            `json:"gasPrice"`
+	Value       hexutil.Big            `json:"value"`
+	Data        hexutil.Bytes          `json:"data"`
+	Currency    Smbol                  `json:"cy"`
+	Dynamic     bool                   `json:"dy"` //contract address parameters are dynamically generated.
+	Category    Smbol                  `json:"catg"`
+	Tkt         *common.Hash           `json:"tkt"`
 }
 
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, bool, error) {
@@ -700,7 +825,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 	// Set sender address or use a default if none specified
 	addr := args.From
-	if addr == (common.Address{}) {
+	if addr == (common.AccountAddress{}) {
 		if wallets := s.b.AccountManager().Wallets(); len(wallets) > 0 {
 			if accounts := wallets[0].Accounts(); len(accounts) > 0 {
 				addr = accounts[0].Address
@@ -714,6 +839,10 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 	if gasPrice.Sign() == 0 {
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
+	}
+
+	if args.GasCurrency.IsEmpty() {
+		args.GasCurrency = Smbol(params.DefaultCurrency)
 	}
 
 	// Create new call message
@@ -741,18 +870,38 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		Tkn: token,
 		Tkt: ticket,
 	}
-
 	rand := keys.RandUint128()
-	if args.To == nil {
-		copy(rand[:], args.Data)
-	} else if state.IsContract(*args.To) {
-		if !args.Dynamic {
-			copy(rand[:], args.To.Data[:16])
+	var to *common.Address
+	if args.To != nil && state.IsContract(common.BytesToAddress(args.To[:])) && !args.Dynamic {
+		copy(rand[:], args.To[:16])
+	}
+	if args.To != nil {
+		var toAddress common.Address
+		if state.IsContract(common.BytesToAddress(args.To[:])) {
+			toAddress = common.BytesToAddress(args.To[:])
+		} else {
+			toPkr := keys.Addr2PKr(args.To.ToUint512(), rand.ToUint256().NewRef())
+			toAddress = common.BytesToAddress(toPkr[:])
 		}
+		to = &toAddress
+	}
+
+	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
+	if args.To != nil && state.IsContract(common.BytesToAddress(args.To[:])) && args.GasCurrency.IsNotSero() {
+		m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
+		if m.Sign() == 0 || d.Sign() == 0 {
+			return nil, 0, false, errors.New("gasCurrency must be SERO or nil")
+		}
+		state.AddBalance(common.BytesToAddress(args.To[:]), "SERO", fee)
+		fee = new(big.Int).Div(fee.Mul(fee, m), d)
+	}
+	feeToken := assets.Token{
+		utils.StringToUint256(string(args.GasCurrency)),
+		utils.U256(*fee),
 	}
 	pkr := keys.Addr2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
-	addr.SetBytes(pkr[:])
-	msg := types.NewMessage(addr, args.To, 0, asset, gas, gasPrice, args.Data, false)
+
+	msg := types.NewMessage(common.BytesToAddress(pkr[:]), to, 0, asset, feeToken, gasPrice, args.Data)
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.
@@ -963,22 +1112,12 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 	if err != nil {
 		return nil, err
 	}
-	fields["miner"] = toPubAddress(fields["miner"].(common.Address), s.b.AccountManager().Wallets())
+	miner_addr := getAddressByPkr(s.b.AccountManager().Wallets(), fields["miner"].(common.Address))
+	if miner_addr != nil {
+		fields["miner_addr"] = miner_addr
+	}
 	fields["totalDifficulty"] = (*hexutil.Big)(s.b.GetTd(b.Hash()))
 	return fields, err
-}
-
-func toPubAddress(onceAddress common.Address, wallets []accounts.Wallet) common.Address {
-
-	if len(wallets) == 0 {
-		return onceAddress
-	}
-	for _, wallet := range wallets {
-		if wallet.IsMine(onceAddress) {
-			return wallet.Accounts()[0].Address
-		}
-	}
-	return onceAddress
 }
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
@@ -1006,7 +1145,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 
 	to := tx.To()
 
-	if to != nil && bytes.Equal(to.Data[:], (&common.Address{}).Data[:]) {
+	if to != nil && bytes.Equal(to[:], (&common.Address{})[:]) {
 		to = nil
 	}
 	result := &RPCTransaction{
@@ -1182,7 +1321,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 
 	to := tx.To()
 
-	if to != nil && bytes.Equal(to.Data[:], (&common.Address{}).Data[:]) {
+	if to != nil && bytes.Equal(to[:], (&common.Address{})[:]) {
 		to = nil
 	}
 
@@ -1210,23 +1349,25 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 	}
 	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
 	if receipt.ContractAddress != (common.Address{}) {
-		fields["contractAddress"] = receipt.ContractAddress
+		fields["contractAddress"] = common.BytesToAccount(receipt.ContractAddress[:64])
 	}
 	return fields, nil
 }
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Value    *hexutil.Big    `json:"value"`
-	Data     *hexutil.Bytes  `json:"data"`
-	Currency Smbol           `json:"cy"`
-	Dynamic  bool            `json:"dy"` //contract address parameters are dynamically generated.
-	Category Smbol           `json:"catg"`
-	Tkt      *common.Hash    `json:"tkt"`
+	From        common.AccountAddress  `json:"from"`
+	To          *common.AccountAddress `json:"to"`
+	Gas         *hexutil.Uint64        `json:"gas"`
+	GasCurrency Smbol                  `json:"gasCy"` //default SERO
+	GasPrice    *hexutil.Big           `json:"gasPrice"`
+	Value       *hexutil.Big           `json:"value"`
+	Data        *hexutil.Bytes         `json:"data"`
+	Currency    Smbol                  `json:"cy"`
+	Dynamic     bool                   `json:"dy"` //contract address parameters are dynamically generated.
+	Category    Smbol                  `json:"catg"`
+	Tkt         *common.Hash           `json:"tkt"`
+	Memo        string                 `json:"Memo"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
@@ -1235,6 +1376,35 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		args.Gas = new(hexutil.Uint64)
 		*(*uint64)(args.Gas) = 90000
 	}
+
+	if args.GasCurrency.IsEmpty() {
+		args.GasCurrency = Smbol(params.DefaultCurrency)
+	}
+
+	if strings.Trim(args.Memo, "") != "" {
+		b := []byte(args.Memo)
+		if len(b) > 64 {
+			return errors.New("args memo is too long,it's limited 64 bytes")
+		}
+	}
+
+	state, _, err := b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return err
+	}
+	if args.To == nil || !state.IsContract(common.BytesToAddress(args.To[:])) {
+		if args.GasCurrency.IsNotEmpty() && args.GasCurrency.IsNotSero() {
+			return errors.New(`GasCurrency must be null or SERO`)
+		}
+	} else {
+		if args.GasCurrency.IsNotSero() {
+			m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
+			if m.Sign() == 0 || d.Sign() == 0 {
+				return errors.New("the smart contract dose not support alternative payment!")
+			}
+		}
+	}
+
 	if args.GasPrice == nil {
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
@@ -1279,46 +1449,69 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 
 func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
 	var input []byte
+	var Pkr keys.PKr
+	var isZ bool
 	to := args.To
-	rand := keys.RandUint128()
-	var z ztx.OutType
+	fromRand := keys.Uint256{}
+	feevalue := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	if to == nil {
-		copy(rand[:], *args.Data)
-		z = ztx.TYPE_N
-	} else if state.IsContract(*to) {
-		z = ztx.TYPE_N
+		copy(fromRand[:16], (*args.Data)[:16])
+		isZ = false
+	} else if state.IsContract(common.BytesToAddress(args.To[:])) {
+		isZ = false
+		Pkr = *to.ToPKr()
 		if !args.Dynamic {
-			copy(rand[:], args.To.Data[:16])
+			copy(fromRand[:16], args.To[:16])
+		}
+		if args.GasCurrency.IsNotSero() {
+			m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
+			feevalue = new(big.Int).Div(feevalue.Mul(feevalue, m), d)
 		}
 	} else {
-		z = ztx.TYPE_Z
+		fromRand = keys.RandUint256()
+		Pkr = keys.Addr2PKr(to.ToUint512(), keys.RandUint256().NewRef())
+		isZ = true
 	}
 	if args.Data != nil {
 		input = *args.Data
 	}
-	tx := types.NewTransaction((*big.Int)(args.GasPrice), input, string(args.Currency))
-	txt := types.NewTxt(to, (*big.Int)(args.Value), (*big.Int)(args.GasPrice), uint64(*args.Gas), z, string(args.Currency), string(args.Category), args.Tkt)
-	txt.FromRnd = rand.ToUint256().NewRef()
+	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), input)
+	ehash := tx.Ehash()
+	fee := assets.Token{
+		utils.StringToUint256(string(args.GasCurrency)),
+		utils.U256(*feevalue),
+	}
+	outData := types.NewTxtOut(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, args.Memo, isZ)
+	txt := types.NewTxt(fromRand.NewRef(), ehash, fee, outData, nil, nil, nil)
+	return tx, txt, nil
+}
+
+func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+	var Pkr keys.PKr
+	if state.IsContract(common.BytesToAddress(args.To[:])) {
+		Pkr = *(args.To.ToPKr())
+	} else {
+		Pkr = keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())
+	}
+	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), nil)
+	fromRand := keys.RandUint256().NewRef()
+	ehash := tx.Ehash()
+	fee := assets.Token{
+		utils.StringToUint256(string(args.GasCurrency)),
+		utils.U256(*new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))),
+	}
+	pkgCreate := types.NewCreatePkg(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, args.Memo)
+	txt := types.NewTxt(fromRand, ehash, fee, nil, pkgCreate, nil, nil)
+	txt.FromRnd = keys.RandUint256().NewRef()
 	return tx, txt, nil
 }
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
-func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
+func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction, to *common.AccountAddress) (common.Hash, error) {
 	if err := b.SendTx(ctx, tx); err != nil {
 		return common.Hash{}, err
 	}
-	if tx.To() == nil {
-		//abi := types.MakeSigner(b.ChainConfig(), b.CurrentBlock().Number())
-		//from, err := types.Sender(abi, tx)
-		//from := tx.From()
-		//if err != nil {
-		//	return common.Hash{}, err
-		//}
-		//addr := crypto.CreateAddress(from, tx.Nonce())
-		log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex())
-	} else {
-		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
-	}
+	log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", to)
 	return tx.Hash(), nil
 }
 
@@ -1367,7 +1560,260 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return submitTransaction(ctx, s.b, encrypted)
+	return submitTransaction(ctx, s.b, encrypted, args.To)
+}
+
+func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	s.nonceLock.mu.Lock()
+	defer s.nonceLock.mu.Unlock()
+	// Look up the wallet containing the requested abi
+	account := accounts.Account{Address: args.From}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	if args.To == nil {
+		return common.Hash{}, errors.New("to can not be nil")
+	}
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Assemble the transaction and sign with the wallet
+	tx, txt, err := args.toPkg(state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if th, ok := s.b.GetEngin().(threaded); ok {
+		miner := s.b.GetMiner()
+		if miner.CanStart() {
+			miner.SetCanStart(0)
+			defer miner.SetCanStart(1)
+		}
+		threads := th.Threads()
+		if threads >= 0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
+		}
+	}
+	encrypted, err := wallet.EncryptTx(account, tx, txt, state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return submitTransaction(ctx, s.b, encrypted, args.To)
+}
+
+type ClosePkgArgs struct {
+	From     *common.AccountAddress `json:"from"`
+	Gas      *hexutil.Uint64        `json:"gas"`
+	GasPrice *hexutil.Big           `json:"gasPrice"`
+	PkgId    *keys.Uint256          `json:"id"`
+	Key      *keys.Uint256          `json:"key"`
+}
+
+func (args *ClosePkgArgs) setDefaults(ctx context.Context, b Backend) error {
+
+	if args.Gas == nil {
+		args.Gas = new(hexutil.Uint64)
+		*(*uint64)(args.Gas) = 90000
+	}
+
+	if args.GasPrice == nil {
+		price, err := b.SuggestPrice(ctx)
+		if err != nil {
+			return err
+		}
+		args.GasPrice = (*hexutil.Big)(price)
+	} else {
+		if args.GasPrice.ToInt().Sign() == 0 {
+			return errors.New(`gasPrice can not be zero`)
+		}
+	}
+	if args.PkgId == nil {
+		return errors.New("id can not be nil")
+	}
+
+	if args.Key == nil {
+		return errors.New("key can not be nil")
+	}
+
+	return nil
+}
+
+func (args *ClosePkgArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), nil)
+	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
+	ehash := tx.Ehash()
+	txt := &ztx.T{
+		Fee: assets.Token{
+			utils.StringToUint256(params.DefaultCurrency),
+			utils.U256(*fee),
+		},
+		PkgClose: &ztx.PkgClose{*args.PkgId, *args.Key},
+	}
+	txt.Ehash = ehash
+	txt.FromRnd = keys.RandUint256().NewRef()
+	return tx, txt, nil
+}
+
+func (s *PublicTransactionPoolAPI) ClosePkg(ctx context.Context, args ClosePkgArgs) (common.Hash, error) {
+	s.nonceLock.mu.Lock()
+	defer s.nonceLock.mu.Unlock()
+	// Look up the wallet containing the requested abi
+	account := accounts.Account{Address: *args.From}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Assemble the transaction and sign with the wallet
+	tx, txt, err := args.toTransaction(state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if th, ok := s.b.GetEngin().(threaded); ok {
+		miner := s.b.GetMiner()
+		if miner.CanStart() {
+			miner.SetCanStart(0)
+			defer miner.SetCanStart(1)
+		}
+		threads := th.Threads()
+		if threads >= 0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
+		}
+	}
+	encrypted, err := wallet.EncryptTx(account, tx, txt, state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return submitTransaction(ctx, s.b, encrypted, nil)
+}
+
+type TransferPkgArgs struct {
+	From     *common.AccountAddress `json:"from"`
+	Gas      *hexutil.Uint64        `json:"gas"`
+	GasPrice *hexutil.Big           `json:"gasPrice"`
+	PkgId    *keys.Uint256          `json:"id"`
+	To       *common.AccountAddress `json:"To"`
+}
+
+func (args *TransferPkgArgs) setDefaults(ctx context.Context, b Backend) error {
+	if args.Gas == nil {
+		args.Gas = new(hexutil.Uint64)
+		*(*uint64)(args.Gas) = 90000
+	}
+
+	if args.GasPrice == nil {
+		price, err := b.SuggestPrice(ctx)
+		if err != nil {
+			return err
+		}
+		args.GasPrice = (*hexutil.Big)(price)
+	} else {
+		if args.GasPrice.ToInt().Sign() == 0 {
+			return errors.New(`gasPrice can not be zero`)
+		}
+	}
+	if args.PkgId == nil {
+		return errors.New("id can not be nil")
+	}
+
+	if args.To == nil {
+		return errors.New("to can not be nil")
+	}
+
+	return nil
+}
+
+func (args *TransferPkgArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), nil)
+	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
+	ehash := tx.Ehash()
+	var Pkr keys.PKr
+	if state.IsContract(common.BytesToAddress(args.To[:])) {
+		Pkr = *(args.To.ToPKr())
+	} else {
+		Pkr = keys.Addr2PKr(args.To.ToUint512(), keys.RandUint256().NewRef())
+	}
+	txt := &ztx.T{
+		Fee: assets.Token{
+			utils.StringToUint256(params.DefaultCurrency),
+			utils.U256(*fee),
+		},
+		PkgTransfer: &ztx.PkgTransfer{*args.PkgId, Pkr},
+	}
+	txt.Ehash = ehash
+	txt.FromRnd = keys.RandUint256().NewRef()
+	return tx, txt, nil
+}
+
+func (s *PublicTransactionPoolAPI) TransferPkg(ctx context.Context, args TransferPkgArgs) (common.Hash, error) {
+	s.nonceLock.mu.Lock()
+	defer s.nonceLock.mu.Unlock()
+	// Look up the wallet containing the requested abi
+	account := accounts.Account{Address: *args.From}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Assemble the transaction and sign with the wallet
+	tx, txt, err := args.toTransaction(state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if th, ok := s.b.GetEngin().(threaded); ok {
+		miner := s.b.GetMiner()
+		if miner.CanStart() {
+			miner.SetCanStart(0)
+			defer miner.SetCanStart(1)
+		}
+		threads := th.Threads()
+		if threads >= 0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
+		}
+	}
+	encrypted, err := wallet.EncryptTx(account, tx, txt, state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return submitTransaction(ctx, s.b, encrypted, args.To)
 }
 
 // EncryptTransactionResult represents a RLP encoded signed transaction.
@@ -1442,7 +1888,7 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]*RPCTransaction, err
 	}
 	transactions := make([]*RPCTransaction, 0, len(pending))
 	for _, tx := range pending {
-		if isMine(s.b.AccountManager().Wallets(), tx.From()) {
+		if fromAddr := getAddressByPkr(s.b.AccountManager().Wallets(), tx.From()); fromAddr != nil {
 			transactions = append(transactions, newRPCPendingTransaction(tx))
 		}
 	}

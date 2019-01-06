@@ -199,7 +199,19 @@ func (c *Console) init(preload []string) error {
 			if _, err = c.jsre.Run(`jeth.sendTransaction = sero.sendTransaction;`); err != nil {
 				return fmt.Errorf("sero.sendTransaction: %v", err)
 			}
+			if _, err = c.jsre.Run(`jeth.createPkg = sero.createPkg;`); err != nil {
+				return fmt.Errorf("sero.createPkg: %v", err)
+			}
+			if _, err = c.jsre.Run(`jeth.transferPkg = sero.transferPkg;`); err != nil {
+				return fmt.Errorf("sero.transferPkg: %v", err)
+			}
+			if _, err = c.jsre.Run(`jeth.closePkg = sero.closePkg;`); err != nil {
+				return fmt.Errorf("sero.closePkg: %v", err)
+			}
 			obj.Set("sendTransaction", bridge.SendTransaction)
+			obj.Set("createPkg", bridge.CreatePkg)
+			obj.Set("transferPkg", bridge.TransferPkg)
+			obj.Set("closePkg", bridge.ClosePkg)
 		}
 	}
 	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.

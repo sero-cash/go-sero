@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/common"
@@ -27,7 +28,9 @@ import (
 // StateDB is an EVM database for full state querying.
 type StateDB interface {
 	CreateAccount(common.Address)
-	GetZState() *zstate.State
+	GetZState() *zstate.ZState
+	GetPkgState() *pkgstate.PkgState
+
 	SubBalance(common.Address, string, *big.Int)
 	AddBalance(common.Address, string, *big.Int)
 	GetBalance(common.Address, string) *big.Int
@@ -35,6 +38,9 @@ type StateDB interface {
 
 	RegisterTicket(common.Address, string) bool
 	GetContrctAddressByTicket(key string) common.Address
+
+	SetTokenRate(common.Address, string, *big.Int, *big.Int) bool
+	GetTokenRate(common.Address, string) (*big.Int, *big.Int)
 	RegisterToken(common.Address, string) bool
 	GetContrctAddressByToken(key string) common.Address
 
@@ -77,8 +83,8 @@ type StateDB interface {
 
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool)
 
-	GetContrctNonce() (uint64)
-	IncAndGetContrctNonce() (uint64)
+	GetContrctNonce() uint64
+	IncAndGetContrctNonce() uint64
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM EVM

@@ -31,7 +31,7 @@ type ContractRef interface {
 
 // AccountRef implements ContractRef.
 //
-// Account references are used during EVM initialisation and
+// AccountAddress references are used during EVM initialisation and
 // it's primary use is to fetch addresses. Removing this object
 // proves difficult because of the cached jump destinations which
 // are fetched from the parent contract (i.e. the caller), which
@@ -169,7 +169,7 @@ func (c *Contract) Address() common.Address {
 
 // Value returns the contracts value (sent to it from it's caller)
 func (c *Contract) Value() *big.Int {
-	if c.asset.Tkn != nil {
+	if c.asset != nil && c.asset.Tkn != nil {
 		value := big.Int(c.asset.Tkn.Value)
 		return &value
 	} else {
@@ -178,7 +178,7 @@ func (c *Contract) Value() *big.Int {
 }
 
 func (c *Contract) Currency() string {
-	if c.asset.Tkn != nil {
+	if c.asset != nil && c.asset.Tkn != nil {
 		return strings.TrimSpace(string(c.asset.Tkn.Currency[:]))
 	} else {
 		return "SERO"

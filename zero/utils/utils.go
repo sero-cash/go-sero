@@ -18,9 +18,9 @@ package utils
 
 import (
 	"bytes"
-	"encoding/gob"
 	"fmt"
 	"math/big"
+	"runtime"
 	"strings"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -41,16 +41,6 @@ func Uint256SliceCut(is []keys.Uint256, l int) (ret []keys.Uint256) {
 	}
 	ret = is[:l]
 	return
-}
-
-func DeepCopy(dst, src interface{}) {
-	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
-		panic(fmt.Sprintf("deepCopy encode error for : %v", src))
-	}
-	if err := gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dst); err != nil {
-		panic(fmt.Sprintf("deepCopy decode error for : %v", src))
-	}
 }
 
 type Uint256s []keys.Uint256
@@ -74,4 +64,10 @@ func StringToUint256(str string) keys.Uint256 {
 	copy(ret[len(ret)-len(b):], b)
 	return ret
 
+}
+
+func ShowStack() {
+	var buf [4096]byte
+	n := runtime.Stack(buf[:], false)
+	fmt.Printf("==> %s\n", string(buf[:n]))
 }
