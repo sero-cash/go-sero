@@ -473,6 +473,13 @@ func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy 
 	if err != nil {
 		return nil, err
 	}
+	if cy == "" {
+		return nil, errors.New("cy can not be empty!")
+	} else {
+		if cy == "sero" || cy == "SERO" {
+			return nil, nil
+		}
+	}
 	contractAddress := state.GetContrctAddressByToken(cy)
 	empty := common.Address{}
 	if contractAddress == empty {
