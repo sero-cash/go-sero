@@ -71,7 +71,7 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 				return
 			} else {
 				if added {
-					if src.Out_Z == nil {
+					if in.IsO {
 						p.desc_o.ins = append(p.desc_o.ins, *src)
 					} else {
 						p.desc_z.ins = append(p.desc_z.ins, *src)
@@ -83,6 +83,11 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 			e = err
 			return
 		}
+	}
+
+	if len(p.desc_z.ins) > 10 {
+		p.desc_o.ins = append(p.desc_o.ins, p.desc_z.ins...)
+		p.desc_z.ins = nil
 	}
 
 	if ts.PkgClose != nil {

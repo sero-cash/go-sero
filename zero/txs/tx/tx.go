@@ -25,6 +25,7 @@ import (
 
 type In struct {
 	Root keys.Uint256
+	IsO  bool
 }
 
 type Out struct {

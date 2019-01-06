@@ -133,16 +133,14 @@ func (self *In_S) ToHash_for_gen() (ret keys.Uint256) {
 func (self *In_S) ToHash_for_sign() (ret keys.Uint256) {
 	hash := crypto.Keccak256(
 		self.Root[:],
-		self.Nil[:],
-		self.AssetCM[:],
-		self.Sign[:],
 	)
 	copy(ret[:], hash)
 	return ret
 }
 
 type Desc_O struct {
-	Ins  []In_O
+	//Ins  []In_O
+	Ins  []In_S
 	Outs []Out_O
 }
 

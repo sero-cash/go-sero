@@ -312,6 +312,17 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 	EndBlock()
 }
 
+type ArrayObj struct {
+	p0 int
+	p1 uint64
+}
+
+func TestArrayObj(t *testing.T) {
+	a := [6]ArrayObj{}
+	a[1].p0 = 0
+	fmt.Printf("%v\n", a)
+}
+
 func TestMain(m *testing.M) {
 	cpt.ZeroInit("", cpt.NET_Dev)
 	NewBlock()
@@ -322,14 +333,8 @@ func TestTx(t *testing.T) {
 	user_m := newUser(1)
 	user_a := newUser(2)
 	user_m.addOut(100)
-	user_m.addOut(100)
-	user_m.addOut(100)
-	user_m.addOut(100)
 	user_m.Send(50, 10, user_a, true)
-	user_m.Send(50, 10, user_a, true)
-	user_m.Send(50, 10, user_a, true)
-	user_m.Send(50, 10, user_a, true)
-	if user_m.Logout() != 160 {
+	if user_m.Logout() != 40 {
 		t.Fail()
 	}
 }

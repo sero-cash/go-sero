@@ -83,26 +83,17 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		} else {
 		}
 		if src, err := state.State.GetOut(&in_o.Root); e == nil {
-			if src.IsO() {
-				if keys.VerifyPKr(&hash_z, &in_o.Sign, &src.Out_O.Addr) {
-					{
-						asset := src.Out_O.Asset.ToFlatAsset()
-						asset_desc := cpt.AssetDesc{
-							Tkn_currency: asset.Tkn.Currency,
-							Tkn_value:    asset.Tkn.Value.ToUint256(),
-							Tkt_category: asset.Tkt.Category,
-							Tkt_value:    asset.Tkt.Value,
-						}
-						cpt.GenAssetCC(&asset_desc)
-						balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
-					}
-				} else {
-					e = errors.New("txs.verify in_o verify failed")
-					return
-				}
-			} else {
-				e = errors.New("txs.Verify src is z,but in is o")
+			g := cpt.VerifyInputSDesc{}
+			g.Ehash = hash_z
+			g.Nil = in_o.Nil
+			g.RootCM = *src.ToRootCM()
+			g.Sign = in_o.Sign
+			g.Pkr = *src.ToPKr()
+			if err := cpt.VerifyInputS(&g); err != nil {
+				e = errors.New("txs.Verify: in_o verify failed!")
 				return
+			} else {
+				balance_desc.Zin_acms = append(balance_desc.Zin_acms, in_o.AssetCM[:]...)
 			}
 		} else {
 			e = err

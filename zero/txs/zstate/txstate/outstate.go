@@ -79,6 +79,14 @@ func (self *OutState) ToRootCM() *keys.Uint256 {
 	return self.RootCM
 }
 
+func (self *OutState) ToPKr() *keys.PKr {
+	if self.IsO() {
+		return &self.Out_O.Addr
+	} else {
+		return &self.Out_Z.PKr
+	}
+}
+
 func (self *OutState) Serial() (ret []byte, e error) {
 	if self != nil {
 		return rlp.EncodeToBytes(self)
