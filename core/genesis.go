@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"errors"
+	"fmt"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/common/math"
@@ -238,25 +238,20 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 	for _, addr := range keys {
 		account := g.Alloc[addr]
 		if addr == state.EmptyAddress {
-			for key, value := range account.Storage {
-				statedb.SetState(addr, key, value)
-			}
 		} else if account.Code != nil && len(account.Code) > 0 {
-			addresses := common.AccountAddress{}
-			addresses.SetBytes(addr[0:64])
-			fmt.Println(addresses.Base58())
-			statedb.AddBalance(addr, "SERO", account.Balance)
+			if account.Balance != nil && account.Balance.Sign() > 0 {
+				statedb.AddBalance(addr, "SERO", account.Balance)
+			}
 			statedb.SetCode(addr, account.Code)
-			for key, value := range account.Storage {
-				statedb.SetState(addr, key, value)
-			}
 		} else {
-			asset := assets.Asset{Tkn: &assets.Token{
-				Currency: *sero.HashToUint256(),
-				Value:    utils.U256(*account.Balance),
-			},
+			if account.Balance != nil && account.Balance.Sign() > 0 {
+				asset := assets.Asset{Tkn: &assets.Token{
+					Currency: *sero.HashToUint256(),
+					Value:    utils.U256(*account.Balance),
+				},
+				}
+				statedb.GetZState().AddTxOut(addr, asset)
 			}
-			statedb.GetZState().AddTxOut(addr, asset)
 		}
 		for key, value := range account.Storage {
 			statedb.SetState(addr, key, value)
