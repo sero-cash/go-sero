@@ -212,7 +212,7 @@ func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, root *key
 					no_tkt_value = true
 				}
 			} else {
-				no_tkn_value = true
+				no_tkt_value = true
 			}
 
 			if no_tkt_value && no_tkn_value {
@@ -296,6 +296,7 @@ func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, root *key
 					wos.Num = state.State.State.Num()
 					state.add_out_dirty(root, &wos)
 					state.add_out_dirty(&wos.Trace, &wos)
+					break
 				} else {
 					log.Error("My out_z confirm error", "root", hexutil.Encode(os.ToRootCM()[:]))
 				}
