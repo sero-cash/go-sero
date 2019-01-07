@@ -968,7 +968,7 @@ func handleIssueToken(d []byte, evm *EVM, contract *Contract, mem []byte) (bool,
 		if !evm.StateDB.RegisterToken(contract.Address(), coinName) {
 			return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "coinName registered by other")
 		} else {
-			fee := new(big.Int).Set(bigZero)
+			fee := new(big.Int).Set(level6)
 			if evm.chainConfig.ChainID.Uint64() == 2019 {
 				fee = tokenFee(coinName)
 			}
