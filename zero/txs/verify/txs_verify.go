@@ -111,6 +111,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 
 	t.Renter("Miner-Verify-----o_outs")
 	for _, out_o := range s.Desc_O.Outs {
+
 		if keys.PKrValid(&out_o.Addr) {
 			if out_o.Asset.Tkn != nil {
 				if !CheckUint(&out_o.Asset.Tkn.Value) {
