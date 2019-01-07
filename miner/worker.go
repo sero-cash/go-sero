@@ -374,6 +374,8 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		header:    header,
 		createdAt: time.Now(),
 	}
+	key := header.Coinbase.ToCaddr()
+	work.state.AddNonceAddress(key[:], header.Coinbase)
 	if self.eth.AccountManager() != nil {
 		seeds := []keys.Uint512{}
 		for _, w := range self.eth.AccountManager().Wallets() {

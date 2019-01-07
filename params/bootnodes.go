@@ -19,9 +19,9 @@ package params
 // BetanetBootnodes are the enode URLs of the P2P bootstrap nodes running on
 // the main Ethereum network.
 var BetanetBootnodes = []string{
-	//"snode://a64756b1859b7d51a95cfd183e5a01b6fa581c5a572c62a6685a3c1f05adbd58f68d8153c2dad466b8d3c5903d0e09054776a8ee5d3e9fae50f61e68266744dc@140.143.152.43:60609",
+	"snode://c4c6aa3e3c73c1d86d53f904bb82ffbbc50edd75530487f053d37bbcf75e27ca4c7ec215f56274cf60176b5d7fb896c9bd54354ba2fedb7d3adb35efc053cd14@13.251.221.90:53719",
+	"snode://1eb4b0bfa17bd70601b70da8df9070f5b4d1757864e0361e730bba04ccdc8e02cb0d51b8428921570684357eb9c053c433e23085a51e6ffde1c0d734f8dbbfe6@140.143.152.43:53719",
 	"snode://f5f92eb85242a4ad9853d7315caeb5ff38ff90aa137e2348d42fef7ea90eb3012d369f4eae1efefb26ee20ee41c6380798f77108109039336b77ec9d65def74f@111.230.148.82:53719",
-
 }
 
 // AlphanetBootnodes are the enode URLs of the P2P bootstrap nodes running on the
