@@ -99,7 +99,7 @@ func (ethash *Ethash) mine(block *types.Block, id int, seed uint64, abort chan s
 	var (
 		header  = block.Header()
 		hash    = header.HashNoNonce().Bytes()
-		target  = new(big.Int).Div(maxUint256, header.Difficulty)
+		target  = new(big.Int).Div(maxUint256, header.ActualDifficulty())
 		number  = header.Number.Uint64()
 		dataset = ethash.dataset(number)
 	)

@@ -120,6 +120,11 @@ func (h *Header) HashNoNonce() common.Hash {
 	})
 }
 
+func (h *Header) ActualDifficulty() *big.Int {
+	return h.Difficulty
+	//return new(big.Int).Add(h.Difficulty, big.NewInt(0))
+}
+
 // Size returns the approximate memory used by all internal contents. It is used
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
