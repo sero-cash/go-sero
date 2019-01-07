@@ -908,13 +908,13 @@ func newAutumnTwilightInstructionSet() [256]operation {
 			halts:         true,
 			valid:         true,
 		},
-		SELFDESTRUCT: {
-			execute:       opSuicide,
-			gasCost:       gasSuicide,
-			validateStack: makeStackFunc(1, 0),
-			halts:         true,
-			valid:         true,
-			writes:        true,
-		},
+		//SELFDESTRUCT: {
+		//	execute:       opSuicide,
+		//	gasCost:       gasSuicide,
+		//	validateStack: makeStackFunc(1, 0),
+		//	halts:         true,
+		//	valid:         true,
+		//	writes:        true,
+		//},
 	}
 }

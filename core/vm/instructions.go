@@ -860,8 +860,8 @@ func opStop(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 }
 
 func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(stack.pop()))
-	interpreter.evm.StateDB.Suicide(contract.Address(), toAddr)
+	//toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(stack.pop()))
+	//interpreter.evm.StateDB.Suicide(contract.Address(), toAddr)
 	return nil, nil
 }
 
