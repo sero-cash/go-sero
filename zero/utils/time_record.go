@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-var TR_enable = true
+var TR_enable = false
 
 type TimeRecord struct {
 	start time.Time
