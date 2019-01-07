@@ -867,13 +867,13 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 
 func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (common.Hash, uint64, error) {
 	offset := new(big.Int).SetBytes(d[64:96]).Uint64()
-	len := new(big.Int).SetBytes(mem[offset:offset+32]).Uint64()
+	len := new(big.Int).SetBytes(mem[offset : offset+32]).Uint64()
 	if len == 0 {
 		return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "nameLen is zero")
 	}
 
 	categoryName := string(mem[offset+32 : offset+32+len])
-	match, err := regexp.Match("^[A-Z0-9_]{1,32}$", []byte(categoryName))
+	match, err := regexp.Match("^[A-Z][A-Z0-9_]{0,31}$", []byte(categoryName))
 	if err != nil || !match {
 		return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "illegal categoryName")
 	}
@@ -948,13 +948,13 @@ var foundationAccount = common.Base58ToAddress("hcZCikh7h3By7FBoDhCj8a6swKukeZRK
 
 func handleIssueToken(d []byte, evm *EVM, contract *Contract, mem []byte) (bool, error) {
 	offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-	len := new(big.Int).SetBytes(mem[offset:offset+32]).Uint64()
+	len := new(big.Int).SetBytes(mem[offset : offset+32]).Uint64()
 	if len == 0 {
 		return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "nameLen is zero")
 	}
 
 	coinName := string(mem[offset+32 : offset+32+len])
-	match, err := regexp.Match("^[A-Z0-9_]{1,32}$", []byte(coinName))
+	match, err := regexp.Match("^[A-Z][A-Z0-9_]{0,31}$", []byte(coinName))
 	if err != nil || !match {
 		return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "illegal coinName")
 	}
@@ -1000,7 +1000,7 @@ func handleSend(d []byte, evm *EVM, contract *Contract, mem []byte) ([]byte, uin
 		return nil, 0, fmt.Errorf("handleSend error , contract : %s, toAddr : %s, error : %s", contract.Address(), toAddr, "not load toAddrss")
 	}
 	currency_offset := new(big.Int).SetBytes(d[32:64]).Uint64()
-	length := new(big.Int).SetBytes(mem[currency_offset:currency_offset+32]).Uint64()
+	length := new(big.Int).SetBytes(mem[currency_offset : currency_offset+32]).Uint64()
 	var currency string
 	if length != 0 {
 		currency = string(mem[currency_offset+32 : currency_offset+32+length])
@@ -1008,7 +1008,7 @@ func handleSend(d []byte, evm *EVM, contract *Contract, mem []byte) ([]byte, uin
 
 	var category string
 	category_offset := new(big.Int).SetBytes(d[96:128]).Uint64()
-	length = new(big.Int).SetBytes(mem[category_offset:category_offset+32]).Uint64()
+	length = new(big.Int).SetBytes(mem[category_offset : category_offset+32]).Uint64()
 	if length != 0 {
 		category = string(mem[category_offset+32 : category_offset+32+length])
 	}
@@ -1077,7 +1077,7 @@ func makeLog(size int) executionFunc {
 			contract.Gas += interpreter.evm.callGasTemp
 		} else if topics[0] == topic_balanceOf {
 			offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-			len := new(big.Int).SetBytes(data[offset:offset+32]).Uint64()
+			len := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
 			balance := new(big.Int)
 			if len != 0 {
 				coinName := string(data[offset+32 : offset+32+len])
@@ -1123,13 +1123,13 @@ func makeLog(size int) executionFunc {
 			contract.Gas += interpreter.evm.callGasTemp
 		} else if topics[0] == topic_setTokenRate {
 			offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-			len := new(big.Int).SetBytes(data[offset:offset+32]).Uint64()
+			len := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
 			if len == 0 {
 				return nil, fmt.Errorf("setTokenRate error , contract : %s, error : %s", contract.Address(), "coinName len=0")
 			}
 
 			coinName := string(data[offset+32 : offset+32+len])
-			match, err := regexp.Match("^[A-Z0-9_]{1,32}$", []byte(coinName))
+			match, err := regexp.Match("^[A-Z][A-Z0-9_]{0,31}$", []byte(coinName))
 			if err != nil || !match {
 				return nil, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "illegal coinName")
 			}
@@ -1212,14 +1212,14 @@ func makeLog(size int) executionFunc {
 
 func setCallValues(d []byte, data []byte, contract *Contract) {
 	currency_offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-	length := new(big.Int).SetBytes(data[currency_offset:currency_offset+32]).Uint64()
+	length := new(big.Int).SetBytes(data[currency_offset : currency_offset+32]).Uint64()
 	var currency string
 	if length != 0 {
 		currency = string(data[currency_offset+32 : currency_offset+32+length])
 	}
 	var category string
 	category_offset := new(big.Int).SetBytes(d[64:96]).Uint64()
-	length = new(big.Int).SetBytes(data[category_offset:category_offset+32]).Uint64()
+	length = new(big.Int).SetBytes(data[category_offset : category_offset+32]).Uint64()
 	if length != 0 {
 		category = string(data[category_offset+32 : category_offset+32+length])
 	}
