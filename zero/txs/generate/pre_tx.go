@@ -94,11 +94,6 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 		}
 	}
 
-	if len(p.desc_z.ins) > 10 {
-		p.desc_o.ins = append(p.desc_o.ins, p.desc_z.ins...)
-		p.desc_z.ins = nil
-	}
-
 	if ts.PkgClose != nil {
 		if zpkg := state1.State.Pkgs.GetPkg(&ts.PkgClose.Id); zpkg == nil {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
