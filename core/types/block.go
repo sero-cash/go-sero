@@ -35,6 +35,7 @@ import (
 
 var (
 	EmptyRootHash = DeriveSha(Transactions{})
+	maxUint256    = new(big.Int).Exp(big.NewInt(2), big.NewInt(256), big.NewInt(0))
 )
 
 // A BlockNonce is a 64-bit hash which proves (combined with the
@@ -96,6 +97,10 @@ type headerMarshaling struct {
 	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 }
 
+func (h *Header) Valid() bool {
+	return h.Number.Uint64() >= h.Licr.L && h.Number.Uint64() <= h.Licr.H
+}
+
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
@@ -121,8 +126,16 @@ func (h *Header) HashNoNonce() common.Hash {
 }
 
 func (h *Header) ActualDifficulty() *big.Int {
-	return h.Difficulty
-	//return new(big.Int).Add(h.Difficulty, big.NewInt(0))
+	if h.Valid() {
+		c := new(big.Int).SetUint64(h.Licr.C)
+		if h.Difficulty.Cmp(c) > 0 {
+			return new(big.Int).Sub(h.Difficulty, c)
+		} else {
+			return big.NewInt(1)
+		}
+	} else {
+		return maxUint256
+	}
 }
 
 // Size returns the approximate memory used by all internal contents. It is used

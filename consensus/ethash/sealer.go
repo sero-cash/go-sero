@@ -103,6 +103,10 @@ func (ethash *Ethash) mine(block *types.Block, id int, seed uint64, abort chan s
 		number  = header.Number.Uint64()
 		dataset = ethash.dataset(number)
 	)
+	if !header.Valid() {
+		log.Info("license expired, please send email to license@sero.vip for new license!")
+		return
+	}
 	// Start generating random nonces until we abort or find a good one
 	var (
 		attempts = int64(0)

@@ -172,6 +172,10 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 	if !keys.CheckLICr(header.Coinbase.ToPKr(), &header.Licr, header.Number.Uint64()) {
 		return fmt.Errorf("invalid Licr : pkr %v, licr %v", header.Coinbase, header.Licr)
 	}
+
+	if !header.Valid() {
+		return fmt.Errorf("invalid Licr : pkr %v, licr %v, disable", header.Coinbase, header.Licr)
+	}
 	// Ensure that the header's extra-data section is of a reasonable size
 	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
 		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
