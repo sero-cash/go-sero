@@ -384,9 +384,9 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 }
 
 var (
-	base      = big.NewInt(1e+17)
-	big100    = big.NewInt(100)
-	threeSero = new(big.Int).Mul(big.NewInt(30), base)
+	base    = big.NewInt(1e+17)
+	big100  = big.NewInt(100)
+	oneSero = new(big.Int).Mul(big.NewInt(10), base)
 
 	blockRewards = []*big.Int{
 		new(big.Int).Mul(big.NewInt(350), base),
@@ -435,7 +435,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 		} else if ratio >= 20 {
 			reward = reward.Mul(reward, big.NewInt(1)).Div(reward, big.NewInt(5))
 		} else {
-			reward = big.NewInt(0).Set(threeSero)
+			reward = big.NewInt(0).Set(oneSero)
 		}
 	}
 
@@ -446,8 +446,8 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 		reward = reward.Mul(reward, big.NewInt(4)).Div(reward, big.NewInt(5))
 	}
 
-	if reward.Cmp(threeSero) < 0 {
-		reward = big.NewInt(0).Set(threeSero)
+	if reward.Cmp(oneSero) < 0 {
+		reward = big.NewInt(0).Set(oneSero)
 	}
 
 	if poolBalance.Cmp(reward) < 0 {

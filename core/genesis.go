@@ -353,7 +353,7 @@ func DeveloperGenesisBlock() *Genesis {
 		GasLimit:  5000000,
 
 		Difficulty: big.NewInt(1),
-		//Alloc:      decodePreAlloc(testnetAllocData),
+		Alloc:      decodePreAlloc(testnetAllocData),
 	}
 }
 
