@@ -169,7 +169,7 @@ func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 // stock Ethereum ethash engine.
 // See YP section 4.3.4. "Block Header Validity"
 func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, seal bool) error {
-	if !keys.CheckLICr(header.Coinbase.ToPKr(), &header.Licr) {
+	if !keys.CheckLICr(header.Coinbase.ToPKr(), &header.Licr, header.Number.Uint64()) {
 		return fmt.Errorf("invalid Licr : pkr %v, licr %v", header.Coinbase, header.Licr)
 	}
 	// Ensure that the header's extra-data section is of a reasonable size

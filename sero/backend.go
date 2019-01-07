@@ -337,16 +337,16 @@ func (s *Sero) StartMining(local bool) error {
 		log.Error("Cannot start mining without serobase", "err", err)
 		return fmt.Errorf("serobase missing: %v", err)
 	}
-	pkr, lic, ret := keys.Addr2PKrAndLICr(eb.ToUint512())
-	ret = keys.CheckLICr(&pkr, &lic)
+	pkr, lic, ret := keys.Addr2PKrAndLICr(eb.ToUint512(), 0)
+	ret = keys.CheckLICr(&pkr, &lic, 0)
 	if !ret {
 		lic_t := keys.LICr{}
-		if bytes.Equal(lic[:32], lic_t[:32]) {
+		if bytes.Equal(lic.Proof[:32], lic_t.Proof[:32]) {
 			log.Error("Cannot start mining , miner license does not exists ", "", "")
 			return fmt.Errorf(" miner license does not exists")
 		} else {
 			log.Error("Cannot start mining ,invalid miner license", "", "")
-			return fmt.Errorf("invalid miner license: %v", common.Bytes2Hex(lic[:]))
+			return fmt.Errorf("invalid miner license: %v", common.Bytes2Hex(lic.Proof[:]))
 		}
 	}
 

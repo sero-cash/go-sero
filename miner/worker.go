@@ -262,7 +262,7 @@ func (self *worker) update() {
 				txset := types.NewTransactionsByPrice(ev.Txs)
 				addr := common.Address{}
 				//pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
-				pkr, _, ret := keys.Addr2PKrAndLICr(self.coinbase.ToUint512())
+				pkr, _, ret := keys.Addr2PKrAndLICr(self.coinbase.ToUint512(), 0)
 				if !ret {
 					log.Error("Failed to Addr2PKrAndLICr")
 					return
@@ -421,7 +421,7 @@ func (self *worker) commitNewWork() {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		addr := common.Address{}
 		//pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
-		pkr, licr, ret := keys.Addr2PKrAndLICr(self.coinbase.ToUint512())
+		pkr, licr, ret := keys.Addr2PKrAndLICr(self.coinbase.ToUint512(), header.Number.Uint64())
 		if !ret {
 			log.Error("Failed to Addr2PKrAndLICr")
 			return

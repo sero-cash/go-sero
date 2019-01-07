@@ -1065,7 +1065,7 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 	fields := map[string]interface{}{
 		"number":           (*hexutil.Big)(head.Number),
 		"hash":             b.Hash(),
-		"licr":             hexutil.Bytes(head.Licr[:]),
+		"licr":             hexutil.Bytes(head.Licr.Proof[:]),
 		"parentHash":       head.ParentHash,
 		"nonce":            head.Nonce,
 		"mixHash":          head.MixDigest,
