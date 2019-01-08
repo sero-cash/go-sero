@@ -98,7 +98,11 @@ type headerMarshaling struct {
 }
 
 func (h *Header) Valid() bool {
-	return h.Number.Uint64() >= h.Licr.L && h.Number.Uint64() <= h.Licr.H
+	if h.Licr.H == 0 {
+		return h.Number.Uint64() >= h.Licr.L
+	} else {
+		return h.Number.Uint64() >= h.Licr.L && h.Number.Uint64() <= h.Licr.H
+	}
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
