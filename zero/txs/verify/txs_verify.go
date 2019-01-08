@@ -69,6 +69,11 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
 	}
 
+	if !keys.PKrValid(&s.From) {
+		e = errors.New("txs.verify from is invalid")
+		return
+	}
+
 	if !keys.VerifyPKr(&hash_z, &s.Sign, &s.From) {
 		e = errors.New("txs.verify from verify failed")
 		return
