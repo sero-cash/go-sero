@@ -94,21 +94,12 @@ type StateDB struct {
 	validRevisions []revision
 	nextRevisionId int
 
-	seeds  []keys.Uint512
 	number uint64
 	lock   sync.Mutex
 }
 
 func (self *StateDB) IsContract(addr common.Address) bool {
 	return self.getStateObject(addr) != nil
-}
-
-func (self *StateDB) GetSeeds() []keys.Uint512 {
-	return self.seeds
-}
-
-func (self *StateDB) SetSeeds(seeds []keys.Uint512) {
-	self.seeds = seeds
 }
 
 type StateDbGet interface {
