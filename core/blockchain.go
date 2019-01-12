@@ -1098,6 +1098,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		headers[i] = block.Header()
 		seals[i] = true
 	}
+
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
 	defer close(abort)
 

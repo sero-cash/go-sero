@@ -195,7 +195,7 @@ func (b *EthAPIBackend) Stats() (pending int, queued int) {
 	return b.sero.txPool.Stats()
 }
 
-func (b *EthAPIBackend) TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
+func (b *EthAPIBackend) TxPoolContent() (types.Transactions, types.Transactions) {
 	return b.sero.TxPool().Content()
 }
 
