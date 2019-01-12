@@ -76,6 +76,7 @@ func NewTransaction(gasPrice *big.Int, gasLimit uint64, data []byte) *Transactio
 	}
 
 	tx := &Transaction{data: d}
+
 	return tx
 }
 

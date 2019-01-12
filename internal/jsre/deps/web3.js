@@ -6295,8 +6295,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var reSendTransaction = new Method({
                 name: 'reSendTransaction',
                 call: 'sero_reSendTransaction',
-                params: 2,
-                inputFormatter: [formatters.inputAddressFormatter,utils.toHex]
+                params: 1,
+                inputFormatter: [utils.toHex]
             });
 
             var createPkg = new Method({

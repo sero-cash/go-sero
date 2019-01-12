@@ -277,7 +277,8 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// If we're reorging an old state, reinject all dropped transactions
 	var reinject types.Transactions
-	add := pool.chain.GetBlock(newHead.Hash(), newHead.Number.Uint64())
+	// Reorg seems shallow enough to pull in all transactions into memory
+	var discarded, included types.Transactions
 
 	if oldHead != nil && oldHead.Hash() != newHead.ParentHash {
 		// If the reorg is too deep, avoid doing it (will happen during fast sync)
@@ -287,11 +288,10 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		if depth := uint64(math.Abs(float64(oldNum) - float64(newNum))); depth > 64 {
 			log.Debug("Skipping deep transaction reorg", "depth", depth)
 		} else {
-			// Reorg seems shallow enough to pull in all transactions into memory
-			var discarded, included types.Transactions
 
 			var (
 				rem = pool.chain.GetBlock(oldHead.Hash(), oldHead.Number.Uint64())
+				add = pool.chain.GetBlock(newHead.Hash(), newHead.Number.Uint64())
 			)
 			for rem.NumberU64() > add.NumberU64() {
 				discarded = append(discarded, rem.Transactions()...)
@@ -336,9 +336,9 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.pendingState = state.ManageState(statedb)
 	pool.currentMaxGas = newHead.GasLimit
 
-	for _, tx := range add.Transactions() {
+	for _, tx := range included {
 		pool.removeTx(tx.Hash())
-		log.Info("confirm removeTx tx", "hash", tx.Hash())
+		log.Debug("confirm removeTx tx", "hash", tx.Hash())
 	}
 	// Inject any transactions discarded due to reorgs
 	log.Debug("Reinjecting stale transactions", "count", len(reinject))
@@ -445,7 +445,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 	err := verify.Verify(tx.GetZZSTX(), pool.currentState.GetZState())
 	if err != nil {
-		log.Error("validateTx", "hash", tx.Hash(), "verify stx err", err)
+		log.Error("validateTx error", "hash", tx.Hash().Hex(), "verify stx err", err)
 		return ErrVerifyError
 	}
 
@@ -547,6 +547,9 @@ func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
 // If the senders are not among the locally tracked ones, full pricing constraints
 // will apply.
 func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
+	for _, tx := range txs {
+		log.Debug("AddRemotes tx", "hash", tx.Hash().Hex())
+	}
 	return pool.addTxs(txs, false)
 }
 

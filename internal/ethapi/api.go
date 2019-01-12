@@ -1453,6 +1453,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	var isZ bool
 	to := args.To
 	fromRand := keys.Uint256{}
+
 	feevalue := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	if to == nil {
 		copy(fromRand[:16], (*args.Data)[:16])
@@ -1563,7 +1564,7 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	return submitTransaction(ctx, s.b, encrypted, args.To)
 }
 
-func (s *PublicTransactionPoolAPI) ReSendTransaction(ctx context.Context, from common.AccountAddress, txhash common.Hash) (common.Hash, error) {
+func (s *PublicTransactionPoolAPI) ReSendTransaction(ctx context.Context, txhash common.Hash) (common.Hash, error) {
 
 	pending, err := s.b.GetPoolTransactions()
 	if err != nil {
@@ -1580,14 +1581,8 @@ func (s *PublicTransactionPoolAPI) ReSendTransaction(ctx context.Context, from c
 	if tx == nil {
 		return common.Hash{}, errors.New("can not find tx " + txhash.Hex() + " in local txpool!")
 	}
-	account := accounts.Account{Address: from}
-
-	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
 		return common.Hash{}, err
-	}
-	if !wallet.IsMine(tx.From()) {
-		return common.Hash{}, errors.New("tx from has chanded!")
 	}
 	return submitTransaction(ctx, s.b, tx, nil)
 }
