@@ -88,8 +88,10 @@ func (l *txPricedList) Add(tx *types.Transaction, threshold *big.Int) bool {
 	if tx.GasPrice().Cmp(threshold) < 0 {
 		return false
 	}
+	if t := l.all.Get(tx.Hash()); t == nil {
+		heap.Push(l.items, tx)
+	}
 	l.all.Add(tx)
-	heap.Push(l.items, tx)
 	return true
 }
 

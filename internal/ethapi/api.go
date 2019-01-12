@@ -122,29 +122,30 @@ func NewPublicTxPoolAPI(b Backend) *PublicTxPoolAPI {
 }
 
 // Content returns the transactions contained within the transaction pool.
-func (s *PublicTxPoolAPI) Content() map[string]map[string]map[string]*RPCTransaction {
-	content := map[string]map[string]map[string]*RPCTransaction{
-		"pending": make(map[string]map[string]*RPCTransaction),
-		"queued":  make(map[string]map[string]*RPCTransaction),
+
+func (s *PublicTxPoolAPI) Content() map[string]map[string]*RPCTransaction {
+	content := map[string]map[string]*RPCTransaction{
+		"pending": make(map[string]*RPCTransaction),
+		"queued":  make(map[string]*RPCTransaction),
 	}
 	pending, queue := s.b.TxPoolContent()
 
 	// Flatten the pending transactions
-	for account, txs := range pending {
-		dump := make(map[string]*RPCTransaction)
-		for _, tx := range txs {
-			dump[fmt.Sprintf("%v", tx.Hash())] = newRPCPendingTransaction(tx)
-		}
-		content["pending"][account.Base58()] = dump
+
+	dump := make(map[string]*RPCTransaction)
+	for _, tx := range pending {
+		dump[tx.Hash().Hex()] = newRPCPendingTransaction(tx)
 	}
+	content["pending"] = dump
+
 	// Flatten the queued transactions
-	for account, txs := range queue {
-		dump := make(map[string]*RPCTransaction)
-		for _, tx := range txs {
-			dump[fmt.Sprintf("%d", tx.Hash())] = newRPCPendingTransaction(tx)
-		}
-		content["queued"][account.Base58()] = dump
+
+	qdump := make(map[string]*RPCTransaction)
+	for _, tx := range queue {
+		qdump[tx.Hash().Hex()] = newRPCPendingTransaction(tx)
 	}
+	content["queued"] = qdump
+
 	return content
 }
 
@@ -159,12 +160,13 @@ func (s *PublicTxPoolAPI) Status() map[string]hexutil.Uint {
 
 // Inspect retrieves the content of the transaction pool and flattens it into an
 // easily inspectable list.
-func (s *PublicTxPoolAPI) Inspect() map[string]map[string]map[string]string {
-	content := map[string]map[string]map[string]string{
-		"pending": make(map[string]map[string]string),
-		"queued":  make(map[string]map[string]string),
+
+func (s *PublicTxPoolAPI) Inspect() map[string]map[string]string {
+	content := map[string]map[string]string{
+		"pending": make(map[string]string),
+		"queued":  make(map[string]string),
 	}
-	pending, queue := s.b.TxPoolContent()
+	/*pending, queue := s.b.TxPoolContent()
 
 	// Define a formatter to flatten a transaction into a string
 	var format = func(tx *types.Transaction) string {
@@ -174,21 +176,19 @@ func (s *PublicTxPoolAPI) Inspect() map[string]map[string]map[string]string {
 		return fmt.Sprintf("contract creation: %v gas × %v wei", tx.Gas(), tx.GasPrice())
 	}
 	// Flatten the pending transactions
-	for account, txs := range pending {
-		dump := make(map[string]string)
-		for _, tx := range txs {
-			dump[fmt.Sprintf("%v", tx.Hash())] = format(tx)
-		}
-		content["pending"][account.Base58()] = dump
+
+	dump := make(map[string]string)
+	for _, tx := range pending {
+		dump[fmt.Sprintf("%s", tx.Hash())] = format(tx)
 	}
+	content["pending"] = dump
+
 	// Flatten the queued transactions
-	for account, txs := range queue {
-		dump := make(map[string]string)
-		for _, tx := range txs {
-			dump[fmt.Sprintf("%v", tx.Hash())] = format(tx)
-		}
-		content["queued"][account.Base58()] = dump
+	qdump := make(map[string]string)
+	for _, tx := range queue {
+		qdump[fmt.Sprintf("%s", tx.Hash())] = format(tx)
 	}
+	content["queued"] = qdump*/
 	return content
 }
 
@@ -1561,6 +1561,35 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 		return common.Hash{}, err
 	}
 	return submitTransaction(ctx, s.b, encrypted, args.To)
+}
+
+func (s *PublicTransactionPoolAPI) ReSendTransaction(ctx context.Context, from common.AccountAddress, txhash common.Hash) (common.Hash, error) {
+
+	pending, err := s.b.GetPoolTransactions()
+	if err != nil {
+		return common.Hash{}, err
+	}
+	var tx *types.Transaction
+
+	for _, ptx := range pending {
+		if ptx.Hash() == txhash {
+			tx = ptx
+			break
+		}
+	}
+	if tx == nil {
+		return common.Hash{}, errors.New("can not find tx " + txhash.Hex() + " in local txpool!")
+	}
+	account := accounts.Account{Address: from}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if !wallet.IsMine(tx.From()) {
+		return common.Hash{}, errors.New("tx from has chanded!")
+	}
+	return submitTransaction(ctx, s.b, tx, nil)
 }
 
 func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArgs) (common.Hash, error) {

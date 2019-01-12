@@ -338,11 +338,15 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 
 	for _, tx := range add.Transactions() {
 		pool.removeTx(tx.Hash())
+		log.Info("confirm removeTx tx", "hash", tx.Hash())
 	}
 	// Inject any transactions discarded due to reorgs
 	log.Debug("Reinjecting stale transactions", "count", len(reinject))
 	if len(reinject) > 0 {
 		pool.addTxsLocked(reinject, false)
+		for _, tx := range reinject {
+			log.Info("reinject tx", "hash", tx.Hash())
+		}
 	}
 
 	pool.promoteExecutables()
@@ -398,8 +402,22 @@ func (pool *TxPool) Stats() (int, int) {
 
 // Content retrieves the data content of the transaction pool, returning all the
 // pending as well as queued transactions, grouped by account and sorted by nonce.
-func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
-	return nil, nil
+func (pool *TxPool) Content() (types.Transactions, types.Transactions) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	pending := types.Transactions{}
+	if pool.newPending != nil && pool.newPending.items != nil {
+		pending = append(pending, pool.newPending.Flatten()...)
+	}
+
+	queued := types.Transactions{}
+
+	if pool.newQueue != nil && pool.newQueue.items != nil {
+		queued = append(queued, pool.newQueue.Flatten()...)
+	}
+
+	return pending, queued
 }
 
 // Pending retrieves all currently processable transactions, groupped by origin
@@ -427,7 +445,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 	err := verify.Verify(tx.GetZZSTX(), pool.currentState.GetZState())
 	if err != nil {
-		log.Error("validateTx", "verify stx err", err)
+		log.Error("validateTx", "hash", tx.Hash(), "verify stx err", err)
 		return ErrVerifyError
 	}
 
@@ -457,7 +475,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
-	if pool.all.Get(hash) != nil {
+	if pool.all.Get(hash) != nil && !local {
 		log.Trace("Discarding already known transaction", "hash", hash)
 		return false, fmt.Errorf("known transaction: %x", hash)
 	}
