@@ -169,9 +169,11 @@ func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 // stock Ethereum ethash engine.
 // See YP section 4.3.4. "Block Header Validity"
 func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, seal bool) error {
+	t := utils.TR_enter("_________________0")
 	if !keys.CheckLICr(header.Coinbase.ToPKr(), &header.Licr, header.Number.Uint64()) {
 		return fmt.Errorf("invalid Licr : pkr %v, licr %v", header.Coinbase, header.Licr)
 	}
+	t.Renter("______________1")
 
 	if !header.Valid() {
 		return fmt.Errorf("invalid Licr : pkr %v, licr %v, disable", header.Coinbase, header.Licr)
@@ -190,6 +192,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 	}
 	// Verify the block's difficulty based in it's timestamp and parent's difficulty
 	expected := ethash.CalcDifficulty(chain, header.Time.Uint64(), parent)
+	t.Renter("______________2")
 
 	if expected.Cmp(header.Difficulty) != 0 {
 		return fmt.Errorf("invalid difficulty: have %v, want %v", header.Difficulty, expected)
@@ -220,12 +223,14 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 	if diff := new(big.Int).Sub(header.Number, parent.Number); diff.Cmp(big.NewInt(1)) != 0 {
 		return consensus.ErrInvalidNumber
 	}
+	t.Renter("______________3")
 	// Verify the engine specific seal securing the block
 	if seal {
 		if err := ethash.VerifySeal(chain, header); err != nil {
 			return err
 		}
 	}
+	t.Renter("______________4")
 	return nil
 }
 

@@ -257,16 +257,18 @@ func (self *worker) update() {
 			//Note all transactions received may not be continuous with transactions
 			//already included in the current mining block. These transactions will
 			//be automatically eliminated.
-			if atomic.LoadInt32(&self.mining) == 0 {
+			if atomic.LoadInt32(&self.mining) == 0 && self.current != nil {
 				self.currentMu.Lock()
 				txset := types.NewTransactionsByPrice(ev.Txs)
 				addr := common.Address{}
-				//pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
-				pkr, _, ret := keys.Addr2PKrAndLICr(self.coinbase.ToUint512(), 0)
-				if !ret {
-					log.Error("Failed to Addr2PKrAndLICr")
-					return
-				}
+				pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
+				//pkr, _, ret := keys.Addr2PKrAndLICr(self.coinbase.ToUint512(), self.current.header.Number.Uint64())
+				//if !ret {
+				//	log.Error("Failed to Addr2PKrAndLICr")
+				//	return
+				//} else {
+				//}
+
 				addr.SetBytes(pkr[:])
 
 				self.current.commitTransactions(self.mux, txset, self.chain, addr)
@@ -320,6 +322,7 @@ func (self *worker) wait() {
 				logs   = work.state.Logs()
 			)
 			events = append(events, core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
+			self.eth.TxPool().RemoveTxs(work.handledTxs)
 			if stat == core.CanonStatTy {
 				events = append(events, core.ChainHeadEvent{Block: block})
 			}
@@ -353,7 +356,7 @@ func (self *worker) push(work *Work) {
 	if atomic.LoadInt32(&self.mining) != 1 {
 		return
 	}
-	self.eth.TxPool().RemoveTxs(work.handledTxs)
+
 	for agent := range self.agents {
 		atomic.AddInt32(&self.atWork, 1)
 		if ch := agent.Work(); ch != nil {

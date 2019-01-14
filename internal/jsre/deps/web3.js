@@ -1095,7 +1095,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         /**
          * Formats input value to byte representation of vm address
          *
-         * @method formatInputReal
+         * @method formatInputAddress
          * @param {String}
          * @returns {SolidityParam}
          */
@@ -4325,7 +4325,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 options.to = inputAddressFormatter(options.to);
             }
 
-            ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
+            ['gasPrice', 'gas', 'value', 'fee'].filter(function (key) {
                 return options[key] !== undefined;
             }).forEach(function(key){
                 options[key] = utils.fromDecimal(options[key]);
@@ -4350,7 +4350,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 options.to = inputAddressFormatter(options.to);
             }
 
-            ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
+            ['gasPrice', 'gas', 'value', 'fee'].filter(function (key) {
                 return options[key] !== undefined;
             }).forEach(function(key){
                 options[key] = utils.fromDecimal(options[key]);
@@ -6292,6 +6292,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [formatters.inputTransactionFormatter]
             });
 
+            var reSendTransaction = new Method({
+                name: 'reSendTransaction',
+                call: 'sero_reSendTransaction',
+                params: 1,
+                inputFormatter: [utils.toHex]
+            });
+
             var createPkg = new Method({
                 name: 'createPkg',
                 call: 'sero_createPkg',
@@ -6377,6 +6384,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 call,
                 estimateGas,
                 sendTransaction,
+                reSendTransaction,
                 createPkg,
                 closePkg,
                 transferPkg,

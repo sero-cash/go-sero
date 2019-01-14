@@ -801,6 +801,12 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setBootstrapNodes(ctx, cfg)
 	setBootstrapNodesV5(ctx, cfg)
 
+	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
+		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
+	}
+
+	log.Info("Maximum peer count", "SERO", cfg.MaxPeers)
+
 	//lightClient := ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalString(SyncModeFlag.Name) == "light"
 	////lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
 	//lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
