@@ -323,6 +323,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		}
 	}
 
+
 	// Initialize the internal state to the current head
 	if newHead == nil {
 		newHead = pool.chain.CurrentBlock().Header() // Special case during testing
@@ -335,6 +336,11 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.currentState = statedb
 	pool.pendingState = state.ManageState(statedb)
 	pool.currentMaxGas = newHead.GasLimit
+
+	if len(included) == 0 {
+		add := pool.chain.GetBlock(newHead.Hash(), newHead.Number.Uint64())
+		included = append(included, add.Transactions()...)
+	}
 
 	for _, tx := range included {
 		pool.removeTx(tx.Hash())
