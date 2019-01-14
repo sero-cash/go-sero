@@ -76,6 +76,7 @@ type Work struct {
 	createdAt time.Time
 
 	handledTxs []*types.Transaction
+	errHandledTxs []*types.Transaction
 
 	gasReward uint64
 }
@@ -356,7 +357,7 @@ func (self *worker) push(work *Work) {
 	if atomic.LoadInt32(&self.mining) != 1 {
 		return
 	}
-
+	self.eth.TxPool().RemoveTxs(work.errHandledTxs)
 	for agent := range self.agents {
 		atomic.AddInt32(&self.atWork, 1)
 		if ch := agent.Work(); ch != nil {
@@ -526,7 +527,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 			// nonce-too-high clause will prevent us from executing in vain).
 			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
 			txs.Shift()
-			env.handledTxs = append(env.handledTxs, tx)
+			env.errHandledTxs = append(env.errHandledTxs, tx)
 		}
 	}
 
