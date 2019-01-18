@@ -1,11 +1,9 @@
 #!/bin/sh
 
-ROOT=$(cd `dirname $0`; pwd)
-
-if [ -f "${ROOT}/pid" ];then
+if [ -f "pid" ];then
     echo "kill -9 `cat pid`"
     kill -9 `cat pid`
-    rm -rf ${ROOT}/pid
+    rm -rf pid
 else
     echo "no pid"
 fi

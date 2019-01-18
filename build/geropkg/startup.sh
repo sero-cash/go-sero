@@ -1,40 +1,39 @@
 #!/bin/sh
+show_usage="args: [-d , -p, -n,-r,-h]\
+                                  [--datadir=, --port=, --net=, --rpc=,--help]"
+export DYLD_LIBRARY_PATH="./czero/lib/"
+export LD_LIBRARY_PATH="./czero/lib/"
+DEFAULT_DATD_DIR="./data"
+LOGDIR="./log"
+DEFAULT_PORT=53717
 
-ROOT=$(cd `dirname $0`; pwd)
+DATADIR_OPTION=${DEFAULT_DATD_DIR}
+NET_OPTION=""
+RPC_OPTION=""
+PORT_OPTION=${DEFAULT_PORT}
 
-sh ${ROOT}/stop.sh
 
-export DYLD_LIBRARY_PATH=${ROOT}/czero/lib/
-export LD_LIBRARY_PATH=${ROOT}/czero/lib/
-DEFAULT_DATD_DIR="${ROOT}/data"
-LOGDIR="${ROOT}/log"
-DEFAULT_RPCPORT=8545
-DEFAULT_PORT=60602
-
-cmd="${ROOT}/bin/gero --datadir=${DEFAULT_DATD_DIR} --port ${DEFAULT_PORT}"
-if [[ $# -gt 0 ]]; then
-     while [[ "$1" != "" ]]; do
-       	 case "$1" in
-		--datadir)
-		    cmd=${cmd/--datadir=${DEFAULT_DATD_DIR}/--datadir=$2};shift 2;;
-        --dev)
-		    cmd="$cmd --dev";shift;;
-
-        --alpha)
-		    cmd="$cmd --alpha";shift;;
-        --rpc)
-		    localhost=$(hostname -I|awk -F ' ' '{print $1}')
-		    cmd="$cmd --rpc --rpcport $2 --rpcaddr $localhost --rpcapi personal,sero,web3 --rpccorsdomain '*'";shift 2;;
-        --port)
-            cmd=${cmd/--port ${DEFAULT_PORT}/--port $2};shift 2;;
-        --keystore)
-            cmd="$cmd --keystore $2";shift 2;;
-		*)exit;;
+GETOPT_ARGS=`getopt -o d:p:n:r:h -al datadir:,port:,net:,rpc:,help -- "$@"`
+eval set -- "$GETOPT_ARGS"
+while [ -n "$1" ]
+do
+        case "$1" in
+                -d|--datadir) DATADIR_OPTION=$2; shift 2;;
+                -p|--port) PORT_OPTION=$2; shift 2;;
+                -n|--net) NET_OPTION=--$2; shift 2;;
+                -r|--rpc)
+                        localhost=$(hostname -I|awk -F ' ' '{print $1}')
+                        RPC_OPTION="$cmd --rpc --rpcport $2 --rpcaddr $localhost --rpcapi personal,sero,web3 --rpccorsdomain '*'"; shift 2;;
+                -h|--help) echo $show_usage exit 0;;
+                --) break ;;
         esac
-    done
-fi
+done
 
-mkdir -p ${ROOT}/log
+cmd="bin/gero --datadir ${DATADIR_OPTION} --port ${PORT_OPTION} ${NET_OPTION} ${RPC_OPTION}"
+mkdir -p $LOGDIR
 
 echo $cmd
-${cmd} &> ${ROOT}/log/gero.log & echo $! > ${ROOT}/pid
+current=`date "+%Y-%m-%d"`
+logName="gero_$current.log"
+sh stop.sh
+nohup ${cmd} >> "${LOGDIR}/${logName}" & echo $! > "./pid"
