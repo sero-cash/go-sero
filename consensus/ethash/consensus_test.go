@@ -18,6 +18,7 @@ package ethash
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -83,4 +84,79 @@ func TestCalcDifficulty(t *testing.T) {
 			t.Error(name, "failed. Expected", test.CurrentDifficulty, "and calculated", diff)
 		}
 	}
+}
+
+func TestCalcDifficultyV2(t *testing.T) {
+	//print(120000, 330000000)
+	//print(120000, 340000000)
+	//print(120000, 340000001)
+	//print(120000, 1651524619)
+	//
+	//print(120001, 330000000)
+	//print(120001, 340000000)
+	//print(120001, 340000001)
+	//print(120001, 1700000000)
+	//print(120001, 1700000001)
+	//print(120001, 4000000000)
+	//print(120001, 4000000001)
+	//print(120001, 17000000000)
+	//print(120001, 17000000001)
+	//
+	//print(3057600, 330000000)
+	//print(3057600, 339999999)
+	//print(3057600, 340000000)
+	//print(3057600, 340000001)
+	//print(3057600, 1699999999)
+	//print(3057600, 1700000000)
+	//print(3057600, 1700000001)
+	//print(3057600, 3999999999)
+	//print(3057600, 4000000000)
+	//print(3057600, 4000000001)
+	//print(3057600, 16999999999)
+	//print(3057600, 17000000000)
+	//print(3057600, 17000000001)
+	//
+	//print(3057601, 330000000)
+	//print(3057601, 339999999)
+	//print(3057601, 340000000)
+	//print(3057601, 340000001)
+	//print(3057601, 1699999999)
+	//print(3057601, 1700000000)
+	//print(3057601, 1700000001)
+	//print(3057601, 3999999999)
+	//print(3057601, 4000000000)
+	//print(3057601, 4000000001)
+	//print(3057601, 16999999999)
+	//print(3057601, 17000000000)
+	//print(3057601, 17000000001)
+	//
+	//print(3057601+8294400, 330000000)
+	//print(3057601+8294400, 339999999)
+	//print(3057601+8294400, 340000000)
+	//print(3057601+8294400, 340000001)
+	//print(3057601+8294400, 1699999999)
+	//print(3057601+8294400, 1700000000)
+	//print(3057601+8294400, 1700000001)
+	//print(3057601+8294400, 3999999999)
+	//print(3057601+8294400, 4000000000)
+	//print(3057601+8294400, 4000000001)
+	//print(3057601+8294400, 16999999999)
+	//print(3057601+8294400, 17000000000)
+	//print(3057601+8294400, 17000000001)
+
+	//1875498290
+
+	print(120000, 2075498290)
+}
+
+func print(number int64, difficulty int64) {
+	header := &types.Header{
+		Number:     big.NewInt(number),
+		Difficulty: big.NewInt(difficulty),
+	}
+	v2 := accumulateRewardsV2(nil, header)
+	fmt.Println(number, difficulty)
+	fmt.Println(v2)
+	fmt.Println(new(big.Float).Quo(new(big.Float).SetInt(v2), big.NewFloat(1e+18)))
+	fmt.Println("-------------------------")
 }
