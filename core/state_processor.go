@@ -17,6 +17,8 @@
 package core
 
 import (
+	"math/big"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core/state"
@@ -24,7 +26,6 @@ import (
 	"github.com/sero-cash/go-sero/core/vm"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/params"
-	"math/big"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning

@@ -122,6 +122,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 		}
 	}
 
+	var stz *zstate.ZState
 	var st1 *State
 	parse_count := 0
 	for i := len(need_load) - 1; i >= 0; i-- {
@@ -139,33 +140,49 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			load_name = state1_file_name(parent_num, &parent_hash)
 		}
 
+		if stz == nil {
+			target := need_load[0].Hash()
+			stz = bc.NewState(&target)
+		}
+
 		t := utils.TR_enter(fmt.Sprintf("PARSE_BLOCK_CHAIN----NewState(num=%v)", current_num))
 
-		state := bc.NewState(&current_hash)
+		block := stz.GetBlock(current_num, current_hash.HashToUint256())
 
-		current_cm_count += len(state.State.Block.Roots)
+		if block == nil {
+			temp_state := bc.NewState(&current_hash)
+			if temp_state == nil {
+				panic(fmt.Sprintf("new zstate error: %v:%v !", current_num, current_hash))
+			}
+			block = &zstate.Block{}
+			block.Pkgs = temp_state.Pkgs.Block.Pkgs
+			block.Dels = temp_state.State.Block.Dels
+			block.Roots = temp_state.State.Block.Roots
+		}
+
+		//state := bc.NewState(&current_hash)
+
+		current_cm_count += len(block.Roots)
 
 		t.Renter("PARSE_BLOCK_CHAIN----LoadState")
 
 		if st1 == nil {
-			s1 := LoadState(state, load_name)
+			s1 := LoadState(stz, load_name)
 			st1 = &s1
-		} else {
-			st1.State = state
 		}
 
 		commitment_len := len(st1.State.State.Block.Roots)
 		t.Renter(fmt.Sprintf("PARSE_BLOCK_CHAIN----UpdateWiteness(count=%d)", commitment_len))
-		st1.UpdateWitness(tks)
+		st1.UpdateWitness(tks, current_num, block)
 		current_state1 = st1
 
 		t.Renter("PARSE_BLOCK_CHAIN----Finalize")
 		if parse_count%2000 == 0 {
-			st1.Finalize(saved_name)
+			st1.Finalize(saved_name, current_num)
 			st1 = nil
 		} else {
 			if i < 30 {
-				st1.Finalize(saved_name)
+				st1.Finalize(saved_name, current_num)
 				st1 = nil
 			}
 		}

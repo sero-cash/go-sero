@@ -981,6 +981,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Write other block data using a batch.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
+	state.GetZState().RecordBlock(block.Header().Hash().HashToUint256())
 	//rawdb.WriteHash(bc.db, block.Number().Uint64(), block.Hash())
 
 	root, err := state.Commit(true)
