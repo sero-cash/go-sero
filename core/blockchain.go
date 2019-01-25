@@ -148,6 +148,8 @@ type BlockChain struct {
 	badBlocks *lru.Cache // Bad block cache
 
 	accountManager *accounts.Manager
+
+	cashChose     atomic.Value
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -184,6 +186,7 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
 	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
 	bc.accountManager = accountManager
+	bc.cashChose.Store(uint64(0))
 
 	var err error
 	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
@@ -266,8 +269,12 @@ type State1BlockChain struct {
 	bc *BlockChain
 }
 
+func (self *State1BlockChain) CashChose() *atomic.Value {
+	return &self.bc.cashChose
+}
+
 func (self *State1BlockChain) GetCurrenHeader() *types.Header {
-	return self.bc.hc.CurrentHeader()
+	return self.bc.CurrentBlock().Header()
 }
 func (self *State1BlockChain) GetHeader(hash *common.Hash) *types.Header {
 	return self.bc.GetHeaderByHash(*hash)
@@ -1017,7 +1024,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			chosen := header.Number.Uint64()
 
 			// If we exceeded out time allowance, flush an entire trie to disk
-			if bc.gcproc > bc.cacheConfig.TrieTimeLimit {
+			if bc.gcproc > bc.cacheConfig.TrieTimeLimit || header.Number.Uint64()%10000 == 0{
 				// If we're exceeding limits but haven't reached a large enough memory gap,
 				// warn the user that the system is becoming unstable.
 				if chosen < lastWrite+triesInMemory && bc.gcproc >= 2*bc.cacheConfig.TrieTimeLimit {
@@ -1031,7 +1038,9 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			// Garbage collect anything below our required write retention
 			for !bc.triegc.Empty() {
 				root, number := bc.triegc.Pop()
-				if uint64(-number) > chosen {
+				chose := bc.cashChose.Load().(uint64)
+
+				if chose < triesInMemory || uint64(-number) > chose-triesInMemory {
 					bc.triegc.Push(root, number)
 					break
 				}

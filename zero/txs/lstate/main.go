@@ -3,6 +3,7 @@ package lstate
 import (
 	"fmt"
 	"runtime/debug"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 
@@ -27,6 +28,8 @@ type BlockChain interface {
 	GetHeader(hash *common.Hash) *types.Header
 	NewState(hash *common.Hash) *zstate.ZState
 	GetTks() []keys.Uint512
+
+	CashChose() *atomic.Value
 }
 
 func state1_file_name(num uint64, hash *common.Hash) (ret string) {
@@ -50,9 +53,9 @@ func Run(bc BlockChain) {
 func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int, e error) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error("parse block chain error : ", "recover", r)
+			log.Error("parse block chain error : ", "number", bc.GetCurrenHeader().Number , "recover", r)
 			debug.PrintStack()
-			e = errors.Errorf("parse block chain error %v", r)
+			e = errors.Errorf("parse block chain error %v %v",bc.GetCurrenHeader().Number, r)
 		}
 	}()
 
@@ -80,6 +83,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			return
 		}
 	}
+	chose := current_header.Number.Uint64()
 
 	progress := utils.NewProgress("STATE1_PROCESS : ", current_header.Number.Uint64())
 
@@ -200,6 +204,8 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 		current_state1 = &st1
 	}
 
+	cashChose := bc.CashChose()
+	cashChose.Store(chose)
 	return current_cm_count, nil
 
 }

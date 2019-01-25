@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sero-cash/go-sero/crypto"
-	"github.com/sero-cash/go-sero/log"
 	"math/big"
 	"runtime"
 	"time"
@@ -420,7 +419,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 		reward = accumulateRewardsV1(config, statedb, header)
 	}
 
-	log.Info(fmt.Sprintf("BlockNumber = %v, gasLimie = %v, gasUsed = %v, reward = %v", header.Number.Uint64(), header.GasLimit, header.GasUsed, reward))
+	//log.Info(fmt.Sprintf("BlockNumber = %v, gasLimie = %v, gasUsed = %v, reward = %v", header.Number.Uint64(), header.GasLimit, header.GasUsed, reward))
 	reward.Add(reward, new(big.Int).SetUint64(gasReward))
 	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
