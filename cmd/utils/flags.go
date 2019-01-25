@@ -171,6 +171,11 @@ var (
 		Name:  metrics.DashboardEnabledFlag,
 		Usage: "Enable the dashboard",
 	}
+	GCModeFlag = cli.StringFlag{
+		Name:  "gcmode",
+		Usage: `Blockchain garbage collection mode ("full", "archive")`,
+		Value: "full",
+	}
 	DashboardAddrFlag = cli.StringFlag{
 		Name:  "dashboard.addr",
 		Usage: "Dashboard listening interface",
@@ -1154,11 +1159,11 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 			DatasetsOnDisk: sero.DefaultConfig.Ethash.DatasetsOnDisk,
 		})
 	}
-	//if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
-	//	Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
-	//}
+	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
+		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
+	}
 	cache := &core.CacheConfig{
-		//Disabled:      ctx.GlobalString(GCModeFlag.Name) == "archive",
+		Disabled:      ctx.GlobalString(GCModeFlag.Name) == "archive",
 		TrieNodeLimit: sero.DefaultConfig.TrieCache,
 		TrieTimeLimit: sero.DefaultConfig.TrieTimeout,
 	}
