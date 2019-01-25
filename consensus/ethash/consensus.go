@@ -20,10 +20,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/crypto"
 	"math/big"
 	"runtime"
 	"time"
+
+	"github.com/sero-cash/go-sero/crypto"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -346,7 +347,7 @@ func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Head
 	if ethash.config.PowMode == ModeTest {
 		size = 32 * 1024
 	}
-	digest, result := hashimotoLight(size, cache.cache, header.HashNoNonce().Bytes(), header.Nonce.Uint64())
+	digest, result := hashimotoLight(size, cache.cache, header.HashNoNonce().Bytes(), header.Nonce.Uint64(), header.Number.Uint64())
 	// Caches are unmapped in a finalizer. Ensure that the cache stays live
 	// until after the call to hashimotoLight so it's not unmapped while being used.
 	runtime.KeepAlive(cache)
@@ -496,7 +497,6 @@ func accumulateRewardsV2(statedb *state.StateDB, header *types.Header) *big.Int 
 	} else {
 		reward = rewardStd
 	}
-
 
 	if statedb == nil {
 		return reward
