@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/log"
 	"math/big"
 	"runtime"
 	"time"
@@ -386,7 +387,7 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, receipts), nil
 }
-const V2Number = uint64(120000)
+const V2Number = uint64(130000)
 var (
 	base    = big.NewInt(1e+17)
 	big100  = big.NewInt(100)
@@ -394,7 +395,7 @@ var (
 
 	oriReward    = new(big.Int).Mul(big.NewInt(66773505743), big.NewInt(1000000000))
 	interval     = big.NewInt(8294400)
-	halveNimber  = big.NewInt(int64(V2Number) + 2937600)
+	halveNimber  = big.NewInt(3057600)
 	difficultyL1 = big.NewInt(340000000)
 	difficultyL2 = big.NewInt(1700000000)
 	difficultyL3 = big.NewInt(4000000000)
@@ -419,7 +420,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 		reward = accumulateRewardsV1(config, statedb, header)
 	}
 
-	//log.Info(fmt.Sprintf("BlockNumber = %v, gasLimie = %v, gasUsed = %v, reward =%v", header.Number.Uint64(), header.GasLimit, header.GasUsed, reward))
+	log.Info(fmt.Sprintf("BlockNumber = %v, gasLimie = %v, gasUsed = %v, reward = %v", header.Number.Uint64(), header.GasLimit, header.GasUsed, reward))
 	reward.Add(reward, new(big.Int).SetUint64(gasReward))
 	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
@@ -495,11 +496,9 @@ func accumulateRewardsV2(statedb *state.StateDB, header *types.Header) *big.Int 
 	}
 
 	reward = new(big.Int).Div(reward.Mul(reward, ratio), oriReward)
-
-	if reward.Cmp(oriReward) > 0 {
-		reward = new(big.Int).Mul(big.NewInt(10), base)
+	if statedb == nil {
+		return reward
 	}
-
 	statedb.AddBalance(communityRewardPool, "SERO", new(big.Int).Div(reward, big.NewInt(15)))
 	statedb.AddBalance(teamRewardPool, "SERO", new(big.Int).Div(new(big.Int).Mul(reward, big2), big.NewInt(15)))
 
