@@ -154,7 +154,7 @@ func (self *State) dataTo() {
 	}
 }
 
-func (self *State) Finalize(saveName string) {
+func (self *State) Finalize(saveName string, num uint64) {
 	self.toData()
 	self.clear_dirty()
 	current_file := zconfig.State1_file(saveName)
@@ -163,7 +163,7 @@ func (self *State) Finalize(saveName string) {
 		panic(err)
 	} else {
 	}
-	zconfig.Remove_State1_dir_files(self.State.State.Num())
+	zconfig.Remove_State1_dir_files(num)
 	return
 }
 
@@ -181,17 +181,17 @@ func (state *State) GetOut(root *keys.Uint256) (src *OutState, e error) {
 	}
 }
 
-func (self *State) addOut(tks []keys.Uint512, os *txstate.OutState, root *keys.Uint256) {
+func (self *State) addOut(tks []keys.Uint512, os *txstate.OutState, root *keys.Uint256, num uint64) {
 
-	t := utils.TR_enter(fmt.Sprintf("ADD_OUT num=%v", self.State.State.Num()))
+	t := utils.TR_enter(fmt.Sprintf("ADD_OUT num=%v", num))
 
-	self.addWouts(tks, os, root)
+	self.addWouts(tks, os, root, num)
 
 	t.Leave()
 	return
 }
 
-func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, root *keys.Uint256) {
+func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, root *keys.Uint256, num uint64) {
 	for _, tk := range tks {
 		if os.IsO() {
 			out_o := os.Out_O
@@ -253,7 +253,7 @@ func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, root *key
 				wos.Out_Z = out_z
 				wos.Z = false
 				wos.Trace = cpt.GenTil(&tk, os.ToRootCM())
-				wos.Num = state.State.State.Num()
+				wos.Num = num
 				state.add_out_dirty(root, &wos)
 				state.add_out_dirty(&wos.Trace, &wos)
 				t.Leave()
@@ -293,7 +293,7 @@ func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, root *key
 					wos.OutIndex = os.Index
 					wos.Z = true
 					wos.Trace = cpt.GenTil(&tk, os.ToRootCM())
-					wos.Num = state.State.State.Num()
+					wos.Num = num
 					state.add_out_dirty(root, &wos)
 					state.add_out_dirty(&wos.Trace, &wos)
 					break
@@ -401,11 +401,11 @@ func (state *State) GetPkgs(tk *keys.Uint512, is_from bool) (ret []*Pkg) {
 	return
 }
 
-func (state *State) UpdateWitness(tks []keys.Uint512) {
-	for _, del := range state.State.State.Block.Dels {
+func (state *State) UpdateWitness(tks []keys.Uint512, num uint64, block *zstate.Block) {
+	for _, del := range block.Dels {
 		state.del(&del)
 	}
-	for _, root := range state.State.State.Block.Roots {
+	for _, root := range block.Roots {
 		t := utils.TR_enter("UpdateWitness---RootKey")
 
 		if os, err := state.State.State.GetOut(&root); err != nil {
@@ -417,11 +417,11 @@ func (state *State) UpdateWitness(tks []keys.Uint512) {
 			}
 			t.Renter("UpdateWitness---ToRootCM")
 			t.Renter("UpdateWitness---addOut")
-			state.addOut(tks, os, &root)
+			state.addOut(tks, os, &root, num)
 		}
 		t.Leave()
 	}
-	for _, id := range state.State.Pkgs.Block.Pkgs {
+	for _, id := range block.Pkgs {
 		pg := state.State.Pkgs.GetPkg(&id)
 		state.addPkg(tks, &id, pg)
 	}

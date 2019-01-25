@@ -88,25 +88,30 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		} else {
 		}
 		if src, err := state.State.GetOut(&in_o.Root); e == nil {
-			g := cpt.VerifyInputSDesc{}
-			g.Ehash = hash_z
-			g.Nil = in_o.Nil
-			g.RootCM = *src.ToRootCM()
-			g.Sign = in_o.Sign
-			g.Pkr = *src.ToPKr()
-			if err := cpt.VerifyInputS(&g); err != nil {
-				e = errors.New("txs.Verify: in_o verify failed!")
-				return
-			} else {
-				asset := src.Out_O.Asset.ToFlatAsset()
-				asset_desc := cpt.AssetDesc{
-					Tkn_currency: asset.Tkn.Currency,
-					Tkn_value:    asset.Tkn.Value.ToUint256(),
-					Tkt_category: asset.Tkt.Category,
-					Tkt_value:    asset.Tkt.Value,
+			if src != nil {
+				g := cpt.VerifyInputSDesc{}
+				g.Ehash = hash_z
+				g.Nil = in_o.Nil
+				g.RootCM = *src.ToRootCM()
+				g.Sign = in_o.Sign
+				g.Pkr = *src.ToPKr()
+				if err := cpt.VerifyInputS(&g); err != nil {
+					e = errors.New("txs.Verify: in_o verify failed!")
+					return
+				} else {
+					asset := src.Out_O.Asset.ToFlatAsset()
+					asset_desc := cpt.AssetDesc{
+						Tkn_currency: asset.Tkn.Currency,
+						Tkn_value:    asset.Tkn.Value.ToUint256(),
+						Tkt_category: asset.Tkt.Category,
+						Tkt_value:    asset.Tkt.Value,
+					}
+					cpt.GenAssetCC(&asset_desc)
+					balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
 				}
-				cpt.GenAssetCC(&asset_desc)
-				balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
+			} else {
+				e = errors.New("txs.Verify: in_o not find in the outs!")
+				return
 			}
 		} else {
 			e = err

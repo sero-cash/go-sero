@@ -147,6 +147,8 @@ type BlockChain struct {
 	badBlocks *lru.Cache // Bad block cache
 
 	accountManager *accounts.Manager
+
+	cashChose     atomic.Value
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -183,6 +185,7 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
 	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
 	bc.accountManager = accountManager
+	bc.cashChose.Store(uint64(0))
 
 	var err error
 	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
@@ -216,8 +219,12 @@ type State1BlockChain struct {
 	bc *BlockChain
 }
 
+func (self *State1BlockChain) CashChose() *atomic.Value {
+	return &self.bc.cashChose
+}
+
 func (self *State1BlockChain) GetCurrenHeader() *types.Header {
-	return self.bc.hc.CurrentHeader()
+	return self.bc.CurrentBlock().Header()
 }
 func (self *State1BlockChain) GetHeader(hash *common.Hash) *types.Header {
 	return self.bc.GetHeaderByHash(*hash)
@@ -889,7 +896,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	return 0, nil
 }
 
-//var lastWrite uint64
+var lastWrite uint64
 
 // WriteBlockWithoutState writes only the block and its metadata to the database,
 // but does not write any state. This is used to construct competing side forks
@@ -905,8 +912,6 @@ func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) (e
 
 	return nil
 }
-
-var lastWrite uint64
 
 // WriteBlockWithState writes the block and all associated state to the database.
 func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
@@ -933,6 +938,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Write other block data using a batch.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
+	state.GetZState().RecordBlock(block.Header().Hash().HashToUint256())
 	//rawdb.WriteHash(bc.db, block.Number().Uint64(), block.Hash())
 
 	root, err := state.Commit(true)
@@ -944,9 +950,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	}
 	triedb := bc.stateCache.TrieDB()
 
-	//if err := triedb.Commit(root, false); err != nil {
-	//	return NonStatTy, err
-	//}
+	// If we're running an archive node, always flush
 	if bc.cacheConfig.Disabled {
 		if err := triedb.Commit(root, false); err != nil {
 			return NonStatTy, err

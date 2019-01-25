@@ -263,13 +263,6 @@ func (self *worker) update() {
 				txset := types.NewTransactionsByPrice(ev.Txs)
 				addr := common.Address{}
 				pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
-				//pkr, _, ret := keys.Addr2PKrAndLICr(self.coinbase.ToUint512(), self.current.header.Number.Uint64())
-				//if !ret {
-				//	log.Error("Failed to Addr2PKrAndLICr")
-				//	return
-				//} else {
-				//}
-
 				addr.SetBytes(pkr[:])
 
 				self.current.commitTransactions(self.mux, txset, self.chain, addr)
@@ -332,22 +325,6 @@ func (self *worker) wait() {
 			// Insert the block into the set of pending ones to wait for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 			log.Info(fmt.Sprintf("mined new block done in %v, number = %v, txs = %v", time.Since(work.createdAt), block.NumberU64(), len(block.Body().Transactions)))
-			//fmt.Printf("------------------------------------\n")
-			//stateDB, _ := self.chain.StateAt(self.chain.CurrentBlock().Root())
-			//for _, seed := range work.state.GetSeeds() {
-			//	outs, err := txs.GetOuts(&seed, stateDB.GetZState())
-			//	if err != nil {
-			//		fmt.Errorf("%s\n", err)
-			//		continue
-			//	}
-			//	for i, out := range outs {
-			//		data, _ := json.Marshal(out)
-			//		fmt.Printf("%s : %s\n", i, data)
-			//	}
-			//	fmt.Printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
-			//
-			//}
-			//fmt.Printf("------------------------------------\n")
 		}
 	}
 }

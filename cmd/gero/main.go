@@ -199,7 +199,7 @@ func init() {
 			subCommandName = ctx.Args()[0]
 		}
 
-		if !strings.EqualFold(subCommandName, "attach") {
+		if !strings.EqualFold(subCommandName, "attach") && !strings.EqualFold(subCommandName, "version") {
 			netType := cpt.NET_Beta
 			switch {
 			case ctx.GlobalBool(utils.AlphanetFlag.Name):
