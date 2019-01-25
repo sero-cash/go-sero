@@ -148,6 +148,8 @@ type BlockChain struct {
 	badBlocks *lru.Cache // Bad block cache
 
 	accountManager *accounts.Manager
+
+	cashChose     atomic.Value
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -184,6 +186,7 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
 	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
 	bc.accountManager = accountManager
+	bc.cashChose.Store(uint64(0))
 
 	var err error
 	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
@@ -266,8 +269,12 @@ type State1BlockChain struct {
 	bc *BlockChain
 }
 
+func (self *State1BlockChain) CashChose() *atomic.Value {
+	return &self.bc.cashChose
+}
+
 func (self *State1BlockChain) GetCurrenHeader() *types.Header {
-	return self.bc.hc.CurrentHeader()
+	return self.bc.CurrentBlock().Header()
 }
 func (self *State1BlockChain) GetHeader(hash *common.Hash) *types.Header {
 	return self.bc.GetHeaderByHash(*hash)
@@ -939,7 +946,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	return 0, nil
 }
 
-//var lastWrite uint64
+var lastWrite uint64
 
 // WriteBlockWithoutState writes only the block and its metadata to the database,
 // but does not write any state. This is used to construct competing side forks
@@ -981,6 +988,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Write other block data using a batch.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
+	state.GetZState().RecordBlock(block.Header().Hash().HashToUint256())
 	//rawdb.WriteHash(bc.db, block.Number().Uint64(), block.Hash())
 
 	root, err := state.Commit(true)
@@ -993,8 +1001,52 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	triedb := bc.stateCache.TrieDB()
 
 	// If we're running an archive node, always flush
-	if err := triedb.Commit(root, false); err != nil {
-		return NonStatTy, err
+	if bc.cacheConfig.Disabled {
+		if err := triedb.Commit(root, false); err != nil {
+			return NonStatTy, err
+		}
+	} else {
+		// Full but not archive node, do proper garbage collection
+		triedb.Reference(root, common.Hash{}) // metadata reference to keep trie alive
+		bc.triegc.Push(root, -float32(block.NumberU64()))
+
+		if current := block.NumberU64(); current > triesInMemory {
+			// If we exceeded our memory allowance, flush matured singleton nodes to disk
+			var (
+				nodes, imgs = triedb.Size()
+				limit       = common.StorageSize(bc.cacheConfig.TrieNodeLimit) * 1024 * 1024
+			)
+			if nodes > limit || imgs > 4*1024*1024 {
+				triedb.Cap(limit - serodb.IdealBatchSize)
+			}
+			// Find the next state trie we need to commit
+			header := bc.GetHeaderByNumber(current - triesInMemory)
+			chosen := header.Number.Uint64()
+
+			// If we exceeded out time allowance, flush an entire trie to disk
+			if bc.gcproc > bc.cacheConfig.TrieTimeLimit || header.Number.Uint64()%10000 == 0{
+				// If we're exceeding limits but haven't reached a large enough memory gap,
+				// warn the user that the system is becoming unstable.
+				if chosen < lastWrite+triesInMemory && bc.gcproc >= 2*bc.cacheConfig.TrieTimeLimit {
+					log.Info("State in memory for too long, committing", "time", bc.gcproc, "allowance", bc.cacheConfig.TrieTimeLimit, "optimum", float64(chosen-lastWrite)/triesInMemory)
+				}
+				// Flush an entire trie and restart the counters
+				triedb.Commit(header.Root, true)
+				lastWrite = chosen
+				bc.gcproc = 0
+			}
+			// Garbage collect anything below our required write retention
+			for !bc.triegc.Empty() {
+				root, number := bc.triegc.Pop()
+				chose := bc.cashChose.Load().(uint64)
+
+				if chose < triesInMemory || uint64(-number) > chose-triesInMemory {
+					bc.triegc.Push(root, number)
+					break
+				}
+				triedb.Dereference(root.(common.Hash))
+			}
+		}
 	}
 
 	rawdb.WriteReceipts(batch, block.Hash(), block.NumberU64(), receipts)
