@@ -386,7 +386,9 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, receipts), nil
 }
+
 const V2Number = uint64(130000)
+
 var (
 	base    = big.NewInt(1e+17)
 	big100  = big.NewInt(100)
@@ -407,14 +409,13 @@ var (
 	communityAddress = common.Base58ToAddress("ZkVB2f8H1usYBSeViS7wPqSSFseXnCYXEbT2XxCSuRhfFg9KbBKbTvpTBj7dmSZxEKTp6rsqS3EX9js6StgRijZQBkaok2U5Fy8oLuGFrt1C5jwdAYB4Nqn8KNRniiQyCeb")
 )
 
-
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward .
 func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, header *types.Header, gasReward uint64) {
 
 	var reward *big.Int
-	if header.Number.Uint64() >= V2Number {
-		reward = accumulateRewardsV2(statedb, header)
+	if header.Number.Uint64() >= 800 {
+		reward = testAccumulateRewardsV2(statedb, header)
 	} else {
 		reward = accumulateRewardsV1(config, statedb, header)
 	}
@@ -502,6 +503,55 @@ func accumulateRewardsV2(statedb *state.StateDB, header *types.Header) *big.Int 
 	statedb.AddBalance(teamRewardPool, "SERO", new(big.Int).Div(new(big.Int).Mul(reward, big2), big.NewInt(15)))
 
 	if header.Number.Uint64()%5000 == 0 {
+		balance := statedb.GetBalance(teamRewardPool, "SERO")
+		statedb.SubBalance(teamRewardPool, "SERO", balance)
+		assetTeam := assets.Asset{Tkn: &assets.Token{
+			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+			Value:    utils.U256(*balance),
+		},
+		}
+		statedb.GetZState().AddTxOut(teamAddress, assetTeam)
+
+		balance = statedb.GetBalance(communityRewardPool, "SERO")
+		statedb.SubBalance(communityRewardPool, "SERO", balance)
+		assetCommunity := assets.Asset{Tkn: &assets.Token{
+			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+			Value:    utils.U256(*balance),
+		},
+		}
+		statedb.GetZState().AddTxOut(communityAddress, assetCommunity)
+	}
+	return reward
+}
+
+func testAccumulateRewardsV2(statedb *state.StateDB, header *types.Header) *big.Int {
+	reward := new(big.Int).Mul(big.NewInt(640), base)
+	if header.Number.Uint64() >= 1000 {
+		i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(header.Number, big.NewInt(500)), big.NewInt(2000)), big1)
+		reward.Div(reward, new(big.Int).Exp(big2, i, nil))
+	}
+
+	var ratio *big.Int
+	if header.Difficulty.Cmp(big.NewInt(10000)) < 0 { //<3.4
+		reward = new(big.Int).Mul(big.NewInt(10), base)
+	} else if header.Difficulty.Cmp(big.NewInt(20000)) < 0 { //<17
+		reward = new(big.Int).Mul(big.NewInt(14), base)
+	} else if header.Difficulty.Cmp(big.NewInt(40000)) < 0 { //<40
+		reward = new(big.Int).Mul(big.NewInt(20), base)
+	} else if header.Difficulty.Cmp(big.NewInt(100000)) < 0 { //<170
+		reward = new(big.Int).Mul(big.NewInt(25), base)
+	} else {
+		ratio = oriReward
+	}
+
+	reward = new(big.Int).Div(reward.Mul(reward, ratio), oriReward)
+	if statedb == nil {
+		return reward
+	}
+	statedb.AddBalance(communityRewardPool, "SERO", new(big.Int).Div(reward, big.NewInt(15)))
+	statedb.AddBalance(teamRewardPool, "SERO", new(big.Int).Div(new(big.Int).Mul(reward, big2), big.NewInt(15)))
+
+	if header.Number.Uint64()%5 == 0 {
 		balance := statedb.GetBalance(teamRewardPool, "SERO")
 		statedb.SubBalance(teamRewardPool, "SERO", balance)
 		assetTeam := assets.Asset{Tkn: &assets.Token{
