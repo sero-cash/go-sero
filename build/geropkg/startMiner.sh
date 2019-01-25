@@ -1,6 +1,6 @@
 #!/bin/sh
-show_usage="args: [-d ,-k, -p, -n,-r,-h]\
-                                  [--datadir=,--keystore=, --port=, --net=, --rpc=,--help]"
+show_usage="args: [-d ,-k, -p, -n,-r,-t,-s,-h]\
+                                  [--datadir=,--keystore=, --port=, --net=, --rpc=,--threads=,--serobase=,--help]"
 export DYLD_LIBRARY_PATH="./czero/lib/"
 export LD_LIBRARY_PATH="./czero/lib/"
 DEFAULT_DATD_DIR="./data"
@@ -12,9 +12,12 @@ NET_OPTION=""
 RPC_OPTION=""
 PORT_OPTION=${DEFAULT_PORT}
 KEYSTORE_OPTION=""
+MINER_OPTION="--mine"
+MINER_THREAD_OPTION=""
+SEROBASE_OPTION=""
 
 
-GETOPT_ARGS=`getopt -o d:k:p:n:r:h -al datadir:,keystore:,port:,net:,rpc:,help -- "$@"`
+GETOPT_ARGS=`getopt -o d:k:p:n:r:t:s:h -al datadir:,keystore:,port:,net:,rpc:,threads:,serobase:,help -- "$@"`
 eval set -- "$GETOPT_ARGS"
 while [ -n "$1" ]
 do
@@ -23,6 +26,8 @@ do
                 -p|--port) PORT_OPTION=$2; shift 2;;
                 -n|--net) NET_OPTION=--$2; shift 2;;
                 -k|--keystore) KEYSTORE_OPTION="--keystore $2"; shift 2;;
+                -t|--threads) MINER_THREAD_OPTION="--minerthreads $2"; shift 2;;
+                -s|--serobase) SEROBASE_OPTION="--serobase $2"; shift 2;;
                 -r|--rpc)
                         localhost=$(hostname -I|awk -F ' ' '{print $1}')
                         RPC_OPTION="$cmd --rpc --rpcport $2 --rpcaddr $localhost --rpcapi personal,sero,web3 --rpccorsdomain '*'"; shift 2;;
@@ -31,7 +36,7 @@ do
         esac
 done
 
-cmd="bin/gero --datadir ${DATADIR_OPTION} --port ${PORT_OPTION} ${NET_OPTION} ${RPC_OPTION} ${KEYSTORE_OPTION}"
+cmd="bin/gero --datadir ${DATADIR_OPTION} --port ${PORT_OPTION} ${NET_OPTION} ${RPC_OPTION} ${KEYSTORE_OPTION} ${MINER_OPTION} ${MINER_THREAD_OPTION} ${SEROBASE_OPTION}"
 mkdir -p $LOGDIR
 
 echo $cmd

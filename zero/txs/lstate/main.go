@@ -53,9 +53,9 @@ func Run(bc BlockChain) {
 func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int, e error) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error("parse block chain error : ", "number", bc.GetCurrenHeader().Number , "recover", r)
+			log.Error("parse block chain error : ", "number", bc.GetCurrenHeader().Number, "recover", r)
 			debug.PrintStack()
-			e = errors.Errorf("parse block chain error %v %v",bc.GetCurrenHeader().Number, r)
+			e = errors.Errorf("parse block chain error %v %v", bc.GetCurrenHeader().Number, r)
 		}
 	}()
 
@@ -156,7 +156,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			if temp_state == nil {
 				panic(fmt.Sprintf("new zstate error: %v:%v !", current_num, current_hash))
 			} else {
-				log.Info("STATE1_PARSE GO BACK TO STATE: ", "num", current_num, "hash", current_hash)
+				log.Debug("STATE1_PARSE GO BACK TO STATE: ", "num", current_num, "hash", current_hash)
 			}
 			block = &zstate.Block{}
 			block.Pkgs = temp_state.Pkgs.Block.Pkgs
