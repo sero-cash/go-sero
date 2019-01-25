@@ -55,8 +55,12 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			e = errors.Errorf("parse block chain error %v", r)
 		}
 	}()
+
 	var current_header *types.Header
 	current_header = bc.GetCurrenHeader()
+	hash := current_header.Hash()
+	var stz = bc.NewState(&hash)
+
 	tks := bc.GetTks()
 
 	delay := uint64(6)
@@ -122,7 +126,6 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 		}
 	}
 
-	var stz *zstate.ZState
 	var st1 *State
 	parse_count := 0
 	for i := len(need_load) - 1; i >= 0; i-- {
@@ -140,11 +143,6 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			load_name = state1_file_name(parent_num, &parent_hash)
 		}
 
-		if stz == nil {
-			target := need_load[0].Hash()
-			stz = bc.NewState(&target)
-		}
-
 		t := utils.TR_enter(fmt.Sprintf("PARSE_BLOCK_CHAIN----NewState(num=%v)", current_num))
 
 		block := stz.GetBlock(current_num, current_hash.HashToUint256())
@@ -153,6 +151,8 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			temp_state := bc.NewState(&current_hash)
 			if temp_state == nil {
 				panic(fmt.Sprintf("new zstate error: %v:%v !", current_num, current_hash))
+			} else {
+				log.Info("STATE1_PARSE GO BACK TO STATE: ", "num", current_num, "hash", current_hash)
 			}
 			block = &zstate.Block{}
 			block.Pkgs = temp_state.Pkgs.Block.Pkgs
