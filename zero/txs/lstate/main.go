@@ -66,23 +66,32 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 
 	tks := bc.GetTks()
 
-	delay := uint64(6)
-	if current_header.Number.Uint64() < 6 {
-		delay = 0
-	} else {
-		dist := current_header.Number.Uint64() - delay
-		if delay > dist {
-			delay = dist
+	current_chose := bc.CashChose()
+	if current_chose != nil {
+		chose := current_chose.Load().(uint64)
+		if chose > 0 {
+			if (current_header.Number.Uint64() - chose) > 6 {
+				delay := uint64(6)
+				if current_header.Number.Uint64() < 6 {
+					delay = 0
+				} else {
+					dist := current_header.Number.Uint64() - delay
+					if delay > dist {
+						delay = dist
+					}
+				}
+
+				for i := uint64(0); i < delay; i++ {
+					parent_hash := current_header.ParentHash
+					current_header = bc.GetHeader(&parent_hash)
+					if current_header == nil {
+						return
+					}
+				}
+			}
 		}
 	}
 
-	for i := uint64(0); i < delay; i++ {
-		parent_hash := current_header.ParentHash
-		current_header = bc.GetHeader(&parent_hash)
-		if current_header == nil {
-			return
-		}
-	}
 	chose := current_header.Number.Uint64()
 
 	progress := utils.NewProgress("STATE1_PROCESS : ", current_header.Number.Uint64())
