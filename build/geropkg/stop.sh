@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ -f "pid" ];then
     echo "kill -9 `cat pid`"
