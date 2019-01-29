@@ -280,9 +280,13 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 	}
 
 	statedb.Commit(false)
+
 	statedb.Database().TrieDB().Commit(root, true)
 
-	return types.NewBlock(head, nil, nil)
+	block := types.NewBlock(head, nil, nil)
+	statedb.GetZState().RecordBlock(block.Header().Hash().HashToUint256())
+
+	return block
 }
 
 // Commit writes the block and state of a genesis specification to the database.

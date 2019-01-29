@@ -333,7 +333,7 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 
 // hashimoto aggregates data from the full dataset in order to produce our final
 // value for a particular header hash and nonce.
-func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32) []uint32) ([]byte, []byte) {
+func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32) []uint32, num uint64) ([]byte, []byte) {
 	// Calculate the number of theoretical rows (we use one buffer nonetheless)
 	rows := uint32(size / mixBytes)
 
@@ -343,7 +343,7 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 	binary.LittleEndian.PutUint64(seed[32:], nonce)
 
 	//seed = crypto.Keccak512(seed)
-	seed = cpt.Miner_Hash_0(seed)
+	seed = cpt.Miner_Hash_0(seed, num)
 	seedHead := binary.LittleEndian.Uint32(seed)
 
 	// Start the mix with replicated seed
@@ -372,13 +372,13 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 		binary.LittleEndian.PutUint32(digest[i*4:], val)
 	}
 	//return digest, crypto.Keccak256(append(seed, digest...))
-	return digest, cpt.Miner_Hash_1(append(seed, digest...))
+	return digest, cpt.Miner_Hash_1(append(seed, digest...), num)
 }
 
 // hashimotoLight aggregates data from the full dataset (using only a small
 // in-memory cache) in order to produce our final value for a particular header
 // hash and nonce.
-func hashimotoLight(size uint64, cache []uint32, hash []byte, nonce uint64) ([]byte, []byte) {
+func hashimotoLight(size uint64, cache []uint32, hash []byte, nonce uint64, num uint64) ([]byte, []byte) {
 	keccak512 := makeHasher(sha3.NewKeccak512())
 
 	lookup := func(index uint32) []uint32 {
@@ -390,18 +390,18 @@ func hashimotoLight(size uint64, cache []uint32, hash []byte, nonce uint64) ([]b
 		}
 		return data
 	}
-	return hashimoto(hash, nonce, size, lookup)
+	return hashimoto(hash, nonce, size, lookup, num)
 }
 
 // hashimotoFull aggregates data from the full dataset (using the full in-memory
 // dataset) in order to produce our final value for a particular header hash and
 // nonce.
-func hashimotoFull(dataset []uint32, hash []byte, nonce uint64) ([]byte, []byte) {
+func hashimotoFull(dataset []uint32, hash []byte, nonce uint64, num uint64) ([]byte, []byte) {
 	lookup := func(index uint32) []uint32 {
 		offset := index * hashWords
 		return dataset[offset : offset+hashWords]
 	}
-	return hashimoto(hash, nonce, uint64(len(dataset))*4, lookup)
+	return hashimoto(hash, nonce, uint64(len(dataset))*4, lookup, num)
 }
 
 const maxEpoch = 2048
