@@ -20,6 +20,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/txs/lstate"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -27,7 +28,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sero-cash/go-sero/zero/txs/lstate"
 	"github.com/sero-cash/go-sero/zero/txs/verify"
 
 	"github.com/hashicorp/golang-lru"
@@ -154,7 +154,7 @@ type BlockChain struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator and
 // Processor.
-func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, accountManager *accounts.Manager) (*BlockChain, error) {
+func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, accountManager *accounts.Manager, mineMode bool) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
 			TrieNodeLimit: 256 * 1024 * 1024,
@@ -202,11 +202,13 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	// Take ownership of this particular state
 	go bc.update()
 
-	lstate.Run(
-		&State1BlockChain{
-			bc: bc,
-		},
-	)
+	if !mineMode {
+		lstate.Run(
+			&State1BlockChain{
+				bc: bc,
+			},
+		)
+	}
 
 	return bc, nil
 }

@@ -83,6 +83,8 @@ type Config struct {
 	SyncMode  downloader.SyncMode
 	NoPruning bool
 
+	MineMode bool
+
 	// Light client options
 	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
 	LightPeers int `toml:",omitempty"` // Maximum number of LES client peers

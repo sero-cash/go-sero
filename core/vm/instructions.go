@@ -944,7 +944,9 @@ func tokenFee(coinName string) *big.Int {
 	return level7
 }
 
-var foundationAccount = common.Base58ToAddress("hcZCikh7h3By7FBoDhCj8a6swKukeZRKm5Xg1s9RStPTNV7GzE3rJDzJsDwCWy9p86A8amMdCHgF7jKaMfSt1zfaBEbqkapuveHyFko2V9ZKisMC5qMp4VacYnApXokr4ea")
+var foundationAccount1 = common.Base58ToAddress("hcZCikh7h3By7FBoDhCj8a6swKukeZRKm5Xg1s9RStPTNV7GzE3rJDzJsDwCWy9p86A8amMdCHgF7jKaMfSt1zfaBEbqkapuveHyFko2V9ZKisMC5qMp4VacYnApXokr4ea")
+
+var foundationAccount2 = common.Base58ToAddress("5niHmAcSoDzaekKTUpLR3qkQf6djC7AGhnJnuPr8w7ArqQzhxyhEf61Rp68WhpoYo57r5q8CVsLopTJ9uc5VS92fRSHsjBqY9rqMJfQ4DBMw5QyXvT4oyeF7P9sb7ruvwZD")
 
 func handleIssueToken(d []byte, evm *EVM, contract *Contract, mem []byte) (bool, error) {
 	offset := new(big.Int).SetBytes(d[0:32]).Uint64()
@@ -979,7 +981,13 @@ func handleIssueToken(d []byte, evm *EVM, contract *Contract, mem []byte) (bool,
 					Value:    utils.U256(*fee),
 				},
 				}
-				evm.StateDB.GetZState().AddTxOut(foundationAccount, asset)
+
+				if (evm.BlockNumber.Uint64() >= 300000) {
+					evm.StateDB.GetZState().AddTxOut(foundationAccount2, asset)
+				} else {
+					evm.StateDB.GetZState().AddTxOut(foundationAccount1, asset)
+				}
+
 			} else {
 				return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "insufficient balance for token fee")
 			}

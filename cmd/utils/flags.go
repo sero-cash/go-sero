@@ -290,6 +290,10 @@ var (
 	}
 
 	// Miner settings
+	MiningModeFlag = cli.BoolFlag{
+		Name:  "mineMode",
+		Usage: "Enable mining",
+	}
 	MiningEnabledFlag = cli.BoolFlag{
 		Name:  "mine",
 		Usage: "Enable mining",
@@ -1011,10 +1015,10 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	}
 	cfg.DatabaseHandles = makeDatabaseHandles()
 
-	//if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
-	//	Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
-	//}
-	//cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
+	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
+		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
+	}
+	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
 
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
 		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
@@ -1038,6 +1042,10 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
+	}
+
+	if ctx.GlobalIsSet(MiningModeFlag.Name) {
+		cfg.MineMode = true
 	}
 
 	// Override any default configs for hard coded networks.
