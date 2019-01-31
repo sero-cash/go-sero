@@ -50,6 +50,8 @@ func Run(bc BlockChain) {
 	}
 }
 
+const delay_block_count = 12
+
 func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int, e error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -70,17 +72,16 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 	if current_chose != nil {
 		chose := current_chose.Load().(uint64)
 		if chose > 0 {
-			if (current_header.Number.Uint64() - chose) > 6 {
-				delay := uint64(6)
-				if current_header.Number.Uint64() < 6 {
-					delay = 0
-				} else {
-					dist := current_header.Number.Uint64() - delay
-					if delay > dist {
-						delay = dist
-					}
+			delay := uint64(delay_block_count)
+			if current_header.Number.Uint64() < delay_block_count {
+				delay = 0
+			} else {
+				dist := current_header.Number.Uint64() - delay
+				if delay > dist {
+					delay = dist
 				}
-
+			}
+			if (current_header.Number.Uint64() - chose) > delay {
 				for i := uint64(0); i < delay; i++ {
 					parent_hash := current_header.ParentHash
 					current_header = bc.GetHeader(&parent_hash)
