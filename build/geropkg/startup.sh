@@ -6,7 +6,7 @@ export LD_LIBRARY_PATH="./czero/lib/"
 DEFAULT_DATD_DIR="./data"
 LOGDIR="./log"
 DEFAULT_PORT=53717
-
+CONFIG_PATH="./geroConfig.toml"
 DATADIR_OPTION=${DEFAULT_DATD_DIR}
 NET_OPTION=""
 RPC_OPTION=""
@@ -31,7 +31,7 @@ do
         esac
 done
 
-cmd="bin/gero --datadir ${DATADIR_OPTION} --port ${PORT_OPTION} ${NET_OPTION} ${RPC_OPTION} ${KEYSTORE_OPTION}"
+cmd="bin/gero --config ${CONFIG_PATH} --datadir ${DATADIR_OPTION} --port ${PORT_OPTION} ${NET_OPTION} ${RPC_OPTION} ${KEYSTORE_OPTION}"
 mkdir -p $LOGDIR
 
 echo $cmd

@@ -15,6 +15,7 @@ KEYSTORE_OPTION=""
 MINER_OPTION="--mine"
 MINER_THREAD_OPTION=""
 SEROBASE_OPTION=""
+CONFIG_PATH="./geroConfig.toml"
 
 
 GETOPT_ARGS=`getopt -o d:k:p:n:r:t:s:h -al datadir:,keystore:,port:,net:,rpc:,threads:,serobase:,help -- "$@"`
@@ -36,7 +37,7 @@ do
         esac
 done
 
-cmd="bin/gero --datadir ${DATADIR_OPTION} --port ${PORT_OPTION} ${NET_OPTION} ${RPC_OPTION} ${KEYSTORE_OPTION} ${MINER_OPTION} ${MINER_THREAD_OPTION} ${SEROBASE_OPTION}"
+cmd="bin/gero --config ${CONFIG_PATH}  --datadir ${DATADIR_OPTION} --port ${PORT_OPTION} ${NET_OPTION} ${RPC_OPTION} ${KEYSTORE_OPTION} ${MINER_OPTION} ${MINER_THREAD_OPTION} ${SEROBASE_OPTION}"
 mkdir -p $LOGDIR
 
 echo $cmd
