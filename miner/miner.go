@@ -162,6 +162,18 @@ func (self *Miner) HashRate() (tot int64) {
 	return
 }
 
+func (self *Miner) StartHashRate() {
+	if pow, ok := self.engine.(consensus.PoW); ok {
+		pow.StartHashrate()
+	}
+}
+
+func (self *Miner) StropHashRate() {
+	if pow, ok := self.engine.(consensus.PoW); ok {
+		pow.StopHashrate()
+	}
+}
+
 func (self *Miner) SetExtra(extra []byte) error {
 	if uint64(len(extra)) > params.MaximumExtraDataSize {
 		return fmt.Errorf("Extra exceeds max length. %d > %v", len(extra), params.MaximumExtraDataSize)

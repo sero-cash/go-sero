@@ -2062,7 +2062,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @return {Array} the byte array
          */
         function decode(string) {
-            if (string.length === 0) return []
+            if (!string || string.length === 0) return []
 
             var i, j, bytes = [0]
             for (i = 0; i < string.length; i++) {
@@ -2935,7 +2935,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
     },{"./base58":17,"./sha3.js":20,"bignumber.js":"bignumber.js","utf8":85}],22:[function(require,module,exports){
         module.exports={
-            "version": "0.2.15"
+            "version": "0.2.20"
         }
 
     },{}],23:[function(require,module,exports){
@@ -4325,7 +4325,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 options.to = inputAddressFormatter(options.to);
             }
 
-            ['gasPrice', 'gas', 'value', 'fee'].filter(function (key) {
+            ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
                 return options[key] !== undefined;
             }).forEach(function(key){
                 options[key] = utils.fromDecimal(options[key]);
@@ -4350,7 +4350,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 options.to = inputAddressFormatter(options.to);
             }
 
-            ['gasPrice', 'gas', 'value', 'fee'].filter(function (key) {
+            ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
                 return options[key] !== undefined;
             }).forEach(function(key){
                 options[key] = utils.fromDecimal(options[key]);
@@ -6365,6 +6365,18 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 0
             });
 
+            var startHashrate = new Method({
+                name: 'startHashrate',
+                call: 'sero_startHashrate',
+                params: 0
+            });
+
+            var stopHashrate = new Method({
+                name: 'stopHashrate',
+                call: 'sero_stopHashrate',
+                params: 0
+            });
+
             return [
                 isMinePKr,
                 getBalance,
@@ -6395,7 +6407,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 compileLLL,
                 compileSerpent,
                 submitWork,
-                getWork
+                getWork,
+                startHashrate,
+                stopHashrate
             ];
         };
 

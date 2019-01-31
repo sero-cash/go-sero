@@ -46,6 +46,24 @@ func NewMeter() Meter {
 	return m
 }
 
+func NewHashrateMeter() Meter {
+	m := &StandardMeter{
+		snapshot:  &MeterSnapshot{},
+		a1:        NewHashrateEWMA1(),
+		a5:        NewHashrateEWMA5(),
+		a15:       NewHashrateEWMA15(),
+		startTime: time.Now(),
+	}
+	arbiter.Lock()
+	defer arbiter.Unlock()
+	arbiter.meters[m] = struct{}{}
+	if !arbiter.started {
+		arbiter.started = true
+		go arbiter.tick()
+	}
+	return m
+}
+
 // NewMeter constructs and registers a new StandardMeter and launches a
 // goroutine.
 // Be sure to unregister the meter from the registry once it is of no use to

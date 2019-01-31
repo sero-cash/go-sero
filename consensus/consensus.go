@@ -97,6 +97,10 @@ type Engine interface {
 type PoW interface {
 	Engine
 
+	StartHashrate()
+
+	StopHashrate()
+
 	// Hashrate returns the current mining hashrate of a PoW consensus engine.
 	Hashrate() float64
 }

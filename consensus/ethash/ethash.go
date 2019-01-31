@@ -565,6 +565,17 @@ func (ethash *Ethash) Hashrate() float64 {
 	return ethash.hashrate.Rate1()
 }
 
+func (ethash *Ethash) StartHashrate() {
+	ethash.hashrate.Stop()
+	ethash.hashrate = metrics.NewHashrateMeter()
+}
+
+func (ethash *Ethash) StopHashrate() {
+	ethash.hashrate.Stop()
+	ethash.hashrate = metrics.NilMeter{}
+
+}
+
 // APIs implements consensus.Engine, returning the user facing RPC APIs. Currently
 // that is empty.
 func (ethash *Ethash) APIs(chain consensus.ChainReader) []rpc.API {

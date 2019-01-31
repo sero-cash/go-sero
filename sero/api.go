@@ -68,6 +68,14 @@ func (api *PublicSeroAPI) Hashrate() hexutil.Uint64 {
 	return hexutil.Uint64(api.e.Miner().HashRate())
 }
 
+func (api *PublicSeroAPI) StartHashrate() {
+	api.e.Miner().StartHashRate()
+}
+
+func (api *PublicSeroAPI) StopHashrate() {
+	api.e.Miner().StropHashRate()
+}
+
 // PublicMinerAPI provides an API to control the miner.
 // It offers only methods that operate on data that pose no security risk when it is publicly accessible.
 type PublicMinerAPI struct {

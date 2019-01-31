@@ -23,6 +23,26 @@ func NewEWMA(alpha float64) EWMA {
 	return &StandardEWMA{alpha: alpha}
 }
 
+func NewHashrateEWMA(alpha float64) EWMA {
+
+	return &StandardEWMA{alpha: alpha}
+}
+
+// NewEWMA1 constructs a new EWMA for a one-minute moving average.
+func NewHashrateEWMA1() EWMA {
+	return NewHashrateEWMA(1 - math.Exp(-5.0/60.0/1))
+}
+
+// NewEWMA5 constructs a new EWMA for a five-minute moving average.
+func NewHashrateEWMA5() EWMA {
+	return NewHashrateEWMA(1 - math.Exp(-5.0/60.0/5))
+}
+
+// NewEWMA15 constructs a new EWMA for a fifteen-minute moving average.
+func NewHashrateEWMA15() EWMA {
+	return NewHashrateEWMA(1 - math.Exp(-5.0/60.0/15))
+}
+
 // NewEWMA1 constructs a new EWMA for a one-minute moving average.
 func NewEWMA1() EWMA {
 	return NewEWMA(1 - math.Exp(-5.0/60.0/1))
