@@ -77,6 +77,10 @@ type ZState struct {
 	Pkgs  pkgstate.PkgState
 }
 
+func (self *ZState) Num() uint64 {
+	return self.num
+}
+
 func NewState(tri0 tri.Tri, num uint64) (state *ZState) {
 	state = &ZState{}
 	state.Tri = tri0

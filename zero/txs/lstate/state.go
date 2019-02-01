@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime/debug"
 	"sync"
 
 	"github.com/sero-cash/go-sero/log"
@@ -429,6 +430,13 @@ func (state *State) UpdateWitness(tks []keys.Uint512, num uint64, block *zstate.
 }
 
 func (self *State) GetOuts(tk *keys.Uint512) (outs []*OutState, e error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("GetOuts error : ", "number", self.State.Num(), "recover", r)
+			debug.PrintStack()
+			e = fmt.Errorf("%v", r)
+		}
+	}()
 	for _, root := range self.G2wouts {
 		if src, err := self.GetOut(&root); err != nil {
 			e = err

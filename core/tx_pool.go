@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -323,7 +324,6 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		}
 	}
 
-
 	// Initialize the internal state to the current head
 	if newHead == nil {
 		newHead = pool.chain.CurrentBlock().Header() // Special case during testing
@@ -438,7 +438,15 @@ func (pool *TxPool) Pending() (types.Transactions, error) {
 
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (priced and size).
-func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
+func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("validateTx error : ", "hash", tx.Hash().Hex(), "recover", r)
+			debug.PrintStack()
+			e = errors.New(fmt.Sprintf("%v", r))
+		}
+	}()
+
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > 3200*1024 {
 		return ErrOversizedData

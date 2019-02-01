@@ -19,11 +19,8 @@ package txstate
 import (
 	"fmt"
 	"math/big"
-	"runtime/debug"
 	"sort"
 	"sync"
-
-	"github.com/sero-cash/go-sero/log"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -97,12 +94,6 @@ func (self *State) Name2BKey(name string, num uint64) (ret []byte) {
 }
 
 func (self *State) load() {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error("txstate load error:")
-			debug.PrintStack()
-		}
-	}()
 	get := CurrentGet{}
 	tri.GetObj(
 		self.tri,
