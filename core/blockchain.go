@@ -149,6 +149,8 @@ type BlockChain struct {
 	accountManager *accounts.Manager
 
 	cashChose     atomic.Value
+
+	mineMode bool
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -186,6 +188,7 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
 	bc.accountManager = accountManager
 	bc.cashChose.Store(uint64(0))
+	bc.mineMode = mineMode
 
 	var err error
 	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
@@ -1039,12 +1042,19 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			// Garbage collect anything below our required write retention
 			for !bc.triegc.Empty() {
 				root, number := bc.triegc.Pop()
-				chose := bc.cashChose.Load().(uint64)
-
-				if chose < triesInMemory || uint64(-number) > chose-triesInMemory {
-					bc.triegc.Push(root, number)
-					break
+				if bc.mineMode {
+					if uint64(-number) > chosen {
+						bc.triegc.Push(root, number)
+						break
+					}
+				} else {
+					chose := bc.cashChose.Load().(uint64)
+					if chose < triesInMemory || uint64(-number) > chose-triesInMemory {
+						bc.triegc.Push(root, number)
+						break
+					}
 				}
+
 				triedb.Dereference(root.(common.Hash))
 			}
 		}
