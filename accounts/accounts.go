@@ -98,6 +98,8 @@ type Wallet interface {
 
 	// IsMine return whether an once address is mine or not
 	IsMine(onceAddress common.Address) bool
+
+	AddressUnlocked(account Account) (bool, error)
 }
 
 // Backend is a "wallet provider" that may contain a batch of accounts they can

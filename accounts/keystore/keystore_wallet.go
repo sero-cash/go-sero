@@ -106,6 +106,20 @@ func (w *keystoreWallet) EncryptTx(account accounts.Account, tx *types.Transacti
 
 }
 
+func (w *keystoreWallet) AddressUnlocked(account accounts.Account) (bool, error) {
+	if account.Address != w.account.Address {
+		return false, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return false, accounts.ErrUnknownAccount
+	}
+	_, err := w.keystore.GetSeed(account)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
 	w.keystore.mu.Lock()
 	defer w.keystore.mu.Unlock()
