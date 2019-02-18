@@ -2935,7 +2935,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
     },{"./base58":17,"./sha3.js":20,"bignumber.js":"bignumber.js","utf8":85}],22:[function(require,module,exports){
         module.exports={
-            "version": "0.2.20"
+            "version": "0.2.24"
         }
 
     },{}],23:[function(require,module,exports){
@@ -6377,6 +6377,16 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 0
             });
 
+            var getBlockRewardByNumber = new Method({
+                name: 'getBlockRewardByNumber',
+                call: 'sero_getBlockRewardByNumber',
+                params: 1,
+                inputFormatter: [formatters.inputBlockNumberFormatter],
+                outputFormatter:function(val){return val.map(function(e){
+                    return utils.toBigNumber(e);
+                })}
+            });
+
             return [
                 isMinePKr,
                 getBalance,
@@ -6409,7 +6419,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 submitWork,
                 getWork,
                 startHashrate,
-                stopHashrate
+                stopHashrate,
+                getBlockRewardByNumber
             ];
         };
 

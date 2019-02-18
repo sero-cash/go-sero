@@ -740,6 +740,17 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.
 	return nil, err
 }
 
+func (s *PublicBlockChainAPI) GetBlockRewardByNumber(ctx context.Context, blockNr rpc.BlockNumber) [3]hexutil.Big {
+	var res [3]hexutil.Big
+	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
+		rewards := GetBlockReward(block.Header().Number, block.Header().Difficulty, block.Header().GasUsed, block.Header().GasLimit)
+		res[0] = hexutil.Big(*rewards[0])
+		res[1] = hexutil.Big(*rewards[1])
+		res[2] = hexutil.Big(*rewards[2])
+	}
+	return res
+}
+
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]interface{}, error) {
