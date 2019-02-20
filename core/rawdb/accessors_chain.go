@@ -271,6 +271,11 @@ func DeleteTd(db DatabaseDeleter, hash common.Hash, number uint64) {
 	}
 }
 
+type StateRecepipts struct {
+	Receipts []*types.ReceiptForStorage
+	States   []byte
+}
+
 // ReadReceipts retrieves all the transaction receipts belonging to a block.
 func ReadReceipts(db DatabaseReader, hash common.Hash, number uint64) types.Receipts {
 	// Retrieve the flattened receipt slice
@@ -279,14 +284,15 @@ func ReadReceipts(db DatabaseReader, hash common.Hash, number uint64) types.Rece
 		return nil
 	}
 	// Convert the revceipts from their storage form to their internal representation
-	storageReceipts := []*types.ReceiptForStorage{}
+	storageReceipts := StateRecepipts{}
 	if err := rlp.DecodeBytes(data, &storageReceipts); err != nil {
 		log.Error("Invalid receipt array RLP", "hash", hash, "err", err)
 		return nil
 	}
-	receipts := make(types.Receipts, len(storageReceipts))
-	for i, receipt := range storageReceipts {
+	receipts := make(types.Receipts, len(storageReceipts.Receipts))
+	for i, receipt := range storageReceipts.Receipts {
 		receipts[i] = (*types.Receipt)(receipt)
+		receipts[i].Status = uint64(storageReceipts.States[i])
 	}
 	return receipts
 }
@@ -295,10 +301,13 @@ func ReadReceipts(db DatabaseReader, hash common.Hash, number uint64) types.Rece
 func WriteReceipts(db DatabaseWriter, hash common.Hash, number uint64, receipts types.Receipts) {
 	// Convert the receipts into their storage form and serialize them
 	storageReceipts := make([]*types.ReceiptForStorage, len(receipts))
+	states := make([]byte, len(receipts))
 	for i, receipt := range receipts {
 		storageReceipts[i] = (*types.ReceiptForStorage)(receipt)
+		states[i] = byte(receipt.Status)
 	}
-	bytes, err := rlp.EncodeToBytes(storageReceipts)
+
+	bytes, err := rlp.EncodeToBytes(StateRecepipts{storageReceipts, states})
 	if err != nil {
 		log.Crit("Failed to encode block receipts", "err", err)
 	}
