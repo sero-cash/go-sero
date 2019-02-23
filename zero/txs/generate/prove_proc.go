@@ -132,6 +132,7 @@ func genDesc_Zs(state *lstate.State, seed *keys.Uint256, ptx *preTx, balance_des
 		g.desc.Tkt_value = asset.Tkt.Value
 		g.desc.Memo = out.Memo
 		g.desc.Pkr = out.Addr
+		g.desc.Height = state.State.Num()
 		g.index = i
 
 		gen_output_procs.StartProc(&g)

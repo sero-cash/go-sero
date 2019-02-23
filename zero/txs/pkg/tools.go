@@ -11,6 +11,7 @@ import (
 func DePkg(key *keys.Uint256, pkg *Pkg_Z) (ret Pkg_O, e error) {
 	desc := cpt.InfoDesc{}
 	desc.Key = *key
+	desc.Flag = true
 	desc.Einfo = pkg.EInfo
 	cpt.DecOutput(&desc)
 	ret.Memo = desc.Memo
