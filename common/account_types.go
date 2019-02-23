@@ -62,6 +62,10 @@ func Base58ToAccount(s string) AccountAddress {
 // Ethereum Data or not.
 func IsBase58Account(s string) bool {
 	if base58.IsBase58Str(s) {
+		account := Base58ToAccount(s)
+		if !keys.IsPKValid(account.ToUint512()) {
+			return false
+		}
 		temp := Base58ToAccount(s).Base58()
 		if temp == s {
 			return true
