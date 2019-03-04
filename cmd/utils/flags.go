@@ -752,7 +752,7 @@ func makeDatabaseHandles() int {
 // a key index in the key store to an internal account representation.
 func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
 	// If the specified account is a valid address, return it
-	if common.IsBase58Address(account) {
+	if common.IsBase58Account(account) {
 		return accounts.Account{Address: common.Base58ToAccount(account)}, nil
 	}
 	// Otherwise try to interpret the account as a keystore index
