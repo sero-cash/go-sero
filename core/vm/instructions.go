@@ -967,56 +967,28 @@ func handleIssueToken(d []byte, evm *EVM, contract *Contract, mem []byte) (bool,
 	}
 	address := evm.StateDB.GetContrctAddressByToken(coinName)
 	if address == (common.Address{}) {
-		if evm.BlockNumber.Uint64() <= 329999 {
+		fee := new(big.Int).Set(level6)
+		if evm.chainConfig.ChainID.Uint64() == 2019 {
+			fee = tokenFee(coinName)
+		}
+		if evm.StateDB.GetBalance(contract.Address(), "SERO").Cmp(fee) >= 0 {
 			if !evm.StateDB.RegisterToken(contract.Address(), coinName) {
 				return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "coinName registered by other")
 			} else {
-				fee := new(big.Int).Set(level6)
-				if evm.chainConfig.ChainID.Uint64() == 2019 {
-					fee = tokenFee(coinName)
+				evm.StateDB.SubBalance(contract.Address(), "SERO", fee)
+				asset := assets.Asset{Tkn: &assets.Token{
+					Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+					Value:    utils.U256(*fee),
+				},
 				}
-				if evm.StateDB.GetBalance(contract.Address(), "SERO").Cmp(fee) >= 0 {
-					evm.StateDB.SubBalance(contract.Address(), "SERO", fee)
-					asset := assets.Asset{Tkn: &assets.Token{
-						Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
-						Value:    utils.U256(*fee),
-					},
-					}
-
-					if (evm.BlockNumber.Uint64() >= 300000) {
-						evm.StateDB.GetZState().AddTxOut(foundationAccount2, asset)
-					} else {
-						evm.StateDB.GetZState().AddTxOut(foundationAccount1, asset)
-					}
-
+				if (evm.BlockNumber.Uint64() >= 300000) {
+					evm.StateDB.GetZState().AddTxOut(foundationAccount2, asset)
 				} else {
-					return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "insufficient balance for token fee")
+					evm.StateDB.GetZState().AddTxOut(foundationAccount1, asset)
 				}
 			}
 		} else {
-			fee := new(big.Int).Set(level6)
-			if evm.chainConfig.ChainID.Uint64() == 2019 {
-				fee = tokenFee(coinName)
-			}
-			if evm.StateDB.GetBalance(contract.Address(), "SERO").Cmp(fee) >= 0 {
-				if !evm.StateDB.RegisterToken(contract.Address(), coinName) {
-					return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "coinName registered by other")
-				} else {
-					evm.StateDB.SubBalance(contract.Address(), "SERO", fee)
-					asset := assets.Asset{Tkn: &assets.Token{
-						Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
-						Value:    utils.U256(*fee),
-					},
-					}
-					if (evm.BlockNumber.Uint64() >= 300000) {
-						evm.StateDB.GetZState().AddTxOut(foundationAccount2, asset)
-					} else {
-						evm.StateDB.GetZState().AddTxOut(foundationAccount1, asset)
-					}
-				}
-			} else {
-				return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "insufficient balance for token fee")
-			}
+			return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "insufficient balance for token fee")
 		}
 	} else if address != contract.Address() {
 		return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "coinName registered by other")
