@@ -25,7 +25,7 @@ do
                 -k|--keystore) KEYSTORE_OPTION="--keystore $2"; shift 2;;
                 -r|--rpc)
                         localhost=$(hostname -I|awk -F ' ' '{print $1}')
-                        RPC_OPTION="$cmd --rpc --rpcport $2 --rpcaddr $localhost --rpcapi personal,sero,web3 --rpccorsdomain '*'"; shift 2;;
+                        RPC_OPTION="$cmd --rpc --rpcport $2 --rpcaddr $localhost  --rpccorsdomain '*'"; shift 2;;
                 -h|--help) echo $show_usage;exit 0;;
                 --) break ;;
         esac

@@ -376,6 +376,28 @@ var (
 		Usage: "Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts '*' wildcard.",
 		Value: strings.Join(node.DefaultConfig.HTTPVirtualHosts, ","),
 	}
+	RPCReadTimeoutFlag = cli.Int64Flag{
+		Name: "rpcreadtimeout",
+		Usage: `ReadTimeout is the maximum duration for reading the entire request, including the body.
+ 
+        Because ReadTimeout does not let Handlers make per-request
+        decisions on each request body's acceptable deadline or
+        upload rate, most users will prefer to useReadHeaderTimeout. It is valid to use them both.`,
+		Value: 120,
+	}
+	RPCWriteTimeoutFlag = cli.Int64Flag{
+		Name: "rpcwritetimeout",
+		Usage: `WriteTimeout is the maximum duration before timing out writes of the response. 
+        It is reset whenever a new request's header is read. Like ReadTimeout, it does not
+		let Handlers make decisions on a per-request basis.`,
+		Value: 120,
+	}
+	RPCIdleTimeoutFlag = cli.Int64Flag{
+		Name: "rpcidletimeout",
+		Usage: `IdleTimeout is the maximum amount of time to wait for the next request when keep-alives are enabled. 
+        If IdleTimeout is zero, the value of ReadTimeout is used. If both are zero, ReadHeaderTimeout is used.`,
+		Value: 120,
+	}
 	RPCApiFlag = cli.StringFlag{
 		Name:  "rpcapi",
 		Usage: "API's offered over the HTTP-RPC interface",
@@ -694,6 +716,15 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	}
 	if ctx.GlobalIsSet(RPCVirtualHostsFlag.Name) {
 		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(RPCVirtualHostsFlag.Name))
+	}
+	if ctx.GlobalIsSet(RPCReadTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.ReadTimeout = time.Duration(ctx.GlobalInt64(RPCReadTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCWriteTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.WriteTimeout = time.Duration(ctx.GlobalInt64(RPCWriteTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCIdleTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.IdleTimeout = time.Duration(ctx.GlobalInt64(RPCIdleTimeoutFlag.Name)) * time.Second
 	}
 }
 
