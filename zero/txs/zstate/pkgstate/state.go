@@ -2,227 +2,146 @@ package pkgstate
 
 import (
 	"fmt"
-	"sort"
 	"sync"
 
-	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-sero/serodb"
 
-	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-sero/zero/localdb"
+
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
+	"github.com/sero-cash/go-sero/zero/txs/stx"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate/data"
 
 	"github.com/sero-cash/go-sero/zero/utils"
 
-	"github.com/sero-cash/go-sero/zero/txs/stx"
-
-	"github.com/sero-cash/go-czero-import/keys"
-
-	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 )
-
-type ZPkg struct {
-	High uint64
-	From keys.PKr
-	Pack stx.PkgCreate
-}
-
-func (self *ZPkg) Serial() (ret []byte, e error) {
-	return rlp.EncodeToBytes(self)
-}
-
-type PkgGet struct {
-	out *ZPkg
-}
-
-func (self *PkgGet) Out() *ZPkg {
-	return self.out
-}
-
-func (self *PkgGet) Unserial(v []byte) (e error) {
-	if len(v) < 2 {
-		self.out = nil
-		return
-	} else {
-		self.out = &ZPkg{}
-		if err := rlp.DecodeBytes(v, &self.out); err != nil {
-			e = err
-			self.out = nil
-			return
-		} else {
-			return
-		}
-	}
-}
-
-type Block struct {
-	Pkgs []keys.Uint256
-}
-
-func pkgBlockName(num uint64) (ret []byte) {
-	ret = []byte(fmt.Sprintf("PKGSTATE_BLOCK_NAME_%d", num))
-	return
-}
-
-func (self *Block) Serial() (ret []byte, e error) {
-	return rlp.EncodeToBytes(self)
-}
-
-type BlockGet struct {
-	out *Block
-}
-
-func (self *BlockGet) Out() *Block {
-	return self.out
-}
-
-func (self *BlockGet) Unserial(v []byte) (e error) {
-	if len(v) < 2 {
-		self.out = nil
-		return
-	} else {
-		self.out = &Block{}
-		if err := rlp.DecodeBytes(v, &self.out); err != nil {
-			e = err
-			self.out = nil
-			return
-		} else {
-			return
-		}
-	}
-}
 
 type PkgState struct {
 	tri tri.Tri
 	rw  *sync.RWMutex
 	num uint64
 
-	Data
+	data      data.Data
 	snapshots utils.Snapshots
 }
 
 func NewPkgState(tri tri.Tri, num uint64) (state PkgState) {
 	state = PkgState{tri: tri, num: num}
+	state.data = *data.NewData(num)
 	state.rw = new(sync.RWMutex)
-	state.clear()
+	state.data.Clear()
 	state.load()
 	return
 }
 
+func (self *PkgState) Snapshot(revid int) {
+	self.snapshots.Push(revid, &self.data)
+}
+func (self *PkgState) Revert(revid int) {
+	self.data.Clear()
+	self.data = *self.snapshots.Revert(revid).(*data.Data)
+	return
+}
+
 func (self *PkgState) load() {
-	get := BlockGet{}
-	tri.GetObj(
-		self.tri,
-		pkgBlockName(self.num),
-		&get,
-	)
-	if get.out != nil {
-		self.Block = *get.out
-	}
 }
 
 func (self *PkgState) Update() {
-	G2pkgs_dirty := utils.Uint256s{}
-	for k := range self.Dirty_G2pkgs {
-		G2pkgs_dirty = append(G2pkgs_dirty, k)
-	}
-	sort.Sort(G2pkgs_dirty)
-
-	for _, k := range G2pkgs_dirty {
-		v := self.G2pkgs[k]
-		tri.UpdateObj(self.tri, pkgName(&k), v)
-	}
-	if len(self.Block.Pkgs) > 0 {
-		tri.UpdateObj(self.tri, pkgBlockName(self.num), &self.Block)
-	}
+	self.data.SaveState(self.tri)
 	return
 }
 
-func (self *PkgState) Snapshot(revid int) {
-	self.snapshots.Push(revid, &self.Data)
+func (self *PkgState) RecordState(putter serodb.Putter, hash *keys.Uint256) {
+	self.data.RecordState(putter, hash)
 }
-func (self *PkgState) Revert(revid int) {
-	self.clear()
-	self.Data = *self.snapshots.Revert(revid).(*Data)
+
+func (self *PkgState) GetPkgByHash(hash *keys.Uint256) (ret *localdb.ZPkg) {
+	ret = self.data.GetPkgByHash(self.tri, hash)
 	return
 }
 
-func (state *PkgState) add_pkg_dirty(pkg *ZPkg) {
-	state.G2pkgs[pkg.Pack.Id] = pkg
-	state.Dirty_G2pkgs[pkg.Pack.Id] = true
-	state.Block.Pkgs = append(state.Block.Pkgs, pkg.Pack.Id)
-}
-
-func (state *PkgState) del_pkg_dirty(id *keys.Uint256) {
-	state.G2pkgs[*id] = nil
-	state.Dirty_G2pkgs[*id] = true
-	state.Block.Pkgs = append(state.Block.Pkgs, *id)
-}
-
-func pkgName(k *keys.Uint256) (ret []byte) {
-	ret = []byte("ZState0_PkgName")
-	ret = append(ret, k[:]...)
+func (self *PkgState) GetPkgById(id *keys.Uint256) (ret *localdb.ZPkg) {
+	ret = self.data.GetPkgById(self.tri, id)
 	return
 }
 
-func (state *PkgState) getPkg(id *keys.Uint256) (pg *ZPkg) {
-	if pg = state.G2pkgs[*id]; pg != nil {
+func (state *PkgState) GetPkgHashes() (ret []keys.Uint256) {
+	return state.data.GetHashes()
+}
+
+func (self *PkgState) Force_del(hash *keys.Uint256, close *stx.PkgClose) (e error) {
+	self.rw.Lock()
+	defer self.rw.Unlock()
+	if pg := self.data.GetPkgById(self.tri, &close.Id); pg == nil || pg.Closed {
+		e = fmt.Errorf("Close Pkg is nil: %v", hexutil.Encode(close.Id[:]))
 		return
 	} else {
-		get := PkgGet{}
-		tri.GetObj(state.tri, pkgName(id), &get)
-		pg = get.Out()
+		if keys.VerifyPKr(hash, &close.Sign, &pg.Pack.PKr) {
+			pg.Closed = true
+			self.data.Add(pg)
+		} else {
+			e = fmt.Errorf("Close Pkg signed error: %v", hexutil.Encode(close.Id[:]))
+			return
+		}
 		return
 	}
 }
 
-func (self *PkgState) GetPkg(id *keys.Uint256) (pg *ZPkg) {
+func (self *PkgState) Force_add(from *keys.PKr, pack *stx.PkgCreate) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	return self.getPkg(id)
-}
 
-func (self *PkgState) Force_del(id *keys.Uint256) {
-	self.rw.Lock()
-	defer self.rw.Unlock()
-	self.del_pkg_dirty(id)
-}
-
-func (self *PkgState) Force_add(from *keys.PKr, pack *stx.PkgCreate) {
-	self.rw.Lock()
-	defer self.rw.Unlock()
-	zpkg := ZPkg{
-		self.num,
-		*from,
-		pack.Clone(),
-	}
-	self.add_pkg_dirty(&zpkg)
-}
-
-func (self *PkgState) Force_transfer(id *keys.Uint256, to *keys.PKr) {
-	self.rw.Lock()
-	defer self.rw.Unlock()
-	if pg := self.getPkg(id); pg == nil {
+	if pg := self.data.GetPkgById(self.tri, &pack.Id); pg != nil {
+		e = fmt.Errorf("Create Pkg is not nil: %v", hexutil.Encode(pack.Id[:]))
 		return
 	} else {
-		pg.Pack.PKr = *to
-		self.add_pkg_dirty(pg)
+		zpkg := localdb.ZPkg{
+			self.num,
+			*from,
+			pack.Clone(),
+			false,
+		}
+		self.data.Add(&zpkg)
+		return
+	}
+
+}
+
+func (self *PkgState) Force_transfer(hash *keys.Uint256, trans *stx.PkgTransfer) (e error) {
+	self.rw.Lock()
+	defer self.rw.Unlock()
+	if pg := self.data.GetPkgById(self.tri, &trans.Id); pg == nil || pg.Closed {
+		e = fmt.Errorf("Transfer Pkg is nil: %v", hexutil.Encode(trans.Id[:]))
+		return
+	} else {
+		if keys.VerifyPKr(hash, &trans.Sign, &pg.Pack.PKr) {
+			pg.Pack.PKr = trans.PKr
+			self.data.Add(pg)
+		} else {
+			e = fmt.Errorf("Transfer Pkg signed error: %v", hexutil.Encode(trans.Id[:]))
+			return
+		}
 		return
 	}
 }
 
 type OPkg struct {
-	Z ZPkg
+	Z localdb.ZPkg
 	O pkg.Pkg_O
 }
 
 func (self *PkgState) Close(id *keys.Uint256, pkr *keys.PKr, key *keys.Uint256) (ret OPkg, e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if pg := self.getPkg(id); pg == nil {
-		e = fmt.Errorf("Pkg is nil: %v", hexutil.Encode(id[:]))
+	if pg := self.data.GetPkgById(self.tri, id); pg == nil || pg.Closed {
+		e = fmt.Errorf("Close Pkg is nil: %v", hexutil.Encode(id[:]))
 		return
 	} else {
 		if pg.Pack.PKr != *pkr {
-			e = fmt.Errorf("Pkg Owner Check Failed: %v", hexutil.Encode(id[:]))
+			e = fmt.Errorf("Close Pkg Owner Check Failed: %v", hexutil.Encode(id[:]))
 			return
 		} else {
 			if ret.O, e = pkg.DePkg(key, &pg.Pack.Pkg); e != nil {
@@ -232,7 +151,8 @@ func (self *PkgState) Close(id *keys.Uint256, pkr *keys.PKr, key *keys.Uint256) 
 				if e = pkg.ConfirmPkg(&ret.O, &ret.Z.Pack.Pkg); e != nil {
 					return
 				} else {
-					self.del_pkg_dirty(id)
+					pg.Closed = true
+					self.data.Add(pg)
 					return
 				}
 			}
@@ -243,16 +163,16 @@ func (self *PkgState) Close(id *keys.Uint256, pkr *keys.PKr, key *keys.Uint256) 
 func (self *PkgState) Transfer(id *keys.Uint256, pkr *keys.PKr, to *keys.PKr) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if pg := self.getPkg(id); pg == nil {
-		e = fmt.Errorf("Pkg is nil: %v", hexutil.Encode(id[:]))
+	if pg := self.data.GetPkgById(self.tri, id); pg == nil || pg.Closed {
+		e = fmt.Errorf("Transfer Pkg is nil: %v", hexutil.Encode(id[:]))
 		return
 	} else {
 		if pg.Pack.PKr != *pkr {
-			e = fmt.Errorf("Pkg Owner Check Failed: %v", hexutil.Encode(id[:]))
+			e = fmt.Errorf("Transfer Pkg Owner Check Failed: %v", hexutil.Encode(id[:]))
 			return
 		} else {
 			pg.Pack.PKr = *to
-			self.add_pkg_dirty(pg)
+			self.data.Add(pg)
 			return
 		}
 	}

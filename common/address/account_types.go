@@ -14,13 +14,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package common
+package address
 
 import (
 	"bytes"
 	"database/sql/driver"
 	"fmt"
 	"math/big"
+
+	"github.com/pkg/errors"
+
+	"github.com/sero-cash/go-sero/common/addrutil"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/base58"
@@ -54,7 +58,7 @@ func BigToAccount(b *big.Int) AccountAddress { return BytesToAccount(b.Bytes()) 
 
 func Base58ToAccount(s string) AccountAddress {
 	out := [AccountAddressLength]byte{}
-	FromBase58(s, out[:])
+	addrutil.FromBase58(s, out[:])
 	return BytesToAccount(out[:])
 }
 
@@ -63,13 +67,15 @@ func Base58ToAccount(s string) AccountAddress {
 func IsBase58Account(s string) bool {
 	if base58.IsBase58Str(s) {
 		account := Base58ToAccount(s)
-		if !keys.IsPKValid(account.ToUint512()) {
+		if keys.IsPKValid(account.ToUint512()) {
+			temp := Base58ToAccount(s).Base58()
+			if temp == s {
+				return true
+			}
+		} else {
 			return false
 		}
-		temp := Base58ToAccount(s).Base58()
-		if temp == s {
-			return true
-		}
+
 		return false
 	}
 	return false
@@ -125,9 +131,31 @@ func (a AccountAddress) MarshalText() ([]byte, error) {
 	return hexutil.Bytes(a[:]).MarshalBase58Text()
 }
 
+func isZeroSuffix(base58bytes [96]byte) bool {
+	zerobytes := [32]byte{}
+	suffix := [32]byte{}
+	copy(suffix[:], base58bytes[64:])
+	return (zerobytes == suffix)
+}
+
 // UnmarshalText parses a hash in hex syntax.
 func (a *AccountAddress) UnmarshalText(input []byte) error {
-	return hexutil.UnmarshalFixedBase58Text("Data", input, a[:])
+	maxBase58Bytes := [96]byte{}
+	err := hexutil.UnmarshalFixedBase58Text(input, maxBase58Bytes[:])
+	if err != nil {
+		return err
+	}
+	if isZeroSuffix(maxBase58Bytes) {
+		copy(a[:], maxBase58Bytes[:64])
+		if keys.IsPKValid(a.ToUint512()) {
+			return nil
+		} else {
+			return errors.New(fmt.Sprintf("invalud base58 accountAddress %v", string(input)))
+		}
+
+	} else {
+		return errors.New(fmt.Sprintf("invalud base58 account address %v", string(input)))
+	}
 }
 
 // Scan implements Scanner for database/sql.

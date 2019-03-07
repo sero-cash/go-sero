@@ -37,8 +37,9 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/pborman/uuid"
-	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/crypto"
@@ -78,7 +79,7 @@ type keyStorePassphrase struct {
 	scryptP     int
 }
 
-func (ks keyStorePassphrase) GetKey(addr common.AccountAddress, filename, auth string) (*Key, error) {
+func (ks keyStorePassphrase) GetKey(addr address.AccountAddress, filename, auth string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 
 	keyjson, err := ioutil.ReadFile(filename)
@@ -98,7 +99,7 @@ func (ks keyStorePassphrase) GetKey(addr common.AccountAddress, filename, auth s
 }
 
 // StoreKey generates a key, encrypts with 'auth' and stores in the given directory
-func StoreKey(dir, auth string, scryptN, scryptP int) (common.AccountAddress, error) {
+func StoreKey(dir, auth string, scryptN, scryptP int) (address.AccountAddress, error) {
 	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP}, rand.Reader, auth)
 	return a.Address, err
 }

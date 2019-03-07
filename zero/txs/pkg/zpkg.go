@@ -10,7 +10,7 @@ import (
 type Pkg_Z struct {
 	AssetCM keys.Uint256
 	PkgCM   keys.Uint256
-	EInfo   [cpt.INFO_WIDTH]byte `json:"-"`
+	EInfo   cpt.Einfo `json:"-"`
 }
 
 func (this Pkg_Z) ToRef() (ret *Pkg_Z) {
@@ -21,6 +21,7 @@ func (this Pkg_Z) ToRef() (ret *Pkg_Z) {
 func (self *Pkg_Z) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.AssetCM[:])
+	d.Write(self.PkgCM[:])
 	d.Write(self.EInfo[:])
 	copy(ret[:], d.Sum(nil))
 	return ret

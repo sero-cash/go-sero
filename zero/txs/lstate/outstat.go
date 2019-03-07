@@ -18,51 +18,17 @@ package lstate
 
 import (
 	"sort"
-	"time"
 
-	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
+	"github.com/sero-cash/go-sero/zero/localdb"
+
+	"github.com/sero-cash/go-sero/serodb"
 
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/rlp"
-	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-type OutStat struct {
-	Time  int64
-	Value utils.U256
-	Z     bool
-}
-
-func (self *OutStat) Serial() (ret []byte, e error) {
-	if self != nil {
-		return rlp.EncodeToBytes(self)
-	} else {
-		return
-	}
-}
-
-type OutStatGet struct {
-	out *OutStat
-}
-
-func (self *OutStatGet) Unserial(v []byte) (e error) {
-	if len(v) == 0 {
-		self.out = nil
-		return
-	} else {
-		self.out = &OutStat{}
-		if err := rlp.DecodeBytes(v, self.out); err != nil {
-			e = err
-			return
-		} else {
-			return
-		}
-	}
-}
-
 type OutStatWrap struct {
-	stat OutStat
+	stat localdb.OutStat
 	out  *OutState
 }
 
@@ -98,34 +64,32 @@ func outStatName(root *keys.Uint256) (ret []byte) {
 	return
 }
 
-func UpdateOutStat(st *txstate.State, out *OutState) {
-	os := OutStat{}
+func UpdateOutStat(db serodb.Database, out *OutState) {
+	os := localdb.OutStat{}
 	os.Z = out.Z
 	if out.Out_O.Asset.Tkn != nil {
 		os.Value = out.Out_O.Asset.Tkn.Value
 	} else {
 		os.Value = utils.U256_0
 	}
-	os.Time = time.Now().UnixNano()
-	tri.UpdateGlobalObj(st.Tri(), outStatName(&out.Root), &os)
+	localdb.UpdateOutStat(db, &out.Root, &os)
 }
 
-func SortOutStats(st *txstate.State, outs []*OutState) {
+func SortOutStats(db serodb.Database, outs []*OutState) {
 	wraps := OutStats{}
 	for _, out := range outs {
 		out_root := out.Root
-		get := OutStatGet{}
-		tri.GetGlobalObj(st.Tri(), outStatName(&out_root), &get)
-		if get.out != nil {
+		get := localdb.GetOutStat(db, &out_root)
+		if get != nil {
 			wraps = append(
 				wraps,
 				OutStatWrap{
-					*get.out,
+					*get,
 					out,
 				},
 			)
 		} else {
-			os := OutStat{}
+			os := localdb.OutStat{}
 			os.Z = out.Z
 			if out.Out_O.Asset.Tkn != nil {
 				os.Value = out.Out_O.Asset.Tkn.Value

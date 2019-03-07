@@ -16,7 +16,11 @@ func WatchPkg(id *keys.Uint256, key *keys.Uint256) (ret pkg.Pkg_O, pkr keys.PKr,
 		e = errors.New("Watch Pkg but lstate is nil")
 		return
 	}
-	pg := st1.State.Pkgs.GetPkg(id)
+	pg := st1.State.Pkgs.GetPkgById(id)
+	if pg == nil || pg.Closed {
+		e = errors.New("Watch Pkg but has been closed")
+		return
+	}
 	pkr = pg.Pack.PKr
 	ret, e = pkg.DePkg(key, &pg.Pack.Pkg)
 	return

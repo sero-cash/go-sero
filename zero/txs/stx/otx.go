@@ -137,7 +137,6 @@ func (self *In_S) ToHash_for_sign() (ret keys.Uint256) {
 }
 
 type Desc_O struct {
-	//Ins  []In_O
 	Ins  []In_S
 	Outs []Out_O
 }

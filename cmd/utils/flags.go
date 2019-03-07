@@ -28,6 +28,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-sero/zero/txs/generate"
 	"github.com/sero-cash/go-sero/zero/txs/verify"
 
@@ -783,8 +785,8 @@ func makeDatabaseHandles() int {
 // a key index in the key store to an internal account representation.
 func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
 	// If the specified account is a valid address, return it
-	if common.IsBase58Account(account) {
-		return accounts.Account{Address: common.Base58ToAccount(account)}, nil
+	if address.IsBase58Account(account) {
+		return accounts.Account{Address: address.Base58ToAccount(account)}, nil
 	}
 	// Otherwise try to interpret the account as a keystore index
 	index, err := strconv.Atoi(account)

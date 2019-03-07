@@ -5,6 +5,10 @@ import (
 	"runtime/debug"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-sero/zero/localdb"
+
+	"github.com/sero-cash/go-sero/serodb"
+
 	"github.com/pkg/errors"
 
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -28,8 +32,8 @@ type BlockChain interface {
 	GetHeader(hash *common.Hash) *types.Header
 	NewState(hash *common.Hash) *zstate.ZState
 	GetTks() []keys.Uint512
-
 	CashChose() *atomic.Value
+	GetDB() serodb.Database
 }
 
 func state1_file_name(num uint64, hash *common.Hash) (ret string) {
@@ -38,12 +42,18 @@ func state1_file_name(num uint64, hash *common.Hash) (ret string) {
 }
 
 var current_state1 *State
+var current_bc BlockChain
 
 func CurrentState1() *State {
 	return current_state1
 }
 
+func BC() BlockChain {
+	return current_bc
+}
+
 func Run(bc BlockChain) {
+	current_bc = bc
 	go run(bc)
 	for current_state1 != nil {
 		time.Sleep(time.Second * 1)
@@ -160,7 +170,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 
 		t := utils.TR_enter(fmt.Sprintf("PARSE_BLOCK_CHAIN----NewState(num=%v)", current_num))
 
-		block := stz.GetBlock(current_num, current_hash.HashToUint256())
+		block := localdb.GetBlock(bc.GetDB(), current_num, current_hash.HashToUint256())
 
 		if block == nil {
 			temp_state := bc.NewState(&current_hash)
@@ -169,10 +179,10 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			} else {
 				log.Debug("STATE1_PARSE GO BACK TO STATE: ", "num", current_num, "hash", current_hash)
 			}
-			block = &zstate.Block{}
-			block.Pkgs = temp_state.Pkgs.Block.Pkgs
-			block.Dels = temp_state.State.Block.Dels
-			block.Roots = temp_state.State.Block.Roots
+			block = &localdb.Block{}
+			block.Pkgs = temp_state.Pkgs.GetPkgHashes()
+			block.Roots = temp_state.State.GetBlockRoots()
+			block.Dels = temp_state.State.GetBlockDels()
 		}
 
 		//state := bc.NewState(&current_hash)
@@ -186,7 +196,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 			st1 = &s1
 		}
 
-		commitment_len := len(st1.State.State.Block.Roots)
+		commitment_len := len(st1.State.State.GetBlockRoots())
 		t.Renter(fmt.Sprintf("PARSE_BLOCK_CHAIN----UpdateWiteness(count=%d)", commitment_len))
 		st1.UpdateWitness(tks, current_num, block)
 		current_state1 = st1

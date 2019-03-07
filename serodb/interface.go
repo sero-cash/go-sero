@@ -30,12 +30,16 @@ type Deleter interface {
 	Delete(key []byte) error
 }
 
+type Getter interface {
+	Get(key []byte) ([]byte, error)
+	Has(key []byte) (bool, error)
+}
+
 // Database wraps all database operations. All methods are safe for concurrent use.
 type Database interface {
 	Putter
 	Deleter
-	Get(key []byte) ([]byte, error)
-	Has(key []byte) (bool, error)
+	Getter
 	Close()
 	NewBatch() Batch
 }

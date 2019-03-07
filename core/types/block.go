@@ -19,13 +19,14 @@ package types
 
 import (
 	"encoding/binary"
-	"github.com/sero-cash/go-czero-import/keys"
 	"io"
 	"math/big"
 	"sort"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -108,6 +109,7 @@ func (h *Header) Valid() bool {
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
+	//test
 	return rlpHash(h)
 }
 

@@ -103,6 +103,7 @@ func (self *PkgCreate) ToHash() (ret keys.Uint256) {
 	d.Write(self.Id[:])
 	d.Write(self.PKr[:])
 	d.Write(self.Pkg.ToHash().NewRef()[:])
+	d.Write(self.Proof.ToHash().NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return ret
 }
@@ -120,6 +121,7 @@ func (self *PkgCreate) ToHash_for_sign() (ret keys.Uint256) {
 	d.Write(self.Id[:])
 	d.Write(self.PKr[:])
 	d.Write(self.Pkg.ToHash().NewRef()[:])
+	d.Write(self.Proof.ToHash().NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return ret
 }

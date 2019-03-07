@@ -382,6 +382,9 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), stateDB, header, gasReward)
+
+	stateDB.GetZState().PreGenerateRoot(header, chain)
+
 	header.Root = stateDB.IntermediateRoot(true)
 
 	// Header seems complete, assemble into a block and return

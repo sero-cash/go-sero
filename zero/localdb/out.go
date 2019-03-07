@@ -1,20 +1,4 @@
-// copyright 2018 The sero.cash Authors
-// This file is part of the go-sero library.
-//
-// The go-sero library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-sero library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
-
-package txstate
+package localdb
 
 import (
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -96,16 +80,16 @@ func (self *OutState) Serial() (ret []byte, e error) {
 }
 
 type OutState0Get struct {
-	out *OutState
+	Out *OutState
 }
 
 func (self *OutState0Get) Unserial(v []byte) (e error) {
 	if len(v) == 0 {
-		self.out = nil
+		self.Out = nil
 		return
 	} else {
-		self.out = &OutState{}
-		if err := rlp.DecodeBytes(v, &self.out); err != nil {
+		self.Out = &OutState{}
+		if err := rlp.DecodeBytes(v, &self.Out); err != nil {
 			e = err
 			return
 		} else {
@@ -113,3 +97,24 @@ func (self *OutState0Get) Unserial(v []byte) (e error) {
 		}
 	}
 }
+
+func OutKey(root *keys.Uint256) []byte {
+	key := []byte("$SERO_LOCALDB_OUTSTATE$")
+	key = append(key, root[:]...)
+	return key
+}
+
+/*
+func PutOut(db serodb.Putter, root *keys.Uint256, out *OutState) {
+	outkey := OutKey(root)
+	tri.UpdateDBObj(db, outkey, out)
+}
+
+func GetOut(db serodb.Getter, root *keys.Uint256) (ret *OutState) {
+	outkey := OutKey(root)
+	outget := OutState0Get{}
+	tri.GetDBObj(db, outkey, &outget)
+	ret = outget.Out
+	return
+}
+*/

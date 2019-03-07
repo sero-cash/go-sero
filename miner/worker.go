@@ -23,6 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
@@ -111,7 +113,7 @@ type worker struct {
 	proc    core.Validator
 	chainDb serodb.Database
 
-	coinbase common.AccountAddress
+	coinbase address.AccountAddress
 	extra    []byte
 
 	currentMu sync.Mutex
@@ -128,7 +130,7 @@ type worker struct {
 	atWork int32
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.AccountAddress, sero Backend, mux *event.TypeMux) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase address.AccountAddress, sero Backend, mux *event.TypeMux) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
@@ -158,7 +160,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	return worker
 }
 
-func (self *worker) setSerobase(addr common.AccountAddress) {
+func (self *worker) setSerobase(addr address.AccountAddress) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.coinbase = addr

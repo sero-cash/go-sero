@@ -27,6 +27,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/sero-cash/go-sero/common/addrutil"
+
 	"github.com/sero-cash/go-sero/crypto/sha3"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -245,7 +247,7 @@ func BigToContractAddress(b *big.Int) ContractAddress { return BytesToContractAd
 
 func Base58ToAddress(s string) Address {
 	out := [AddressLength]byte{}
-	FromBase58(s, out[:])
+	addrutil.FromBase58(s, out[:])
 	return BytesToAddress(out[:])
 }
 
@@ -253,11 +255,17 @@ func Base58ToAddress(s string) Address {
 // Ethereum Data or not.
 func IsBase58Address(s string) bool {
 	if base58.IsBase58Str(s) {
-		temp := Base58ToAddress(s).Base58()
-		if temp == s {
-			return true
+		address := Base58ToAddress(s)
+		if keys.PKrValid(address.ToPKr()) {
+			temp := Base58ToAddress(s).Base58()
+			if temp == s {
+				return true
+			} else {
+				return false
+			}
+		} else {
+			return false
 		}
-		return false
 	}
 	return false
 
@@ -289,7 +297,15 @@ func (a Address) Base58() string {
 
 // String implements fmt.Stringer.
 func (a Address) String() string {
-	return a.Base58()
+	zerobytes := [32]byte{}
+	var suffix [32]byte
+	copy(suffix[:], a[64:])
+	if suffix == zerobytes {
+		return base58.EncodeToString(a[:64])
+	} else {
+		return a.Base58()
+	}
+
 }
 
 // Format implements fmt.Formatter, forcing the byte slice to be formatted as is,
@@ -315,7 +331,15 @@ func (a Address) MarshalText() ([]byte, error) {
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *Address) UnmarshalText(input []byte) error {
-	return hexutil.UnmarshalFixedBase58Text("Data", input, a[:])
+	err := hexutil.UnmarshalFixedBase58Text(input, a[:])
+	if err != nil {
+		return err
+	}
+	_, err = IsPkr(a)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // UnmarshalJSON parses a hash in hex syntax.

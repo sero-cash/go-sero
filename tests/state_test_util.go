@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -192,8 +194,8 @@ func (t *StateTest) genesis(config *params.ChainConfig) *core.Genesis {
 }
 
 func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
-	// Derive sender from private key if present.
-	var from common.AccountAddress
+	// Derive from private key if present.
+	var from address.AccountAddress
 	if len(tx.PrivateKey) > 0 {
 		key, err := crypto.ToECDSA(tx.PrivateKey)
 		if err != nil {
@@ -204,7 +206,7 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 	// Parse recipient if present.
 	var to *common.Address
 	if tx.To != "" {
-		toAccount := new(common.AccountAddress)
+		toAccount := new(address.AccountAddress)
 		if err := toAccount.UnmarshalText([]byte(tx.To)); err != nil {
 			return nil, fmt.Errorf("invalid to address: %v", err)
 		}

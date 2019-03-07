@@ -209,7 +209,7 @@ func Gen_lstate(st *lstate.State, seed *keys.Uint256, t *tx.T) (s stx.T, e error
 			return
 		}
 		for _, used_out := range ctx.p.uouts {
-			lstate.UpdateOutStat(&st.State.State, &used_out)
+			lstate.UpdateOutStat(lstate.BC().GetDB(), &used_out)
 		}
 		s = ctx.s
 		return

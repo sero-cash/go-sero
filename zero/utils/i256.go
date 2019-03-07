@@ -17,6 +17,12 @@ func NewI256(i int64) (ret I256) {
 	return
 }
 
+func (self I256) DeepCopy() interface{} {
+	bi := big.Int(self)
+	dc := I256(*big.NewInt(0).Set(&bi))
+	return dc
+}
+
 func (x *I256) GobEncode() ([]byte, error) {
 	b := big.Int(*x)
 	return b.GobEncode()
