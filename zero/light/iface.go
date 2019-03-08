@@ -37,7 +37,7 @@ type TxStatusFlag int
 
 type TxStatus struct {
 	Flag TxStatusFlag
-	info string
+	Info string
 }
 
 const (
