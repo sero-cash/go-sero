@@ -75,7 +75,7 @@ func (self OutStats) Less(i, j int) bool {
 	left := self[i]
 	right := self[j]
 	if left.stat.Time != right.stat.Time {
-		return left.stat.Time > right.stat.Time
+		return left.stat.Time < right.stat.Time
 	}
 	if left.stat.Value.Cmp(&right.stat.Value) != 0 {
 		return left.stat.Value.Cmp(&right.stat.Value) < 0
