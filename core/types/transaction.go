@@ -20,6 +20,8 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-sero/zero/light"
+
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -80,7 +82,19 @@ func NewTransaction(gasPrice *big.Int, gasLimit uint64, data []byte) *Transactio
 	return tx
 }
 
+func Ehash(price big.Int, gasLimit uint64, payload []byte) keys.Uint256 {
+	h := rlpHash([]interface{}{
+		price,
+		gasLimit,
+		payload,
+	})
+	r := keys.Uint256{}
+	copy(r[:], h[:])
+	return r
+}
+
 func (tx Transaction) Ehash() keys.Uint256 {
+
 	h := rlpHash([]interface{}{
 		&tx.data.Price,
 		tx.data.GasLimit,
@@ -107,6 +121,17 @@ func NewTxt(fromRnd *keys.Uint256, ehash keys.Uint256, fee assets.Token, out *zt
 		PkgClose:    pkgClose,
 	}
 	return txt
+}
+
+func NewTxWithGTx(gtx light.GTx) *Transaction {
+	d := txdata{
+		Price:    &gtx.GasPrice,
+		GasLimit: gtx.Gas,
+		Stxt:     &gtx.Tx,
+	}
+	tx := &Transaction{data: d}
+
+	return tx
 }
 
 func NewTxtOut(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *common.Hash, memo string, isZ bool) *ztx.Out {

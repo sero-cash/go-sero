@@ -20,6 +20,9 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/light"
+
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/miner"
 
@@ -39,35 +42,35 @@ import (
 	"github.com/sero-cash/go-sero/serodb"
 )
 
-// EthAPIBackend implements ethapi.Backend for full nodes
-type EthAPIBackend struct {
+// SeroAPIBackend implements ethapi.Backend for full nodes
+type SeroAPIBackend struct {
 	sero *Sero
 	gpo  *gasprice.Oracle
 }
 
 // ChainConfig returns the active chain configuration.
-func (b *EthAPIBackend) ChainConfig() *params.ChainConfig {
+func (b *SeroAPIBackend) ChainConfig() *params.ChainConfig {
 	return b.sero.chainConfig
 }
 
-func (b *EthAPIBackend) CurrentBlock() *types.Block {
+func (b *SeroAPIBackend) CurrentBlock() *types.Block {
 	return b.sero.blockchain.CurrentBlock()
 }
 
-func (b *EthAPIBackend) GetEngin() consensus.Engine {
+func (b *SeroAPIBackend) GetEngin() consensus.Engine {
 	return b.sero.engine
 }
 
-func (b *EthAPIBackend) GetMiner() *miner.Miner {
+func (b *SeroAPIBackend) GetMiner() *miner.Miner {
 	return b.sero.miner
 }
 
-func (b *EthAPIBackend) SetHead(number uint64) {
+func (b *SeroAPIBackend) SetHead(number uint64) {
 	b.sero.protocolManager.downloader.Cancel()
 	b.sero.blockchain.SetHead(number, core.DelFn)
 }
 
-func (b *EthAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
+func (b *SeroAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
 		block := b.sero.miner.PendingBlock()
@@ -80,11 +83,11 @@ func (b *EthAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNum
 	return b.sero.blockchain.GetHeaderByNumber(uint64(blockNr)), nil
 }
 
-func (b *EthAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+func (b *SeroAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
 	return b.sero.blockchain.GetHeaderByHash(hash), nil
 }
 
-func (b *EthAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
+func (b *SeroAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
 		block := b.sero.miner.PendingBlock()
@@ -97,7 +100,7 @@ func (b *EthAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumb
 	return b.sero.blockchain.GetBlockByNumber(uint64(blockNr)), nil
 }
 
-func (b *EthAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
+func (b *SeroAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
 		block, state := b.sero.miner.Pending()
@@ -112,18 +115,18 @@ func (b *EthAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.
 	return stateDb, header, err
 }
 
-func (b *EthAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.Block, error) {
+func (b *SeroAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.Block, error) {
 	return b.sero.blockchain.GetBlockByHash(hash), nil
 }
 
-func (b *EthAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
+func (b *SeroAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
 	if number := rawdb.ReadHeaderNumber(b.sero.chainDb, hash); number != nil {
 		return rawdb.ReadReceipts(b.sero.chainDb, hash, *number), nil
 	}
 	return nil, nil
 }
 
-func (b *EthAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
+func (b *SeroAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
 	number := rawdb.ReadHeaderNumber(b.sero.chainDb, hash)
 	if number == nil {
 		return nil, nil
@@ -139,42 +142,42 @@ func (b *EthAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*typ
 	return logs, nil
 }
 
-func (b *EthAPIBackend) GetTd(blockHash common.Hash) *big.Int {
+func (b *SeroAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 	return b.sero.blockchain.GetTdByHash(blockHash)
 }
 
-func (b *EthAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
+func (b *SeroAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
 	vmError := func() error { return nil }
 
 	context := core.NewEVMContext(msg, header, b.sero.BlockChain(), nil)
 	return vm.NewEVM(context, state, b.sero.chainConfig, vmCfg), vmError, nil
 }
 
-func (b *EthAPIBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
+func (b *SeroAPIBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
 	return b.sero.BlockChain().SubscribeRemovedLogsEvent(ch)
 }
 
-func (b *EthAPIBackend) SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription {
+func (b *SeroAPIBackend) SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription {
 	return b.sero.BlockChain().SubscribeChainEvent(ch)
 }
 
-func (b *EthAPIBackend) SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription {
+func (b *SeroAPIBackend) SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription {
 	return b.sero.BlockChain().SubscribeChainHeadEvent(ch)
 }
 
-func (b *EthAPIBackend) SubscribeChainSideEvent(ch chan<- core.ChainSideEvent) event.Subscription {
+func (b *SeroAPIBackend) SubscribeChainSideEvent(ch chan<- core.ChainSideEvent) event.Subscription {
 	return b.sero.BlockChain().SubscribeChainSideEvent(ch)
 }
 
-func (b *EthAPIBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
+func (b *SeroAPIBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
 	return b.sero.BlockChain().SubscribeLogsEvent(ch)
 }
 
-func (b *EthAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
+func (b *SeroAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
 	return b.sero.txPool.AddLocal(signedTx)
 }
 
-func (b *EthAPIBackend) GetPoolTransactions() (types.Transactions, error) {
+func (b *SeroAPIBackend) GetPoolTransactions() (types.Transactions, error) {
 	pending, err := b.sero.txPool.Pending()
 	if err != nil {
 		return nil, err
@@ -183,57 +186,70 @@ func (b *EthAPIBackend) GetPoolTransactions() (types.Transactions, error) {
 	return pending, nil
 }
 
-func (b *EthAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction {
+func (b *SeroAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction {
 	return b.sero.txPool.Get(hash)
 }
 
-//func (b *EthAPIBackend) GetPoolNonce(ctx context.Context, addr common.Data) (uint64, error) {
+//func (b *SeroAPIBackend) GetPoolNonce(ctx context.Context, addr common.Data) (uint64, error) {
 //	return b.sero.txPool.State().GetNonce(addr), nil
 //}
 
-func (b *EthAPIBackend) Stats() (pending int, queued int) {
+func (b *SeroAPIBackend) Stats() (pending int, queued int) {
 	return b.sero.txPool.Stats()
 }
 
-func (b *EthAPIBackend) TxPoolContent() (types.Transactions, types.Transactions) {
+func (b *SeroAPIBackend) TxPoolContent() (types.Transactions, types.Transactions) {
 	return b.sero.TxPool().Content()
 }
 
-func (b *EthAPIBackend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
+func (b *SeroAPIBackend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
 	return b.sero.TxPool().SubscribeNewTxsEvent(ch)
 }
 
-func (b *EthAPIBackend) Downloader() *downloader.Downloader {
+func (b *SeroAPIBackend) Downloader() *downloader.Downloader {
 	return b.sero.Downloader()
 }
 
-func (b *EthAPIBackend) ProtocolVersion() int {
+func (b *SeroAPIBackend) ProtocolVersion() int {
 	return b.sero.EthVersion()
 }
 
-func (b *EthAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
+func (b *SeroAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
 }
 
-func (b *EthAPIBackend) ChainDb() serodb.Database {
+func (b *SeroAPIBackend) ChainDb() serodb.Database {
 	return b.sero.ChainDb()
 }
 
-func (b *EthAPIBackend) EventMux() *event.TypeMux {
+func (b *SeroAPIBackend) EventMux() *event.TypeMux {
 	return b.sero.EventMux()
 }
 
-func (b *EthAPIBackend) AccountManager() *accounts.Manager {
+func (b *SeroAPIBackend) AccountManager() *accounts.Manager {
 	return b.sero.AccountManager()
 }
 
-func (b *EthAPIBackend) BloomStatus() (uint64, uint64) {
+func (b *SeroAPIBackend) BloomStatus() (uint64, uint64) {
 	sections, _, _ := b.sero.bloomIndexer.Sections()
 	return params.BloomBitsBlocks, sections
 }
 
-func (b *EthAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
+func (b *SeroAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
 	for i := 0; i < bloomFilterThreads; i++ {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.sero.bloomRequests)
 	}
+}
+
+func (b *SeroAPIBackend) GetBlocksInfo(start uint64, count uint64) ([]light.Block, error) {
+	return nil, nil
+
+}
+func (b *SeroAPIBackend) GetAnchor(roots []keys.Uint256) ([]light.Witness, error) {
+	return nil, nil
+
+}
+func (b *SeroAPIBackend) CommitTx(tx *light.GTx) error {
+	signedTx := types.NewTxWithGTx(*tx)
+	return b.sero.txPool.AddLocal(signedTx)
 }

@@ -1,6 +1,8 @@
 package light
 
 import (
+	"math/big"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -19,12 +21,16 @@ type GOut struct {
 }
 
 type GTx struct {
-	Tx stx.T
+	Gas      uint64
+	GasPrice big.Int
+	Tx       stx.T
 }
 
 type GenTxParam struct {
-	Ins  []GIn
-	Outs []GOut
+	Gas      uint64
+	GasPrice big.Int
+	Ins      []GIn
+	Outs     []GOut
 }
 
 type SLI interface {
@@ -34,7 +40,7 @@ type SLI interface {
 }
 
 type SRI interface {
-	GetBlocksInfo(start int, count int) ([]Block, error)
+	GetBlocksInfo(start uint64, count uint64) ([]Block, error)
 	GetAnchor(roots []keys.Uint256) ([]Witness, error)
 	CommitTx(tx *GTx) error
 }

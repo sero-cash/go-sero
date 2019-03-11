@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/light"
+
 	"github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
 
@@ -721,6 +723,22 @@ func (s *PublicBlockChainAPI) WatchPkg(ctx context.Context, id keys.Uint256, key
 	pkg["asset"] = asset
 
 	return pkg, nil
+}
+
+func (s *PublicBlockChainAPI) GetBlockInfo(ctx context.Context, start hexutil.Uint64, count hexutil.Uint64) ([]light.Block, error) {
+	block, err := s.b.GetBlocksInfo(uint64(start), uint64(count))
+	if err != nil {
+		return nil, err
+	}
+	return block, err
+}
+
+func (s *PublicBlockChainAPI) GetAnchor(ctx context.Context, roots []keys.Uint256) ([]light.Witness, error) {
+	witness, err := s.b.GetAnchor(roots)
+	if err != nil {
+		return nil, err
+	}
+	return witness, err
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
@@ -1585,6 +1603,29 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 		return common.Hash{}, err
 	}
 	return submitTransaction(ctx, s.b, encrypted, args.To)
+}
+
+type CommitTxArgs struct {
+	Gas      *hexutil.Uint64 `json:"gas"`
+	GasPrice *hexutil.Big    `json:"gasPrice"`
+	Tx       stx.T           `json:"tx"`
+}
+
+func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args CommitTxArgs) error {
+
+	if args.Gas == nil {
+		return errors.New("gas can not be nil")
+	}
+	if args.GasPrice == nil {
+		return errors.New("gasprice can not be nil")
+	}
+
+	gtx := &light.GTx{
+		Gas:      uint64(*args.Gas),
+		GasPrice: (big.Int)(*args.GasPrice),
+		Tx:       args.Tx,
+	}
+	return s.b.CommitTx(gtx)
 }
 
 func (s *PublicTransactionPoolAPI) ReSendTransaction(ctx context.Context, txhash common.Hash) (common.Hash, error) {

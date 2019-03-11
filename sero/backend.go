@@ -84,7 +84,7 @@ type Sero struct {
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *core.ChainIndexer             // Bloom indexer operating during block imports
 
-	APIBackend *EthAPIBackend
+	APIBackend *SeroAPIBackend
 
 	miner    *miner.Miner
 	gasPrice *big.Int
@@ -172,7 +172,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	sero.miner = miner.New(sero, sero.chainConfig, sero.EventMux(), sero.engine)
 	sero.miner.SetExtra(makeExtraData(config.ExtraData))
 
-	sero.APIBackend = &EthAPIBackend{sero, nil}
+	sero.APIBackend = &SeroAPIBackend{sero, nil}
 	gpoParams := config.GPO
 	if gpoParams.Default == nil {
 		gpoParams.Default = config.GasPrice
