@@ -33,22 +33,8 @@ type SLI interface {
 	GenTx(param *GenTxParam) (GTx, error)
 }
 
-type TxStatusFlag int
-
-type TxStatus struct {
-	Flag TxStatusFlag
-	Info string
-}
-
-const (
-	TX_PROC = TxStatusFlag(0)
-	TX_SUCC = TxStatusFlag(1)
-	TX_FAIL = TxStatusFlag(2)
-)
-
 type SRI interface {
 	GetBlocksInfo(start int, count int) ([]Block, error)
 	GetAnchor(roots []keys.Uint256) ([]Witness, error)
 	CommitTx(tx *GTx) error
-	GetTxStatus(tx []keys.Uint256) ([]TxStatus, error)
 }
