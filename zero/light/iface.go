@@ -33,7 +33,7 @@ type GenTxParam struct {
 	Outs     []GOut
 }
 
-type SLI interface {
+type ISLI interface {
 	CreateKr() Kr
 	DecOuts(outs []Out, skr *keys.PKr) ([]DOut, error)
 	GenTx(param *GenTxParam) (GTx, error)

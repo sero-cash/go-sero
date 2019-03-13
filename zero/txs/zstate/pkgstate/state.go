@@ -5,6 +5,8 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/sero-cash/go-sero/zero/localdb"
+
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-sero/rlp"
@@ -18,40 +20,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 )
-
-type ZPkg struct {
-	High uint64
-	From keys.PKr
-	Pack stx.PkgCreate
-}
-
-func (self *ZPkg) Serial() (ret []byte, e error) {
-	return rlp.EncodeToBytes(self)
-}
-
-type PkgGet struct {
-	out *ZPkg
-}
-
-func (self *PkgGet) Out() *ZPkg {
-	return self.out
-}
-
-func (self *PkgGet) Unserial(v []byte) (e error) {
-	if len(v) < 2 {
-		self.out = nil
-		return
-	} else {
-		self.out = &ZPkg{}
-		if err := rlp.DecodeBytes(v, &self.out); err != nil {
-			e = err
-			self.out = nil
-			return
-		} else {
-			return
-		}
-	}
-}
 
 type Block struct {
 	Pkgs []keys.Uint256
@@ -145,7 +113,7 @@ func (self *PkgState) Revert(revid int) {
 	return
 }
 
-func (state *PkgState) add_pkg_dirty(pkg *ZPkg) {
+func (state *PkgState) add_pkg_dirty(pkg *localdb.ZPkg) {
 	state.G2pkgs[pkg.Pack.Id] = pkg
 	state.Dirty_G2pkgs[pkg.Pack.Id] = true
 	state.Block.Pkgs = append(state.Block.Pkgs, pkg.Pack.Id)
@@ -163,18 +131,18 @@ func pkgName(k *keys.Uint256) (ret []byte) {
 	return
 }
 
-func (state *PkgState) getPkg(id *keys.Uint256) (pg *ZPkg) {
+func (state *PkgState) getPkg(id *keys.Uint256) (pg *localdb.ZPkg) {
 	if pg = state.G2pkgs[*id]; pg != nil {
 		return
 	} else {
-		get := PkgGet{}
+		get := localdb.PkgGet{}
 		tri.GetObj(state.tri, pkgName(id), &get)
-		pg = get.Out()
+		pg = get.Out
 		return
 	}
 }
 
-func (self *PkgState) GetPkg(id *keys.Uint256) (pg *ZPkg) {
+func (self *PkgState) GetPkg(id *keys.Uint256) (pg *localdb.ZPkg) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	return self.getPkg(id)
@@ -189,7 +157,7 @@ func (self *PkgState) Force_del(id *keys.Uint256) {
 func (self *PkgState) Force_add(from *keys.PKr, pack *stx.PkgCreate) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	zpkg := ZPkg{
+	zpkg := localdb.ZPkg{
 		self.num,
 		*from,
 		pack.Clone(),
@@ -210,7 +178,7 @@ func (self *PkgState) Force_transfer(id *keys.Uint256, to *keys.PKr) {
 }
 
 type OPkg struct {
-	Z ZPkg
+	Z localdb.ZPkg
 	O pkg.Pkg_O
 }
 

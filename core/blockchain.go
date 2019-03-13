@@ -20,13 +20,16 @@ package core
 import (
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/txs/lstate"
 	"io"
 	"math/big"
 	mrand "math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/sero-cash/go-sero/zero/light"
+
+	"github.com/sero-cash/go-sero/zero/txs/lstate"
 
 	"github.com/sero-cash/go-sero/zero/txs/verify"
 
@@ -148,7 +151,7 @@ type BlockChain struct {
 
 	accountManager *accounts.Manager
 
-	cashChose     atomic.Value
+	cashChose atomic.Value
 
 	mineMode bool
 }
@@ -211,6 +214,7 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 				bc: bc,
 			},
 		)
+		light.Light_inst.SetBC(&State1BlockChain{bc: bc})
 	}
 
 	return bc, nil
@@ -271,6 +275,14 @@ func (bc *BlockChain) getProcInterrupt() bool {
 
 type State1BlockChain struct {
 	bc *BlockChain
+}
+
+func (self *State1BlockChain) GetBlockByNumber(num uint64) *types.Block {
+	return self.bc.GetBlockByNumber(num)
+}
+
+func (self *State1BlockChain) GetDB() serodb.Database {
+	return self.bc.db
 }
 
 func (self *State1BlockChain) CashChose() *atomic.Value {
@@ -992,7 +1004,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Write other block data using a batch.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
-	state.GetZState().RecordBlock(block.Header().Hash().HashToUint256())
+	state.GetZState().RecordBlock(batch, block.Header().Hash().HashToUint256())
 	//rawdb.WriteHash(bc.db, block.Number().Uint64(), block.Hash())
 
 	root, err := state.Commit(true)
@@ -1028,7 +1040,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			chosen := header.Number.Uint64()
 
 			// If we exceeded out time allowance, flush an entire trie to disk
-			if bc.gcproc > bc.cacheConfig.TrieTimeLimit || header.Number.Uint64()%10000 == 0{
+			if bc.gcproc > bc.cacheConfig.TrieTimeLimit || header.Number.Uint64()%10000 == 0 {
 				// If we're exceeding limits but haven't reached a large enough memory gap,
 				// warn the user that the system is becoming unstable.
 				if chosen < lastWrite+triesInMemory && bc.gcproc >= 2*bc.cacheConfig.TrieTimeLimit {

@@ -8,8 +8,8 @@ import (
 )
 
 type Kr struct {
-	PKr keys.PKr
 	SKr keys.PKr
+	PKr keys.PKr
 }
 
 type Out struct {

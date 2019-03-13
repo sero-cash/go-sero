@@ -26,6 +26,7 @@ import (
 
 	"github.com/sero-cash/go-sero/log"
 
+	"github.com/sero-cash/go-sero/zero/localdb"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -35,7 +36,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
 
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
-	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
 
 	"github.com/sero-cash/go-czero-import/cpt"
 
@@ -182,7 +182,7 @@ func (state *State) GetOut(root *keys.Uint256) (src *OutState, e error) {
 	}
 }
 
-func (self *State) addOut(tks []keys.Uint512, os *txstate.OutState, root *keys.Uint256, num uint64) {
+func (self *State) addOut(tks []keys.Uint512, os *localdb.OutState, root *keys.Uint256, num uint64) {
 
 	t := utils.TR_enter(fmt.Sprintf("ADD_OUT num=%v", num))
 
@@ -192,7 +192,7 @@ func (self *State) addOut(tks []keys.Uint512, os *txstate.OutState, root *keys.U
 	return
 }
 
-func (state *State) addWouts(tks []keys.Uint512, os *txstate.OutState, root *keys.Uint256, num uint64) {
+func (state *State) addWouts(tks []keys.Uint512, os *localdb.OutState, root *keys.Uint256, num uint64) {
 	for _, tk := range tks {
 		if os.IsO() {
 			out_o := os.Out_O
@@ -328,7 +328,7 @@ func (state *State) del(del *keys.Uint256) (e error) {
 	return
 }
 
-func (state *State) addPkg(tks []keys.Uint512, id *keys.Uint256, pg *pkgstate.ZPkg) {
+func (state *State) addPkg(tks []keys.Uint512, id *keys.Uint256, pg *localdb.ZPkg) {
 	state.mu.Lock()
 	defer state.mu.Unlock()
 
@@ -403,7 +403,7 @@ func (state *State) GetPkgs(tk *keys.Uint512, is_from bool) (ret []*Pkg) {
 	return
 }
 
-func (state *State) UpdateWitness(tks []keys.Uint512, num uint64, block *zstate.Block) {
+func (state *State) UpdateWitness(tks []keys.Uint512, num uint64, block *localdb.Block) {
 	for _, del := range block.Dels {
 		state.del(&del)
 	}
@@ -458,6 +458,6 @@ func (self *State) GetOuts(tk *keys.Uint512) (outs []*OutState, e error) {
 			}
 		}
 	}
-	SortOutStats(&self.State.State, outs)
+	SortOutStats(BC().GetDB(), outs)
 	return
 }

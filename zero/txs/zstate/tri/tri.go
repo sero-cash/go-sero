@@ -18,6 +18,7 @@ package tri
 
 import (
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 type Tri interface {
@@ -98,8 +99,25 @@ func GetObj(tri Tri, key []byte, obj unserial) {
 	return
 }
 
-func GetGlobalObj(tri Tri, key []byte, obj unserial) {
+/*func GetGlobalObj(tri Tri, key []byte, obj unserial) {
 	if v, err := tri.TryGlobalGet(key); err != nil {
+		if err := obj.Unserial(nil); err != nil {
+			panic(err)
+			return
+		} else {
+		}
+	} else {
+		if err := obj.Unserial(v); err != nil {
+			panic(err)
+			return
+		} else {
+		}
+	}
+	return
+}*/
+
+func GetDBObj(db serodb.Database, key []byte, obj unserial) {
+	if v, err := db.Get(key); err != nil {
 		if err := obj.Unserial(nil); err != nil {
 			panic(err)
 			return
@@ -133,12 +151,26 @@ func UpdateObj(tri Tri, key []byte, obj serial) {
 	return
 }
 
-func UpdateGlobalObj(tri Tri, key []byte, obj serial) {
+/*func UpdateGlobalObj(tri Tri, key []byte, obj serial) {
 	if s, err := obj.Serial(); err != nil {
 		panic(err)
 		return
 	} else {
 		if err := tri.TryGlobalPut(key, s); err != nil {
+			panic(err)
+			return
+		} else {
+		}
+	}
+	return
+}*/
+
+func UpdateDBObj(database serodb.Putter, key []byte, obj serial) {
+	if s, err := obj.Serial(); err != nil {
+		panic(err)
+		return
+	} else {
+		if err := database.Put(key, s); err != nil {
 			panic(err)
 			return
 		} else {

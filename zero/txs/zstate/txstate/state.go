@@ -22,6 +22,8 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/sero-cash/go-sero/zero/localdb"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
@@ -78,7 +80,7 @@ func (state *State) add_in_dirty(in *keys.Uint256) {
 	state.Dirty_G2ins[*in] = true
 }
 
-func (state *State) add_out_dirty(k *keys.Uint256, out *OutState) {
+func (state *State) add_out_dirty(k *keys.Uint256, out *localdb.OutState) {
 	state.G2outs[*k] = out
 	state.Dirty_G2outs[*k] = true
 	state.Block.Roots = append(state.Block.Roots, *k)
@@ -126,6 +128,7 @@ func pkgName0(k uint64) (ret []byte) {
 	ret = append(ret, big.NewInt(int64(k)).Bytes()...)
 	return
 }
+
 func (self *State) Update() {
 	self.rw.Lock()
 	defer self.rw.Unlock()
@@ -186,7 +189,7 @@ func (state *State) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint25
 }
 
 func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
-	os := OutState{}
+	os := localdb.OutState{}
 	if out_o != nil {
 		o := *out_o
 		os.Out_O = &o
@@ -287,17 +290,17 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	return
 }
 
-func (state *State) GetOut(root *keys.Uint256) (src *OutState, e error) {
+func (state *State) GetOut(root *keys.Uint256) (src *localdb.OutState, e error) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	if out := state.G2outs[*root]; out != nil {
 		return out, nil
 	} else {
-		get := OutState0Get{}
+		get := localdb.OutState0Get{}
 		tri.GetObj(state.tri, outName0(root), &get)
-		if get.out != nil {
-			state.G2outs[*root] = get.out
-			return get.out, nil
+		if get.Out != nil {
+			state.G2outs[*root] = get.Out
+			return get.Out, nil
 		} else {
 			return nil, nil
 		}

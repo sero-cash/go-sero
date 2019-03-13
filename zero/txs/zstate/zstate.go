@@ -19,7 +19,9 @@ package zstate
 import (
 	"math/big"
 
-	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/zero/localdb"
+
+	"github.com/sero-cash/go-sero/serodb"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
@@ -31,44 +33,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 )
-
-type Block struct {
-	Roots []keys.Uint256
-	Dels  []keys.Uint256
-	Pkgs  []keys.Uint256
-}
-
-func (self *Block) Serial() (ret []byte, e error) {
-	if self != nil {
-		if bytes, err := rlp.EncodeToBytes(self); err != nil {
-			e = err
-			return
-		} else {
-			ret = bytes
-			return
-		}
-	} else {
-		return
-	}
-}
-
-type BlockGet struct {
-	Out *Block
-}
-
-func (self *BlockGet) Unserial(v []byte) (e error) {
-	if len(v) == 0 {
-		return
-	} else {
-		out := Block{}
-		if err := rlp.DecodeBytes(v, &out); err != nil {
-			return
-		} else {
-			self.Out = &out
-			return
-		}
-	}
-}
 
 type ZState struct {
 	Tri   tri.Tri
@@ -108,21 +72,16 @@ func (self *ZState) Update() {
 	return
 }
 
-func (self *ZState) RecordBlock(hash *keys.Uint256) {
-	blockkey := BlockKey(self.num, hash)
-	block := Block{}
+func (self *ZState) RecordBlock(db serodb.Putter, hash *keys.Uint256) {
+	block := localdb.Block{}
 	block.Pkgs = self.Pkgs.Block.Pkgs
 	block.Roots = self.State.Block.Roots
 	block.Dels = self.State.Block.Dels
-	tri.UpdateGlobalObj(self.Tri, blockkey, &block)
-}
-
-func (self *ZState) GetBlock(num uint64, hash *keys.Uint256) (ret *Block) {
-	blockkey := BlockKey(num, hash)
-	blockget := BlockGet{}
-	tri.GetGlobalObj(self.Tri, blockkey, &blockget)
-	ret = blockget.Out
-	return
+	localdb.PutBlock(db, self.num, hash, &block)
+	for _, k := range block.Roots {
+		os := self.State.G2outs[k]
+		localdb.PutOut(db, &k, os)
+	}
 }
 
 func (self *ZState) Snapshot(revid int) {

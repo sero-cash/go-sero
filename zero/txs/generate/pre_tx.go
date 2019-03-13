@@ -20,6 +20,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/localdb"
+
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
@@ -45,7 +47,7 @@ type prePkgClose struct {
 
 type prePkgTransfer struct {
 	pkr  keys.PKr
-	zpkg pkgstate.ZPkg
+	zpkg localdb.ZPkg
 }
 
 type prePkgDesc struct {
