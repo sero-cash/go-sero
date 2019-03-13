@@ -3,6 +3,8 @@ package light
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/localdb"
 )
@@ -50,6 +52,18 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []Block, e er
 }
 
 func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []Witness, e error) {
+	state := Light_inst.GetState()
+	if state != nil {
+		for _, root := range roots {
+			wit := Witness{}
+			wit.pos, wit.paths, wit.Anchor = state.State.MTree.GetPaths(root)
+			wits = append(wits, wit)
+		}
+		return
+	} else {
+		e = errors.New("State is nil")
+		return
+	}
 	return
 }
 

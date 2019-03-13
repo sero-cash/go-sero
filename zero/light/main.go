@@ -21,9 +21,7 @@ type BlockChain interface {
 }
 
 type Light struct {
-	Bc          BlockChain
-	StableState *zstate.ZState
-	LogState    *zstate.ZState
+	Bc BlockChain
 }
 
 var Light_inst Light
@@ -35,6 +33,11 @@ func (self *Light) SetBC(bc BlockChain) {
 func (self *Light) GetDelayedNum(delay uint64) (ret uint64) {
 	ret = self.Bc.GetCurrenHeader().Number.Uint64() - delay
 	return
+}
+
+func (self *Light) GetState() (ret *zstate.ZState) {
+	hash := self.Bc.GetCurrenHeader().Hash()
+	return self.Bc.NewState(&hash)
 }
 
 func GetDelayNumber(current uint64, chose uint64, delay uint64) (num uint64) {

@@ -3,6 +3,7 @@ package light
 import (
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/localdb"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 )
@@ -13,10 +14,8 @@ type Kr struct {
 }
 
 type Out struct {
-	Root  keys.Uint256
-	Index uint64
-	Z_out *stx.Out_Z
-	O_out *stx.Out_O
+	Root keys.Uint256
+	localdb.OutState
 }
 
 type DOut struct {
