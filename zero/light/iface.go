@@ -39,7 +39,7 @@ type ISLI interface {
 	GenTx(param *GenTxParam) (GTx, error)
 }
 
-type SRI interface {
+type ISRI interface {
 	GetBlocksInfo(start uint64, count uint64) ([]Block, error)
 	GetAnchor(roots []keys.Uint256) ([]Witness, error)
 	CommitTx(tx *GTx) error
