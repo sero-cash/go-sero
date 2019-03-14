@@ -27,7 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sero-cash/go-sero/zero/light"
+	"github.com/sero-cash/go-sero/zero/light/light_ref"
 
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
 
@@ -214,7 +214,7 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 				bc: bc,
 			},
 		)
-		light.Light_inst.SetBC(&State1BlockChain{bc: bc})
+		light_ref.Ref_inst.SetBC(&State1BlockChain{bc: bc})
 	}
 
 	return bc, nil

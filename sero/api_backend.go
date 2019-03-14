@@ -250,6 +250,6 @@ func (b *SeroAPIBackend) GetAnchor(roots []keys.Uint256) ([]light.Witness, error
 
 }
 func (b *SeroAPIBackend) CommitTx(tx *light.GTx) error {
-	signedTx := types.NewTxWithGTx(*tx)
+	signedTx := types.NewTxWithGTx(tx.Gas, &tx.GasPrice, &tx.Tx)
 	return b.sero.txPool.AddLocal(signedTx)
 }

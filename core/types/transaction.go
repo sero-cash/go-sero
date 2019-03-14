@@ -20,7 +20,7 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/sero-cash/go-sero/zero/light"
+	//"github.com/sero-cash/go-sero/zero/light"
 
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
@@ -123,11 +123,11 @@ func NewTxt(fromRnd *keys.Uint256, ehash keys.Uint256, fee assets.Token, out *zt
 	return txt
 }
 
-func NewTxWithGTx(gtx light.GTx) *Transaction {
+func NewTxWithGTx(gas uint64, gasPrice *big.Int, t *zstx.T) *Transaction {
 	d := txdata{
-		Price:    &gtx.GasPrice,
-		GasLimit: gtx.Gas,
-		Stxt:     &gtx.Tx,
+		Price:    gasPrice,
+		GasLimit: gas,
+		Stxt:     t,
 	}
 	tx := &Transaction{data: d}
 

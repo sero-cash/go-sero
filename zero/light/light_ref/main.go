@@ -1,4 +1,4 @@
-package light
+package light_ref
 
 import (
 	"sync/atomic"
@@ -20,22 +20,22 @@ type BlockChain interface {
 	GetDB() serodb.Database
 }
 
-type Light struct {
+type Ref struct {
 	Bc BlockChain
 }
 
-var Light_inst Light
+var Ref_inst Ref
 
-func (self *Light) SetBC(bc BlockChain) {
+func (self *Ref) SetBC(bc BlockChain) {
 	self.Bc = bc
 }
 
-func (self *Light) GetDelayedNum(delay uint64) (ret uint64) {
+func (self *Ref) GetDelayedNum(delay uint64) (ret uint64) {
 	ret = self.Bc.GetCurrenHeader().Number.Uint64() - delay
 	return
 }
 
-func (self *Light) GetState() (ret *zstate.ZState) {
+func (self *Ref) GetState() (ret *zstate.ZState) {
 	hash := self.Bc.GetCurrenHeader().Hash()
 	return self.Bc.NewState(&hash)
 }
