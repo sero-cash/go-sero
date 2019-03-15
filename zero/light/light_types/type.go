@@ -1,4 +1,4 @@
-package light
+package light_types
 
 import (
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -31,8 +31,8 @@ type Block struct {
 }
 
 type Witness struct {
-	pos    uint64
-	paths  [cpt.DEPTH]keys.Uint256
+	Pos    uint64
+	Paths  [cpt.DEPTH]keys.Uint256
 	Anchor keys.Uint256
 }
 

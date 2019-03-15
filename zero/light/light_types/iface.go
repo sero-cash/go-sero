@@ -1,4 +1,4 @@
-package light
+package light_types
 
 import (
 	"math/big"
@@ -29,6 +29,7 @@ type GTx struct {
 type GenTxParam struct {
 	Gas      uint64
 	GasPrice big.Int
+	From     Kr
 	Ins      []GIn
 	Outs     []GOut
 }

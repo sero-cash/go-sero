@@ -20,8 +20,9 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/light/light_types"
+
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/zero/light"
 
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/miner"
@@ -241,15 +242,15 @@ func (b *SeroAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.M
 	}
 }
 
-func (b *SeroAPIBackend) GetBlocksInfo(start uint64, count uint64) ([]light.Block, error) {
+func (b *SeroAPIBackend) GetBlocksInfo(start uint64, count uint64) ([]light_types.Block, error) {
 	return nil, nil
 
 }
-func (b *SeroAPIBackend) GetAnchor(roots []keys.Uint256) ([]light.Witness, error) {
+func (b *SeroAPIBackend) GetAnchor(roots []keys.Uint256) ([]light_types.Witness, error) {
 	return nil, nil
 
 }
-func (b *SeroAPIBackend) CommitTx(tx *light.GTx) error {
+func (b *SeroAPIBackend) CommitTx(tx *light_types.GTx) error {
 	signedTx := types.NewTxWithGTx(tx.Gas, &tx.GasPrice, &tx.Tx)
 	return b.sero.txPool.AddLocal(signedTx)
 }

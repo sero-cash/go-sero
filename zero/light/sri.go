@@ -3,6 +3,8 @@ package light
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/light/light_types"
+
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
 
 	"github.com/pkg/errors"
@@ -16,7 +18,7 @@ type SRI struct {
 
 var SRI_Inst = SRI{}
 
-func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []Block, e error) {
+func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []light_types.Block, e error) {
 	stable_num := light_ref.Ref_inst.GetDelayedNum(32)
 	if start <= stable_num {
 		if stable_num-start+1 < count {
@@ -28,7 +30,7 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []Block, e er
 			hash := chain_block.Hash()
 			local_block := localdb.GetBlock(light_ref.Ref_inst.Bc.GetDB(), num, hash.HashToUint256())
 			if local_block != nil {
-				block := Block{}
+				block := light_types.Block{}
 				block.Num = num
 				for _, k := range local_block.Dels {
 					block.Nils = append(block.Nils, k)
@@ -53,12 +55,12 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []Block, e er
 	}
 }
 
-func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []Witness, e error) {
+func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []light_types.Witness, e error) {
 	state := light_ref.Ref_inst.GetState()
 	if state != nil {
 		for _, root := range roots {
-			wit := Witness{}
-			wit.pos, wit.paths, wit.Anchor = state.State.MTree.GetPaths(root)
+			wit := light_types.Witness{}
+			wit.Pos, wit.Paths, wit.Anchor = state.State.MTree.GetPaths(root)
 			wits = append(wits, wit)
 		}
 		return
@@ -66,9 +68,5 @@ func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []Witness, e error) {
 		e = errors.New("State is nil")
 		return
 	}
-	return
-}
-
-func (self *SRI) CommitTx(tx *GTx) (e error) {
 	return
 }

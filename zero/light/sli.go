@@ -3,6 +3,8 @@ package light
 import (
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/light/light_generate"
+	"github.com/sero-cash/go-sero/zero/light/light_types"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -13,7 +15,7 @@ type SLI struct {
 
 var SLI_Inst = SLI{}
 
-func (self *SLI) CreateKr() (kr Kr) {
+func (self *SLI) CreateKr() (kr light_types.Kr) {
 	rnd := keys.RandUint256()
 	zsk := keys.RandUint256()
 	vsk := keys.RandUint256()
@@ -35,11 +37,11 @@ func (self *SLI) CreateKr() (kr Kr) {
 	return
 }
 
-func (self *SLI) DecOuts(outs []Out, skr *keys.PKr) (douts []DOut) {
+func (self *SLI) DecOuts(outs []light_types.Out, skr *keys.PKr) (douts []light_types.DOut) {
 	sk := keys.Uint512{}
 	copy(sk[:], skr[:])
 	for _, out := range outs {
-		dout := DOut{}
+		dout := light_types.DOut{}
 		if out.Out_O != nil {
 			dout.Asset = out.Out_O.Asset.Clone()
 			dout.Memo = out.Out_O.Memo
@@ -71,6 +73,15 @@ func (self *SLI) DecOuts(outs []Out, skr *keys.PKr) (douts []DOut) {
 	return
 }
 
-func (self *SLI) GenTx(param *GenTxParam) (gtx GTx, e error) {
-	return
+func (self *SLI) GenTx(param *light_types.GenTxParam) (gtx light_types.GTx, e error) {
+
+	if tx, err := light_generate.Generate(param); err != nil {
+		e = err
+		return
+	} else {
+		gtx.Tx = tx
+		gtx.Gas = param.Gas
+		gtx.GasPrice = param.GasPrice
+		return
+	}
 }

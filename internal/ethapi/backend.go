@@ -21,8 +21,9 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/light/light_types"
+
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/zero/light"
 
 	"github.com/sero-cash/go-sero/miner"
 
@@ -78,9 +79,9 @@ type Backend interface {
 	GetEngin() consensus.Engine
 	GetMiner() *miner.Miner
 
-	GetBlocksInfo(start uint64, count uint64) ([]light.Block, error)
-	GetAnchor(roots []keys.Uint256) ([]light.Witness, error)
-	CommitTx(tx *light.GTx) error
+	GetBlocksInfo(start uint64, count uint64) ([]light_types.Block, error)
+	GetAnchor(roots []keys.Uint256) ([]light_types.Witness, error)
+	CommitTx(tx *light_types.GTx) error
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
