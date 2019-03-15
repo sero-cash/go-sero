@@ -142,6 +142,14 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	}
 
 	t.Renter("Miner-Verify-----pkgs")
+	if s.Desc_Pkg.Create != nil {
+		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Create.Id); pg != nil {
+			e = fmt.Errorf("pkg id already exists %v", hexutil.Encode(s.Desc_Pkg.Create.Id[:]))
+			return
+		} else {
+		}
+	}
+
 	if s.Desc_Pkg.Transfer != nil {
 		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Transfer.Id); pg == nil {
 			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
