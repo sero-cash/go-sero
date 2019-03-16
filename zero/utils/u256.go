@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"io"
 	"math/big"
 
@@ -59,12 +60,18 @@ func (b *U256) DecodeRLP(s *rlp.Stream) error {
 	}
 }
 
+func (b U256) MarshalJSON() ([]byte, error) {
+	i := big.Int(b)
+	return i.MarshalJSON()
+}
+
 func (b U256) MarshalText() ([]byte, error) {
 	i := big.Int(b)
 	return i.MarshalText()
 }
 
 func (b *U256) UnmarshalJSON(input []byte) error {
+	fmt.Println(string(input))
 	i := big.Int{}
 	if e := i.UnmarshalJSON(input); e != nil {
 		return e
