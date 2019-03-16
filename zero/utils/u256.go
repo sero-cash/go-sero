@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"io"
 	"math/big"
 
@@ -71,7 +70,6 @@ func (b U256) MarshalText() ([]byte, error) {
 }
 
 func (b *U256) UnmarshalJSON(input []byte) error {
-	fmt.Println(string(input))
 	i := big.Int{}
 	if e := i.UnmarshalJSON(input); e != nil {
 		return e

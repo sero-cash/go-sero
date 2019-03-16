@@ -1411,6 +1411,18 @@ type SendTxArgs struct {
 	Memo        string                 `json:"Memo"`
 }
 
+type SendPkrTxArgs struct {
+	From     common.AccountAddress `json:"from"`
+	To       *common.Address       `json:"to"`
+	Gas      *hexutil.Uint64       `json:"gas"`
+	GasPrice *hexutil.Big          `json:"gasPrice"`
+	Value    *hexutil.Big          `json:"value"`
+	Currency Smbol                 `json:"cy"`
+	Category Smbol                 `json:"catg"`
+	Tkt      *common.Hash          `json:"tkt"`
+	Memo     string                `json:"Memo"`
+}
+
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
 func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	if args.Gas == nil {
