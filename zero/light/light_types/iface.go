@@ -3,6 +3,8 @@ package light_types
 import (
 	"math/big"
 
+	"github.com/sero-cash/go-sero/common/hexutil"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -21,8 +23,8 @@ type GOut struct {
 }
 
 type GTx struct {
-	Gas      uint64
-	GasPrice big.Int
+	Gas      hexutil.Uint64
+	GasPrice hexutil.Big
 	Tx       stx.T
 }
 

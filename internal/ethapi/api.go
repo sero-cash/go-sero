@@ -1605,27 +1605,8 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	return submitTransaction(ctx, s.b, encrypted, args.To)
 }
 
-type CommitTxArgs struct {
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Tx       stx.T           `json:"tx"`
-}
-
-func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args CommitTxArgs) error {
-
-	if args.Gas == nil {
-		return errors.New("gas can not be nil")
-	}
-	if args.GasPrice == nil {
-		return errors.New("gasprice can not be nil")
-	}
-
-	gtx := &light_types.GTx{
-		Gas:      uint64(*args.Gas),
-		GasPrice: (big.Int)(*args.GasPrice),
-		Tx:       args.Tx,
-	}
-	return s.b.CommitTx(gtx)
+func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args light_types.GTx) error {
+	return s.b.CommitTx(&args)
 }
 
 func (s *PublicTransactionPoolAPI) ReSendTransaction(ctx context.Context, txhash common.Hash) (common.Hash, error) {

@@ -3,6 +3,7 @@ package light_types
 import (
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/localdb"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -25,13 +26,13 @@ type DOut struct {
 }
 
 type Block struct {
-	Num  uint64
+	Num  hexutil.Uint64
 	Outs []Out
 	Nils []keys.Uint256
 }
 
 type Witness struct {
-	Pos    uint64
+	Pos    hexutil.Uint64
 	Paths  [cpt.DEPTH]keys.Uint256
 	Anchor keys.Uint256
 }

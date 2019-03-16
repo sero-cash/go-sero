@@ -31,7 +31,11 @@ func (self *Ref) SetBC(bc BlockChain) {
 }
 
 func (self *Ref) GetDelayedNum(delay uint64) (ret uint64) {
-	ret = self.Bc.GetCurrenHeader().Number.Uint64() - delay
+	ret = GetDelayNumber(
+		self.Bc.GetCurrenHeader().Number.Uint64(),
+		self.Bc.CashChose().Load().(uint64),
+		delay,
+	)
 	return
 }
 

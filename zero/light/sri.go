@@ -3,6 +3,8 @@ package light
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-sero/common/hexutil"
+
 	"github.com/sero-cash/go-sero/zero/light/light_types"
 
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
@@ -31,19 +33,20 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []light_types
 			local_block := localdb.GetBlock(light_ref.Ref_inst.Bc.GetDB(), num, hash.HashToUint256())
 			if local_block != nil {
 				block := light_types.Block{}
-				block.Num = num
+				block.Num = hexutil.Uint64(num)
 				for _, k := range local_block.Dels {
 					block.Nils = append(block.Nils, k)
 				}
 				for _, k := range local_block.Roots {
 					out := localdb.GetOut(light_ref.Ref_inst.Bc.GetDB(), &k)
 					if out != nil {
-						block.Outs = append(block.Outs)
+						block.Outs = append(block.Outs, light_types.Out{k, *out})
 					} else {
 						e = fmt.Errorf("GetBlocksInfo.GetOut Failed, num: %v root: %v", num, k)
 						return
 					}
 				}
+				blocks = append(blocks, block)
 			} else {
 				e = fmt.Errorf("GetBlocksInfo.GetBlock Failed, num: %v", num)
 				return
@@ -60,7 +63,11 @@ func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []light_types.Witness, e 
 	if state != nil {
 		for _, root := range roots {
 			wit := light_types.Witness{}
-			wit.Pos, wit.Paths, wit.Anchor = state.State.MTree.GetPaths(root)
+			out := localdb.GetOut(light_ref.Ref_inst.Bc.GetDB(), &root)
+			pos, paths, anchor := state.State.MTree.GetPaths(*out.RootCM)
+			wit.Pos = hexutil.Uint64(pos)
+			wit.Paths = paths
+			wit.Anchor = anchor
 			wits = append(wits, wit)
 		}
 		return

@@ -3,6 +3,7 @@ package light
 import (
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/light/light_generate"
 	"github.com/sero-cash/go-sero/zero/light/light_types"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -80,8 +81,8 @@ func (self *SLI) GenTx(param *light_types.GenTxParam) (gtx light_types.GTx, e er
 		return
 	} else {
 		gtx.Tx = tx
-		gtx.Gas = param.Gas
-		gtx.GasPrice = param.GasPrice
+		gtx.Gas = hexutil.Uint64(param.Gas)
+		gtx.GasPrice = hexutil.Big(param.GasPrice)
 		return
 	}
 }
