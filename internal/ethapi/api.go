@@ -554,6 +554,17 @@ func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses
 
 }
 
+func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk common.AccountAddress) (common.Address, error) {
+
+	if !(keys.IsPKValid(Pk.ToUint512())) {
+		return common.Address{}, errors.New("invalid address")
+	}
+	PKr := keys.Addr2PKr(Pk.ToUint512(), nil)
+	result := common.Address{}
+	copy(result[:], PKr[:])
+	return result, nil
+}
+
 type Balance struct {
 	Tkn map[string]*hexutil.Big   `json:"tkn"`
 	Tkt map[string][]*common.Hash `json:"tkt"`
@@ -1411,18 +1422,6 @@ type SendTxArgs struct {
 	Memo        string                 `json:"Memo"`
 }
 
-type SendPkrTxArgs struct {
-	From     common.AccountAddress `json:"from"`
-	To       *common.Address       `json:"to"`
-	Gas      *hexutil.Uint64       `json:"gas"`
-	GasPrice *hexutil.Big          `json:"gasPrice"`
-	Value    *hexutil.Big          `json:"value"`
-	Currency Smbol                 `json:"cy"`
-	Category Smbol                 `json:"catg"`
-	Tkt      *common.Hash          `json:"tkt"`
-	Memo     string                `json:"Memo"`
-}
-
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
 func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	if args.Gas == nil {
@@ -1495,6 +1494,73 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 
 		if len(input) < 18 {
 			return errors.New(`contract creation without any data provided`)
+		}
+	}
+	return nil
+}
+
+type SendPKrTxArgs struct {
+	From     common.AccountAddress `json:"from"`
+	To       *common.Address       `json:"to"`
+	Gas      *hexutil.Uint64       `json:"gas"`
+	GasPrice *hexutil.Big          `json:"gasPrice"`
+	Value    *hexutil.Big          `json:"value"`
+	Currency Smbol                 `json:"cy"`
+	Category Smbol                 `json:"catg"`
+	Tkt      *common.Hash          `json:"tkt"`
+	Memo     string                `json:"Memo"`
+}
+
+// setDefaults is a helper function that fills in default values for unspecified tx fields.
+func (args *SendPKrTxArgs) setDefaults(ctx context.Context, b Backend) error {
+	if args.Gas == nil {
+		args.Gas = new(hexutil.Uint64)
+		*(*uint64)(args.Gas) = 90000
+	}
+
+	if strings.Trim(args.Memo, "") != "" {
+		b := []byte(args.Memo)
+		if len(b) > 64 {
+			return errors.New("args memo is too long,it's limited 64 bytes")
+		}
+	}
+
+	if args.To == nil {
+		return errors.New(`to can not be null`)
+
+	}
+
+	Pkr := keys.PKr{}
+	copy(Pkr[:], args.To[:])
+	if !keys.PKrValid(&Pkr) {
+		return errors.New("Invalid to address,invalid PKr")
+	}
+	if args.GasPrice == nil {
+		price, err := b.SuggestPrice(ctx)
+		if err != nil {
+			return err
+		}
+		args.GasPrice = (*hexutil.Big)(price)
+	} else {
+		if args.GasPrice.ToInt().Sign() == 0 {
+			return errors.New(`gasPrice can not be zero`)
+		}
+	}
+
+	if args.Currency.IsEmpty() {
+		args.Currency = Smbol(params.DefaultCurrency)
+	}
+
+	if args.Value == nil {
+		args.Value = new(hexutil.Big)
+	}
+	if args.Category.IsEmpty() {
+		if args.Tkt != nil {
+			return errors.New(fmt.Sprintf("tx without tkt:%s catg", args.Tkt))
+		}
+	} else {
+		if args.Tkt == nil {
+			return errors.New(fmt.Sprintf("tx without %s tkt", args.Category))
 		}
 	}
 	return nil
@@ -1615,6 +1681,73 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 		return common.Hash{}, err
 	}
 	return submitTransaction(ctx, s.b, encrypted, args.To)
+}
+
+func (args *SendPKrTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+	var input []byte
+	Pkr := keys.PKr{}
+	copy(Pkr[:], args.To[:])
+
+	feevalue := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
+
+	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), input)
+	ehash := tx.Ehash()
+	fee := assets.Token{
+		utils.StringToUint256("SERO"),
+		utils.U256(*feevalue),
+	}
+	outData := types.NewTxtOut(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, args.Memo, true)
+	txt := types.NewTxt(nil, ehash, fee, outData, nil, nil, nil)
+	return tx, txt, nil
+}
+
+// SendTransaction creates a transaction for the given argument, sign it and submit it to the
+// transaction pool.
+func (s *PublicTransactionPoolAPI) SendTransactionWithPKr(ctx context.Context, args SendPKrTxArgs) (common.Hash, error) {
+	s.nonceLock.mu.Lock()
+	defer s.nonceLock.mu.Unlock()
+	// Look up the wallet containing the requested abi
+	account := accounts.Account{Address: args.From}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Assemble the transaction and sign with the wallet
+	tx, txt, err := args.toTransaction(state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if th, ok := s.b.GetEngin().(threaded); ok {
+		miner := s.b.GetMiner()
+		if miner.CanStart() {
+			miner.SetCanStart(0)
+			defer miner.SetCanStart(1)
+		}
+		threads := th.Threads()
+		if threads >= 0 {
+			th.SetThreads(-1)
+			defer th.SetThreads(threads)
+		}
+	}
+	encrypted, err := wallet.EncryptTx(account, tx, txt, state)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	log.Info("Submitted transaction", "recipient", args.To)
+	return submitTransaction(ctx, s.b, encrypted, nil)
 }
 
 func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args *light_types.GTx) error {

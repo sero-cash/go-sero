@@ -2698,6 +2698,19 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }
         };
 
+        var isPKr = function (PKr) {
+
+            if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(PKr)) {
+                bytes = base58ToBytes(PKr)
+                if (bytes.length !== 96) {
+                    return false;
+                }
+                return true;
+            } else {
+                return false;
+            }
+        };
+
         /**
          * Checks if the given string is an address
          *
@@ -2914,6 +2927,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             toAddress: toAddress,
             isBigNumber: isBigNumber,
             isStrictAddress: isStrictAddress,
+            isPKr: isPKr,
             isAddress: isAddress,
             isChecksumAddress: isChecksumAddress,
             toChecksumAddress: toChecksumAddress,
@@ -4359,6 +4373,28 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return options;
         };
 
+        var inputPKrTransactionFormatter = function (options){
+
+            options.from = options.from || config.defaultAccount;
+            options.from = inputAddressFormatter(options.from);
+
+            if (options.to) { // it might be contract creation
+                if (!utils.isPKr(options.to)){
+                    throw new Error('invalid address');
+                }
+            }else{
+                throw new Error('to can not be null');
+            }
+
+            ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
+                return options[key] !== undefined;
+            }).forEach(function(key){
+                options[key] = utils.fromDecimal(options[key]);
+            });
+
+            return options;
+        };
+
         /**
          * Formats the output of a transaction to its proper values
          *
@@ -4591,6 +4627,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             inputBlockNumberFormatter: inputBlockNumberFormatter,
             inputCallFormatter: inputCallFormatter,
             inputTransactionFormatter: inputTransactionFormatter,
+            inputPKrTransactionFormatter: inputPKrTransactionFormatter,
             inputAddressFormatter: inputAddressFormatter,
             inputPostFormatter: inputPostFormatter,
             outputBigNumberFormatter: outputBigNumberFormatter,
@@ -6255,6 +6292,17 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 call: 'sero_getFullAddress',
                 params: 1,
             });
+            var getBlockInfo= new Method({
+                name:'getBlockInfo',
+                call:"sero_getBlockInfo",
+                inputFormatter: [formatters.inputBlockNumberFormatter,formatters.inputBlockNumberFormatter],
+                params:2
+            })
+            var getAnchor = new Method({
+                name :'getAnchor',
+                call:"sero_getAnchor",
+                params:1
+            })
 
             var currencyToContractAddress = new Method({
                 name: 'cyToContractAddress',
@@ -6291,6 +6339,19 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 1,
                 inputFormatter: [formatters.inputTransactionFormatter]
             });
+
+            var sendTransactionWithPKr = new Method({
+                name: 'sendTransactionWithPKr',
+                call: 'sero_sendTransactionWithPKr',
+                params: 1,
+                inputFormatter: [formatters.inputPKrTransactionFormatter]
+            });
+            var genPKr=new Method({
+                name: 'genPKr',
+                call: 'sero_genPKr',
+                params: 1,
+                inputFormatter: [formatters.inputAddressFormatter]
+            })
 
             var reSendTransaction = new Method({
                 name: 'reSendTransaction',
@@ -6398,6 +6459,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 getUncle,
                 getCompilers,
                 getBlockTransactionCount,
+                getBlockInfo,
+                getAnchor,
                 getBlockUncleCount,
                 getTransaction,
                 getTransactionFromBlock,
@@ -6407,10 +6470,12 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 estimateGas,
                 sendTransaction,
                 reSendTransaction,
+                sendTransactionWithPKr,
                 createPkg,
                 closePkg,
                 transferPkg,
                 convertAddressParams,
+                genPKr,
                 getFullAddress,
                 currencyToContractAddress,
                 compileSolidity,
