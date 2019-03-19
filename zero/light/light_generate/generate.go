@@ -34,6 +34,7 @@ func Generate(param *light_types.GenTxParam) (ret stx.T, e error) {
 		e = err
 		return
 	}
+	ret = ctx.s
 	return
 }
 
