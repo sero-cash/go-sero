@@ -1617,8 +1617,8 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	return submitTransaction(ctx, s.b, encrypted, args.To)
 }
 
-func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args light_types.GTx) error {
-	return s.b.CommitTx(&args)
+func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args *light_types.GTx) error {
+	return s.b.CommitTx(args)
 }
 
 func (s *PublicTransactionPoolAPI) ReSendTransaction(ctx context.Context, txhash common.Hash) (common.Hash, error) {
