@@ -26,8 +26,7 @@ type Tri interface {
 	TryUpdate(key, value []byte) error
 	SetState(key *keys.Uint256, value *keys.Uint256)
 	GetState(key *keys.Uint256) (ret keys.Uint256)
-	TryGlobalGet(key []byte) ([]byte, error)
-	TryGlobalPut(key, value []byte) error
+	GlobalGetter() serodb.Getter
 }
 
 func slice2Uint256(s []byte) (r keys.Uint256) {
@@ -116,7 +115,7 @@ func GetObj(tri Tri, key []byte, obj unserial) {
 	return
 }*/
 
-func GetDBObj(db serodb.Database, key []byte, obj unserial) {
+func GetDBObj(db serodb.Getter, key []byte, obj unserial) {
 	if v, err := db.Get(key); err != nil {
 		if err := obj.Unserial(nil); err != nil {
 			panic(err)

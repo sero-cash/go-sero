@@ -26,6 +26,15 @@ func (self *Pkg_Z) ToHash() (ret keys.Uint256) {
 	return ret
 }
 
+func (self *Pkg_Z) ToHash_V1() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.AssetCM[:])
+	d.Write(self.PkgCM[:])
+	d.Write(self.EInfo[:])
+	copy(ret[:], d.Sum(nil))
+	return ret
+}
+
 func (self *Pkg_Z) Clone() (ret Pkg_Z) {
 	utils.DeepCopy(&ret, self)
 	return

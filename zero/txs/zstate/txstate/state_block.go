@@ -16,13 +16,8 @@
 
 package txstate
 
-import (
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/rlp"
-)
-
+/*
 type StateBlock struct {
-	//Tree        *merkle.Tree `rlp:"nil"`
 	Roots []keys.Uint256
 	Dels  []keys.Uint256
 }
@@ -57,3 +52,4 @@ func (self *State0BlockGet) Unserial(v []byte) (e error) {
 		}
 	}
 }
+*/

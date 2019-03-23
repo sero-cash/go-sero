@@ -16,10 +16,7 @@
 
 package txstate
 
-import (
-	"github.com/sero-cash/go-sero/rlp"
-)
-
+/*
 type Current struct {
 	Index int64
 }
@@ -54,3 +51,4 @@ func (self *CurrentGet) Unserial(v []byte) (e error) {
 		}
 	}
 }
+*/

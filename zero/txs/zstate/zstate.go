@@ -17,8 +17,6 @@
 package zstate
 
 import (
-	"math/big"
-
 	"github.com/sero-cash/go-sero/zero/localdb"
 
 	"github.com/sero-cash/go-sero/serodb"
@@ -58,14 +56,6 @@ func (self *ZState) Copy() *ZState {
 	return nil
 }
 
-func BlockKey(num uint64, hash *keys.Uint256) []byte {
-	block_key := []byte("$SERO_ZSTATE_BLOCK_SHOOTCUT$")
-	block_key = append(block_key, big.NewInt(int64(num)).Bytes()...)
-	block_key = append(block_key, []byte("$")...)
-	block_key = append(block_key, hash[:]...)
-	return block_key
-}
-
 func (self *ZState) Update() {
 	self.State.Update()
 	self.Pkgs.Update()
@@ -74,7 +64,7 @@ func (self *ZState) Update() {
 
 func (self *ZState) RecordBlock(db serodb.Putter, hash *keys.Uint256) {
 	block := localdb.Block{}
-	block.Pkgs = self.Pkgs.Block.Pkgs
+	block.Pkgs = self.Pkgs.GetBlockDetails()
 	block.Roots = self.State.Block.Roots
 	block.Dels = self.State.Block.Dels
 	localdb.PutBlock(db, self.num, hash, &block)

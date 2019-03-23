@@ -22,6 +22,8 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate/data"
+
 	"github.com/sero-cash/go-sero/zero/localdb"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -37,7 +39,7 @@ type State struct {
 	num   uint64
 	MTree MerkleTree
 
-	Data
+	data      data.Data
 	snapshots utils.Snapshots
 }
 
@@ -53,7 +55,8 @@ func NewState(tri tri.Tri, num uint64) (state State) {
 	state = State{tri: tri, num: num}
 	state.rw = new(sync.RWMutex)
 	state.MTree = NewMerkleTree(tri)
-	state.clear()
+	state.data = data.NewData(num)
+	state.data.Clear()
 	state.load()
 	return
 }
@@ -62,17 +65,17 @@ func (state *State) append_del_dirty(del *keys.Uint256) {
 	if del == nil {
 		panic("set_last_out but del is nil")
 	}
-	state.Block.Dels = append(state.Block.Dels, *del)
-	state.Dirty_last_out = true
+	state.data.Block.Dels = append(state.data.Block.Dels, *del)
+	state.data.Dirty_last_out = true
 }
 func (state *State) append_commitment_dirty(commitment *keys.Uint256) {
 	if commitment == nil {
 		panic("set_last_out but out is nil")
 	}
 
-	state.Cur.Index = state.Cur.Index + int64(1)
+	state.data.Cur.Index = state.data.Cur.Index + int64(1)
 
-	state.Dirty_last_out = true
+	state.data.Dirty_last_out = true
 }
 
 func (state *State) add_in_dirty(in *keys.Uint256) {
@@ -96,21 +99,21 @@ func (self *State) Name2BKey(name string, num uint64) (ret []byte) {
 }
 
 func (self *State) load() {
-	get := CurrentGet{}
+	get := data.CurrentGet{}
 	tri.GetObj(
 		self.tri,
 		LAST_OUTSTATE0_NAME.Bytes(),
 		&get,
 	)
-	self.Cur = get.out
+	self.Cur = get.Out
 
-	blockget := State0BlockGet{}
+	blockget := data.State0BlockGet{}
 	tri.GetObj(
 		self.tri,
 		self.Name2BKey(BLOCK_NAME, self.num),
 		&blockget,
 	)
-	self.Block = blockget.out
+	self.Block = blockget.Out
 }
 
 func inName(k *keys.Uint256) (ret []byte) {
@@ -169,7 +172,7 @@ func (self *State) Update() {
 		}
 	}
 
-	self.clear_dirty()
+	//self.clear_dirty()
 	return
 }
 

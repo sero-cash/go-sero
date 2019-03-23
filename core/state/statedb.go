@@ -24,6 +24,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sero-cash/go-sero/serodb"
+
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -111,17 +113,14 @@ func (self *StateDB) SetSeeds(seeds []keys.Uint512) {
 	self.seeds = seeds
 }
 
-type StateDbGet interface {
-	Get(key []byte) ([]byte, error)
-}
 type StateDbPut interface {
 	Put(key, value []byte) error
 }
 type StateTri struct {
 	db    *StateDB
 	Tri   Trie
-	Dbget StateDbGet
-	Dbput StateDbPut
+	Dbget serodb.Getter
+	Dbput serodb.Putter
 }
 
 func (self *StateTri) TryGet(key []byte) ([]byte, error) {
@@ -147,6 +146,10 @@ func (self *StateTri) TryGlobalGet(key []byte) ([]byte, error) {
 
 func (self *StateTri) TryGlobalPut(key, value []byte) error {
 	return self.Dbput.Put(key, value)
+}
+
+func (self *StateTri) GlobalGetter() serodb.Getter {
+	return self.Dbget
 }
 
 func (self *StateDB) GetZState() *zstate.ZState {

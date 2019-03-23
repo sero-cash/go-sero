@@ -1,7 +1,10 @@
 package localdb
 
 import (
+	"math/big"
+
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -12,6 +15,15 @@ type ZPkg struct {
 	High uint64
 	From keys.PKr
 	Pack stx.PkgCreate
+}
+
+func (self *ZPkg) ToHash_V1() (ret keys.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(big.NewInt(int64(self.High)).Bytes())
+	d.Write(self.From[:])
+	d.Write(self.Pack.ToHash_V1().NewRef()[:])
+	copy(ret[:], d.Sum(nil))
+	return ret
 }
 
 func (self *ZPkg) Serial() (ret []byte, e error) {
@@ -49,7 +61,7 @@ func PutPkg(db serodb.Putter, hash *keys.Uint256, pkg *ZPkg) {
 	tri.UpdateDBObj(db, key, pkg)
 }
 
-func GetPkg(db serodb.Database, hash *keys.Uint256) (ret *ZPkg) {
+func GetPkg(db serodb.Getter, hash *keys.Uint256) (ret *ZPkg) {
 	key := OutKey(hash)
 	get := PkgGet{}
 	tri.GetDBObj(db, key, &get)
