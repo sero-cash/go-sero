@@ -212,7 +212,7 @@ $ gero --datadir=path/to/custom/data/folder --bootnodes=<bootnode-snode-url-from
 *Note: Since your network will be completely cut off from the sero main and sero alpha networks, you'll also
 need to configure a miner to process transactions and create new blocks for you.*
 
-*Note: Mining on the public Sero network need apply license before hand(gordon@sero.vip). It is will earn sero coins 
+*Note: Mining on the public Sero network need apply license before hand(license@sero.vip). It is will earn sero coins 
 in miner's account.*
 
 #### Running a dev network miner
