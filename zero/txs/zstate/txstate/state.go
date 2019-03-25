@@ -17,9 +17,6 @@
 package txstate
 
 import (
-	"fmt"
-	"math/big"
-	"sort"
 	"sync"
 
 	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate/data"
@@ -62,127 +59,30 @@ func NewState(tri tri.Tri, num uint64) (state State) {
 }
 
 func (state *State) append_del_dirty(del *keys.Uint256) {
-	if del == nil {
-		panic("set_last_out but del is nil")
-	}
-	state.data.Block.Dels = append(state.data.Block.Dels, *del)
-	state.data.Dirty_last_out = true
-}
-func (state *State) append_commitment_dirty(commitment *keys.Uint256) {
-	if commitment == nil {
-		panic("set_last_out but out is nil")
-	}
-
-	state.data.Cur.Index = state.data.Cur.Index + int64(1)
-
-	state.data.Dirty_last_out = true
-}
-
-func (state *State) add_in_dirty(in *keys.Uint256) {
-	state.G2ins[*in] = true
-	state.Dirty_G2ins[*in] = true
-}
-
-func (state *State) add_out_dirty(k *keys.Uint256, out *localdb.OutState) {
-	state.G2outs[*k] = out
-	state.Dirty_G2outs[*k] = true
-	state.Block.Roots = append(state.Block.Roots, *k)
-}
-
-const LAST_OUTSTATE0_NAME = tri.KEY_NAME("ZState0_Cur")
-const BLOCK_NAME = "ZState0_BLOCK"
-
-func (self *State) Name2BKey(name string, num uint64) (ret []byte) {
-	key := fmt.Sprintf("%s_%d", name, num)
-	ret = []byte(key)
-	return
+	state.data.AppendDel(del)
 }
 
 func (self *State) load() {
-	get := data.CurrentGet{}
-	tri.GetObj(
-		self.tri,
-		LAST_OUTSTATE0_NAME.Bytes(),
-		&get,
-	)
-	self.Cur = get.Out
-
-	blockget := data.State0BlockGet{}
-	tri.GetObj(
-		self.tri,
-		self.Name2BKey(BLOCK_NAME, self.num),
-		&blockget,
-	)
-	self.Block = blockget.Out
-}
-
-func inName(k *keys.Uint256) (ret []byte) {
-	ret = []byte("ZState0_InName")
-	ret = append(ret, k[:]...)
-	return
-}
-func outName0(k *keys.Uint256) (ret []byte) {
-	ret = []byte("ZState0_OutName")
-	ret = append(ret, k[:]...)
-	return
-}
-func pkgName0(k uint64) (ret []byte) {
-	ret = []byte("ZState0_PkgName")
-	ret = append(ret, big.NewInt(int64(k)).Bytes()...)
-	return
+	self.data.LoadCur(self.tri)
 }
 
 func (self *State) Update() {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if self.Dirty_last_out {
-		tri.UpdateObj(self.tri, LAST_OUTSTATE0_NAME.Bytes(), &self.Cur)
-		tri.UpdateObj(
-			self.tri,
-			self.Name2BKey(BLOCK_NAME, self.num),
-			&self.Block,
-		)
-	}
-
-	g2ins_dirty := utils.Uint256s{}
-	for k := range self.Dirty_G2ins {
-		g2ins_dirty = append(g2ins_dirty, k)
-	}
-	sort.Sort(g2ins_dirty)
-
-	for _, k := range g2ins_dirty {
-		v := []byte{1}
-		if err := self.tri.TryUpdate(inName(&k), v); err != nil {
-			panic(err)
-			return
-		}
-	}
-
-	g2outs_dirty := utils.Uint256s{}
-	for k := range self.Dirty_G2outs {
-		g2outs_dirty = append(g2outs_dirty, k)
-	}
-	sort.Sort(g2outs_dirty)
-
-	for _, k := range g2outs_dirty {
-		if v := self.G2outs[k]; v != nil {
-			tri.UpdateObj(self.tri, outName0(&k), v)
-		} else {
-			panic("state0 update g2outs can not find dirty out")
-		}
-	}
+	self.data.SaveCur(self.tri)
+	self.data.SaveIndex(self.tri)
 
 	//self.clear_dirty()
 	return
 }
 
 func (self *State) Snapshot(revid int) {
-	self.snapshots.Push(revid, &self.Data)
+	self.snapshots.Push(revid, &self.data)
 }
 
 func (self *State) Revert(revid int) {
-	self.Data.clear()
-	self.Data = *self.snapshots.Revert(revid).(*Data)
+	self.data.Clear()
+	self.data = *self.snapshots.Revert(revid).(*data.Data)
 }
 
 func (state *State) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
@@ -202,58 +102,20 @@ func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint25
 		os.Out_Z = &o
 	}
 
-	os.Index = uint64(state.Cur.Index + 1)
+	os.Index = uint64(state.data.Cur.Index + 1)
 
 	commitment := os.ToRootCM()
-	state.append_commitment_dirty(commitment)
-
-	if state.Cur.Index != int64(os.Index) {
-		panic("add out but cur.index != current_index")
-	}
-
-	if state.Cur.Index < 0 {
-		panic("add out but cur.index < 0")
-	}
 
 	root = state.MTree.AppendLeaf(*commitment)
 
-	state.add_out_dirty(&root, &os)
+	state.data.AddOut(&root, &os)
 	return
 }
 
 func (self *State) HasIn(hash *keys.Uint256) (exists bool) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	return self.hasIn(hash)
-}
-func (self *State) hasIn(hash *keys.Uint256) (exists bool) {
-	if v, ok := self.G2ins[*hash]; ok {
-		exists = v
-		return
-	} else {
-		if v, err := self.tri.TryGet(inName(hash)); err != nil {
-			panic(err)
-			return
-		} else {
-			if v != nil && v[0] == 1 {
-				exists = true
-			} else {
-				exists = false
-			}
-			self.G2ins[*hash] = exists
-		}
-	}
-	return
-}
-
-func (state *State) addIn(root *keys.Uint256) (e error) {
-	if exists := state.hasIn(root); exists {
-		e = fmt.Errorf("add in but exists")
-		return
-	} else {
-		state.add_in_dirty(root)
-		return
-	}
+	return self.data.HasIn(self.tri, hash)
 }
 
 func (state *State) AddStx(st *stx.T) (e error) {
@@ -261,25 +123,22 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	defer state.rw.Unlock()
 	t := utils.TR_enter("AddStx---ins")
 	for _, in := range st.Desc_O.Ins {
-		if err := state.addIn(&in.Root); err != nil {
+		if err := state.data.AddIn(state.tri, &in.Root); err != nil {
 			e = err
 			return
 		} else {
-			state.append_del_dirty(&in.Root)
+			state.data.AppendDel(&in.Root)
 		}
 	}
-	//for _, out := range st.Desc_O.Outs {
-	//	state.AddOut(out.Clone().ToRef(), nil)
-	//}
 
 	t.Renter("AddStx---z_ins")
 	for _, in := range st.Desc_Z.Ins {
-		if err := state.addIn(&in.Nil); err != nil {
+		if err := state.data.AddIn(state.tri, &in.Nil); err != nil {
 			e = err
 			return
 		} else {
-			state.append_del_dirty(&in.Nil)
-			state.append_del_dirty(&in.Trace)
+			state.data.AppendDel(&in.Nil)
+			state.data.AppendDel(&in.Trace)
 		}
 	}
 
@@ -296,18 +155,15 @@ func (state *State) AddStx(st *stx.T) (e error) {
 func (state *State) GetOut(root *keys.Uint256) (src *localdb.OutState, e error) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
-	if out := state.G2outs[*root]; out != nil {
-		return out, nil
-	} else {
-		get := localdb.OutState0Get{}
-		tri.GetObj(state.tri, outName0(root), &get)
-		if get.Out != nil {
-			state.G2outs[*root] = get.Out
-			return get.Out, nil
-		} else {
-			return nil, nil
-		}
-	}
+	return state.data.GetOut(state.tri, root), nil
+}
+
+func (self *State) GetBlockRoots() (roots []keys.Uint256) {
+	return self.data.Block.Roots
+}
+
+func (self *State) GetBlockDels() (dels []keys.Uint256) {
+	return self.data.Block.Dels
 }
 
 type State0Trees struct {
