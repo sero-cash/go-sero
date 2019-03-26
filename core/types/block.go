@@ -111,7 +111,14 @@ func (h *Header) Hash() common.Hash {
 	//test
 	if h.Number.Cmp(big.NewInt(515000)) > 0 {
 		hash := rlpHash(h)
-		hash[31] = 1
+		hash[24] = 0
+		hash[25] = 0
+		hash[26] = 0
+		hash[27] = 0
+		hash[28] = 0
+		hash[29] = 0
+		hash[30] = 0
+		hash[31] = 0
 	}
 	return rlpHash(h)
 }
