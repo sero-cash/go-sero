@@ -6,8 +6,8 @@ import (
 )
 
 type H2Hash struct {
-	name string
-	m    map[keys.Uint256]keys.Uint256
+	Name string
+	M    map[keys.Uint256]keys.Uint256
 }
 
 func NewH2Hash(name string) (ret H2Hash) {
@@ -15,41 +15,50 @@ func NewH2Hash(name string) (ret H2Hash) {
 }
 
 func (self *H2Hash) Clear() {
-	self.m = make(map[keys.Uint256]keys.Uint256)
+	self.M = make(map[keys.Uint256]keys.Uint256)
 }
 
 func (self *H2Hash) Add(id *keys.Uint256, hash *keys.Uint256) {
-	self.m[*id] = *hash
+	self.M[*id] = *hash
 }
 
-func (self *H2Hash) Del(id *keys.Uint256) {
-	self.m[*id] = keys.Empty_Uint256
+func (self *H2Hash) Del(id *keys.Uint256) (ret keys.Uint256) {
+	ret = self.M[*id]
+	delete(self.M, *id)
+	return
+}
+
+func (self *H2Hash) Get(id *keys.Uint256) (ret keys.Uint256) {
+	ret = self.M[*id]
+	return
 }
 
 func (self *H2Hash) K2Name(k *keys.Uint256) (ret []byte) {
-	ret = []byte(self.name)
+	ret = []byte(self.Name)
 	ret = append(ret, k[:]...)
 	return
 }
 
 func (self *H2Hash) Save(tr tri.Tri, id *keys.Uint256) {
-	v := self.m[*id]
-	tr.TryUpdate(self.K2Name(id), v[:])
+	v := self.M[*id]
+	if err := tr.TryUpdate(self.K2Name(id), v[:]); err == nil {
+		return
+	} else {
+		panic(err)
+		return
+	}
 }
 
-func (self *H2Hash) Get(tr tri.Tri, id *keys.Uint256) (ret *keys.Uint256) {
-	var hash keys.Uint256
+func (self *H2Hash) GetByTri(tr tri.Tri, id *keys.Uint256) (ret keys.Uint256) {
 	var ok bool
-	if hash, ok = self.m[*id]; !ok {
+	if ret, ok = self.M[*id]; !ok {
 		if bs, err := tr.TryGet(self.K2Name(id)); err == nil {
-			copy(hash[:], bs[:])
+			copy(ret[:], bs[:])
+			return
 		} else {
 			panic(err)
+			return
 		}
-	}
-	if hash != keys.Empty_Uint256 {
-		ret = &hash
-		return
 	} else {
 		return
 	}

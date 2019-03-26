@@ -12,9 +12,10 @@ import (
 )
 
 type ZPkg struct {
-	High uint64
-	From keys.PKr
-	Pack stx.PkgCreate
+	High   uint64
+	From   keys.PKr
+	Pack   stx.PkgCreate
+	Closed bool
 }
 
 func (self *ZPkg) ToHash_V1() (ret keys.Uint256) {
@@ -22,6 +23,11 @@ func (self *ZPkg) ToHash_V1() (ret keys.Uint256) {
 	d.Write(big.NewInt(int64(self.High)).Bytes())
 	d.Write(self.From[:])
 	d.Write(self.Pack.ToHash_V1().NewRef()[:])
+	if self.Closed {
+		d.Write([]byte{1})
+	} else {
+		d.Write([]byte{0})
+	}
 	copy(ret[:], d.Sum(nil))
 	return ret
 }

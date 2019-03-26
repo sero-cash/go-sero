@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/sero-cash/go-sero/serodb"
+
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/localdb"
 
@@ -45,34 +47,41 @@ func (self *PkgState) Revert(revid int) {
 }
 
 func (self *PkgState) load() {
-	self.data.LoadCur(self.tri)
 }
 
 func (self *PkgState) Update() {
-	self.data.SaveIndex(self.tri)
-	self.data.SaveCur(self.tri)
+	self.data.SaveState(self.tri)
 	return
 }
 
-func (state *PkgState) GetBlockDetails() (ret []keys.Uint256) {
-	return state.data.Dirtys.List()
+func (self *PkgState) RecordState(putter serodb.Putter, hash *keys.Uint256) {
+	self.data.RecordState(putter, hash)
 }
 
-func (self *PkgState) GetPkg(id *keys.Uint256) (pg *localdb.ZPkg) {
-	self.rw.Lock()
-	defer self.rw.Unlock()
-	if hash := self.data.Id2Hash.Get(self.tri, id); hash != nil {
-		pg = localdb.GetPkg(self.tri.GlobalGetter(), hash)
-		return
-	} else {
-		return
-	}
+func (self *PkgState) GetPkgByHash(hash *keys.Uint256) (ret *localdb.ZPkg) {
+	ret = self.data.GetPkgByHash(self.tri, hash)
+	return
+}
+
+func (self *PkgState) GetPkgById(id *keys.Uint256) (ret *localdb.ZPkg) {
+	ret = self.data.GetPkgById(self.tri, id)
+	return
+}
+
+func (state *PkgState) GetPkgHashes() (ret []keys.Uint256) {
+	return state.data.GetHashes()
 }
 
 func (self *PkgState) Force_del(id *keys.Uint256) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	self.data.Del(id)
+	if pg := self.data.GetPkgById(self.tri, id); pg == nil {
+		return
+	} else {
+		pg.Closed = true
+		self.data.Add(pg)
+		return
+	}
 }
 
 func (self *PkgState) Force_add(from *keys.PKr, pack *stx.PkgCreate) {
@@ -82,6 +91,7 @@ func (self *PkgState) Force_add(from *keys.PKr, pack *stx.PkgCreate) {
 		self.num,
 		*from,
 		pack.Clone(),
+		false,
 	}
 	self.data.Add(&zpkg)
 }
@@ -89,7 +99,7 @@ func (self *PkgState) Force_add(from *keys.PKr, pack *stx.PkgCreate) {
 func (self *PkgState) Force_transfer(id *keys.Uint256, to *keys.PKr) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if pg := self.GetPkg(id); pg == nil {
+	if pg := self.data.GetPkgById(self.tri, id); pg == nil {
 		return
 	} else {
 		pg.Pack.PKr = *to
@@ -106,7 +116,7 @@ type OPkg struct {
 func (self *PkgState) Close(id *keys.Uint256, pkr *keys.PKr, key *keys.Uint256) (ret OPkg, e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if pg := self.GetPkg(id); pg == nil {
+	if pg := self.data.GetPkgById(self.tri, id); pg == nil {
 		e = fmt.Errorf("Pkg is nil: %v", hexutil.Encode(id[:]))
 		return
 	} else {
@@ -121,7 +131,8 @@ func (self *PkgState) Close(id *keys.Uint256, pkr *keys.PKr, key *keys.Uint256) 
 				if e = pkg.ConfirmPkg(&ret.O, &ret.Z.Pack.Pkg); e != nil {
 					return
 				} else {
-					self.data.Del(id)
+					pg.Closed = true
+					self.data.Add(pg)
 					return
 				}
 			}
@@ -132,7 +143,7 @@ func (self *PkgState) Close(id *keys.Uint256, pkr *keys.PKr, key *keys.Uint256) 
 func (self *PkgState) Transfer(id *keys.Uint256, pkr *keys.PKr, to *keys.PKr) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if pg := self.GetPkg(id); pg == nil {
+	if pg := self.data.GetPkgById(self.tri, id); pg == nil {
 		e = fmt.Errorf("Pkg is nil: %v", hexutil.Encode(id[:]))
 		return
 	} else {

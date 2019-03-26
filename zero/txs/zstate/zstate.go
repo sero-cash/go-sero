@@ -64,10 +64,15 @@ func (self *ZState) Update() {
 
 func (self *ZState) RecordBlock(db serodb.Putter, hash *keys.Uint256) {
 	block := localdb.Block{}
-	block.Pkgs = self.Pkgs.GetBlockDetails()
+	block.Pkgs = self.Pkgs.GetPkgHashes()
+	for _, hash := range block.Pkgs {
+		self.Pkgs.RecordState(db, &hash)
+	}
+
 	block.Roots = self.State.GetBlockRoots()
 	block.Dels = self.State.GetBlockDels()
 	localdb.PutBlock(db, self.num, hash, &block)
+
 	for _, k := range block.Roots {
 		os, _ := self.State.GetOut(&k)
 		localdb.PutOut(db, &k, os)

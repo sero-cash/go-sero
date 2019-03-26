@@ -180,7 +180,7 @@ func parse_block_chain(bc BlockChain, last_cmd_count int) (current_cm_count int,
 				log.Debug("STATE1_PARSE GO BACK TO STATE: ", "num", current_num, "hash", current_hash)
 			}
 			block = &localdb.Block{}
-			block.Pkgs = temp_state.Pkgs.GetBlockDetails()
+			block.Pkgs = temp_state.Pkgs.GetPkgHashes()
 			block.Roots = temp_state.State.GetBlockRoots()
 			block.Dels = temp_state.State.GetBlockDels()
 		}

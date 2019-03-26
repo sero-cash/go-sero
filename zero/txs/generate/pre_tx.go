@@ -97,7 +97,7 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 	}
 
 	if ts.PkgClose != nil {
-		if zpkg := state1.State.Pkgs.GetPkg(&ts.PkgClose.Id); zpkg == nil {
+		if zpkg := state1.State.Pkgs.GetPkgById(&ts.PkgClose.Id); zpkg == nil {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
 			return
 		} else {
@@ -146,7 +146,7 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 	}
 
 	if ts.PkgTransfer != nil {
-		if zpkg := state1.State.Pkgs.GetPkg(&ts.PkgTransfer.Id); zpkg == nil {
+		if zpkg := state1.State.Pkgs.GetPkgById(&ts.PkgTransfer.Id); zpkg == nil {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgTransfer.Id[:]))
 			return
 		} else {
