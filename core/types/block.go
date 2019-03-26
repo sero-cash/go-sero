@@ -108,6 +108,11 @@ func (h *Header) Valid() bool {
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
+	//test
+	if h.Number.Cmp(big.NewInt(515000)) > 0 {
+		hash := rlpHash(h)
+		hash[31] = 1
+	}
 	return rlpHash(h)
 }
 
