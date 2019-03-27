@@ -5,21 +5,20 @@ import (
 	"sort"
 
 	"github.com/sero-cash/go-czero-import/keys"
+
 	"github.com/sero-cash/go-sero/zero/localdb"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-func (self *Data) addInByNilOrRoot(in *keys.Uint256) {
-	self.G2ins[*in] = true
-	self.Dirty_G2ins[*in] = true
-}
+const LAST_OUTSTATE0_NAME = tri.KEY_NAME("ZState0_Cur")
+const BLOCK_NAME = "ZState0_BLOCK"
 
-func (self *Data) addOutByRoot(k *keys.Uint256, out *localdb.OutState) {
-	self.G2outs[*k] = out
-	self.Dirty_G2outs[*k] = true
+func Name2BKey(name string, num uint64) (ret []byte) {
+	key := fmt.Sprintf("%s_%d", name, num)
+	ret = []byte(key)
+	return
 }
-
 func inName(k *keys.Uint256) (ret []byte) {
 	ret = []byte("ZState0_InName")
 	ret = append(ret, k[:]...)
@@ -30,7 +29,33 @@ func outName0(k *keys.Uint256) (ret []byte) {
 	ret = append(ret, k[:]...)
 	return
 }
-func (self *Data) SaveIndex(tr tri.Tri) {
+
+func (self *Data) LoadState(tr tri.Tri) {
+	get := CurrentGet{}
+	tri.GetObj(
+		tr,
+		LAST_OUTSTATE0_NAME.Bytes(),
+		&get,
+	)
+	self.Cur = get.Out
+
+	blockget := State0BlockGet{}
+	tri.GetObj(
+		tr,
+		Name2BKey(BLOCK_NAME, self.Num),
+		&blockget,
+	)
+	self.Block = blockget.Out
+	return
+}
+
+func (self *Data) SaveState(tr tri.Tri) {
+	tri.UpdateObj(tr, LAST_OUTSTATE0_NAME.Bytes(), &self.Cur)
+	tri.UpdateObj(
+		tr,
+		Name2BKey(BLOCK_NAME, self.Num),
+		&self.Block,
+	)
 	g2ins_dirty := utils.Uint256s{}
 	for k := range self.Dirty_G2ins {
 		g2ins_dirty = append(g2ins_dirty, k)
@@ -58,48 +83,21 @@ func (self *Data) SaveIndex(tr tri.Tri) {
 			panic("state0 update g2outs can not find dirty out")
 		}
 	}
-}
-
-func (self *Data) AddOut(root *keys.Uint256, out *localdb.OutState) {
-	self.addOutByRoot(root, out)
-	self.appendRoot(root)
-	if self.Cur.Index != int64(out.Index) {
-		panic("add out but cur.index != current_index")
-	}
-	if self.Cur.Index < 0 {
-		panic("add out but cur.index < 0")
-	}
 	return
 }
 
 func (self *Data) HasIn(tr tri.Tri, hash *keys.Uint256) (exists bool) {
-	if v, ok := self.G2ins[*hash]; ok {
-		exists = v
+	if v, err := tr.TryGet(inName(hash)); err != nil {
+		panic(err)
 		return
 	} else {
-		if v, err := tr.TryGet(inName(hash)); err != nil {
-			panic(err)
-			return
+		if v != nil && v[0] == 1 {
+			exists = true
 		} else {
-			if v != nil && v[0] == 1 {
-				exists = true
-			} else {
-				exists = false
-			}
-			self.G2ins[*hash] = exists
+			exists = false
 		}
 	}
 	return
-}
-
-func (self *Data) AddIn(tr tri.Tri, nil_or_root *keys.Uint256) (e error) {
-	if exists := self.HasIn(tr, nil_or_root); exists {
-		e = fmt.Errorf("add in but exists")
-		return
-	} else {
-		self.addInByNilOrRoot(nil_or_root)
-		return
-	}
 }
 
 func (self *Data) GetOut(tr tri.Tri, root *keys.Uint256) (src *localdb.OutState) {

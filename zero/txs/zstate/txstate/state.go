@@ -19,6 +19,8 @@ package txstate
 import (
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate/data"
 
 	"github.com/sero-cash/go-sero/zero/localdb"
@@ -58,21 +60,14 @@ func NewState(tri tri.Tri, num uint64) (state State) {
 	return
 }
 
-func (state *State) append_del_dirty(del *keys.Uint256) {
-	state.data.AppendDel(del)
-}
-
 func (self *State) load() {
-	self.data.LoadCur(self.tri)
+	self.data.LoadState(self.tri)
 }
 
 func (self *State) Update() {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	self.data.SaveCur(self.tri)
-	self.data.SaveIndex(self.tri)
-
-	//self.clear_dirty()
+	self.data.SaveState(self.tri)
 	return
 }
 
@@ -123,22 +118,22 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	defer state.rw.Unlock()
 	t := utils.TR_enter("AddStx---ins")
 	for _, in := range st.Desc_O.Ins {
-		if err := state.data.AddIn(state.tri, &in.Root); err != nil {
-			e = err
+		if state.data.HasIn(state.tri, &in.Root) {
+			e = errors.New("desc_o.root already be used !")
 			return
 		} else {
-			state.data.AppendDel(&in.Root)
+			state.data.AddNil(&in.Root)
 		}
 	}
 
 	t.Renter("AddStx---z_ins")
 	for _, in := range st.Desc_Z.Ins {
-		if err := state.data.AddIn(state.tri, &in.Nil); err != nil {
-			e = err
+		if state.data.HasIn(state.tri, &in.Nil) {
+			e = errors.New("desc_o.nil already be used !")
 			return
 		} else {
-			state.data.AppendDel(&in.Nil)
-			state.data.AppendDel(&in.Trace)
+			state.data.AddNil(&in.Nil)
+			state.data.AddDel(&in.Trace)
 		}
 	}
 
