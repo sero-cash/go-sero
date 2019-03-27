@@ -11,7 +11,8 @@ type H2Hash struct {
 }
 
 func NewH2Hash(name string) (ret H2Hash) {
-	return H2Hash{}
+	ret.Name = name
+	return
 }
 
 func (self *H2Hash) Clear() {

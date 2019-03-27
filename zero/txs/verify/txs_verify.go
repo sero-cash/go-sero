@@ -86,9 +86,15 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 
 	for _, in_o := range s.Desc_O.Ins {
 		if ok := state.State.HasIn(&in_o.Root); ok {
-			e = errors.New("txs.verify in already in nils")
+			e = errors.New("txs.verify in already in roots")
 			return
 		} else {
+			if state.Num() >= cpt.SIP2 {
+				if ok := state.State.HasIn(&in_o.Nil); ok {
+					e = errors.New("txs.verify in already in nils")
+					return
+				}
+			}
 		}
 		if src, err := state.State.GetOut(&in_o.Root); e == nil {
 			if src != nil {

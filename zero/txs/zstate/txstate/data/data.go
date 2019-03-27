@@ -15,7 +15,8 @@ type Data struct {
 	Dirty_G2outs map[keys.Uint256]bool
 }
 
-func NewData(num uint64) (ret Data) {
+func NewData(num uint64) (ret *Data) {
+	ret = &Data{}
 	ret.Num = num
 	return
 }
@@ -75,4 +76,16 @@ func (self *Data) AddNil(in *keys.Uint256) {
 
 func (self *Data) AddDel(in *keys.Uint256) {
 	self.appendDel(in)
+}
+
+func (self *Data) GetRoots() (roots []keys.Uint256) {
+	return self.Block.Roots
+}
+
+func (self *Data) GetDels() (dels []keys.Uint256) {
+	return self.Block.Dels
+}
+
+func (self *Data) GetIndex() (index int64) {
+	return self.Cur.Index
 }

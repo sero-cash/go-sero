@@ -19,12 +19,12 @@ func Name2BKey(name string, num uint64) (ret []byte) {
 	ret = []byte(key)
 	return
 }
-func inName(k *keys.Uint256) (ret []byte) {
+func InName(k *keys.Uint256) (ret []byte) {
 	ret = []byte("ZState0_InName")
 	ret = append(ret, k[:]...)
 	return
 }
-func outName0(k *keys.Uint256) (ret []byte) {
+func OutName0(k *keys.Uint256) (ret []byte) {
 	ret = []byte("ZState0_OutName")
 	ret = append(ret, k[:]...)
 	return
@@ -64,7 +64,7 @@ func (self *Data) SaveState(tr tri.Tri) {
 
 	for _, k := range g2ins_dirty {
 		v := []byte{1}
-		if err := tr.TryUpdate(inName(&k), v); err != nil {
+		if err := tr.TryUpdate(InName(&k), v); err != nil {
 			panic(err)
 			return
 		}
@@ -78,7 +78,7 @@ func (self *Data) SaveState(tr tri.Tri) {
 
 	for _, k := range g2outs_dirty {
 		if v := self.G2outs[k]; v != nil {
-			tri.UpdateObj(tr, outName0(&k), v)
+			tri.UpdateObj(tr, OutName0(&k), v)
 		} else {
 			panic("state0 update g2outs can not find dirty out")
 		}
@@ -87,7 +87,7 @@ func (self *Data) SaveState(tr tri.Tri) {
 }
 
 func (self *Data) HasIn(tr tri.Tri, hash *keys.Uint256) (exists bool) {
-	if v, err := tr.TryGet(inName(hash)); err != nil {
+	if v, err := tr.TryGet(InName(hash)); err != nil {
 		panic(err)
 		return
 	} else {
@@ -105,7 +105,7 @@ func (self *Data) GetOut(tr tri.Tri, root *keys.Uint256) (src *localdb.OutState)
 		return out
 	} else {
 		get := localdb.OutState0Get{}
-		tri.GetObj(tr, outName0(root), &get)
+		tri.GetObj(tr, OutName0(root), &get)
 		if get.Out != nil {
 			self.G2outs[*root] = get.Out
 			return get.Out

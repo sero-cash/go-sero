@@ -17,6 +17,7 @@
 package zstate
 
 import (
+	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/zero/localdb"
 
@@ -69,18 +70,20 @@ func (self *ZState) PreGenerateRoot(header *types.Header, ch txstate.Chain) {
 
 func (self *ZState) RecordBlock(db serodb.Putter, hash *keys.Uint256) {
 	block := localdb.Block{}
+	block.Roots = self.State.GetBlockRoots()
+	block.Dels = self.State.GetBlockDels()
+	localdb.PutBlock(db, self.num, hash, &block)
+
 	block.Pkgs = self.Pkgs.GetPkgHashes()
 	for _, hash := range block.Pkgs {
 		self.Pkgs.RecordState(db, &hash)
 	}
 
-	block.Roots = self.State.GetBlockRoots()
-	block.Dels = self.State.GetBlockDels()
-	localdb.PutBlock(db, self.num, hash, &block)
-
-	for _, k := range block.Roots {
-		os, _ := self.State.GetOut(&k)
-		localdb.PutOut(db, &k, os)
+	if self.num >= cpt.SIP2 {
+		for _, k := range block.Roots {
+			os, _ := self.State.GetOut(&k)
+			localdb.PutOut(db, &k, os)
+		}
 	}
 }
 

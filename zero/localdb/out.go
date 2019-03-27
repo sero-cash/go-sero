@@ -111,7 +111,7 @@ func PutOut(db serodb.Putter, root *keys.Uint256, out *OutState) {
 	tri.UpdateDBObj(db, outkey, out)
 }
 
-func GetOut(db serodb.Database, root *keys.Uint256) (ret *OutState) {
+func GetOut(db serodb.Getter, root *keys.Uint256) (ret *OutState) {
 	outkey := OutKey(root)
 	outget := OutState0Get{}
 	tri.GetDBObj(db, outkey, &outget)

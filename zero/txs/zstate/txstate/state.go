@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate/data_v1"
+
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -47,7 +49,7 @@ type State struct {
 	num   uint64
 	MTree MerkleTree
 
-	data      data.Data
+	data      data.IData
 	snapshots utils.Snapshots
 }
 
@@ -63,7 +65,11 @@ func NewState(tri tri.Tri, num uint64) (state State) {
 	state = State{tri: tri, num: num}
 	state.rw = new(sync.RWMutex)
 	state.MTree = NewMerkleTree(tri)
-	state.data = data.NewData(num)
+	if num >= cpt.SIP2 {
+		state.data = data_v1.NewData(num)
+	} else {
+		state.data = data.NewData(num)
+	}
 	state.data.Clear()
 	state.load()
 	return
@@ -81,12 +87,12 @@ func (self *State) Update() {
 }
 
 func (self *State) Snapshot(revid int) {
-	self.snapshots.Push(revid, &self.data)
+	self.snapshots.Push(revid, self.data)
 }
 
 func (self *State) Revert(revid int) {
 	self.data.Clear()
-	self.data = *self.snapshots.Revert(revid).(*data.Data)
+	self.data = self.snapshots.Revert(revid).(data.IData)
 }
 
 func (state *State) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
@@ -106,7 +112,7 @@ func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint25
 		os.Out_Z = &o
 	}
 
-	os.Index = uint64(state.data.Cur.Index + 1)
+	os.Index = uint64(state.data.GetIndex() + 1)
 
 	commitment := os.ToRootCM()
 
@@ -131,12 +137,16 @@ func (state *State) AddStx(st *stx.T) (e error) {
 			e = errors.New("desc_o.in.root already be used !")
 			return
 		} else {
-			state.data.AddNil(&in.Root)
-		}
-		if state.num >= cpt.SIP2 {
-			if state.data.HasIn(state.tri, &in.Nil) {
-				e = errors.New("desc_o.in.nil already be used !")
-				return
+			if state.num >= cpt.SIP2 {
+				if state.data.HasIn(state.tri, &in.Nil) {
+					e = errors.New("desc_o.in.nil already be used !")
+					return
+				} else {
+					state.data.AddNil(&in.Root)
+					state.data.AddNil(&in.Nil)
+				}
+			} else {
+				state.data.AddNil(&in.Root)
 			}
 		}
 	}
@@ -169,18 +179,18 @@ func (state *State) GetOut(root *keys.Uint256) (src *localdb.OutState, e error) 
 }
 
 func (self *State) GetBlockRoots() (roots []keys.Uint256) {
-	return self.data.Block.Roots
+	return self.data.GetRoots()
 }
 
 func (self *State) GetBlockDels() (dels []keys.Uint256) {
-	return self.data.Block.Dels
+	return self.data.GetDels()
 }
 
 type Chain interface {
 	GetBlock(hash common.Hash, number uint64) *types.Block
 }
 
-func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
+func AnalyzeNils(header *types.Header, ch Chain) {
 	hash := header.ParentHash
 	number := header.Number.Uint64() - 1
 	m := make(map[keys.Uint256]int)
@@ -215,7 +225,9 @@ func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
 		hash = b.ParentHash()
 		number = number - 1
 	}
+}
 
+func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
 	if header.Number.Uint64() == (cpt.SIP2) {
 		e := utils.TR_enter_f("")
 		hash := header.ParentHash
