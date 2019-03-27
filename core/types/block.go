@@ -109,7 +109,7 @@ func (h *Header) Valid() bool {
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
 	//test
-	if h.Number.Cmp(big.NewInt(515000)) > 0 {
+	if h.Number.Cmp(big.NewInt(519000)) > 0 {
 		hash := rlpHash(h)
 		hash[24] = 0
 		hash[25] = 0
@@ -119,6 +119,7 @@ func (h *Header) Hash() common.Hash {
 		hash[29] = 0
 		hash[30] = 0
 		hash[31] = 0
+		return hash
 	}
 	return rlpHash(h)
 }
