@@ -17,7 +17,13 @@
 package txstate
 
 import (
+	"fmt"
 	"sync"
+
+	"github.com/sero-cash/go-sero/common"
+
+	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-sero/core/types"
 
 	"github.com/pkg/errors"
 
@@ -159,6 +165,41 @@ func (self *State) GetBlockRoots() (roots []keys.Uint256) {
 
 func (self *State) GetBlockDels() (dels []keys.Uint256) {
 	return self.data.Block.Dels
+}
+
+type Chain interface {
+	GetBlock(hash common.Hash, number uint64) *types.Block
+}
+
+func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
+	return
+	hash := header.ParentHash
+	number := header.Number.Uint64() - 1
+	nils := make(map[keys.Uint256]bool)
+	for {
+		b := ch.GetBlock(hash, number)
+		for _, tx := range b.Transactions() {
+			for _, in := range tx.Stxt().Desc_Z.Ins {
+				if _, ok := nils[in.Nil]; ok {
+					fmt.Printf("block=%v,hash=%v,tx:=%v\n", number, hexutil.Encode(hash[:]), tx.Hash())
+				} else {
+					nils[in.Nil] = true
+				}
+			}
+			for _, in := range tx.Stxt().Desc_O.Ins {
+				if _, ok := nils[in.Nil]; ok {
+					fmt.Printf("block=%v,hash=%v,tx:=%v\n", number, hexutil.Encode(hash[:]), tx.Hash())
+				} else {
+					nils[in.Nil] = true
+				}
+			}
+		}
+		if number == 0 {
+			break
+		}
+		hash = b.ParentHash()
+		number = number - 1
+	}
 }
 
 type State0Trees struct {

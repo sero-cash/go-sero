@@ -19,13 +19,15 @@ package types
 
 import (
 	"encoding/binary"
-	"github.com/sero-cash/go-czero-import/keys"
 	"io"
 	"math/big"
 	"sort"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -143,6 +145,9 @@ func (h *Header) HashNoNonce() common.Hash {
 }
 
 func (h *Header) ActualDifficulty() *big.Int {
+	if cpt.IsAlphaNumber(h.Number.Uint64()) {
+		return big.NewInt(1)
+	}
 	if h.Valid() {
 		c := new(big.Int).SetUint64(h.Licr.C)
 		if h.Difficulty.Cmp(c) > 0 {

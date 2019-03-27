@@ -3,6 +3,8 @@ package generate
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/zero/utils"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
@@ -119,6 +121,9 @@ func (self *gen_ctx) setData() {
 			from_r = keys.RandUint256()
 		}
 		self.s.From = keys.Addr2PKr(&addr, &from_r)
+	}
+	if cpt.IsAlphaNumber(self.st.State.Num()) {
+		self.s.Fee.Value.AddU(utils.NewU256(1).ToRef())
 	}
 }
 

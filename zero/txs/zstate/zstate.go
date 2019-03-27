@@ -17,6 +17,7 @@
 package zstate
 
 import (
+	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/zero/localdb"
 
 	"github.com/sero-cash/go-sero/serodb"
@@ -60,6 +61,10 @@ func (self *ZState) Update() {
 	self.State.Update()
 	self.Pkgs.Update()
 	return
+}
+
+func (self *ZState) PreGenerateRoot(header *types.Header, ch txstate.Chain) {
+	self.State.PreGenerateRoot(header, ch)
 }
 
 func (self *ZState) RecordBlock(db serodb.Putter, hash *keys.Uint256) {
