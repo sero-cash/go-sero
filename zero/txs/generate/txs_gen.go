@@ -122,9 +122,6 @@ func (self *gen_ctx) setData() {
 		}
 		self.s.From = keys.Addr2PKr(&addr, &from_r)
 	}
-	if cpt.IsAlphaNumber(self.st.State.Num()) {
-		self.s.Fee.Value.AddU(utils.NewU256(1).ToRef())
-	}
 }
 
 func (self *gen_ctx) proveTx() (e error) {
@@ -217,6 +214,9 @@ func Gen_lstate(st *lstate.State, seed *keys.Uint256, t *tx.T) (s stx.T, e error
 			lstate.UpdateOutStat(lstate.BC().GetDB(), &used_out)
 		}
 		s = ctx.s
+		if cpt.IsAlphaNumber(ctx.st.State.Num()) {
+			s.Fee.Value.AddU(utils.NewU256(1).ToRef())
+		}
 		return
 	}
 }

@@ -111,16 +111,9 @@ func (h *Header) Valid() bool {
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
 	//test
-	if h.Number.Cmp(big.NewInt(519000)) > 0 {
+	if cpt.IsAlphaNumber(h.Number.Uint64()) {
 		hash := rlpHash(h)
-		hash[24] = 0
-		hash[25] = 0
-		hash[26] = 0
-		hash[27] = 0
-		hash[28] = 0
-		hash[29] = 0
-		hash[30] = 0
-		hash[31] = 0
+		hash[31] = hash[31] + 1
 		return hash
 	}
 	return rlpHash(h)

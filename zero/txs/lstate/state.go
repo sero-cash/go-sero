@@ -425,7 +425,11 @@ func (state *State) UpdateWitness(tks []keys.Uint512, num uint64, block *localdb
 	}
 	for _, hash := range block.Pkgs {
 		pg := state.State.Pkgs.GetPkgByHash(&hash)
-		state.addPkg(tks, &pg.Pack.Id, pg)
+		if pg.Closed {
+			state.addPkg(tks, &pg.Pack.Id, nil)
+		} else {
+			state.addPkg(tks, &pg.Pack.Id, pg)
+		}
 	}
 	return
 }

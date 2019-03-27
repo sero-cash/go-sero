@@ -116,7 +116,7 @@ type OPkg struct {
 func (self *PkgState) Close(id *keys.Uint256, pkr *keys.PKr, key *keys.Uint256) (ret OPkg, e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if pg := self.data.GetPkgById(self.tri, id); pg == nil {
+	if pg := self.data.GetPkgById(self.tri, id); pg == nil || pg.Closed {
 		e = fmt.Errorf("Pkg is nil: %v", hexutil.Encode(id[:]))
 		return
 	} else {
@@ -143,7 +143,7 @@ func (self *PkgState) Close(id *keys.Uint256, pkr *keys.PKr, key *keys.Uint256) 
 func (self *PkgState) Transfer(id *keys.Uint256, pkr *keys.PKr, to *keys.PKr) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if pg := self.data.GetPkgById(self.tri, id); pg == nil {
+	if pg := self.data.GetPkgById(self.tri, id); pg == nil || pg.Closed {
 		e = fmt.Errorf("Pkg is nil: %v", hexutil.Encode(id[:]))
 		return
 	} else {

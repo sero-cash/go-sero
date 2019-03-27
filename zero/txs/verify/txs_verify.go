@@ -154,7 +154,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	}
 
 	if s.Desc_Pkg.Transfer != nil {
-		if pg := state.Pkgs.GetPkgById(&s.Desc_Pkg.Transfer.Id); pg == nil {
+		if pg := state.Pkgs.GetPkgById(&s.Desc_Pkg.Transfer.Id); pg == nil || pg.Closed {
 			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
 			return
 		} else {
@@ -167,7 +167,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	}
 
 	if s.Desc_Pkg.Close != nil {
-		if pg := state.Pkgs.GetPkgById(&s.Desc_Pkg.Close.Id); pg == nil {
+		if pg := state.Pkgs.GetPkgById(&s.Desc_Pkg.Close.Id); pg == nil || pg.Closed {
 			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Close.Id[:]))
 			return
 		} else {

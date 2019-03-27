@@ -170,7 +170,7 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 
 	if txt.PkgClose != nil {
 		zpkg := lstate.CurrentState1().State.Pkgs.GetPkgById(&txt.PkgClose.Id)
-		if zpkg == nil {
+		if zpkg == nil || zpkg.Closed {
 			return nil, errors.New("PkgClose Id is not exists!")
 		}
 		pkg_o, err := pkg.DePkg(&txt.PkgClose.Key, &zpkg.Pack.Pkg)

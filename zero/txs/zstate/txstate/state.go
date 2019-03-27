@@ -17,12 +17,12 @@
 package txstate
 
 import (
-	"fmt"
 	"sync"
+
+	"github.com/sero-cash/go-czero-import/cpt"
 
 	"github.com/sero-cash/go-sero/common"
 
-	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/core/types"
 
 	"github.com/pkg/errors"
@@ -172,33 +172,24 @@ type Chain interface {
 }
 
 func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
-	return
-	hash := header.ParentHash
-	number := header.Number.Uint64() - 1
-	nils := make(map[keys.Uint256]bool)
-	for {
-		b := ch.GetBlock(hash, number)
-		for _, tx := range b.Transactions() {
-			for _, in := range tx.Stxt().Desc_Z.Ins {
-				if _, ok := nils[in.Nil]; ok {
-					fmt.Printf("block=%v,hash=%v,tx:=%v\n", number, hexutil.Encode(hash[:]), tx.Hash())
-				} else {
-					nils[in.Nil] = true
+	if header.Number.Uint64() == (cpt.SIP2) {
+		e := utils.TR_enter_f("")
+		hash := header.ParentHash
+		number := header.Number.Uint64() - 1
+		for {
+			b := ch.GetBlock(hash, number)
+			for _, tx := range b.Transactions() {
+				for _, in := range tx.Stxt().Desc_O.Ins {
+					self.data.AddNil(&in.Nil)
 				}
 			}
-			for _, in := range tx.Stxt().Desc_O.Ins {
-				if _, ok := nils[in.Nil]; ok {
-					fmt.Printf("block=%v,hash=%v,tx:=%v\n", number, hexutil.Encode(hash[:]), tx.Hash())
-				} else {
-					nils[in.Nil] = true
-				}
+			if number == 0 {
+				break
 			}
+			hash = b.ParentHash()
+			number = number - 1
 		}
-		if number == 0 {
-			break
-		}
-		hash = b.ParentHash()
-		number = number - 1
+		e.Leave()
 	}
 }
 
