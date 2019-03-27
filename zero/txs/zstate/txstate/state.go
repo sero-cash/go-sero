@@ -17,7 +17,10 @@
 package txstate
 
 import (
+	"fmt"
 	"sync"
+
+	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-czero-import/cpt"
 
@@ -125,10 +128,16 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	t := utils.TR_enter("AddStx---ins")
 	for _, in := range st.Desc_O.Ins {
 		if state.data.HasIn(state.tri, &in.Root) {
-			e = errors.New("desc_o.root already be used !")
+			e = errors.New("desc_o.in.root already be used !")
 			return
 		} else {
 			state.data.AddNil(&in.Root)
+		}
+		if state.num >= cpt.SIP2 {
+			if state.data.HasIn(state.tri, &in.Nil) {
+				e = errors.New("desc_o.in.nil already be used !")
+				return
+			}
 		}
 	}
 
@@ -172,6 +181,41 @@ type Chain interface {
 }
 
 func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
+	hash := header.ParentHash
+	number := header.Number.Uint64() - 1
+	m := make(map[keys.Uint256]int)
+	for {
+		b := ch.GetBlock(hash, number)
+		for _, tx := range b.Transactions() {
+			for _, in := range tx.Stxt().Desc_O.Ins {
+				if v, ok := m[in.Root]; ok {
+					fmt.Printf("num=%v,block=%v,tx=%v,current=%v,hit=%v\n", number, hexutil.Encode(hash[:]), hexutil.Encode(in.ToHash().NewRef()[:]), 1, v)
+				} else {
+					m[in.Root] = 1
+				}
+			}
+			for _, in := range tx.Stxt().Desc_O.Ins {
+				if v, ok := m[in.Nil]; ok {
+					fmt.Printf("num=%v,block=%v,tx=%v,current=%v,hit=%v\n", number, hexutil.Encode(hash[:]), hexutil.Encode(in.ToHash().NewRef()[:]), 2, v)
+				} else {
+					m[in.Nil] = 2
+				}
+			}
+			for _, in := range tx.Stxt().Desc_Z.Ins {
+				if v, ok := m[in.Nil]; ok {
+					fmt.Printf("num=%v,block=%v,tx=%v,current=%v,hit=%v\n", number, hexutil.Encode(hash[:]), hexutil.Encode(in.ToHash().NewRef()[:]), 3, v)
+				} else {
+					m[in.Nil] = 3
+				}
+			}
+		}
+		if number == 0 {
+			break
+		}
+		hash = b.ParentHash()
+		number = number - 1
+	}
+
 	if header.Number.Uint64() == (cpt.SIP2) {
 		e := utils.TR_enter_f("")
 		hash := header.ParentHash
