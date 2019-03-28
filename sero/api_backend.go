@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/log"
+
 	"github.com/sero-cash/go-sero/zero/light"
 
 	"github.com/sero-cash/go-sero/zero/light/light_types"
@@ -256,5 +258,6 @@ func (b *SeroAPIBackend) CommitTx(tx *light_types.GTx) error {
 	gasPrice := big.Int(tx.GasPrice)
 	gas := uint64(tx.Gas)
 	signedTx := types.NewTxWithGTx(gas, &gasPrice, &tx.Tx)
+	log.Info("commitTx", "txhash", signedTx.Hash().String())
 	return b.sero.txPool.AddLocal(signedTx)
 }
