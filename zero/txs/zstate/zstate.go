@@ -81,8 +81,7 @@ func (self *ZState) RecordBlock(db serodb.Putter, hash *keys.Uint256) {
 
 	if self.num >= cpt.SIP2 {
 		for _, k := range block.Roots {
-			os, _ := self.State.GetOut(&k)
-			localdb.PutOut(db, &k, os)
+			self.State.RecordState(db, &k)
 		}
 	}
 }

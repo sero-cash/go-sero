@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/sero-cash/go-sero/serodb"
+
 	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/zero/localdb"
@@ -27,6 +29,10 @@ func InName(k *keys.Uint256) (ret []byte) {
 func OutName0(k *keys.Uint256) (ret []byte) {
 	ret = []byte("ZState0_OutName")
 	ret = append(ret, k[:]...)
+	return
+}
+
+func (self *Data) RecordState(putter serodb.Putter, root *keys.Uint256) {
 	return
 }
 

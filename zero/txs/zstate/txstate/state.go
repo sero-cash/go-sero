@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/sero-cash/go-sero/serodb"
+
 	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate/data_v1"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -73,6 +75,10 @@ func NewState(tri tri.Tri, num uint64) (state State) {
 	state.data.Clear()
 	state.load()
 	return
+}
+
+func (self *State) RecordState(putter serodb.Putter, root *keys.Uint256) {
+	self.data.RecordState(putter, root)
 }
 
 func (self *State) load() {
