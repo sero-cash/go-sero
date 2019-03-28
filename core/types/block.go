@@ -26,7 +26,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/common"
@@ -111,11 +110,6 @@ func (h *Header) Valid() bool {
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
 	//test
-	if cpt.IsAlphaNumber(h.Number.Uint64()) {
-		hash := rlpHash(h)
-		hash[31] = hash[31] + 1
-		return hash
-	}
 	return rlpHash(h)
 }
 
@@ -138,9 +132,6 @@ func (h *Header) HashNoNonce() common.Hash {
 }
 
 func (h *Header) ActualDifficulty() *big.Int {
-	if cpt.IsAlphaNumber(h.Number.Uint64()) {
-		return big.NewInt(1)
-	}
 	if h.Valid() {
 		c := new(big.Int).SetUint64(h.Licr.C)
 		if h.Difficulty.Cmp(c) > 0 {

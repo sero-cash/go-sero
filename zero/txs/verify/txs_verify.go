@@ -45,9 +45,6 @@ func Verify(s *stx.T, state *zstate.ZState) (e error) {
 	return Verify_state1(s, state)
 }
 func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
-	if cpt.IsAlphaNumber(state.State.Num()) {
-		s.Fee.Value.SubU(utils.NewU256(1).ToRef())
-	}
 
 	t := utils.TR_enter("Miner-Verify-----Pre")
 

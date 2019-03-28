@@ -3,8 +3,6 @@ package generate
 import (
 	"errors"
 
-	"github.com/sero-cash/go-sero/zero/utils"
-
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/lstate"
@@ -214,9 +212,6 @@ func Gen_lstate(st *lstate.State, seed *keys.Uint256, t *tx.T) (s stx.T, e error
 			lstate.UpdateOutStat(lstate.BC().GetDB(), &used_out)
 		}
 		s = ctx.s
-		if cpt.IsAlphaNumber(ctx.st.State.Num()) {
-			s.Fee.Value.AddU(utils.NewU256(1).ToRef())
-		}
 		return
 	}
 }
