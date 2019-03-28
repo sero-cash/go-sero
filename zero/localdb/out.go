@@ -101,7 +101,7 @@ func (self *OutState0Get) Unserial(v []byte) (e error) {
 }
 
 func OutKey(root *keys.Uint256) []byte {
-	key := []byte("$SERO_LOCALDB_OUT$")
+	key := []byte("$SERO_LOCALDB_OUTSTATE$")
 	key = append(key, root[:]...)
 	return key
 }

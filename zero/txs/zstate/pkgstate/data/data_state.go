@@ -12,7 +12,7 @@ import (
 func (self *Data) SaveState(tr tri.Tri) {
 	G2pkgs_dirty := self.IdDirtys.List()
 	for _, k := range G2pkgs_dirty {
-		self.Id2Hash.Save(tr, &k)
+		self.Id2Hash.SaveByTri(tr, &k)
 	}
 }
 

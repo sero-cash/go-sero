@@ -12,11 +12,7 @@ import (
 
 func (self *Data) RecordState(putter serodb.Putter, root *keys.Uint256) {
 	if out, ok := self.Root2Out[*root]; ok {
-		if out != nil {
-			localdb.PutOut(putter, root, out)
-		} else {
-			panic(errors.New("data_v1.recordstate can not find out"))
-		}
+		localdb.PutRoot(putter, root, &out)
 	} else {
 		panic(errors.New("data_v1.recordstate can not find root"))
 	}
@@ -52,7 +48,10 @@ func (self *Data) HasIn(tr tri.Tri, hash *keys.Uint256) (exists bool) {
 
 func (self *Data) GetOut(tr tri.Tri, root *keys.Uint256) (src *localdb.OutState) {
 	if self.RootSet.Has(tr, root) {
-		src = localdb.GetOut(tr.GlobalGetter(), root)
+		root := localdb.GetRoot(tr.GlobalGetter(), root)
+		if root != nil {
+			src = &root.OS
+		}
 	}
 	if src == nil {
 		d := data.NewData(self.Num)

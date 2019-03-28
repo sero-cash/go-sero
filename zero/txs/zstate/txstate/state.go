@@ -101,13 +101,13 @@ func (self *State) Revert(revid int) {
 	self.data = self.snapshots.Revert(revid).(data.IData)
 }
 
-func (state *State) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
+func (state *State) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z, txhash *keys.Uint256) (root keys.Uint256) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
-	return state.addOut(out_o, out_z)
+	return state.addOut(out_o, out_z, txhash)
 }
 
-func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint256) {
+func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z, txhash *keys.Uint256) (root keys.Uint256) {
 	os := localdb.OutState{}
 	if out_o != nil {
 		o := *out_o
@@ -124,7 +124,7 @@ func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z) (root keys.Uint25
 
 	root = state.MTree.AppendLeaf(*commitment)
 
-	state.data.AddOut(&root, &os)
+	state.data.AddOut(&root, &os, txhash)
 	return
 }
 
@@ -170,7 +170,7 @@ func (state *State) AddStx(st *stx.T) (e error) {
 
 	t.Renter("AddStx---z_outs")
 	for _, out := range st.Desc_Z.Outs {
-		state.addOut(nil, &out)
+		state.addOut(nil, &out, st.ToHash().NewRef())
 	}
 
 	t.Leave()

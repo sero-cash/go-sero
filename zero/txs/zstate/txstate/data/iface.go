@@ -9,7 +9,7 @@ import (
 
 type IData interface {
 	Clear()
-	AddOut(root *keys.Uint256, out *localdb.OutState)
+	AddOut(root *keys.Uint256, out *localdb.OutState, txhash *keys.Uint256)
 	AddNil(in *keys.Uint256)
 	AddDel(in *keys.Uint256)
 

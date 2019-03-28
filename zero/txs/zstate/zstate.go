@@ -100,7 +100,7 @@ func (self *ZState) Revert(revid int) {
 }
 
 func (state *ZState) AddOut_O(out *stx.Out_O) {
-	state.State.AddOut(out.Clone().ToRef(), nil)
+	state.State.AddOut(out.Clone().ToRef(), nil, nil)
 }
 
 func (state *ZState) AddStx(st *stx.T) (e error) {

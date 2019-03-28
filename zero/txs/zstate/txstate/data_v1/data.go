@@ -13,7 +13,7 @@ type Data struct {
 	RootSet utils.HSet
 
 	Cur      data.Current
-	Root2Out map[keys.Uint256]*localdb.OutState
+	Root2Out map[keys.Uint256]localdb.RootState
 
 	Dels  utils.Dirtys
 	Nils  utils.Dirtys
@@ -30,15 +30,21 @@ func NewData(num uint64) (ret *Data) {
 
 func (state *Data) Clear() {
 	state.Cur = data.NewCur()
-	state.Root2Out = make(map[keys.Uint256]*localdb.OutState)
+	state.Root2Out = make(map[keys.Uint256]localdb.RootState)
 	state.Dels.Clear()
 	state.Nils.Clear()
 	state.Roots.Clear()
 }
 
-func (self *Data) AddOut(root *keys.Uint256, out *localdb.OutState) {
+func (self *Data) AddOut(root *keys.Uint256, out *localdb.OutState, txhash *keys.Uint256) {
 	self.Roots.Append(root)
-	self.Root2Out[*root] = out
+	rs := localdb.RootState{}
+	rs.Num = self.Num
+	rs.OS = *out
+	if txhash != nil {
+		rs.TxHash = *txhash
+	}
+	self.Root2Out[*root] = rs
 	self.Cur.Index++
 	if self.Cur.Index != int64(out.Index) {
 		panic("add out but cur.index != current_index")

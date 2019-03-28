@@ -2,6 +2,7 @@ package utils
 
 import (
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 )
 
@@ -40,7 +41,32 @@ func (self *H2Hash) K2Name(k *keys.Uint256) (ret []byte) {
 	return
 }
 
-func (self *H2Hash) Save(tr tri.Tri, id *keys.Uint256) {
+func (self *H2Hash) SaveByDB(putter serodb.Putter, id *keys.Uint256) {
+	v := self.M[*id]
+	if err := putter.Put(self.K2Name(id), v[:]); err == nil {
+		return
+	} else {
+		panic(err)
+		return
+	}
+}
+
+func (self *H2Hash) GetByDB(getter serodb.Getter, id *keys.Uint256) (ret keys.Uint256) {
+	var ok bool
+	if ret, ok = self.M[*id]; !ok {
+		if bs, err := getter.Get(self.K2Name(id)); err == nil {
+			copy(ret[:], bs[:])
+			return
+		} else {
+			panic(err)
+			return
+		}
+	} else {
+		return
+	}
+}
+
+func (self *H2Hash) SaveByTri(tr tri.Tri, id *keys.Uint256) {
 	v := self.M[*id]
 	if err := tr.TryUpdate(self.K2Name(id), v[:]); err == nil {
 		return
