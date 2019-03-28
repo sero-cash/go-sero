@@ -23,7 +23,7 @@ type Data struct {
 func NewData(num uint64) (ret *Data) {
 	ret = &Data{}
 	ret.Num = num
-	ret.NilSet = utils.NewHSet("ZState0_InName")
+	ret.NilSet = utils.NewHSet(data.ZSTATE0_INNAME)
 	ret.RootSet = utils.NewHSet("$ZState0$ROOT-OUT$")
 	return
 }

@@ -16,7 +16,7 @@ type Data struct {
 func NewData(num uint64) (ret *Data) {
 	return &Data{
 		Num:     num,
-		Id2Hash: utils.NewH2Hash("$ZState0_PkgName$"),
+		Id2Hash: utils.NewH2Hash("$ZState0$Pkg$Id2Hash$"),
 	}
 }
 func (self *Data) Clear() {

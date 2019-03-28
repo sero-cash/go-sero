@@ -15,6 +15,8 @@ import (
 
 const LAST_OUTSTATE0_NAME = tri.KEY_NAME("ZState0_Cur")
 const BLOCK_NAME = "ZState0_BLOCK"
+const ZSTATE0_INNAME = "ZState0_InName"
+const ZSTATE0_OUTNAME = "ZState0_OutName"
 
 func Name2BKey(name string, num uint64) (ret []byte) {
 	key := fmt.Sprintf("%s_%d", name, num)
@@ -22,12 +24,12 @@ func Name2BKey(name string, num uint64) (ret []byte) {
 	return
 }
 func InName(k *keys.Uint256) (ret []byte) {
-	ret = []byte("ZState0_InName")
+	ret = []byte(ZSTATE0_INNAME)
 	ret = append(ret, k[:]...)
 	return
 }
 func OutName0(k *keys.Uint256) (ret []byte) {
-	ret = []byte("ZState0_OutName")
+	ret = []byte(ZSTATE0_OUTNAME)
 	ret = append(ret, k[:]...)
 	return
 }

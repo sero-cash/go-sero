@@ -72,9 +72,9 @@ func (self *ZState) RecordBlock(db serodb.Putter, hash *keys.Uint256) {
 	block := localdb.Block{}
 	block.Roots = self.State.GetBlockRoots()
 	block.Dels = self.State.GetBlockDels()
+	block.Pkgs = self.Pkgs.GetPkgHashes()
 	localdb.PutBlock(db, self.num, hash, &block)
 
-	block.Pkgs = self.Pkgs.GetPkgHashes()
 	for _, hash := range block.Pkgs {
 		self.Pkgs.RecordState(db, &hash)
 	}

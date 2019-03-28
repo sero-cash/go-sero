@@ -57,18 +57,18 @@ func (self *PkgGet) Unserial(v []byte) (e error) {
 }
 
 func PkgKey(root *keys.Uint256) []byte {
-	key := []byte("$SERO_LOCALDB_PKG$")
+	key := []byte("$SERO_LOCALDB_PKG_HASH$")
 	key = append(key, root[:]...)
 	return key
 }
 
 func PutPkg(db serodb.Putter, hash *keys.Uint256, pkg *ZPkg) {
-	key := OutKey(hash)
+	key := PkgKey(hash)
 	tri.UpdateDBObj(db, key, pkg)
 }
 
 func GetPkg(db serodb.Getter, hash *keys.Uint256) (ret *ZPkg) {
-	key := OutKey(hash)
+	key := PkgKey(hash)
 	get := PkgGet{}
 	tri.GetDBObj(db, key, &get)
 	ret = get.Out
