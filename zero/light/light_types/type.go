@@ -15,8 +15,8 @@ type Kr struct {
 }
 
 type Out struct {
-	Root keys.Uint256
-	localdb.OutState
+	Root  keys.Uint256
+	State localdb.RootState
 }
 
 type DOut struct {

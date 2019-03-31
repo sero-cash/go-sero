@@ -38,9 +38,9 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []light_types
 					block.Nils = append(block.Nils, k)
 				}
 				for _, k := range local_block.Roots {
-					out := localdb.GetOut(light_ref.Ref_inst.Bc.GetDB(), &k)
-					if out != nil {
-						block.Outs = append(block.Outs, light_types.Out{k, *out})
+					root := localdb.GetRoot(light_ref.Ref_inst.Bc.GetDB(), &k)
+					if root != nil {
+						block.Outs = append(block.Outs, light_types.Out{k, *root})
 					} else {
 						e = fmt.Errorf("GetBlocksInfo.GetOut Failed, num: %v root: %v", num, k)
 						return
