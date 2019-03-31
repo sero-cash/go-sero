@@ -4,9 +4,7 @@ import (
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
@@ -106,6 +104,7 @@ func OutKey(root *keys.Uint256) []byte {
 	return key
 }
 
+/*
 func PutOut(db serodb.Putter, root *keys.Uint256, out *OutState) {
 	outkey := OutKey(root)
 	tri.UpdateDBObj(db, outkey, out)
@@ -118,3 +117,4 @@ func GetOut(db serodb.Getter, root *keys.Uint256) (ret *OutState) {
 	ret = outget.Out
 	return
 }
+*/
