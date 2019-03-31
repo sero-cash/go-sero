@@ -67,10 +67,10 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 	for i, in := range self.Z_Ins {
 		g := gen_input_desc{}
 		g.desc.Sk = in.SKr.ToUint512()
-		g.desc.Pkr = in.Out.Out_Z.PKr
-		g.desc.RPK = in.Out.Out_Z.RPK
-		g.desc.Einfo = in.Out.Out_Z.EInfo
-		g.desc.Index = in.Out.Index
+		g.desc.Pkr = in.Out.State.OS.Out_Z.PKr
+		g.desc.RPK = in.Out.State.OS.Out_Z.RPK
+		g.desc.Einfo = in.Out.State.OS.Out_Z.EInfo
+		g.desc.Index = in.Out.State.OS.Index
 		pos, paths, anchor := in.Witness.Pos, in.Witness.Paths, in.Witness.Anchor
 		g.desc.Position = uint32(pos)
 		g.desc.Anchor = anchor

@@ -43,18 +43,18 @@ func (self *SLI) DecOuts(outs []light_types.Out, skr *keys.PKr) (douts []light_t
 	copy(sk[:], skr[:])
 	for _, out := range outs {
 		dout := light_types.DOut{}
-		if out.Out_O != nil {
-			dout.Asset = out.Out_O.Asset.Clone()
-			dout.Memo = out.Out_O.Memo
-			dout.Nil = cpt.GenNil(&sk, out.RootCM)
+		if out.State.OS.Out_O != nil {
+			dout.Asset = out.State.OS.Out_O.Asset.Clone()
+			dout.Memo = out.State.OS.Out_O.Memo
+			dout.Nil = cpt.GenNil(&sk, out.State.OS.RootCM)
 		} else {
-			key, flag := keys.FetchKey(&sk, &out.Out_Z.RPK)
+			key, flag := keys.FetchKey(&sk, &out.State.OS.Out_Z.RPK)
 			info_desc := cpt.InfoDesc{}
 			info_desc.Key = key
 			info_desc.Flag = flag
-			info_desc.Einfo = out.Out_Z.EInfo
+			info_desc.Einfo = out.State.OS.Out_Z.EInfo
 			cpt.DecOutput(&info_desc)
-			if e := stx.ConfirmOut_Z(&info_desc, out.Out_Z); e == nil {
+			if e := stx.ConfirmOut_Z(&info_desc, out.State.OS.Out_Z); e == nil {
 				dout.Asset = assets.NewAsset(
 					&assets.Token{
 						info_desc.Tkn_currency,
@@ -66,7 +66,7 @@ func (self *SLI) DecOuts(outs []light_types.Out, skr *keys.PKr) (douts []light_t
 					},
 				)
 				dout.Memo = info_desc.Memo
-				dout.Nil = cpt.GenNil(&sk, out.RootCM)
+				dout.Nil = cpt.GenNil(&sk, out.State.OS.RootCM)
 			}
 		}
 		douts = append(douts, dout)

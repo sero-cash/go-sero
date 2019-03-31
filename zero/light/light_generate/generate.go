@@ -40,7 +40,7 @@ func Generate(param *light_types.GenTxParam) (ret stx.T, e error) {
 
 func (self *gen_ctx) prepare() {
 	for _, in := range self.param.Ins {
-		if in.Out.Out_O != nil {
+		if in.Out.State.OS.Out_O != nil {
 			self.O_Ins = append(self.O_Ins, in)
 		} else {
 			self.Z_Ins = append(self.Z_Ins, in)
@@ -68,12 +68,12 @@ func (self *gen_ctx) setData() {
 	}
 	{
 		for _, in := range self.param.Ins {
-			if in.Out.Out_O != nil {
+			if in.Out.State.OS.Out_O != nil {
 				s_in_o := stx.In_S{}
 				s_in_o.Root = in.Out.Root
 				self.s.Desc_O.Ins = append(self.s.Desc_O.Ins, s_in_o)
 				{
-					asset := in.Out.Out_O.Asset.ToFlatAsset()
+					asset := in.Out.State.OS.Out_O.Asset.ToFlatAsset()
 					asset_desc := cpt.AssetDesc{
 						Tkn_currency: asset.Tkn.Currency,
 						Tkn_value:    asset.Tkn.Value.ToUint256(),
@@ -114,8 +114,8 @@ func (self *gen_ctx) signTx() (e error) {
 		g := cpt.InputSDesc{}
 		g.Ehash = hash_z
 		g.Sk = s_in_o.SKr.ToUint512()
-		g.Pkr = s_in_o.Out.Out_O.Addr
-		g.RootCM = *s_in_o.Out.RootCM
+		g.Pkr = s_in_o.Out.State.OS.Out_O.Addr
+		g.RootCM = *s_in_o.Out.State.OS.RootCM
 		if err := cpt.GenInputSProofBySk(&g); err != nil {
 			e = err
 			return
