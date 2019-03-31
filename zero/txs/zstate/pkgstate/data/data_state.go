@@ -26,7 +26,7 @@ func (self *Data) RecordState(putter serodb.Putter, hash *keys.Uint256) {
 
 func (self *Data) GetPkgById(tr tri.Tri, id *keys.Uint256) (pg *localdb.ZPkg) {
 	if hash := self.Id2Hash.GetByTri(tr, id); hash != keys.Empty_Uint256 {
-		pg = localdb.GetPkg(tr.GlobalGetter(), &hash)
+		pg = self.GetPkgByHash(tr, &hash)
 		return
 	} else {
 		return
@@ -34,6 +34,13 @@ func (self *Data) GetPkgById(tr tri.Tri, id *keys.Uint256) (pg *localdb.ZPkg) {
 }
 
 func (self *Data) GetPkgByHash(tr tri.Tri, hash *keys.Uint256) (pg *localdb.ZPkg) {
-	pg = localdb.GetPkg(tr.GlobalGetter(), hash)
-	return
+	var ok bool
+	if pg, ok = self.Hash2Pkg[*hash]; ok {
+		return
+	} else {
+		if pg = localdb.GetPkg(tr.GlobalGetter(), hash); pg != nil {
+			self.Hash2Pkg[*hash] = pg
+		}
+		return
+	}
 }

@@ -56,6 +56,7 @@ func (self *H2Hash) GetByDB(getter serodb.Getter, id *keys.Uint256) (ret keys.Ui
 	if ret, ok = self.M[*id]; !ok {
 		if bs, err := getter.Get(self.K2Name(id)); err == nil {
 			copy(ret[:], bs[:])
+			self.M[*id] = ret
 			return
 		} else {
 			panic(err)
@@ -81,6 +82,7 @@ func (self *H2Hash) GetByTri(tr tri.Tri, id *keys.Uint256) (ret keys.Uint256) {
 	if ret, ok = self.M[*id]; !ok {
 		if bs, err := tr.TryGet(self.K2Name(id)); err == nil {
 			copy(ret[:], bs[:])
+			self.M[*id] = ret
 			return
 		} else {
 			panic(err)

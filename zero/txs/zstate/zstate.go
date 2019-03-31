@@ -109,13 +109,19 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 		return
 	} else {
 		if st.Desc_Pkg.Create != nil {
-			state.Pkgs.Force_add(&st.From, st.Desc_Pkg.Create)
+			if e = state.Pkgs.Force_add(&st.From, st.Desc_Pkg.Create); e != nil {
+				return
+			}
 		}
 		if st.Desc_Pkg.Close != nil {
-			state.Pkgs.Force_del(&st.Desc_Pkg.Close.Id)
+			if e = state.Pkgs.Force_del(&st.Desc_Pkg.Close.Id); e != nil {
+				return
+			}
 		}
 		if st.Desc_Pkg.Transfer != nil {
-			state.Pkgs.Force_transfer(&st.Desc_Pkg.Transfer.Id, &st.Desc_Pkg.Transfer.PKr)
+			if e = state.Pkgs.Force_transfer(&st.Desc_Pkg.Transfer.Id, &st.Desc_Pkg.Transfer.PKr); e != nil {
+				return
+			}
 		}
 	}
 	return

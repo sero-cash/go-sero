@@ -8,23 +8,21 @@ import (
 )
 
 type Data struct {
-	Num     uint64
-	NilSet  utils.HSet
-	RootSet utils.HSet
+	Num uint64
 
 	Cur      data.Current
 	Root2Out map[keys.Uint256]localdb.RootState
 
 	Dels  utils.Dirtys
-	Nils  utils.Dirtys
-	Roots utils.Dirtys
+	Nils  utils.HSet
+	Roots utils.HSet
 }
 
 func NewData(num uint64) (ret *Data) {
 	ret = &Data{}
 	ret.Num = num
-	ret.NilSet = utils.NewHSet(data.ZSTATE0_INNAME)
-	ret.RootSet = utils.NewHSet("$ZState0$ROOT-OUT$")
+	ret.Nils = utils.NewHSet(data.ZSTATE0_INNAME)
+	ret.Roots = utils.NewHSet("$ZState0$ROOT-OUT$")
 	return
 }
 

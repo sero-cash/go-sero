@@ -72,10 +72,11 @@ func (state *PkgState) GetPkgHashes() (ret []keys.Uint256) {
 	return state.data.GetHashes()
 }
 
-func (self *PkgState) Force_del(id *keys.Uint256) {
+func (self *PkgState) Force_del(id *keys.Uint256) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if pg := self.data.GetPkgById(self.tri, id); pg == nil {
+	if pg := self.data.GetPkgById(self.tri, id); pg == nil || pg.Closed {
+		e = fmt.Errorf("Close Pkg is nil: %v", hexutil.Encode(id[:]))
 		return
 	} else {
 		pg.Closed = true
@@ -84,22 +85,31 @@ func (self *PkgState) Force_del(id *keys.Uint256) {
 	}
 }
 
-func (self *PkgState) Force_add(from *keys.PKr, pack *stx.PkgCreate) {
+func (self *PkgState) Force_add(from *keys.PKr, pack *stx.PkgCreate) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	zpkg := localdb.ZPkg{
-		self.num,
-		*from,
-		pack.Clone(),
-		false,
+
+	if pg := self.data.GetPkgById(self.tri, &pack.Id); pg != nil {
+		e = fmt.Errorf("Create Pkg is not nil: %v", hexutil.Encode(pack.Id[:]))
+		return
+	} else {
+		zpkg := localdb.ZPkg{
+			self.num,
+			*from,
+			pack.Clone(),
+			false,
+		}
+		self.data.Add(&zpkg)
+		return
 	}
-	self.data.Add(&zpkg)
+
 }
 
-func (self *PkgState) Force_transfer(id *keys.Uint256, to *keys.PKr) {
+func (self *PkgState) Force_transfer(id *keys.Uint256, to *keys.PKr) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if pg := self.data.GetPkgById(self.tri, id); pg == nil {
+	if pg := self.data.GetPkgById(self.tri, id); pg == nil || pg.Closed {
+		e = fmt.Errorf("Transfer Pkg is nil: %v", hexutil.Encode(id[:]))
 		return
 	} else {
 		pg.Pack.PKr = *to
@@ -117,11 +127,11 @@ func (self *PkgState) Close(id *keys.Uint256, pkr *keys.PKr, key *keys.Uint256) 
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	if pg := self.data.GetPkgById(self.tri, id); pg == nil || pg.Closed {
-		e = fmt.Errorf("Pkg is nil: %v", hexutil.Encode(id[:]))
+		e = fmt.Errorf("Close Pkg is nil: %v", hexutil.Encode(id[:]))
 		return
 	} else {
 		if pg.Pack.PKr != *pkr {
-			e = fmt.Errorf("Pkg Owner Check Failed: %v", hexutil.Encode(id[:]))
+			e = fmt.Errorf("Close Pkg Owner Check Failed: %v", hexutil.Encode(id[:]))
 			return
 		} else {
 			if ret.O, e = pkg.DePkg(key, &pg.Pack.Pkg); e != nil {
@@ -144,11 +154,11 @@ func (self *PkgState) Transfer(id *keys.Uint256, pkr *keys.PKr, to *keys.PKr) (e
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	if pg := self.data.GetPkgById(self.tri, id); pg == nil || pg.Closed {
-		e = fmt.Errorf("Pkg is nil: %v", hexutil.Encode(id[:]))
+		e = fmt.Errorf("Transfer Pkg is nil: %v", hexutil.Encode(id[:]))
 		return
 	} else {
 		if pg.Pack.PKr != *pkr {
-			e = fmt.Errorf("Pkg Owner Check Failed: %v", hexutil.Encode(id[:]))
+			e = fmt.Errorf("Transfer Pkg Owner Check Failed: %v", hexutil.Encode(id[:]))
 			return
 		} else {
 			pg.Pack.PKr = *to
