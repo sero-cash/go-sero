@@ -38,11 +38,8 @@ func (self *HSet) K2Name(k *keys.Uint256) (ret []byte) {
 
 func (self *HSet) Save(tr tri.Tri) {
 	for _, k := range self.Orders {
-		if err := tr.TryUpdate(self.K2Name(&k), []byte{1}); err == nil {
-			return
-		} else {
+		if err := tr.TryUpdate(self.K2Name(&k), []byte{1}); err != nil {
 			panic(err)
-			return
 		}
 	}
 }
