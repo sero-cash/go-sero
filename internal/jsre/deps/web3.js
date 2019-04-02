@@ -2698,11 +2698,11 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }
         };
 
-        var isPKr = function (PKr) {
+        var paramAddress = function (addr) {
 
-            if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(PKr)) {
-                bytes = base58ToBytes(PKr)
-                if (bytes.length !== 96) {
+            if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addr)) {
+                bytes = base58ToBytes(addr)
+                if (bytes.length !== 96 && bytes.length !=64) {
                     return false;
                 }
                 return true;
@@ -2927,7 +2927,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             toAddress: toAddress,
             isBigNumber: isBigNumber,
             isStrictAddress: isStrictAddress,
-            isPKr: isPKr,
+            paramAddress: paramAddress,
             isAddress: isAddress,
             isChecksumAddress: isChecksumAddress,
             toChecksumAddress: toChecksumAddress,
@@ -4336,7 +4336,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }
 
             if (options.to) { // it might be contract creation
-                options.to = inputAddressFormatter(options.to);
+                options.to = inputParamAddressFormatter(options.to);
             }
 
             ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
@@ -4361,7 +4361,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             options.from = inputAddressFormatter(options.from);
 
             if (options.to) { // it might be contract creation
-                options.to = inputAddressFormatter(options.to);
+                options.to=inputParamAddressFormatter(options.to)
             }
 
             ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
@@ -4373,27 +4373,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return options;
         };
 
-        var inputPKrTransactionFormatter = function (options){
-
-            options.from = options.from || config.defaultAccount;
-            options.from = inputAddressFormatter(options.from);
-
-            if (options.to) { // it might be contract creation
-                if (!utils.isPKr(options.to)){
-                    throw new Error('invalid address');
-                }
-            }else{
-                throw new Error('to can not be null');
-            }
-
-            ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
-                return options[key] !== undefined;
-            }).forEach(function(key){
-                options[key] = utils.fromDecimal(options[key]);
-            });
-
-            return options;
-        };
 
         /**
          * Formats the output of a transaction to its proper values
@@ -4584,6 +4563,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             throw new Error('invalid address');
         };
 
+        var inputParamAddressFormatter = function (address) {
+            if (utils.paramAddress(address)) {
+                return address
+            }
+            throw new Error('invalid address');
+        };
+
 
         var outputSyncingFormatter = function(result) {
             if (!result) {
@@ -4627,7 +4613,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             inputBlockNumberFormatter: inputBlockNumberFormatter,
             inputCallFormatter: inputCallFormatter,
             inputTransactionFormatter: inputTransactionFormatter,
-            inputPKrTransactionFormatter: inputPKrTransactionFormatter,
+            inputParamAddressFormatter:inputParamAddressFormatter,
             inputAddressFormatter: inputAddressFormatter,
             inputPostFormatter: inputPostFormatter,
             outputBigNumberFormatter: outputBigNumberFormatter,
@@ -6204,7 +6190,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 name: 'getBalance',
                 call: 'sero_getBalance',
                 params: 2,
-                inputFormatter: [formatters.inputAddressFormatter,formatters.inputDefaultBlockNumberFormatter],
+                inputFormatter: [formatters.inputParamAddressFormatter,formatters.inputDefaultBlockNumberFormatter],
                 outputFormatter: formatters.outputBalanceFormatter
             });
 
@@ -6212,7 +6198,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 name: 'getPkg',
                 call: 'sero_getPkg',
                 params: 3,
-                inputFormatter: [formatters.inputAddressFormatter,null,null],
+                inputFormatter: [formatters.inputParamAddressFormatter,null,null],
             });
 
             var watchPkg = new Method({
@@ -6339,13 +6325,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 1,
                 inputFormatter: [formatters.inputTransactionFormatter]
             });
-
-            var sendTransactionWithPKr = new Method({
-                name: 'sendTransactionWithPKr',
-                call: 'sero_sendTransactionWithPKr',
-                params: 1,
-                inputFormatter: [formatters.inputPKrTransactionFormatter]
-            });
             var genPKr=new Method({
                 name: 'genPKr',
                 call: 'sero_genPKr',
@@ -6470,7 +6449,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 estimateGas,
                 sendTransaction,
                 reSendTransaction,
-                sendTransactionWithPKr,
                 createPkg,
                 closePkg,
                 transferPkg,

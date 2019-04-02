@@ -19,8 +19,6 @@ package common
 
 import (
 	"encoding/hex"
-
-	"github.com/sero-cash/go-sero/common/base58"
 )
 
 // ToHex returns the hex representation of b, prefixed with '0x'.
@@ -47,10 +45,6 @@ func FromHex(s string) []byte {
 		s = "0" + s
 	}
 	return Hex2Bytes(s)
-}
-
-func FromBase58(s string, out []byte) {
-	base58.DecodeString(s, out)
 }
 
 // CopyBytes returns an exact copy of the provided bytes.

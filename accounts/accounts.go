@@ -20,6 +20,7 @@ package accounts
 import (
 	sero "github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/event"
@@ -29,9 +30,9 @@ import (
 // AccountAddress represents an Sero account located at a specific location defined
 // by the optional URL field.
 type Account struct {
-	Address common.AccountAddress `json:"address"` // Sero account address derived from the key
-	Tk      common.AccountAddress `json:"tk"`      // Sero account tk derived from the key
-	URL     URL                   `json:"url"`     // Optional resource locator within a backend
+	Address address.AccountAddress `json:"address"` // Sero account address derived from the key
+	Tk      address.AccountAddress `json:"tk"`      // Sero account tk derived from the key
+	URL     URL                    `json:"url"`     // Optional resource locator within a backend
 }
 
 // Wallet represents a software or hardware wallet that might contain one or more
