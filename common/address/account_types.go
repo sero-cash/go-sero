@@ -147,7 +147,12 @@ func (a *AccountAddress) UnmarshalText(input []byte) error {
 	}
 	if isZeroSuffix(maxBase58Bytes) {
 		copy(a[:], maxBase58Bytes[:64])
-		return nil
+		if keys.IsPKValid(a.ToUint512()) {
+			return nil
+		} else {
+			return errors.New(fmt.Sprintf("invalud base58 accountAddress %v", string(input)))
+		}
+
 	} else {
 		return errors.New(fmt.Sprintf("invalud base58 account address %v", string(input)))
 	}
