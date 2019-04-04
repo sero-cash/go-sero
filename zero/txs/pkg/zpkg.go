@@ -21,14 +21,6 @@ func (this Pkg_Z) ToRef() (ret *Pkg_Z) {
 func (self *Pkg_Z) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.AssetCM[:])
-	d.Write(self.EInfo[:])
-	copy(ret[:], d.Sum(nil))
-	return ret
-}
-
-func (self *Pkg_Z) ToHash_V1() (ret keys.Uint256) {
-	d := sha3.NewKeccak256()
-	d.Write(self.AssetCM[:])
 	d.Write(self.PkgCM[:])
 	d.Write(self.EInfo[:])
 	copy(ret[:], d.Sum(nil))

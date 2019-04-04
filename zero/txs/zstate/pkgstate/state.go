@@ -72,15 +72,20 @@ func (state *PkgState) GetPkgHashes() (ret []keys.Uint256) {
 	return state.data.GetHashes()
 }
 
-func (self *PkgState) Force_del(id *keys.Uint256) (e error) {
+func (self *PkgState) Force_del(hash *keys.Uint256, close *stx.PkgClose) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if pg := self.data.GetPkgById(self.tri, id); pg == nil || pg.Closed {
-		e = fmt.Errorf("Close Pkg is nil: %v", hexutil.Encode(id[:]))
+	if pg := self.data.GetPkgById(self.tri, &close.Id); pg == nil || pg.Closed {
+		e = fmt.Errorf("Close Pkg is nil: %v", hexutil.Encode(close.Id[:]))
 		return
 	} else {
-		pg.Closed = true
-		self.data.Add(pg)
+		if keys.VerifyPKr(hash, &close.Sign, &pg.Pack.PKr) {
+			pg.Closed = true
+			self.data.Add(pg)
+		} else {
+			e = fmt.Errorf("Close Pkg signed error: %v", hexutil.Encode(close.Id[:]))
+			return
+		}
 		return
 	}
 }
@@ -105,15 +110,20 @@ func (self *PkgState) Force_add(from *keys.PKr, pack *stx.PkgCreate) (e error) {
 
 }
 
-func (self *PkgState) Force_transfer(id *keys.Uint256, to *keys.PKr) (e error) {
+func (self *PkgState) Force_transfer(hash *keys.Uint256, trans *stx.PkgTransfer) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
-	if pg := self.data.GetPkgById(self.tri, id); pg == nil || pg.Closed {
-		e = fmt.Errorf("Transfer Pkg is nil: %v", hexutil.Encode(id[:]))
+	if pg := self.data.GetPkgById(self.tri, &trans.Id); pg == nil || pg.Closed {
+		e = fmt.Errorf("Transfer Pkg is nil: %v", hexutil.Encode(trans.Id[:]))
 		return
 	} else {
-		pg.Pack.PKr = *to
-		self.data.Add(pg)
+		if keys.VerifyPKr(hash, &trans.Sign, &pg.Pack.PKr) {
+			pg.Pack.PKr = trans.PKr
+			self.data.Add(pg)
+		} else {
+			e = fmt.Errorf("Transfer Pkg signed error: %v", hexutil.Encode(trans.Id[:]))
+			return
+		}
 		return
 	}
 }

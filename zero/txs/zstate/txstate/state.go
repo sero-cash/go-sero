@@ -118,7 +118,10 @@ func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z, txhash *keys.Uint
 		os.Out_Z = &o
 	}
 
-	os.Index = uint64(state.data.GetIndex() + 1)
+	//index := state.MTree.GetCurrentIndex()
+
+	//os.Index = uint64(state.data.GetIndex() + 1)
+	os.Index = state.MTree.GetCurrentIndex() + 1
 
 	commitment := os.ToRootCM()
 
@@ -134,23 +137,23 @@ func (self *State) HasIn(hash *keys.Uint256) (exists bool) {
 	return self.data.HasIn(self.tri, hash)
 }
 
-func (state *State) AddStx(st *stx.T) (e error) {
+func (state *State) AddStx(st *stx.T, hash *keys.Uint256) (e error) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	t := utils.TR_enter("AddStx---ins")
 	for _, in := range st.Desc_O.Ins {
-		if state.data.HasIn(state.tri, &in.Root) {
-			e = errors.New("desc_o.in.root already be used !")
-			return
+		if state.num >= cpt.SIP2 {
+			if state.data.HasIn(state.tri, &in.Nil) {
+				e = errors.New("desc_o.in.nil already be used !")
+				return
+			} else {
+				state.data.AddNil(&in.Nil)
+				state.data.AddDel(&in.Root)
+			}
 		} else {
-			if state.num >= cpt.SIP2 {
-				if state.data.HasIn(state.tri, &in.Nil) {
-					e = errors.New("desc_o.in.nil already be used !")
-					return
-				} else {
-					state.data.AddNil(&in.Root)
-					state.data.AddNil(&in.Nil)
-				}
+			if state.data.HasIn(state.tri, &in.Root) {
+				e = errors.New("desc_o.in.root already be used !")
+				return
 			} else {
 				state.data.AddNil(&in.Root)
 			}
@@ -170,7 +173,7 @@ func (state *State) AddStx(st *stx.T) (e error) {
 
 	t.Renter("AddStx---z_outs")
 	for _, out := range st.Desc_Z.Outs {
-		state.addOut(nil, &out, st.ToHash().NewRef())
+		state.addOut(nil, &out, hash)
 	}
 
 	t.Leave()
@@ -178,10 +181,10 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	return
 }
 
-func (state *State) GetOut(root *keys.Uint256) (src *localdb.OutState, e error) {
+func (state *State) GetOut(root *keys.Uint256) (src *localdb.OutState) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
-	return state.data.GetOut(state.tri, root), nil
+	return state.data.GetOut(state.tri, root)
 }
 
 func (self *State) GetBlockRoots() (roots []keys.Uint256) {

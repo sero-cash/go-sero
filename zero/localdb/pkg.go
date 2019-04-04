@@ -18,11 +18,11 @@ type ZPkg struct {
 	Closed bool
 }
 
-func (self *ZPkg) ToHash_V1() (ret keys.Uint256) {
+func (self *ZPkg) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(big.NewInt(int64(self.High)).Bytes())
 	d.Write(self.From[:])
-	d.Write(self.Pack.ToHash_V1().NewRef()[:])
+	d.Write(self.Pack.ToHash().NewRef()[:])
 	if self.Closed {
 		d.Write([]byte{1})
 	} else {

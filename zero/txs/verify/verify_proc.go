@@ -70,7 +70,6 @@ func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc) (e error) {
 
 	if tx.Desc_Pkg.Create != nil {
 		create := tx.Desc_Pkg.Create
-		balance_desc.Zout_acms = append(balance_desc.Zout_acms, create.Pkg.AssetCM[:]...)
 
 		g := verify_pkg_desc{}
 		g.desc.AssetCM = create.Pkg.AssetCM

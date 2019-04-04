@@ -22,5 +22,4 @@ type IData interface {
 
 	GetRoots() (roots []keys.Uint256)
 	GetDels() (dels []keys.Uint256)
-	GetIndex() (index int64)
 }

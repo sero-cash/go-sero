@@ -410,17 +410,16 @@ func (state *State) UpdateWitness(tks []keys.Uint512, num uint64, block *localdb
 	for _, root := range block.Roots {
 		t := utils.TR_enter("UpdateWitness---RootKey")
 
-		if os, err := state.State.State.GetOut(&root); err != nil {
-			panic(err)
+		os := state.State.State.GetOut(&root)
+		if os == nil {
+			panic("gen witness out from B2outs can not find in G2outs")
 		} else {
-			if os == nil {
-				panic("gen witness out from B2outs can not find in G2outs")
-			} else {
-			}
-			t.Renter("UpdateWitness---ToRootCM")
-			t.Renter("UpdateWitness---addOut")
-			state.addOut(tks, os, &root, num)
 		}
+
+		t.Renter("UpdateWitness---addOut")
+
+		state.addOut(tks, os, &root, num)
+
 		t.Leave()
 	}
 	for _, hash := range block.Pkgs {

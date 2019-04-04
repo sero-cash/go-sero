@@ -35,6 +35,7 @@ var (
 	indexLeafKey = keys.Uint256(crypto.Keccak256Hash([]byte("outTreeIndex_Leaf")))
 	indexTreeKey = keys.Uint256(crypto.Keccak256Hash([]byte("outTreeIndex_Self")))
 	cap          = toPow2(DEPTH + 1)
+	leafcap      = toPow2(DEPTH)
 	startIndex   = toPow2(DEPTH)
 )
 
@@ -98,6 +99,12 @@ func CalcRoot(value *keys.Uint256, pos uint64, paths *[DEPTH]keys.Uint256) (ret 
 		pos >>= 1
 	}
 	return
+}
+
+func (self *MerkleTree) GetCurrentIndex() (ret uint64) {
+	leafIndex := self.getCurrentLeafIndex() - 1 - startIndex
+	tree_count := self.geCurrentTreeIndex()
+	return tree_count*leafcap + leafIndex
 }
 
 func (self *MerkleTree) GetPaths(value keys.Uint256) (pos uint64, paths [DEPTH]keys.Uint256, anchor keys.Uint256) {

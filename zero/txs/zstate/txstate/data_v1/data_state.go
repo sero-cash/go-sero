@@ -20,18 +20,10 @@ func (self *Data) RecordState(putter serodb.Putter, root *keys.Uint256) {
 }
 
 func (self *Data) LoadState(tr tri.Tri) {
-	get := data.CurrentGet{}
-	tri.GetObj(
-		tr,
-		data.LAST_OUTSTATE0_NAME.Bytes(),
-		&get,
-	)
-	self.Cur = get.Out
 	return
 }
 
 func (self *Data) SaveState(tr tri.Tri) {
-	tri.UpdateObj(tr, data.LAST_OUTSTATE0_NAME.Bytes(), &self.Cur)
 	self.Nils.Save(tr)
 	self.Roots.Save(tr)
 	return

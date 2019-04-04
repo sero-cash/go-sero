@@ -18,7 +18,7 @@ func (self *Data) SaveState(tr tri.Tri) {
 
 func (self *Data) RecordState(putter serodb.Putter, hash *keys.Uint256) {
 	if pkg, ok := self.Hash2Pkg[*hash]; ok {
-		localdb.PutPkg(putter, hash, pkg)
+		localdb.PutPkg(putter, hash, &pkg)
 	} else {
 		panic(errors.New("PKG record index error: hash2pkg"))
 	}
@@ -34,13 +34,16 @@ func (self *Data) GetPkgById(tr tri.Tri, id *keys.Uint256) (pg *localdb.ZPkg) {
 }
 
 func (self *Data) GetPkgByHash(tr tri.Tri, hash *keys.Uint256) (pg *localdb.ZPkg) {
-	var ok bool
-	if pg, ok = self.Hash2Pkg[*hash]; ok {
+	if p, ok := self.Hash2Pkg[*hash]; ok {
+		pg = &p
 		return
 	} else {
-		if pg = localdb.GetPkg(tr.GlobalGetter(), hash); pg != nil {
-			self.Hash2Pkg[*hash] = pg
+		if p := localdb.GetPkg(tr.GlobalGetter(), hash); p != nil {
+			self.Hash2Pkg[*hash] = *p
+			pg = p
+			return
+		} else {
+			return
 		}
-		return
 	}
 }

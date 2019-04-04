@@ -17,7 +17,6 @@
 package zstate
 
 import (
-	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/zero/localdb"
 
@@ -79,10 +78,8 @@ func (self *ZState) RecordBlock(db serodb.Putter, hash *keys.Uint256) {
 		self.Pkgs.RecordState(db, &hash)
 	}
 
-	if self.num >= cpt.SIP2 {
-		for _, k := range block.Roots {
-			self.State.RecordState(db, &k)
-		}
+	for _, k := range block.Roots {
+		self.State.RecordState(db, &k)
 	}
 }
 
@@ -104,7 +101,8 @@ func (state *ZState) AddOut_O(out *stx.Out_O) {
 }
 
 func (state *ZState) AddStx(st *stx.T) (e error) {
-	if err := state.State.AddStx(st); err != nil {
+	hash := st.ToHash()
+	if err := state.State.AddStx(st, &hash); err != nil {
 		e = err
 		return
 	} else {
@@ -114,12 +112,12 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 			}
 		}
 		if st.Desc_Pkg.Close != nil {
-			if e = state.Pkgs.Force_del(&st.Desc_Pkg.Close.Id); e != nil {
+			if e = state.Pkgs.Force_del(&hash, st.Desc_Pkg.Close); e != nil {
 				return
 			}
 		}
 		if st.Desc_Pkg.Transfer != nil {
-			if e = state.Pkgs.Force_transfer(&st.Desc_Pkg.Transfer.Id, &st.Desc_Pkg.Transfer.PKr); e != nil {
+			if e = state.Pkgs.Force_transfer(&hash, st.Desc_Pkg.Transfer); e != nil {
 				return
 			}
 		}

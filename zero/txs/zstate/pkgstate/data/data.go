@@ -10,7 +10,7 @@ type Data struct {
 	Num      uint64
 	Id2Hash  utils.H2Hash
 	IdDirtys utils.Dirtys
-	Hash2Pkg map[keys.Uint256]*localdb.ZPkg
+	Hash2Pkg map[keys.Uint256]localdb.ZPkg
 }
 
 func NewData(num uint64) (ret *Data) {
@@ -22,11 +22,11 @@ func NewData(num uint64) (ret *Data) {
 func (self *Data) Clear() {
 	self.Id2Hash.Clear()
 	self.IdDirtys.Clear()
-	self.Hash2Pkg = make(map[keys.Uint256]*localdb.ZPkg)
+	self.Hash2Pkg = make(map[keys.Uint256]localdb.ZPkg)
 }
 func (self *Data) Add(pkg *localdb.ZPkg) {
-	hash := pkg.ToHash_V1()
-	self.Hash2Pkg[hash] = pkg
+	hash := pkg.ToHash()
+	self.Hash2Pkg[hash] = *pkg
 	self.Id2Hash.Add(&pkg.Pack.Id, &hash)
 	self.IdDirtys.Append(&pkg.Pack.Id)
 }

@@ -10,7 +10,6 @@ import (
 type Data struct {
 	Num uint64
 
-	Cur      data.Current
 	Root2Out map[keys.Uint256]localdb.RootState
 
 	Dels  utils.Dirtys
@@ -27,7 +26,6 @@ func NewData(num uint64) (ret *Data) {
 }
 
 func (state *Data) Clear() {
-	state.Cur = data.NewCur()
 	state.Root2Out = make(map[keys.Uint256]localdb.RootState)
 	state.Dels.Clear()
 	state.Nils.Clear()
@@ -43,13 +41,6 @@ func (self *Data) AddOut(root *keys.Uint256, out *localdb.OutState, txhash *keys
 		rs.TxHash = *txhash
 	}
 	self.Root2Out[*root] = rs
-	self.Cur.Index++
-	if self.Cur.Index != int64(out.Index) {
-		panic("add out but cur.index != current_index")
-	}
-	if self.Cur.Index < 0 {
-		panic("add out but cur.index < 0")
-	}
 	return
 }
 
@@ -68,8 +59,4 @@ func (self *Data) GetRoots() (roots []keys.Uint256) {
 
 func (self *Data) GetDels() (dels []keys.Uint256) {
 	return self.Dels.List()
-}
-
-func (self *Data) GetIndex() (index int64) {
-	return self.Cur.Index
 }
