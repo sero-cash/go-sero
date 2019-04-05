@@ -101,8 +101,8 @@ func CalcRoot(value *keys.Uint256, pos uint64, paths *[DEPTH]keys.Uint256) (ret 
 	return
 }
 
-func (self *MerkleTree) GetCurrentIndex() (ret uint64) {
-	leafIndex := self.getCurrentLeafIndex() - 1 - startIndex
+func (self *MerkleTree) GetLeafSize() (ret uint64) {
+	leafIndex := self.getCurrentLeafIndex() - startIndex
 	tree_count := self.geCurrentTreeIndex()
 	return tree_count*leafcap + leafIndex
 }

@@ -101,23 +101,23 @@ func (state *ZState) AddOut_O(out *stx.Out_O) {
 }
 
 func (state *ZState) AddStx(st *stx.T) (e error) {
-	hash := st.ToHash()
-	if err := state.State.AddStx(st, &hash); err != nil {
+	if err := state.State.AddStx(st); err != nil {
 		e = err
 		return
 	} else {
+		hash_for_s := st.ToHash_for_sign()
 		if st.Desc_Pkg.Create != nil {
 			if e = state.Pkgs.Force_add(&st.From, st.Desc_Pkg.Create); e != nil {
 				return
 			}
 		}
 		if st.Desc_Pkg.Close != nil {
-			if e = state.Pkgs.Force_del(&hash, st.Desc_Pkg.Close); e != nil {
+			if e = state.Pkgs.Force_del(&hash_for_s, st.Desc_Pkg.Close); e != nil {
 				return
 			}
 		}
 		if st.Desc_Pkg.Transfer != nil {
-			if e = state.Pkgs.Force_transfer(&hash, st.Desc_Pkg.Transfer); e != nil {
+			if e = state.Pkgs.Force_transfer(&hash_for_s, st.Desc_Pkg.Transfer); e != nil {
 				return
 			}
 		}

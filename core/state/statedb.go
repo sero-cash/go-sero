@@ -784,6 +784,7 @@ func (self *StateDB) Copy() *StateDB {
 		logSize:           self.logSize,
 		preimages:         make(map[common.Hash][]byte),
 		journal:           newJournal(),
+		number:            self.number,
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range self.journal.dirties {

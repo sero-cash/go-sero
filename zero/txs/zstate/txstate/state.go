@@ -121,7 +121,7 @@ func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z, txhash *keys.Uint
 	//index := state.MTree.GetCurrentIndex()
 
 	//os.Index = uint64(state.data.GetIndex() + 1)
-	os.Index = state.MTree.GetCurrentIndex() + 1
+	os.Index = state.MTree.GetLeafSize()
 
 	commitment := os.ToRootCM()
 
@@ -137,7 +137,7 @@ func (self *State) HasIn(hash *keys.Uint256) (exists bool) {
 	return self.data.HasIn(self.tri, hash)
 }
 
-func (state *State) AddStx(st *stx.T, hash *keys.Uint256) (e error) {
+func (state *State) AddStx(st *stx.T) (e error) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	t := utils.TR_enter("AddStx---ins")
@@ -172,8 +172,9 @@ func (state *State) AddStx(st *stx.T, hash *keys.Uint256) (e error) {
 	}
 
 	t.Renter("AddStx---z_outs")
+	hash_for_sign := st.ToHash_for_sign()
 	for _, out := range st.Desc_Z.Outs {
-		state.addOut(nil, &out, hash)
+		state.addOut(nil, &out, &hash_for_sign)
 	}
 
 	t.Leave()
