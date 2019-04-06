@@ -64,7 +64,7 @@ func Base58ToAccount(s string) AccountAddress {
 
 // IsBase58Account verifies whether a string can represent a valid hex-encoded
 // Ethereum Data or not.
-func IsBase58Account(s string) bool {
+func IsBase58AccountButNotContract(s string) bool {
 	if base58.IsBase58Str(s) {
 		account := Base58ToAccount(s)
 		if keys.IsPKValid(account.ToUint512()) {
@@ -79,18 +79,10 @@ func IsBase58Account(s string) bool {
 		return false
 	}
 	return false
-
-	return base58.IsBase58Str(s)
 }
 
 // Bytes gets the string representation of the underlying Data.
 func (a AccountAddress) Bytes() []byte { return a[:] }
-
-func (a AccountAddress) ToPKr() *keys.PKr {
-	pubKey := keys.PKr{}
-	copy(pubKey[:], a[:])
-	return &pubKey
-}
 
 func (a AccountAddress) ToUint512() *keys.Uint512 {
 	pubKey := keys.Uint512{}
@@ -140,21 +132,14 @@ func isZeroSuffix(base58bytes [96]byte) bool {
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *AccountAddress) UnmarshalText(input []byte) error {
-	maxBase58Bytes := [96]byte{}
-	err := hexutil.UnmarshalFixedBase58Text(input, maxBase58Bytes[:])
-	if err != nil {
-		return err
-	}
-	if isZeroSuffix(maxBase58Bytes) {
-		copy(a[:], maxBase58Bytes[:64])
-		if keys.IsPKValid(a.ToUint512()) {
-			return nil
-		} else {
-			return errors.New(fmt.Sprintf("invalud base58 accountAddress %v", string(input)))
-		}
-
+	input_s := string(input)
+	account := Base58ToAccount(input_s)
+	r_input_s := account.Base58()
+	if r_input_s == input_s {
+		copy(a[:], account[:])
+		return nil
 	} else {
-		return errors.New(fmt.Sprintf("invalud base58 account address %v", string(input)))
+		return errors.New(fmt.Sprintf("invalud base58 accountAddress %v", string(input)))
 	}
 }
 

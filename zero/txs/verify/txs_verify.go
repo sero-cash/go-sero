@@ -33,12 +33,10 @@ import (
 
 func CheckUint(i *utils.U256) bool {
 	u := i.ToUint256()
-	m31 := u[31] & (0xFF)
-	m30 := u[30] & (0xFF)
-	if m31 != 0 && m30 != 0 {
-		return false
-	} else {
+	if u[31] == 0 && u[30] == 0 {
 		return true
+	} else {
+		return false
 	}
 }
 
