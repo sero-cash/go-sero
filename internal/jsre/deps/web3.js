@@ -2698,6 +2698,19 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }
         };
 
+        var paramAddress = function (addr) {
+
+            if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addr)) {
+                bytes = base58ToBytes(addr)
+                if (bytes.length !== 96 && bytes.length !=64) {
+                    return false;
+                }
+                return true;
+            } else {
+                return false;
+            }
+        };
+
         /**
          * Checks if the given string is an address
          *
@@ -2914,6 +2927,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             toAddress: toAddress,
             isBigNumber: isBigNumber,
             isStrictAddress: isStrictAddress,
+            paramAddress: paramAddress,
             isAddress: isAddress,
             isChecksumAddress: isChecksumAddress,
             toChecksumAddress: toChecksumAddress,
@@ -4322,7 +4336,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }
 
             if (options.to) { // it might be contract creation
-                options.to = inputAddressFormatter(options.to);
+                options.to = inputParamAddressFormatter(options.to);
             }
 
             ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
@@ -4347,7 +4361,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             options.from = inputAddressFormatter(options.from);
 
             if (options.to) { // it might be contract creation
-                options.to = inputAddressFormatter(options.to);
+                options.to=inputParamAddressFormatter(options.to)
             }
 
             ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
@@ -4358,6 +4372,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
             return options;
         };
+
 
         /**
          * Formats the output of a transaction to its proper values
@@ -4548,6 +4563,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             throw new Error('invalid address');
         };
 
+        var inputParamAddressFormatter = function (address) {
+            if (utils.paramAddress(address)) {
+                return address
+            }
+            throw new Error('invalid address');
+        };
+
 
         var outputSyncingFormatter = function(result) {
             if (!result) {
@@ -4591,6 +4613,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             inputBlockNumberFormatter: inputBlockNumberFormatter,
             inputCallFormatter: inputCallFormatter,
             inputTransactionFormatter: inputTransactionFormatter,
+            inputParamAddressFormatter:inputParamAddressFormatter,
             inputAddressFormatter: inputAddressFormatter,
             inputPostFormatter: inputPostFormatter,
             outputBigNumberFormatter: outputBigNumberFormatter,
@@ -6167,7 +6190,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 name: 'getBalance',
                 call: 'sero_getBalance',
                 params: 2,
-                inputFormatter: [formatters.inputAddressFormatter,formatters.inputDefaultBlockNumberFormatter],
+                inputFormatter: [formatters.inputParamAddressFormatter,formatters.inputDefaultBlockNumberFormatter],
                 outputFormatter: formatters.outputBalanceFormatter
             });
 
@@ -6175,7 +6198,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 name: 'getPkg',
                 call: 'sero_getPkg',
                 params: 3,
-                inputFormatter: [formatters.inputAddressFormatter,null,null],
+                inputFormatter: [formatters.inputParamAddressFormatter,null,null],
             });
 
             var watchPkg = new Method({
@@ -6255,6 +6278,17 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 call: 'sero_getFullAddress',
                 params: 1,
             });
+            var getBlockInfo= new Method({
+                name:'getBlockInfo',
+                call:"sero_getBlockInfo",
+                inputFormatter: [formatters.inputBlockNumberFormatter,formatters.inputBlockNumberFormatter],
+                params:2
+            })
+            var getAnchor = new Method({
+                name :'getAnchor',
+                call:"sero_getAnchor",
+                params:1
+            })
 
             var currencyToContractAddress = new Method({
                 name: 'cyToContractAddress',
@@ -6291,6 +6325,12 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 1,
                 inputFormatter: [formatters.inputTransactionFormatter]
             });
+            var genPKr=new Method({
+                name: 'genPKr',
+                call: 'sero_genPKr',
+                params: 1,
+                inputFormatter: [formatters.inputAddressFormatter]
+            })
 
             var reSendTransaction = new Method({
                 name: 'reSendTransaction',
@@ -6398,6 +6438,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 getUncle,
                 getCompilers,
                 getBlockTransactionCount,
+                getBlockInfo,
+                getAnchor,
                 getBlockUncleCount,
                 getTransaction,
                 getTransactionFromBlock,
@@ -6411,6 +6453,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 closePkg,
                 transferPkg,
                 convertAddressParams,
+                genPKr,
                 getFullAddress,
                 currencyToContractAddress,
                 compileSolidity,

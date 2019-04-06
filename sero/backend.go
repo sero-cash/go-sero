@@ -30,6 +30,7 @@ import (
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/consensus/ethash"
@@ -84,11 +85,11 @@ type Sero struct {
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *core.ChainIndexer             // Bloom indexer operating during block imports
 
-	APIBackend *EthAPIBackend
+	APIBackend *SeroAPIBackend
 
 	miner    *miner.Miner
 	gasPrice *big.Int
-	serobase common.AccountAddress
+	serobase address.AccountAddress
 
 	networkID     uint64
 	netRPCService *ethapi.PublicNetAPI
@@ -172,7 +173,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	sero.miner = miner.New(sero, sero.chainConfig, sero.EventMux(), sero.engine)
 	sero.miner.SetExtra(makeExtraData(config.ExtraData))
 
-	sero.APIBackend = &EthAPIBackend{sero, nil}
+	sero.APIBackend = &SeroAPIBackend{sero, nil}
 	gpoParams := config.GPO
 	if gpoParams.Default == nil {
 		gpoParams.Default = config.GasPrice
@@ -299,12 +300,12 @@ func (s *Sero) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *Sero) Serobase() (eb common.AccountAddress, err error) {
+func (s *Sero) Serobase() (eb address.AccountAddress, err error) {
 	s.lock.RLock()
 	serobase := s.serobase
 	s.lock.RUnlock()
 
-	if serobase != (common.AccountAddress{}) {
+	if serobase != (address.AccountAddress{}) {
 		return serobase, nil
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
@@ -319,11 +320,11 @@ func (s *Sero) Serobase() (eb common.AccountAddress, err error) {
 			return serobase, nil
 		}
 	}
-	return common.AccountAddress{}, fmt.Errorf("Serobase must be explicitly specified")
+	return address.AccountAddress{}, fmt.Errorf("Serobase must be explicitly specified")
 }
 
 // SetSerobase sets the mining reward address.
-func (s *Sero) SetSerobase(serobase common.AccountAddress) {
+func (s *Sero) SetSerobase(serobase address.AccountAddress) {
 	s.lock.Lock()
 	s.serobase = serobase
 	s.lock.Unlock()

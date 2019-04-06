@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/pkg/errors"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 )
 
@@ -27,11 +29,11 @@ func Encode(input []byte) []byte {
 }
 
 func DecodeString(s string, out []byte) error {
-
-	err := cpt.Base58Decode(&s, out[:])
-
-	return err
-
+	if IsBase58Str(s) {
+		return cpt.Base58Decode(&s, out[:])
+	} else {
+		return errors.New(fmt.Sprintf("invalid base58 string %v", s))
+	}
 }
 
 func IsBase58Str(s string) bool {

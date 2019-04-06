@@ -32,12 +32,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-sero/log"
 
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/accounts"
-	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/event"
 )
@@ -60,10 +61,10 @@ const walletRefreshCycle = 3 * time.Second
 
 // KeyStore manages a key storage directory on disk.
 type KeyStore struct {
-	storage  keyStore                            // Storage backend, might be cleartext or encrypted
-	cache    *accountCache                       // In-memory account cache over the filesystem storage
-	changes  chan struct{}                       // Channel receiving change notifications from the cache
-	unlocked map[common.AccountAddress]*unlocked // Currently unlocked account (decrypted private keys)
+	storage  keyStore                             // Storage backend, might be cleartext or encrypted
+	cache    *accountCache                        // In-memory account cache over the filesystem storage
+	changes  chan struct{}                        // Channel receiving change notifications from the cache
+	unlocked map[address.AccountAddress]*unlocked // Currently unlocked account (decrypted private keys)
 
 	wallets     []accounts.Wallet       // Wallet wrappers around the individual key files
 	updateFeed  event.Feed              // Event feed to notify wallet additions/removals
@@ -92,7 +93,7 @@ func (ks *KeyStore) init(keydir string) {
 	defer ks.mu.Unlock()
 
 	// Initialize the set of unlocked keys and the account cache
-	ks.unlocked = make(map[common.AccountAddress]*unlocked)
+	ks.unlocked = make(map[address.AccountAddress]*unlocked)
 	ks.cache, ks.changes = newAccountCache(keydir)
 
 	// TODO: In order for this finalizer to work, there must be no references
@@ -221,7 +222,7 @@ func (ks *KeyStore) updater() {
 }
 
 // HasAddress reports whether a key with the given address is present.
-func (ks *KeyStore) HasAddress(addr common.AccountAddress) bool {
+func (ks *KeyStore) HasAddress(addr address.AccountAddress) bool {
 	return ks.cache.hasAddress(addr)
 }
 
@@ -260,7 +261,7 @@ func (ks *KeyStore) Unlock(a accounts.Account, passphrase string) error {
 }
 
 // Lock removes the private key with the given address from memory.
-func (ks *KeyStore) Lock(addr common.AccountAddress) error {
+func (ks *KeyStore) Lock(addr address.AccountAddress) error {
 	ks.mu.Lock()
 	if unl, found := ks.unlocked[addr]; found {
 		ks.mu.Unlock()
@@ -325,7 +326,7 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 	return a, key, err
 }
 
-func (ks *KeyStore) expire(addr common.AccountAddress, u *unlocked, timeout time.Duration) {
+func (ks *KeyStore) expire(addr address.AccountAddress, u *unlocked, timeout time.Duration) {
 	t := time.NewTimer(timeout)
 	defer t.Stop()
 	select {
@@ -434,7 +435,7 @@ func zeroKey(k *ecdsa.PrivateKey) {
 	}
 }
 
-func (ks *KeyStore) GetSeed(a accounts.Account) (*common.Seed, error) {
+func (ks *KeyStore) GetSeed(a accounts.Account) (*address.Seed, error) {
 
 	// Look up the key to sign with and abort if it cannot be found
 	ks.mu.RLock()
@@ -446,19 +447,19 @@ func (ks *KeyStore) GetSeed(a accounts.Account) (*common.Seed, error) {
 	}
 	priKey := crypto.FromECDSA(unlockedKey.PrivateKey)
 
-	seed := common.Seed{}
+	seed := address.Seed{}
 	copy(seed[:], priKey)
 	return &seed, nil
 }
 
-func (ks *KeyStore) GetSeedWithPassphrase(account accounts.Account, passphrase string) (*common.Seed, error) {
+func (ks *KeyStore) GetSeedWithPassphrase(account accounts.Account, passphrase string) (*address.Seed, error) {
 	_, key, err := ks.getDecryptedKey(account, passphrase)
 	if err != nil {
 		return nil, err
 	}
 	defer zeroKey(key.PrivateKey)
 	priKey := crypto.FromECDSA(key.PrivateKey)
-	seed := common.Seed{}
+	seed := address.Seed{}
 	copy(seed[:], priKey)
 	return &seed, nil
 }

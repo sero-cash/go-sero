@@ -33,11 +33,10 @@ import (
 
 func CheckUint(i *utils.U256) bool {
 	u := i.ToUint256()
-	m := u[31] & (0xFF)
-	if m != 0 {
-		return false
-	} else {
+	if u[31] == 0 && u[30] == 0 {
 		return true
+	} else {
+		return false
 	}
 }
 
@@ -82,39 +81,41 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	t.Renter("Miner-Verify-----o_ins")
 
 	for _, in_o := range s.Desc_O.Ins {
-		if ok := state.State.HasIn(&in_o.Root); ok {
-			e = errors.New("txs.verify in already in nils")
-			return
-		} else {
-		}
-		if src, err := state.State.GetOut(&in_o.Root); e == nil {
-			if src != nil {
-				g := cpt.VerifyInputSDesc{}
-				g.Ehash = hash_z
-				g.Nil = in_o.Nil
-				g.RootCM = *src.ToRootCM()
-				g.Sign = in_o.Sign
-				g.Pkr = *src.ToPKr()
-				if err := cpt.VerifyInputS(&g); err != nil {
-					e = errors.New("txs.Verify: in_o verify failed!")
-					return
-				} else {
-					asset := src.Out_O.Asset.ToFlatAsset()
-					asset_desc := cpt.AssetDesc{
-						Tkn_currency: asset.Tkn.Currency,
-						Tkn_value:    asset.Tkn.Value.ToUint256(),
-						Tkt_category: asset.Tkt.Category,
-						Tkt_value:    asset.Tkt.Value,
-					}
-					cpt.GenAssetCC(&asset_desc)
-					balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
-				}
-			} else {
-				e = errors.New("txs.Verify: in_o not find in the outs!")
+		if state.Num() >= cpt.SIP2 {
+			if ok := state.State.HasIn(&in_o.Nil); ok {
+				e = errors.New("txs.verify in_o already in nils")
 				return
 			}
 		} else {
-			e = err
+			if ok := state.State.HasIn(&in_o.Root); ok {
+				e = errors.New("txs.verify in_o already in roots")
+				return
+			} else {
+			}
+		}
+		if src := state.State.GetOut(&in_o.Root); src != nil {
+			g := cpt.VerifyInputSDesc{}
+			g.Ehash = hash_z
+			g.Nil = in_o.Nil
+			g.RootCM = *src.ToRootCM()
+			g.Sign = in_o.Sign
+			g.Pkr = *src.ToPKr()
+			if err := cpt.VerifyInputS(&g); err != nil {
+				e = errors.New("txs.Verify: in_o verify failed!")
+				return
+			} else {
+				asset := src.Out_O.Asset.ToFlatAsset()
+				asset_desc := cpt.AssetDesc{
+					Tkn_currency: asset.Tkn.Currency,
+					Tkn_value:    asset.Tkn.Value.ToUint256(),
+					Tkt_category: asset.Tkt.Category,
+					Tkt_value:    asset.Tkt.Value,
+				}
+				cpt.GenAssetCC(&asset_desc)
+				balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
+			}
+		} else {
+			e = errors.New("txs.Verify: in_o not find in the outs!")
 			return
 		}
 	}
@@ -126,24 +127,33 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 				e = errors.New("txs.verify check balance too big")
 				return
 			} else {
-				{
-					asset := out_o.Asset.ToFlatAsset()
-					asset_desc := cpt.AssetDesc{
-						Tkn_currency: asset.Tkn.Currency,
-						Tkn_value:    asset.Tkn.Value.ToUint256(),
-						Tkt_category: asset.Tkt.Category,
-						Tkt_value:    asset.Tkt.Value,
-					}
-					cpt.GenAssetCC(&asset_desc)
-					balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
-				}
 			}
+		}
+		{
+			asset := out_o.Asset.ToFlatAsset()
+			asset_desc := cpt.AssetDesc{
+				Tkn_currency: asset.Tkn.Currency,
+				Tkn_value:    asset.Tkn.Value.ToUint256(),
+				Tkt_category: asset.Tkt.Category,
+				Tkt_value:    asset.Tkt.Value,
+			}
+			cpt.GenAssetCC(&asset_desc)
+			balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
 		}
 	}
 
 	t.Renter("Miner-Verify-----pkgs")
+	if s.Desc_Pkg.Create != nil {
+		if pg := state.Pkgs.GetPkgById(&s.Desc_Pkg.Create.Id); pg != nil {
+			e = fmt.Errorf("pkg id already exists %v", hexutil.Encode(s.Desc_Pkg.Create.Id[:]))
+			return
+		} else {
+			balance_desc.Zout_acms = append(balance_desc.Zout_acms, s.Desc_Pkg.Create.Pkg.AssetCM[:]...)
+		}
+	}
+
 	if s.Desc_Pkg.Transfer != nil {
-		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Transfer.Id); pg == nil {
+		if pg := state.Pkgs.GetPkgById(&s.Desc_Pkg.Transfer.Id); pg == nil || pg.Closed {
 			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Transfer.Id[:]))
 			return
 		} else {
@@ -156,7 +166,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	}
 
 	if s.Desc_Pkg.Close != nil {
-		if pg := state.Pkgs.GetPkg(&s.Desc_Pkg.Close.Id); pg == nil {
+		if pg := state.Pkgs.GetPkgById(&s.Desc_Pkg.Close.Id); pg == nil || pg.Closed {
 			e = fmt.Errorf("Can not find pkg of the id %v", hexutil.Encode(s.Desc_Pkg.Close.Id[:]))
 			return
 		} else {
@@ -175,20 +185,16 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 			e = errors.New("txs.verify in already in nils")
 			return
 		} else {
-			if out, err := state.State.GetOut(&in_z.Anchor); err != nil {
-				e = err
+			if out := state.State.GetOut(&in_z.Anchor); out == nil {
+				e = errors.New("txs.verify can not find out for anchor")
 				return
 			} else {
-				if out == nil {
-					e = errors.New("txs.verify can not find out for anchor")
-				} else {
-				}
 			}
 		}
 	}
 
 	t.Renter("Miner-Verify-----desc_zs")
-	if err := verifyDesc_Zs(s, &balance_desc); err != nil {
+	if err := verifyDesc_Zs(s, &balance_desc, state.Num()); err != nil {
 		e = err
 		return
 	} else {
@@ -197,6 +203,26 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	t.Renter("Miner-Verify-----balance_desc")
 	balance_desc.Bcr = s.Bcr
 	balance_desc.Bsign = s.Bsign
+
+	o_out_size := len(balance_desc.Oout_accs) / 32
+	if o_out_size > 10 {
+		e = errors.New("verify error: o_out_size > 10")
+		return
+	}
+
+	z_out_size := len(balance_desc.Zout_acms) / 32
+
+	if state.Num() >= cpt.SIP2 {
+		if z_out_size > 500 {
+			e = errors.New("verify error: out_size > 500")
+			return
+		}
+	} else {
+		if z_out_size > 6 {
+			e = errors.New("verify error: out_size > 6")
+			return
+		}
+	}
 	if err := cpt.VerifyBalance(&balance_desc); err != nil {
 		e = err
 		return

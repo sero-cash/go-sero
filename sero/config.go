@@ -24,7 +24,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus/ethash"
 	"github.com/sero-cash/go-sero/core"
@@ -97,9 +98,9 @@ type Config struct {
 	TrieTimeout        time.Duration
 
 	// Mining-related options
-	Serobase     common.AccountAddress `toml:",omitempty"`
-	MinerThreads int                   `toml:",omitempty"`
-	ExtraData    []byte                `toml:",omitempty"`
+	Serobase     address.AccountAddress `toml:",omitempty"`
+	MinerThreads int                    `toml:",omitempty"`
+	ExtraData    []byte                 `toml:",omitempty"`
 	GasPrice     *big.Int
 
 	// Ethash options

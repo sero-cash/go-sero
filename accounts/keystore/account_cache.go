@@ -27,9 +27,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	mapset "github.com/deckarep/golang-set"
 	"github.com/sero-cash/go-sero/accounts"
-	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/log"
 )
 
@@ -54,7 +55,7 @@ func (s accountsByTag) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 // AmbiguousAddrError is returned when attempting to unlock
 // an address for which more than one file exists.
 type AmbiguousAddrError struct {
-	Addr    common.AccountAddress
+	Addr    address.AccountAddress
 	Matches []accounts.Account
 }
 
@@ -75,7 +76,7 @@ type accountCache struct {
 	watcher  *watcher
 	mu       sync.Mutex
 	all      accountsByTag
-	byAddr   map[common.AccountAddress][]accounts.Account
+	byAddr   map[address.AccountAddress][]accounts.Account
 	throttle *time.Timer
 	notify   chan struct{}
 	fileC    fileCache
@@ -84,7 +85,7 @@ type accountCache struct {
 func newAccountCache(keydir string) (*accountCache, chan struct{}) {
 	ac := &accountCache{
 		keydir: keydir,
-		byAddr: make(map[common.AccountAddress][]accounts.Account),
+		byAddr: make(map[address.AccountAddress][]accounts.Account),
 		notify: make(chan struct{}, 1),
 		fileC:  fileCache{all: mapset.NewThreadUnsafeSet()},
 	}
@@ -112,7 +113,7 @@ func (ac *accountCache) accountsByTag() []accountByTag {
 	return cpy
 }
 
-func (ac *accountCache) hasAddress(addr common.AccountAddress) bool {
+func (ac *accountCache) hasAddress(addr address.AccountAddress) bool {
 	ac.maybeReload()
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
@@ -193,7 +194,7 @@ func (ac *accountCache) find(a accounts.Account) (accounts.Account, error) {
 		matches = append(matches, accT.accountByURL)
 	}
 
-	if (a.Address != common.AccountAddress{}) {
+	if (a.Address != address.AccountAddress{}) {
 		matches = ac.byAddr[a.Address]
 	}
 	if a.URL.Path != "" {
@@ -206,7 +207,7 @@ func (ac *accountCache) find(a accounts.Account) (accounts.Account, error) {
 				return matches[i], nil
 			}
 		}
-		if (a.Address == common.AccountAddress{}) {
+		if (a.Address == address.AccountAddress{}) {
 			return accounts.Account{}, ErrNoMatch
 		}
 	}
@@ -291,12 +292,12 @@ func (ac *accountCache) scanAccounts() error {
 		// Parse the address.
 		key.Address = ""
 		err = json.NewDecoder(buf).Decode(&key)
-		addr := common.Base58ToAccount(key.Address)
-		tk := common.Base58ToAccount(key.Tk)
+		addr := address.Base58ToAccount(key.Address)
+		tk := address.Base58ToAccount(key.Tk)
 		switch {
 		case err != nil:
 			log.Debug("Failed to decode keystore key", "path", path, "err", err)
-		case (addr == common.AccountAddress{}):
+		case (addr == address.AccountAddress{}):
 			log.Debug("Failed to decode keystore key", "path", path, "err", "missing or zero address")
 		default:
 			return &accounts.Account{Address: addr, Tk: tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: path}}

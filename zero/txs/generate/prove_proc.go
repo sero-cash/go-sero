@@ -125,7 +125,6 @@ func genDesc_Zs(state *lstate.State, seed *keys.Uint256, ptx *preTx, balance_des
 		asset := out.Asset.ToFlatAsset()
 
 		g := gen_output_desc{}
-		g.desc.Seed = *seed
 		g.desc.Tkn_currency = asset.Tkn.Currency
 		g.desc.Tkn_value = asset.Tkn.Value.ToUint256()
 		g.desc.Tkt_category = asset.Tkt.Category

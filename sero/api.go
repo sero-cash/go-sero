@@ -29,6 +29,7 @@ import (
 	"github.com/sero-cash/go-sero/rpc"
 
 	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/rawdb"
@@ -54,12 +55,12 @@ func NewPublicSeroAPI(e *Sero) *PublicSeroAPI {
 }
 
 // Serobase is the address that mining rewards will be send to
-func (api *PublicSeroAPI) Serobase() (common.AccountAddress, error) {
+func (api *PublicSeroAPI) Serobase() (address.AccountAddress, error) {
 	return api.e.Serobase()
 }
 
 // Coinbase is the address that mining rewards will be send to (alias for Serobase)
-func (api *PublicSeroAPI) Coinbase() (common.AccountAddress, error) {
+func (api *PublicSeroAPI) Coinbase() (address.AccountAddress, error) {
 	return api.Serobase()
 }
 
@@ -200,7 +201,7 @@ func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 }
 
 // SetSerobase sets the serobase of the miner
-func (api *PrivateMinerAPI) SetSerobase(serobase common.AccountAddress) bool {
+func (api *PrivateMinerAPI) SetSerobase(serobase address.AccountAddress) bool {
 	api.s.SetSerobase(serobase)
 	return true
 }

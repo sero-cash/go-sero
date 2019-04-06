@@ -19,6 +19,8 @@ package types
 import (
 	"io"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/rlp"
@@ -132,5 +134,5 @@ func (l *LogForStorage) DecodeRLP(s *rlp.Stream) error {
 }
 
 type Account struct {
-	seed common.Seed
+	seed address.Seed
 }

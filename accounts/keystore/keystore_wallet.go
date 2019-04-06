@@ -19,6 +19,8 @@ package keystore
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/generate"
 
@@ -120,7 +122,7 @@ func (w *keystoreWallet) AddressUnlocked(account accounts.Account) (bool, error)
 	return true, nil
 }
 
-func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
+func (w *keystoreWallet) EncryptTxWithSeed(seed address.Seed, btx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
 	w.keystore.mu.Lock()
 	defer w.keystore.mu.Unlock()
 	ins := []tx.In{}
@@ -169,8 +171,8 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed common.Seed, btx *types.Transact
 	}
 
 	if txt.PkgClose != nil {
-		zpkg := lstate.CurrentState1().State.Pkgs.GetPkg(&txt.PkgClose.Id)
-		if zpkg == nil {
+		zpkg := lstate.CurrentState1().State.Pkgs.GetPkgById(&txt.PkgClose.Id)
+		if zpkg == nil || zpkg.Closed {
 			return nil, errors.New("PkgClose Id is not exists!")
 		}
 		pkg_o, err := pkg.DePkg(&txt.PkgClose.Key, &zpkg.Pack.Pkg)

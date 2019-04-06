@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus/ethash"
 	"github.com/sero-cash/go-sero/core"
@@ -31,9 +31,9 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		DatabaseCache           int
 		TrieCache               int
 		TrieTimeout             time.Duration
-		Serobase                common.AccountAddress `toml:",omitempty"`
-		MinerThreads            int                   `toml:",omitempty"`
-		ExtraData               hexutil.Bytes         `toml:",omitempty"`
+		Serobase                address.AccountAddress `toml:",omitempty"`
+		MinerThreads            int                    `toml:",omitempty"`
+		ExtraData               hexutil.Bytes          `toml:",omitempty"`
 		GasPrice                *big.Int
 		Ethash                  ethash.Config
 		TxPool                  core.TxPoolConfig
@@ -81,9 +81,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		DatabaseCache           *int
 		TrieCache               *int
 		TrieTimeout             *time.Duration
-		Serobase                *common.AccountAddress `toml:",omitempty"`
-		MinerThreads            *int                   `toml:",omitempty"`
-		ExtraData               *hexutil.Bytes         `toml:",omitempty"`
+		Serobase                *address.AccountAddress `toml:",omitempty"`
+		MinerThreads            *int                    `toml:",omitempty"`
+		ExtraData               *hexutil.Bytes          `toml:",omitempty"`
 		GasPrice                *big.Int
 		Ethash                  *ethash.Config
 		TxPool                  *core.TxPoolConfig

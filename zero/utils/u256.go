@@ -17,6 +17,12 @@ func NewU256(i uint64) (ret U256) {
 	return
 }
 
+func (self U256) DeepCopy() interface{} {
+	bi := big.Int(self)
+	dc := U256(*big.NewInt(0).Set(&bi))
+	return dc
+}
+
 func (x *U256) GobEncode() ([]byte, error) {
 	b := big.Int(*x)
 	return b.GobEncode()
@@ -57,6 +63,11 @@ func (b *U256) DecodeRLP(s *rlp.Stream) error {
 			return nil
 		}
 	}
+}
+
+func (b U256) MarshalJSON() ([]byte, error) {
+	i := big.Int(b)
+	return i.MarshalJSON()
 }
 
 func (b U256) MarshalText() ([]byte, error) {
