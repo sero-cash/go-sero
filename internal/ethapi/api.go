@@ -718,6 +718,8 @@ func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, addr common.Address, p
 			to := getLocalAccountAddressByPkr(wallets, common.BytesToAddress(p.Pkg.Z.Pack.PKr[:]))
 			if to != nil {
 				pkg["to_addr"] = to
+			} else {
+				pkg["to"] = common.BytesToAddress(p.Pkg.Z.Pack.PKr[:]).String()
 			}
 			if (p.Key != keys.Uint256{}) {
 				pkg["key"] = p.Key
@@ -767,6 +769,8 @@ func (s *PublicBlockChainAPI) WatchPkg(ctx context.Context, id keys.Uint256, key
 	to := getLocalAccountAddressByPkr(wallets, common.BytesToAddress(pkr[:]))
 	if to != nil {
 		pkg["to_addr"] = to
+	} else {
+		pkg["to"] = common.BytesToAddress(pkr[:]).String()
 	}
 	asset := map[string]interface{}{}
 	if pkg_o.Asset.Tkn != nil {
