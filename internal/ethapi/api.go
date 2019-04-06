@@ -245,7 +245,7 @@ func getLocalAccountAddressByPkr(wallets []accounts.Wallet, PKr common.Address) 
 			}
 		}
 	} else {
-		log.Info("getLocalAccountAddressByPkr invalid pkr", "pkr", PKr.String())
+		log.Debug("getLocalAccountAddressByPkr invalid pkr", "pkr", PKr.String())
 		return nil
 	}
 	return nil
