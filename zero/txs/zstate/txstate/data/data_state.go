@@ -35,6 +35,22 @@ func OutName0(k *keys.Uint256) (ret []byte) {
 }
 
 func (self *Data) RecordState(putter serodb.Putter, root *keys.Uint256) {
+	if self.Num > 587483 {
+		if out, ok := self.G2outs[*root]; ok {
+			rs := localdb.RootState{}
+			rs.Num = self.Num
+			rs.OS = *out
+			if txhash, ok := self.H2tx[*root]; ok {
+				if txhash != nil {
+					rs.TxHash = *txhash
+				}
+			} else {
+				panic(fmt.Errorf("data record state h2tx error for : %v", self.Num))
+			}
+		} else {
+			panic(fmt.Errorf("data record state G2outs error for : %v", self.Num))
+		}
+	}
 	return
 }
 
