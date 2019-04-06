@@ -45,8 +45,8 @@ func (self *Data) RecordState(putter serodb.Putter, root *keys.Uint256) {
 			if txhash, ok := self.H2tx[*root]; ok {
 				if txhash != nil {
 					rs.TxHash = *txhash
-					localdb.PutRoot(putter, root, &rs)
 				}
+				localdb.PutRoot(putter, root, &rs)
 			} else {
 				panic(fmt.Errorf("data record state h2tx error for : %v", self.Num))
 			}
