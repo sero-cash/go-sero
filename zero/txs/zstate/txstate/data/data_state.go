@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/sero-cash/go-czero-import/cpt"
+
 	"github.com/sero-cash/go-sero/serodb"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -35,7 +37,7 @@ func OutName0(k *keys.Uint256) (ret []byte) {
 }
 
 func (self *Data) RecordState(putter serodb.Putter, root *keys.Uint256) {
-	if self.Num > 587483 {
+	if int64(self.Num) > int64(cpt.SIP2)-11100 {
 		if out, ok := self.G2outs[*root]; ok {
 			rs := localdb.RootState{}
 			rs.Num = self.Num
