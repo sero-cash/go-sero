@@ -172,9 +172,9 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	}
 
 	t.Renter("AddStx---z_outs")
-	hash_for_sign := st.ToHash_for_sign()
+	txhash := st.ToHash()
 	for _, out := range st.Desc_Z.Outs {
-		state.addOut(nil, &out, &hash_for_sign)
+		state.addOut(nil, &out, &txhash)
 	}
 
 	t.Leave()
