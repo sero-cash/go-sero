@@ -64,7 +64,7 @@ func (self *verify_output_desc) Run() bool {
 	}
 }
 
-func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc) (e error) {
+func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc, height uint64) (e error) {
 	var verify_pkg_procs = verify_input_procs_pool.GetProcs()
 	defer verify_pkg_procs_pool.PutProcs(verify_pkg_procs)
 
@@ -106,6 +106,7 @@ func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc) (e error) {
 		g.pkr = out_z.PKr
 		g.desc.OutCM = out_z.OutCM
 		g.desc.Proof = out_z.Proof
+		g.desc.Height = height
 
 		verify_output_procs.StartProc(&g)
 	}

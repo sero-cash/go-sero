@@ -196,7 +196,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	}
 
 	t.Renter("Miner-Verify-----desc_zs")
-	if err := verifyDesc_Zs(s, &balance_desc); err != nil {
+	if err := verifyDesc_Zs(s, &balance_desc, state.Num()); err != nil {
 		e = err
 		return
 	} else {
@@ -213,11 +213,18 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	}
 
 	z_out_size := len(balance_desc.Zout_acms) / 32
-	if z_out_size > 6 {
-		e = errors.New("verify error: out_size > 6")
-		return
-	}
 
+	if state.Num() >= cpt.SIP2 {
+		if z_out_size > 500 {
+			e = errors.New("verify error: out_size > 500")
+			return
+		}
+	} else {
+		if z_out_size > 6 {
+			e = errors.New("verify error: out_size > 6")
+			return
+		}
+	}
 	if err := cpt.VerifyBalance(&balance_desc); err != nil {
 		e = err
 		return
