@@ -58,7 +58,7 @@ type Out_Z struct {
 	AssetCM keys.Uint256
 	OutCM   keys.Uint256
 	RPK     keys.Uint256
-	EInfo   [cpt.INFO_WIDTH]byte
+	EInfo   cpt.Einfo
 	PKr     keys.PKr
 	Proof   cpt.Proof
 }
