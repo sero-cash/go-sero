@@ -338,8 +338,9 @@ func (s *Sero) StartMining(local bool) error {
 		log.Error("Cannot start mining without serobase", "err", err)
 		return fmt.Errorf("serobase missing: %v", err)
 	}
-	pkr, lic, ret := keys.Addr2PKrAndLICr(eb.ToUint512(), 0)
-	ret = keys.CheckLICr(&pkr, &lic, 0)
+	current_height := s.blockchain.CurrentHeader().Number.Uint64()
+	pkr, lic, ret := keys.Addr2PKrAndLICr(eb.ToUint512(), current_height)
+	ret = keys.CheckLICr(&pkr, &lic, current_height)
 	if !ret {
 		lic_t := keys.LICr{}
 		if bytes.Equal(lic.Proof[:32], lic_t.Proof[:32]) {
