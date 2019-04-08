@@ -40,7 +40,9 @@ func (self *Ref) GetDelayedNum(delay uint64) (ret uint64) {
 }
 
 func (self *Ref) GetState() (ret *zstate.ZState) {
-	hash := self.Bc.GetCurrenHeader().Hash()
+	num := self.GetDelayedNum(6)
+	block := self.Bc.GetBlockByNumber(num)
+	hash := block.Hash()
 	return self.Bc.NewState(&hash)
 }
 
