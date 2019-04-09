@@ -95,7 +95,7 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 		g.desc.Tkt_value = asset.Tkt.Value
 		g.desc.Memo = out.Memo
 		g.desc.Pkr = out.PKr
-		g.desc.Height = 400000
+		g.desc.Height = 606007
 		g.index = i
 
 		gen_output_procs.StartProc(&g)
