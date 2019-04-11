@@ -239,23 +239,25 @@ func AnalyzeNils(header *types.Header, ch Chain) {
 
 func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
 	if header.Number.Uint64() == (cpt.SIP2) {
-		e := utils.TR_enter_f("")
 		hash := header.ParentHash
 		number := header.Number.Uint64() - 1
+		progress := utils.NewProgress("PRE GEN ROOTS: ", number)
+		count := 0
 		for {
 			b := ch.GetBlock(hash, number)
 			for _, tx := range b.Transactions() {
 				for _, in := range tx.Stxt().Desc_O.Ins {
 					self.data.AddNil(&in.Nil)
+					count++
 				}
 			}
+			progress.Tick(number-b.Number().Uint64(), "count", count)
 			if number == 0 {
 				break
 			}
 			hash = b.ParentHash()
 			number = number - 1
 		}
-		e.Leave()
 	}
 }
 
