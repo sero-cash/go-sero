@@ -3,14 +3,12 @@
  Anonymous cryptocurrency based on zero-knowledge proof technology and refactored ethereum protocol by Golang.
 
 
-### Please refer to the official wiki for the tutorial
+* ### Please refer to the official wiki for the tutorial
+   <https://wiki.sero.cash/en/index.html?file=Start/from-the-sourcecode-base-on-centos7>
 
-<https://wiki.sero.cash/en/index.html?file=Start/from-the-sourcecode-base-on-centos7>
 
-
-### Self-apply for BetaNet mining license
-
-<https://sero.cash/license/records.html>
+* ### Self-apply for BetaNet mining license
+   <https://sero.cash/license/records.html>
 
 ## Building the source
 
