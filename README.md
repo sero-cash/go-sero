@@ -262,19 +262,28 @@ for more details on configuring your environment, managing project dependencies 
 ## Community resources
 
 **Wechat:**  SERO9413
+
 **Discord:**  <https://discord.gg/n5HVxE>
+
 **Twitter:**  <https://twitter.com/SEROdotCASH>
+
 **Telegram:**  <https://t.me/SeroOfficial>
+
 **Gitter:**  <https://gitter.im/sero-cash/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link>
 
 
 ## Other resources
 
 **Official Website:** <https://sero.cash>
+
 **White Paper:** <http://sero-media.s3-website-ap-southeast-1.amazonaws.com/Sero_ENG_V1.06.pdf>
+
 **WIKI:** <https://wiki.sero.cash/zh/index.html?file=home-Home>
+
 **Block Explorer:** <https://explorer.web.sero.cash/blocks.html>
+
 **Introduction Video:** <https://v.qq.com/x/page/s0792e921ok.html>
+
 
 ## License
 
