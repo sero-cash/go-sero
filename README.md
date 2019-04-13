@@ -3,6 +3,14 @@
  Anonymous cryptocurrency based on zero-knowledge proof technology and refactored ethereum protocol by Golang.
 
 
+## Please refer to the official wiki for the tutorial:：
+
+<https://wiki.sero.cash/en/index.html?file=Start/from-the-sourcecode-base-on-centos7>
+
+
+## Self-apply for BetaNet mining license:
+
+<https://sero.cash/license/records.html>
 
 ## Building the source
 
@@ -56,8 +64,9 @@ miner member supported
 
 By far the most common scenario is people wanting to simply interact with the Sero network:
 create accounts; transfer funds; deploy and interact with contracts. 
- **Mining in sero beta network need to be licensed because it is for public testing,  please send apply email to 
- gordon@sero .vip**
+ **Mining in sero beta network need to be licensed because it is for public testing, More detailed information can be referred to:**
+ 
+<https://wiki.sero.cash/en/index.html?file=Start/from-the-binary-package>
 
 To do so:
 
