@@ -2723,6 +2723,17 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
         /**
+         * Checks if the given string is an pkr address
+         *
+         * @method isAddress
+         * @param {String} address the given HEX adress
+         * @return {Boolean}
+         */
+        var isToAddress = function (address) {
+            return paramAddress(address)
+        };
+
+        /**
          * Checks if the given string is a checksummed address
          *
          * @method isChecksumAddress
@@ -2929,6 +2940,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             isStrictAddress: isStrictAddress,
             paramAddress: paramAddress,
             isAddress: isAddress,
+            isToAddress: isToAddress,
             isChecksumAddress: isChecksumAddress,
             toChecksumAddress: toChecksumAddress,
             isFunction: isFunction,
@@ -2949,7 +2961,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
     },{"./base58":17,"./sha3.js":20,"bignumber.js":"bignumber.js","utf8":85}],22:[function(require,module,exports){
         module.exports={
-            "version": "0.2.24"
+            "version": "0.2.30"
         }
 
     },{}],23:[function(require,module,exports){
@@ -3048,6 +3060,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         Web3.prototype.toTa = utils.toTa;
         Web3.prototype.fromTa = utils.fromTa;
         Web3.prototype.isAddress = utils.isAddress;
+        Web3.prototype.isToAddress = utils.isToAddress;
         Web3.prototype.isChecksumAddress = utils.isChecksumAddress;
         Web3.prototype.toChecksumAddress = utils.toChecksumAddress;
         Web3.prototype.padLeft = utils.padLeft;
@@ -6296,6 +6309,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 1,
             });
 
+            var getDecimal = new Method({
+                name: 'getDecimal',
+                call: 'sero_getDecimal',
+                params: 1,
+                outputFormatter: utils.toDecimal
+            });
+
             var getTransactionFromBlock = new Method({
                 name: 'getTransactionFromBlock',
                 call: transactionFromBlockCall,
@@ -6456,6 +6476,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 genPKr,
                 getFullAddress,
                 currencyToContractAddress,
+                getDecimal,
                 compileSolidity,
                 compileLLL,
                 compileSerpent,

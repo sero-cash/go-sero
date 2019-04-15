@@ -24,7 +24,6 @@ import (
 	"log"
 	"math/big"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -92,16 +91,16 @@ func TestALL(t *testing.T) {
 	args := []Argument{}
 	inputs := []interface{}{}
 
-	var index int
-	for k, v := range vs {
-		//fmt.Printf("%t\n %t\n", k, v)
-		tv, _, _ := ValueTo(newType(k), v, nil, nil)
-		//fmt.Printf("address = %v\n",addr)
-		fmt.Printf("v=%v\n", tv)
-		args = append(args, Argument{"a" + strconv.Itoa(index), newType(k), false})
-		inputs = append(inputs, tv.Interface())
-		index += 1
-	}
+	//var index int
+	//for k, v := range vs {
+	//	//fmt.Printf("%t\n %t\n", k, v)
+	//	tv, _, _ := ValueTo(newType(k), v, nil, nil)
+	//	//fmt.Printf("address = %v\n",addr)
+	//	fmt.Printf("v=%v\n", tv)
+	//	args = append(args, Argument{"a" + strconv.Itoa(index), newType(k), false})
+	//	inputs = append(inputs, tv.Interface())
+	//	index += 1
+	//}
 
 	//[2]uint32{uint32(100), uint32(99)}, "1234567890", common.HexToAddress("0xbbf289d846208c16edc8474705c748aff07732db"), common.HexToAddress("0x692a70d2e424a56d2c6c27aa97d1a86395877b3a"), "test", uint32(11)
 	method := Method{"test", false, args, nil}
@@ -151,7 +150,7 @@ func TestABIPACK(t *testing.T) {
 
 	inputs := []interface{}{}
 	args := []Argument{}
-	var index int
+	//var index int
 	for _, line := range datas {
 		pairs := strings.Split(line, ":")
 		vs := map[string]interface{}{}
@@ -161,14 +160,14 @@ func TestABIPACK(t *testing.T) {
 		if err := dec.Decode(&vs); err != nil {
 			fmt.Print(err)
 		}
-		for k, v := range vs {
-			//fmt.Printf("%t\n %t\n", k, v)
-			tv, _, _ := ValueTo(newType(k), v, nil, nil)
-			fmt.Printf("v=%v\n", tv)
-			args = append(args, Argument{"a" + strconv.Itoa(index), newType(k), false})
-			inputs = append(inputs, tv.Interface())
-			index += 1
-		}
+		//for k, v := range vs {
+		//	//fmt.Printf("%t\n %t\n", k, v)
+		//	tv, _, _ := ValueTo(newType(k), v, nil, nil)
+		//	fmt.Printf("v=%v\n", tv)
+		//	args = append(args, Argument{"a" + strconv.Itoa(index), newType(k), false})
+		//	inputs = append(inputs, tv.Interface())
+		//	index += 1
+		//}
 
 	}
 
@@ -347,6 +346,95 @@ func TestMultiPack(t *testing.T) {
 	if !bytes.Equal(packed, sig) {
 		t.Errorf("expected %x got %x", sig, packed)
 	}
+}
+
+func TestGetDeciamlByName_Pack(t *testing.T) {
+	const definition = `[{
+	"constant": false,
+	"inputs": [{
+		"name": "name",
+		"type": "string"
+	}],
+	"name": "getDecimal",
+	"outputs": [{
+		"name": "",
+		"type": "uint8"
+	}],
+	"payable": false,
+	"type": "function"
+	}]`
+	abi, err := JSON(strings.NewReader(definition))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	out, err := abi.Pack("getDecimal", "")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	fmt.Printf("%x\n", out)
+}
+
+func TestGetDeciaml_Pack(t *testing.T) {
+	const definition = `[{
+	"constant": true,
+	"inputs": [],
+	"name": "getDecimal",
+	"outputs": [{
+		"name": "",
+		"type": "uint8"
+	}],
+	"payable": false,
+	"type": "function"
+    }]`
+	abi, err := JSON(strings.NewReader(definition))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	out, err := abi.Pack("getDecimal", "")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	fmt.Printf("%x\n", out)
+}
+
+func TestDeciaml_Pack(t *testing.T) {
+	const definition = `[{
+	"constant": true,
+	"inputs": [],
+	"name": "decimals",
+	"outputs": [{
+		"name": "",
+		"type": "uint8"
+	}],
+	"payable": false,
+	"type": "function"
+    }]`
+	abi, err := JSON(strings.NewReader(definition))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	out, err := abi.Pack("getDecimal", "")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	fmt.Printf("%x\n", out)
+}
+
+func TestABI_Pack(t *testing.T) {
+	const definition = `[{"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"name","type":"string"}],"name":"getDecimal","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"getDecimal","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"inputs":[{"name":"name","type":"string"},{"name":"symbol","type":"string"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"}]`
+	abi, err := JSON(strings.NewReader(definition))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	out, err := abi.Pack("getDecimal")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	fmt.Printf("%x\n", out)
 }
 
 func ExampleJSON() {

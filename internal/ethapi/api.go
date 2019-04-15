@@ -915,6 +915,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	defer func(start time.Time) { log.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+
 	if state == nil || err != nil {
 		return nil, 0, false, err
 	}
@@ -1092,6 +1093,55 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 		}
 	}
 	return hexutil.Uint64(hi), nil
+}
+
+func (s *PublicBlockChainAPI) GetDecimal(ctx context.Context, tokenName string) (*hexutil.Uint, error) {
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return nil, err
+	}
+	if tokenName == "" {
+		return nil, errors.New("tokenName can not be empty!")
+	} else {
+		if tokenName == "sero" || tokenName == "SERO" {
+			return nil, errors.New("tokenName can not be sero!")
+
+		}
+	}
+	contractAddress := state.GetContrctAddressByToken(tokenName)
+	empty := common.Address{}
+	if contractAddress == empty {
+		return nil, errors.New(tokenName + "not exists!")
+	}
+	contractAddr := address.BytesToAccount(contractAddress[:64])
+	callArgs := CallArgs{
+		To: &contractAddress,
+	}
+	decimals := NewSRC20Decimal(contractAddr, tokenName)
+	for _, d := range decimals {
+		data, err := d.Pack()
+		if err != nil {
+			log.Info("SRC20Decimal", "pack", d.method, err)
+			continue
+		}
+		callArgs.Data = data
+		res, _, failed, err := s.doCall(ctx, callArgs, rpc.LatestBlockNumber, vm.Config{}, 0)
+		if err != nil || failed {
+			log.Info("SRC20Decimal", "docall", err)
+			continue
+		}
+		decimal, err := d.Unpack(res)
+		if err != nil {
+			log.Info("SRC20Decimal", "unpack", err)
+			continue
+		}
+		result := hexutil.Uint(*decimal)
+		log.Info("GetDecimal", "contract", contractAddr.String(), "method", d.method, "decimal", *decimal)
+		return &result, nil
+
+	}
+	return nil, errors.New("contract not support SER20 decimals")
 }
 
 // ExecutionResult groups all structured logs emitted by the EVM
