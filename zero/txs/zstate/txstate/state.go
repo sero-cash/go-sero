@@ -241,7 +241,8 @@ func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
 	if header.Number.Uint64() == (cpt.SIP2) {
 		hash := header.ParentHash
 		number := header.Number.Uint64() - 1
-		progress := utils.NewProgress("PRE GEN ROOTS: ", number)
+		size := number
+		progress := utils.NewProgress("PRE GEN ROOTS: ", size)
 		count := 0
 		for {
 			b := ch.GetBlock(hash, number)
@@ -251,7 +252,7 @@ func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
 					count++
 				}
 			}
-			progress.Tick(number-b.Number().Uint64(), "count", count)
+			progress.Tick(size-number, "count", count)
 			if number == 0 {
 				break
 			}

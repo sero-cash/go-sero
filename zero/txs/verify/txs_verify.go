@@ -80,6 +80,9 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 
 	t.Renter("Miner-Verify-----o_ins")
 
+	var verify_input_o_procs = verify_input_o_procs_pool.GetProcs()
+	defer verify_input_o_procs_pool.PutProcs(verify_input_o_procs)
+
 	for _, in_o := range s.Desc_O.Ins {
 		if state.Num() >= cpt.SIP2 {
 			if ok := state.State.HasIn(&in_o.Nil); ok {
@@ -94,7 +97,13 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 			}
 		}
 		if src := state.State.GetOut(&in_o.Root); src != nil {
-			g := cpt.VerifyInputSDesc{}
+			desc := verify_input_o_desc{}
+			desc.in = in_o
+			desc.hash_z = hash_z
+			desc.src = *src
+			verify_input_o_procs.StartProc(&desc)
+
+			/*g := cpt.VerifyInputSDesc{}
 			g.Ehash = hash_z
 			g.Nil = in_o.Nil
 			g.RootCM = *src.ToRootCM()
@@ -113,9 +122,20 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 				}
 				cpt.GenAssetCC(&asset_desc)
 				balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
-			}
+			}*/
 		} else {
 			e = errors.New("txs.Verify: in_o not find in the outs!")
+			return
+		}
+	}
+	if verify_input_o_procs.HasProc() {
+		if p_runs := verify_input_o_procs.Wait(); p_runs != nil {
+			for _, p_run := range p_runs {
+				desc := p_run.(*verify_input_o_desc)
+				balance_desc.Oin_accs = append(balance_desc.Oin_accs, desc.asset_cc[:]...)
+			}
+		} else {
+			e = errors.New("verify input_o sign failed!!!")
 			return
 		}
 	}

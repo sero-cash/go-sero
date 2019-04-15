@@ -3,66 +3,9 @@ package verify
 import (
 	"errors"
 
-	"github.com/sero-cash/go-czero-import/keys"
-
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/utils"
 )
-
-var verify_pkg_procs_pool = utils.NewProcsPool(func() int { return G_v_thread_num })
-
-type verify_pkg_desc struct {
-	desc cpt.PkgVerifyDesc
-	e    error
-}
-
-func (self *verify_pkg_desc) Run() bool {
-	if err := cpt.VerifyPkg(&self.desc); err != nil {
-		self.e = err
-		return false
-	} else {
-		return true
-	}
-}
-
-var verify_input_procs_pool = utils.NewProcsPool(func() int { return G_v_thread_num })
-
-type verify_input_desc struct {
-	desc cpt.InputVerifyDesc
-	e    error
-}
-
-func (self *verify_input_desc) Run() bool {
-	if err := cpt.VerifyInput(&self.desc); err != nil {
-		self.e = err
-		return false
-	} else {
-		return true
-	}
-}
-
-var verify_output_procs_pool = utils.NewProcsPool(func() int { return G_v_thread_num })
-
-type verify_output_desc struct {
-	desc cpt.OutputVerifyDesc
-	pkr  keys.PKr
-	e    error
-}
-
-func (self *verify_output_desc) Run() bool {
-	if keys.PKrValid(&self.pkr) {
-		if err := cpt.VerifyOutput(&self.desc); err != nil {
-			self.e = err
-			return false
-		} else {
-			return true
-		}
-	} else {
-		self.e = errors.New("z_out pkr is invalid !")
-		return false
-	}
-}
 
 func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc, height uint64) (e error) {
 	var verify_pkg_procs = verify_input_procs_pool.GetProcs()
