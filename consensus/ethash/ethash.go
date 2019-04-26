@@ -29,6 +29,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -279,6 +280,7 @@ type dataset struct {
 	mmap    mmap.MMap // Memory map itself to unmap before releasing
 	dataset []uint32  // The actual cache data content
 	once    sync.Once // Ensures the cache is generated only once
+	done    uint32
 }
 
 // newDataset creates a new ethash mining dataset and returns it as a plain Go
@@ -287,9 +289,15 @@ func newDataset(epoch uint64) interface{} {
 	return &dataset{epoch: epoch}
 }
 
+func (d *dataset) generated() bool {
+	return atomic.LoadUint32(&d.done) == 1
+}
+
 // generate ensures that the dataset content is generated before use.
 func (d *dataset) generate(dir string, limit int, test bool) {
 	d.once.Do(func() {
+		defer atomic.StoreUint32(&d.done, 1)
+
 		csize := cacheSize(d.epoch*epochLength + 1)
 		dsize := datasetSize(d.epoch*epochLength + 1)
 		seed := seedHash(d.epoch*epochLength + 1)
@@ -504,6 +512,26 @@ func (ethash *Ethash) cache(block uint64) *cache {
 	if futureI != nil {
 		future := futureI.(*cache)
 		go future.generate(ethash.config.CacheDir, ethash.config.CachesOnDisk, ethash.config.PowMode == ModeTest)
+	}
+	return current
+}
+
+func (ethash *Ethash) dataset_async(block uint64) *dataset {
+	// Retrieve the requested ethash dataset
+	epoch := block / epochLength
+	currentI, futureI := ethash.datasets.get(epoch)
+	current := currentI.(*dataset)
+
+	// If async is specified, generate everything in a background thread
+	if !current.generated() {
+		go func() {
+			current.generate(ethash.config.DatasetDir, ethash.config.DatasetsOnDisk, ethash.config.PowMode == ModeTest)
+
+			if futureI != nil {
+				future := futureI.(*dataset)
+				future.generate(ethash.config.DatasetDir, ethash.config.DatasetsOnDisk, ethash.config.PowMode == ModeTest)
+			}
+		}()
 	}
 	return current
 }

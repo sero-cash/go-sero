@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/lstate"
+
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/serodb"
@@ -19,6 +21,14 @@ import (
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 )
+
+func CurrentLState() *State1 {
+	if r, ok := lstate.CurrentLState().(*State1); !ok {
+		return nil
+	} else {
+		return r
+	}
+}
 
 func state1_file_name(num uint64, hash *common.Hash) (ret string) {
 	ret = fmt.Sprintf("%010d.%s", num, hexutil.Encode(hash[:])[3:])

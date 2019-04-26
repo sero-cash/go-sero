@@ -5,9 +5,8 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 
-	"github.com/sero-cash/go-sero/zero/lstate"
-
 	"github.com/pkg/errors"
+	"github.com/sero-cash/go-sero/zero/lstate"
 
 	"github.com/sero-cash/go-sero/zero/localdb"
 
@@ -168,4 +167,7 @@ func (self *State1) GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error)
 		e = errors.New("GetOuts but state1 is nil")
 		return
 	}
+}
+func (self *State1) AddAccount(tk *keys.Uint512) (ret bool) {
+	return false
 }

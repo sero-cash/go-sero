@@ -24,6 +24,8 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core/types"
@@ -126,12 +128,19 @@ search:
 		default:
 			// We don't have to update hash rate on every nonce, so update after after 2^X nonces
 			attempts++
-			if (attempts % (1 << 15)) == 0 {
+			if (attempts % (1 << 8)) == 0 {
 				ethash.hashrate.Mark(attempts)
 				attempts = 0
 			}
 			// Compute the PoW value of this nonce
-			digest, result := hashimotoFull(dataset.dataset, hash, nonce, header.Number.Uint64())
+			var digest []byte
+			var result []byte
+			if number >= seroparam.SIP3 {
+				digest, result = progpowFull(dataset.dataset, hash, nonce, number)
+			} else {
+				digest, result = hashimotoFull(dataset.dataset, hash, nonce, number)
+			}
+
 			if new(big.Int).SetBytes(result).Cmp(target) <= 0 {
 				// Correct nonce found, create a new header with it
 				header = types.CopyHeader(header)
