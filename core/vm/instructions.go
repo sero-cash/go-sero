@@ -1173,7 +1173,7 @@ func makeLog(size int) executionFunc {
 			copy(key[:], d[32:64])
 			pkg, err := interpreter.evm.StateDB.GetPkgState().Close(&id, contract.Address().ToPKr(), &key)
 			if err != nil {
-				memory.Set(mStart.Uint64(), 128, make([]byte, 128))
+				memory.Set(mStart.Uint64(), 256, make([]byte, 256))
 			} else {
 				if pkg.O.Asset.Tkn != nil {
 					currency := common.BytesToString(pkg.O.Asset.Tkn.Currency[:])
