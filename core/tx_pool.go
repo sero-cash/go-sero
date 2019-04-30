@@ -468,6 +468,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 		return ErrUnderpriced
 	}
 
+	if !tx.IsOpContract() {
+		if len(tx.Data()) > 0 {
+			return errors.New(`not create or call crontract tx playdata must be nil`)
+		}
+	}
+
 	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil)
 	if err != nil {
 		return err

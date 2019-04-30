@@ -1603,6 +1603,15 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		if len(input) < 18 {
 			return errors.New(`contract creation without any data provided`)
 		}
+	} else {
+		var input []byte
+		if args.Data != nil {
+			input = *args.Data
+		}
+
+		if len(input) > 0 {
+			return errors.New(`not create or call crontract data params must be nil`)
+		}
 	}
 	return nil
 }
