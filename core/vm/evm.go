@@ -177,7 +177,10 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, to, asset, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	input = loadAddress(evm, caller, input, contract, false)
+	input,err = loadAddress(evm, caller, input, contract, false)
+	if err != nil {
+		return ret, contract.Gas, err
+	}
 
 	start := time.Now()
 
@@ -233,7 +236,10 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	// only.
 	contract := NewContract(caller, to, asset, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	input = loadAddress(evm, caller, input, contract, false)
+	input,err = loadAddress(evm, caller, input, contract, false)
+	if err != nil {
+		return ret, contract.Gas, err
+	}
 
 	ret, err = run(evm, contract, input)
 	if err != nil {
@@ -267,7 +273,10 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	// Initialise a new contract and make initialise the delegate values
 	contract := NewContract(caller, to, nil, gas).AsDelegate()
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	input = loadAddress(evm, caller, input, contract, false)
+	input,err = loadAddress(evm, caller, input, contract, false)
+	if err != nil {
+		return ret, contract.Gas, err
+	}
 
 	ret, err = run(evm, contract, input)
 	if err != nil {
@@ -308,7 +317,10 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	// only.
 	contract := NewContract(caller, to, nil, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	input = loadAddress(evm, caller, input, contract, false)
+	input,err = loadAddress(evm, caller, input, contract, false)
+	if err != nil {
+		return ret, contract.Gas, err
+	}
 
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally
@@ -323,11 +335,17 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	return ret, contract.Gas, err
 }
 
-func loadAddress(evm *EVM, caller ContractRef, input []byte, contract *Contract, contractCreation bool) []byte {
+func loadAddress(evm *EVM, caller ContractRef, input []byte, contract *Contract, contractCreation bool) ([]byte, error) {
 	contract.PutNonceAddress(evm.StateDB, caller.Address())
 	if !evm.StateDB.IsContract(caller.Address()) {
 		if len(input) != 0 && (contractCreation || len(contract.Code) > 0) {
+			if len(input) < 2 {
+				return input, ErrCodeInvalid
+			}
 			n := int(input[0])<<8 + int(input[1])
+			if len(input) < n*96+2 {
+				return input, ErrCodeInvalid
+			}
 			for i := 0; i < n; i++ {
 				addr := common.BytesToAddress(input[i*96+2 : i*96+98])
 				contract.PutNonceAddress(evm.StateDB, addr)
@@ -335,7 +353,7 @@ func loadAddress(evm *EVM, caller ContractRef, input []byte, contract *Contract,
 			input = input[n*96+2:]
 		}
 	}
-	return input
+	return input, nil
 }
 
 // create creates a new contract using code as deployment code.
@@ -361,7 +379,10 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, asset *asset
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
 	contract := NewContract(caller, AccountRef(address), asset, gas)
-	code = loadAddress(evm, caller, code, contract, true)
+	code, err := loadAddress(evm, caller, code, contract, true)
+	if err != nil {
+		return nil, common.Address{}, contract.Gas, err
+	}
 	contract.SetCallCode(&address, crypto.Keccak256Hash(code), code)
 
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
@@ -412,6 +433,9 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, asset *asset
 
 // Create creates a new contract using code as deployment code.
 func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, asset *assets.Asset) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+	if len(code) < 16 {
+		return ret, contractAddr, leftOverGas, ErrCodeInvalid
+	}
 	contractAddr = crypto.CreateAddress(caller.Address(), evm.StateDB.IncAndGetContrctNonce(), code[0:16])
 	return evm.create(caller, code[16:], gas, asset, contractAddr)
 }
