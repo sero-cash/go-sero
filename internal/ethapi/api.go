@@ -1552,6 +1552,18 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	if err != nil {
 		return err
 	}
+
+	if args.To != nil && !state.IsContract(common.BytesToAddress(args.To[:])) {
+		var input []byte
+		if args.Data != nil {
+			input = *args.Data
+		}
+
+		if len(input) > 0 {
+			return errors.New(`not create or call contract data must be nil`)
+		}
+	}
+
 	if args.To == nil || !state.IsContract(common.BytesToAddress(args.To[:])) {
 		if args.GasCurrency.IsNotEmpty() && args.GasCurrency.IsNotSero() {
 			return errors.New(`GasCurrency must be null or SERO`)
@@ -1602,15 +1614,6 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 
 		if len(input) < 18 {
 			return errors.New(`contract creation without any data provided`)
-		}
-	} else {
-		var input []byte
-		if args.Data != nil {
-			input = *args.Data
-		}
-
-		if len(input) > 0 {
-			return errors.New(`not create or call crontract data params must be nil`)
 		}
 	}
 	return nil
