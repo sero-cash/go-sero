@@ -113,7 +113,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 		Value:    utils.U256(*cfg.Value),
 	},
 	}
-	ret, _, err := vmenv.Call(
+	ret, _, err, _ := vmenv.Call(
 		sender,
 		common.BytesToAddress([]byte("contract")),
 		input,
@@ -170,7 +170,7 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 		Value:    utils.U256(*cfg.Value),
 	},
 	}
-	ret, leftOverGas, err := vmenv.Call(
+	ret, leftOverGas, err, _ := vmenv.Call(
 		sender,
 		address,
 		input,

@@ -35,7 +35,7 @@ type (
 	// CanTransferFunc is the signature of a transfer guard function
 	CanTransferFunc func(StateDB, common.Address, *assets.Asset) bool
 	// TransferFunc is the signature of a transfer function
-	TransferFunc func(StateDB, common.Address, common.Address, *assets.Asset)
+	TransferFunc func(StateDB, common.Address, common.Address, *assets.Asset) (alarm bool)
 	// GetHashFunc returns the nth block hash in the blockchain
 	// and is used by the BLOCKHASH EVM op code.
 	GetHashFunc func(uint64) common.Hash
@@ -152,18 +152,18 @@ func (evm *EVM) Interpreter() Interpreter {
 // parameters. It also handles any necessary value transfer required and takes
 // the necessary steps to create accounts and reverses the state in case of an
 // execution error or failed value transfer.
-func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, asset *assets.Asset) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, asset *assets.Asset) (ret []byte, leftOverGas uint64, err error, alarm bool) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
-		return nil, gas, nil
+		return nil, gas, nil, false
 	}
 
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth
+		return nil, gas, ErrDepth, false
 	}
 
 	if evm.StateDB.IsContract(caller.Address()) && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), asset) {
-		return nil, gas, ErrInsufficientBalance
+		return nil, gas, ErrInsufficientBalance, false
 	}
 
 	var (
@@ -171,15 +171,15 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		snapshot = evm.StateDB.Snapshot()
 	)
 
-	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), asset)
+	alarm = evm.Transfer(evm.StateDB, caller.Address(), to.Address(), asset)
 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, to, asset, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	input,err = loadAddress(evm, caller, input, contract, false)
+	input, err = loadAddress(evm, caller, input, contract, false)
 	if err != nil {
-		return ret, leftOverGas, err
+		return ret, leftOverGas, err, alarm
 	}
 
 	start := time.Now()
@@ -203,7 +203,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 			contract.UseGas(contract.Gas)
 		}
 	}
-	return ret, contract.Gas, err
+	return ret, contract.Gas, err, alarm
 }
 
 // CallCode executes the contract associated with the addr with the given input
@@ -236,7 +236,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	// only.
 	contract := NewContract(caller, to, asset, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	input,err = loadAddress(evm, caller, input, contract, false)
+	input, err = loadAddress(evm, caller, input, contract, false)
 	if err != nil {
 		return ret, leftOverGas, err
 	}
@@ -273,7 +273,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	// Initialise a new contract and make initialise the delegate values
 	contract := NewContract(caller, to, nil, gas).AsDelegate()
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	input,err = loadAddress(evm, caller, input, contract, false)
+	input, err = loadAddress(evm, caller, input, contract, false)
 	if err != nil {
 		return ret, leftOverGas, err
 	}
@@ -317,7 +317,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	// only.
 	contract := NewContract(caller, to, nil, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	input,err = loadAddress(evm, caller, input, contract, false)
+	input, err = loadAddress(evm, caller, input, contract, false)
 	if err != nil {
 		return ret, leftOverGas, err
 	}
