@@ -125,7 +125,8 @@ func (t *VMTest) exec(statedb *state.StateDB, vmconfig vm.Config) ([]byte, uint6
 		Value:    utils.U256(*e.Value),
 	},
 	}
-	return evm.Call(vm.AccountRef(e.Caller), e.Address, e.Data, e.GasLimit, &asset)
+	a, b, c, _ := evm.Call(vm.AccountRef(e.Caller), e.Address, e.Data, e.GasLimit, &asset)
+	return a, b, c
 }
 
 func (t *VMTest) newEVM(statedb *state.StateDB, vmconfig vm.Config) *vm.EVM {
@@ -137,7 +138,7 @@ func (t *VMTest) newEVM(statedb *state.StateDB, vmconfig vm.Config) *vm.EVM {
 	//	}
 	//	return core.CanTransfer(db, address, amount)
 	//}
-	transfer := func(db vm.StateDB, sender, recipient common.Address, pkg *assets.Asset) {}
+	transfer := func(db vm.StateDB, sender, recipient common.Address, pkg *assets.Asset) (alarm bool) { return false }
 	context := vm.Context{
 		//CanTransfer: canTransfer,
 		Transfer:    transfer,

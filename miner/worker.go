@@ -23,6 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -483,6 +485,12 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		tx := txs.Peek()
 		if tx == nil {
 			break
+		}
+
+		if env.header.Number.Uint64() == zconfig.VP0 {
+			txs.Shift()
+			env.errHandledTxs = append(env.errHandledTxs, tx)
+			continue
 		}
 
 		// Start executing the transaction

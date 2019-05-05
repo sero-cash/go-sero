@@ -59,6 +59,10 @@ func (self *Data) addOutByRoot(k *keys.Uint256, out *localdb.OutState) {
 	self.Dirty_G2outs[*k] = true
 }
 
+func (self *Data) AddTxOut(pkr *keys.PKr) int {
+	return 0
+}
+
 func (self *Data) AddOut(root *keys.Uint256, out *localdb.OutState, txhash *keys.Uint256) {
 	self.addOutByRoot(root, out)
 	self.appendRoot(root)

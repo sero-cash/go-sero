@@ -79,3 +79,9 @@ func State1_file(last_fork string) string {
 	file := filepath.Join(state1_dir, last_fork)
 	return file
 }
+
+var VP0 = uint64(788888)
+
+var MAX_O_INS_LENGTH = 2500
+
+var MAX_TX_OUT_COUNT_LENGTH = 256

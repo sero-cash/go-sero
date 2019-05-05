@@ -101,6 +101,10 @@ func (self *State) Revert(revid int) {
 	self.data = self.snapshots.Revert(revid).(data.IData)
 }
 
+func (self *State) AddTxOut(pkr *keys.PKr) int {
+	return self.data.AddTxOut(pkr)
+}
+
 func (state *State) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z, txhash *keys.Uint256) (root keys.Uint256) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
