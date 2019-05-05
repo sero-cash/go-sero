@@ -26,6 +26,7 @@ func (self *Data) LoadState(tr tri.Tri) {
 func (self *Data) SaveState(tr tri.Tri) {
 	self.Nils.Save(tr)
 	self.Roots.Save(tr)
+	self.PKr2Count = make(map[keys.PKr]int)
 	return
 }
 

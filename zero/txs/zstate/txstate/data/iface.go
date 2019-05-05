@@ -9,6 +9,8 @@ import (
 
 type IData interface {
 	Clear()
+
+	AddTxOut(pkr *keys.PKr) int
 	AddOut(root *keys.Uint256, out *localdb.OutState, txhash *keys.Uint256)
 	AddNil(in *keys.Uint256)
 	AddDel(in *keys.Uint256)

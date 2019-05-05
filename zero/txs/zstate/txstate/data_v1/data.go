@@ -15,6 +15,8 @@ type Data struct {
 	Dels  utils.Dirtys
 	Nils  utils.HSet
 	Roots utils.HSet
+
+	PKr2Count map[keys.PKr]int
 }
 
 func NewData(num uint64) (ret *Data) {
@@ -27,9 +29,21 @@ func NewData(num uint64) (ret *Data) {
 
 func (state *Data) Clear() {
 	state.Root2Out = make(map[keys.Uint256]localdb.RootState)
+	state.PKr2Count = make(map[keys.PKr]int)
 	state.Dels.Clear()
 	state.Nils.Clear()
 	state.Roots.Clear()
+}
+
+func (self *Data) AddTxOut(pkr *keys.PKr) int {
+	if count, ok := self.PKr2Count[*pkr]; !ok {
+		self.PKr2Count[*pkr] = 1
+		return 1
+	} else {
+		count++
+		self.PKr2Count[*pkr] = count
+		return count
+	}
 }
 
 func (self *Data) AddOut(root *keys.Uint256, out *localdb.OutState, txhash *keys.Uint256) {
