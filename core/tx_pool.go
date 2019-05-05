@@ -111,7 +111,7 @@ type TxPoolConfig struct {
 // pool.
 var DefaultTxPoolConfig = TxPoolConfig{
 
-	PriceLimit:   1,
+	PriceLimit:   params.Gta,
 	AccountSlots: 16,
 	GlobalSlots:  4096,
 	AccountQueue: 64,
