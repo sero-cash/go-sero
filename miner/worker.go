@@ -18,11 +18,12 @@ package miner
 
 import (
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/zconfig"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/common/address"
 
@@ -487,7 +488,8 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}
 
 		if env.header.Number.Uint64() == zconfig.VP0 {
-			txs.Pop()
+			txs.Shift()
+			env.errHandledTxs = append(env.errHandledTxs, tx)
 			continue
 		}
 		// Start executing the transaction
