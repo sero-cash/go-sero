@@ -106,9 +106,9 @@ func CanTransfer(db vm.StateDB, addr common.Address, asset *assets.Asset) bool {
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
-func Transfer(db vm.StateDB, sender, recipient common.Address, asset *assets.Asset) bool {
+func Transfer(db vm.StateDB, sender, recipient common.Address, asset *assets.Asset) error {
 	if asset == nil {
-		return true
+		return nil
 	}
 	if db.IsContract(sender) {
 		if asset.Tkn != nil {
@@ -138,8 +138,8 @@ func Transfer(db vm.StateDB, sender, recipient common.Address, asset *assets.Ass
 		}
 	} else {
 		if err := db.GetZState().AddTxOutWithCheck(recipient, *asset); err != nil {
-			return false
+			return err
 		}
 	}
-	return true;
+	return nil;
 }

@@ -36,7 +36,7 @@ type (
 	// CanTransferFunc is the signature of a transfer guard function
 	CanTransferFunc func(StateDB, common.Address, *assets.Asset) bool
 	// TransferFunc is the signature of a transfer function
-	TransferFunc func(StateDB, common.Address, common.Address, *assets.Asset) bool
+	TransferFunc func(StateDB, common.Address, common.Address, *assets.Asset) error
 	// GetHashFunc returns the nth block hash in the blockchain
 	// and is used by the BLOCKHASH EVM op code.
 	GetHashFunc func(uint64) common.Hash
@@ -172,7 +172,9 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		snapshot = evm.StateDB.Snapshot()
 	)
 
-	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), asset)
+	if err = evm.Transfer(evm.StateDB, caller.Address(), to.Address(), asset); err != nil {
+		return ret, leftOverGas, err
+	}
 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
