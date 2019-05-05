@@ -137,7 +137,7 @@ func (t *VMTest) newEVM(statedb *state.StateDB, vmconfig vm.Config) *vm.EVM {
 	//	}
 	//	return core.CanTransfer(db, address, amount)
 	//}
-	transfer := func(db vm.StateDB, sender, recipient common.Address, pkg *assets.Asset) {}
+	transfer := func(db vm.StateDB, sender, recipient common.Address, pkg *assets.Asset) (error){return nil}
 	context := vm.Context{
 		//CanTransfer: canTransfer,
 		Transfer:    transfer,
