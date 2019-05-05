@@ -27,5 +27,5 @@ var (
 	ErrInsufficientBalance      = errors.New("insufficient balance for transfer")
 	ErrContractAddressCollision = errors.New("contract address collision")
 	ErrNoCompatibleInterpreter  = errors.New("no compatible interpreter")
-	ErrCodeInvalid              = errors.New("imput invalid")
+	ErrCodeInvalid              = errors.New("input invalid")
 )

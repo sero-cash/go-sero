@@ -909,6 +909,8 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 		//contract.Gas += returnGas
 		if err != nil {
 			return common.Hash{}, returnGas, err
+		} else {
+			return value, returnGas, nil
 		}
 	}
 

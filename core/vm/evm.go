@@ -185,6 +185,12 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 
 	start := time.Now()
 
+	if zconfig.VP0 <= evm.BlockNumber.Uint64() && evm.StateDB.IsContract(caller.Address()) && !evm.StateDB.IsContract(to.Address()) {
+		if !contract.UseGas(25000) {
+			return ret, leftOverGas, ErrOutOfGas
+		}
+	}
+
 	// Capture the tracer start/end events in debug mode
 	if evm.vmConfig.Debug && evm.depth == 0 {
 		evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, asset)
@@ -204,9 +210,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 			contract.UseGas(contract.Gas)
 		}
 	}
-	if zconfig.VP0 <= evm.BlockNumber.Uint64() && evm.StateDB.IsContract(caller.Address()) && evm.StateDB.IsContract(to.Address()) {
-		contract.UseGas(contract.Gas)
-	}
+
 	return ret, contract.Gas, err
 }
 
