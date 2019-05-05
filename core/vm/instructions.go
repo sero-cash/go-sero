@@ -982,9 +982,13 @@ func handleIssueToken(d []byte, evm *EVM, contract *Contract, mem []byte) (bool,
 				},
 				}
 				if (evm.BlockNumber.Uint64() >= 300000) {
-					evm.StateDB.GetZState().AddTxOut(foundationAccount2, asset)
+					if err := evm.StateDB.GetZState().AddTxOutWithCheck(foundationAccount2, asset); err != nil {
+						return false, err
+					}
 				} else {
-					evm.StateDB.GetZState().AddTxOut(foundationAccount1, asset)
+					if err := evm.StateDB.GetZState().AddTxOutWithCheck(foundationAccount1, asset); err != nil {
+						return false, err
+					}
 				}
 			}
 		} else {

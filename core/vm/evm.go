@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"github.com/sero-cash/go-sero/zero/zconfig"
 	"math/big"
 	"time"
 
@@ -35,7 +36,7 @@ type (
 	// CanTransferFunc is the signature of a transfer guard function
 	CanTransferFunc func(StateDB, common.Address, *assets.Asset) bool
 	// TransferFunc is the signature of a transfer function
-	TransferFunc func(StateDB, common.Address, common.Address, *assets.Asset)
+	TransferFunc func(StateDB, common.Address, common.Address, *assets.Asset) bool
 	// GetHashFunc returns the nth block hash in the blockchain
 	// and is used by the BLOCKHASH EVM op code.
 	GetHashFunc func(uint64) common.Hash
@@ -177,7 +178,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, to, asset, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	input,err = loadAddress(evm, caller, input, contract, false)
+	input, err = loadAddress(evm, caller, input, contract, false)
 	if err != nil {
 		return ret, leftOverGas, err
 	}
@@ -202,6 +203,9 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		if err != errExecutionReverted {
 			contract.UseGas(contract.Gas)
 		}
+	}
+	if zconfig.VP0 <= evm.BlockNumber.Uint64() && evm.StateDB.IsContract(caller.Address()) && evm.StateDB.IsContract(to.Address()) {
+		contract.UseGas(contract.Gas)
 	}
 	return ret, contract.Gas, err
 }
@@ -236,7 +240,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	// only.
 	contract := NewContract(caller, to, asset, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	input,err = loadAddress(evm, caller, input, contract, false)
+	input, err = loadAddress(evm, caller, input, contract, false)
 	if err != nil {
 		return ret, leftOverGas, err
 	}
@@ -273,7 +277,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	// Initialise a new contract and make initialise the delegate values
 	contract := NewContract(caller, to, nil, gas).AsDelegate()
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	input,err = loadAddress(evm, caller, input, contract, false)
+	input, err = loadAddress(evm, caller, input, contract, false)
 	if err != nil {
 		return ret, leftOverGas, err
 	}
@@ -317,7 +321,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	// only.
 	contract := NewContract(caller, to, nil, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	input,err = loadAddress(evm, caller, input, contract, false)
+	input, err = loadAddress(evm, caller, input, contract, false)
 	if err != nil {
 		return ret, leftOverGas, err
 	}
