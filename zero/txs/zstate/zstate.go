@@ -17,7 +17,7 @@
 package zstate
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/serodb"
@@ -127,15 +127,21 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 	return
 }
 
-func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset) (e error) {
+func (state *ZState) AddTxOutWithCheck(addr common.Address, asset assets.Asset) (e error) {
 	if state.Num() >= zconfig.VP0 {
 		count := state.State.AddTxOut(addr.ToPKr())
 		if count > zconfig.MAX_TX_OUT_COUNT_LENGTH {
-			e = errors.New("ZState AddTxOut Count > 256")
+			e = fmt.Errorf("ZState AddTxOut Count > %v", zconfig.MAX_TX_OUT_COUNT_LENGTH)
 			return
 		}
 	}
 
+	state.AddTxOut(addr, asset)
+
+	return
+}
+
+func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset) {
 	t := utils.TR_enter("AddTxOut-----")
 	need_add := false
 	if asset.Tkn != nil {

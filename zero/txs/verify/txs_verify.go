@@ -87,7 +87,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 
 	if state.State.Num() >= zconfig.VP0 {
 		if len(s.Desc_O.Ins) > zconfig.MAX_O_INS_LENGTH {
-			e = errors.New("txs.verify O ins length > 2500")
+			e = fmt.Errorf("txs.verify O ins length > %v, current is %v", zconfig.MAX_O_INS_LENGTH, len(s.Desc_O.Ins))
 			return
 		}
 	}

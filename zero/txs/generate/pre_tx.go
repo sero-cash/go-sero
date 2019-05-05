@@ -20,7 +20,6 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/zero/localdb"
@@ -100,7 +99,7 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 	}
 
 	if len(p.desc_o.ins) > zconfig.MAX_O_INS_LENGTH {
-		e = errors.New("O ins length > 2500")
+		e = fmt.Errorf("pre gen tx O ins length > %v,current is %v", zconfig.MAX_O_INS_LENGTH, len(p.desc_o.ins))
 		return
 	}
 
