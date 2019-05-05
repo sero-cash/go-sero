@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
@@ -499,6 +501,13 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		log.Trace("Discarding already known transaction", "hash", hash)
 		return false, fmt.Errorf("known transaction: %x", hash)
 	}
+
+	currentBlockNum := pool.chain.CurrentBlock().NumberU64()
+
+	if (zconfig.VP0-50) < currentBlockNum && currentBlockNum < (zconfig.VP0+50) {
+		return false, fmt.Errorf("protect vp0:%v", zconfig.VP0)
+	}
+
 	// If the transaction fails basic validation, discard it
 	if err := pool.validateTx(tx, local); err != nil {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
