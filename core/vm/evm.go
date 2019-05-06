@@ -179,6 +179,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 	input, err = loadAddress(evm, caller, input, contract, false)
 	if err != nil {
+		evm.StateDB.RevertToSnapshot(snapshot)
 		return ret, leftOverGas, err, alarm
 	}
 
@@ -238,6 +239,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 	input, err = loadAddress(evm, caller, input, contract, false)
 	if err != nil {
+		evm.StateDB.RevertToSnapshot(snapshot)
 		return ret, leftOverGas, err
 	}
 
@@ -275,6 +277,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 	input, err = loadAddress(evm, caller, input, contract, false)
 	if err != nil {
+		evm.StateDB.RevertToSnapshot(snapshot)
 		return ret, leftOverGas, err
 	}
 
@@ -319,6 +322,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 	input, err = loadAddress(evm, caller, input, contract, false)
 	if err != nil {
+		evm.StateDB.RevertToSnapshot(snapshot)
 		return ret, leftOverGas, err
 	}
 
@@ -381,6 +385,7 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, asset *asset
 	contract := NewContract(caller, AccountRef(address), asset, gas)
 	code, err := loadAddress(evm, caller, code, contract, true)
 	if err != nil {
+		evm.StateDB.RevertToSnapshot(snapshot)
 		return nil, common.Address{}, 0, err
 	}
 	contract.SetCallCode(&address, crypto.Keccak256Hash(code), code)
