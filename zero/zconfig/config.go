@@ -80,7 +80,7 @@ func State1_file(last_fork string) string {
 	return file
 }
 
-var VP0 = uint64(783000)
+var VP0 = uint64(788888)
 
 var MAX_O_INS_LENGTH = 2500
 
