@@ -17,10 +17,12 @@
 package zstate
 
 import (
-	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/zero/localdb"
+	"github.com/sero-cash/go-sero/log"
 
+	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/zero/localdb"
+	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
@@ -125,6 +127,21 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 	return
 }
 
+func (state *ZState) AddTxOutWithCheck(addr common.Address, asset assets.Asset) (alarm bool) {
+	alarm = false
+	if state.Num() >= zconfig.VP0 {
+		count := state.State.AddTxOut(addr.ToPKr())
+		if count > zconfig.MAX_TX_OUT_COUNT_LENGTH {
+			log.Error("[ALARM] ZState AddTxOut Overflow", "MAX_TX_OUT_COUNT_LENGTH", zconfig.MAX_TX_OUT_COUNT_LENGTH)
+			alarm = true
+		}
+	}
+
+	state.AddTxOut(addr, asset)
+
+	return
+}
+
 func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset) {
 	t := utils.TR_enter("AddTxOut-----")
 	need_add := false
@@ -147,4 +164,6 @@ func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset) {
 		state.AddOut_O(&o)
 	}
 	t.Leave()
+
+	return
 }

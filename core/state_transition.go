@@ -198,7 +198,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	if contractCreation {
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, msg.Asset())
 	} else {
-		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, msg.Asset())
+		ret, st.gas, vmerr, _ = evm.Call(sender, st.to(), st.data, st.gas, msg.Asset())
 	}
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)

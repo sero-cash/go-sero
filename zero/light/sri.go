@@ -64,8 +64,8 @@ func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []light_types.Witness, e 
 		for _, root := range roots {
 			wit := light_types.Witness{}
 			out := localdb.GetRoot(light_ref.Ref_inst.Bc.GetDB(), &root)
-			if out==nil {
-				e=errors.New("GetAnchor use root but out is nil !!!")
+			if out == nil {
+				e = errors.New("GetAnchor use root but out is nil !!!")
 				return
 			}
 			pos, paths, anchor := state.State.MTree.GetPaths(*out.OS.RootCM)
