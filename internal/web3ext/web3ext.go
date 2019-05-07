@@ -629,8 +629,8 @@ web3._extend({
 	property: 'ssi',
 	methods: [
 		new web3._extend.Method({
-			name: 'getblockinfo',
-			call: 'ssi_getBlockInfo',
+			name: 'getblocksinfo',
+			call: 'ssi_getBlocksInfo',
 			params: 2,
 			inputFormatter: [
 				web3._extend.utils.toHex,

@@ -22,7 +22,7 @@ import (
 type PublicSSIAPI struct {
 }
 
-func (s *PublicSSIAPI) GetBlockInfo(ctx context.Context, start hexutil.Uint64, count hexutil.Uint64) ([]light_issi.Block, error) {
+func (s *PublicSSIAPI) GetBlocksInfo(ctx context.Context, start hexutil.Uint64, count hexutil.Uint64) ([]light_issi.Block, error) {
 	return light.SSI_Inst.GetBlocksInfo(uint64(start), uint64(count))
 }
 
