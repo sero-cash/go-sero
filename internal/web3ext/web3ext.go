@@ -629,6 +629,11 @@ web3._extend({
 	property: 'ssi',
 	methods: [
 		new web3._extend.Method({
+			name: 'createkr',
+			call: 'ssi_createKr',
+			params: 0
+		}),
+		new web3._extend.Method({
 			name: 'getblocksinfo',
 			call: 'ssi_getBlocksInfo',
 			params: 2,

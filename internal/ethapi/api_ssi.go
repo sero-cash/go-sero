@@ -22,6 +22,10 @@ import (
 type PublicSSIAPI struct {
 }
 
+func (s *PublicSSIAPI) CreateKr() (kr light_types.Kr) {
+	return light.SLI_Inst.CreateKr()
+}
+
 func (s *PublicSSIAPI) GetBlocksInfo(ctx context.Context, start hexutil.Uint64, count hexutil.Uint64) ([]light_issi.Block, error) {
 	return light.SSI_Inst.GetBlocksInfo(uint64(start), uint64(count))
 }
