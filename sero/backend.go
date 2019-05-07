@@ -26,6 +26,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-sero/zero/light/light_ref"
+
 	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/accounts"
@@ -150,6 +152,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 		cacheConfig = &core.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
 	)
 	sero.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, sero.chainConfig, sero.engine, vmConfig, sero.accountManager, config.MineMode)
+
+	light_ref.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain}, sero)
 
 	if err != nil {
 		return nil, err

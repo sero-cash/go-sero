@@ -88,6 +88,12 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 	nonceLock := new(AddrLocker)
 	return []rpc.API{
 		{
+			Namespace: "ssi",
+			Version:   "1.0",
+			Service:   &PublicSSIAPI{},
+			Public:    true,
+		},
+		{
 			Namespace: "sero",
 			Version:   "1.0",
 			Service:   NewPublicEthereumAPI(apiBackend),

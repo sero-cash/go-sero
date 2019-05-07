@@ -30,6 +30,7 @@ var Modules = map[string]string{
 	"shh":        Shh_JS,
 	"swarmfs":    SWARMFS_JS,
 	"txpool":     TxPool_JS,
+	"ssi":        SSI_JS,
 }
 
 const Chequebook_JS = `
@@ -619,6 +620,43 @@ web3._extend({
 				return status;
 			}
 		}),
+	]
+});
+`
+
+const SSI_JS = `
+web3._extend({
+	property: 'ssi',
+	methods: [
+		new web3._extend.Method({
+			name: 'getblockinfo',
+			call: 'ssi_getBlockInfo',
+			params: 2,
+			inputFormatter: [
+				web3._extend.utils.toHex,
+				web3._extend.utils.toHex
+			]
+		}),
+		new web3._extend.Method({
+			name: 'detail',
+			call: 'ssi_detail',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'gentx',
+			call: 'ssi_genTx',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'gettx',
+			call: 'ssi_getTx',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'committx',
+			call: 'ssi_commitTx',
+			params: 1
+		})
 	]
 });
 `

@@ -20,7 +20,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -210,12 +209,10 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	if !mineMode {
 		lstate.Run(
 			&State1BlockChain{
-				bc: bc,
+				bc,
 			},
 		)
 	}
-	light_ref.Ref_inst.SetBC(&State1BlockChain{bc: bc})
-
 	return bc, nil
 }
 
@@ -273,36 +270,36 @@ func (bc *BlockChain) getProcInterrupt() bool {
 }
 
 type State1BlockChain struct {
-	bc *BlockChain
+	Bc *BlockChain
 }
 
 func (self *State1BlockChain) GetBlockByNumber(num uint64) *types.Block {
-	return self.bc.GetBlockByNumber(num)
+	return self.Bc.GetBlockByNumber(num)
 }
 
 func (self *State1BlockChain) GetDB() serodb.Database {
-	return self.bc.db
+	return self.Bc.db
 }
 
 func (self *State1BlockChain) CashChose() *atomic.Value {
-	return &self.bc.cashChose
+	return &self.Bc.cashChose
 }
 
 func (self *State1BlockChain) GetCurrenHeader() *types.Header {
-	return self.bc.CurrentBlock().Header()
+	return self.Bc.CurrentBlock().Header()
 }
 func (self *State1BlockChain) GetHeader(hash *common.Hash) *types.Header {
-	return self.bc.GetHeaderByHash(*hash)
+	return self.Bc.GetHeaderByHash(*hash)
 }
 func (self *State1BlockChain) NewState(hash *common.Hash) *zstate.ZState {
-	header := self.bc.GetHeaderByHash(*hash)
+	header := self.Bc.GetHeaderByHash(*hash)
 	num := header.Number.Uint64()
 	var st *state.StateDB
 	var e error
 	if num == 0 {
-		st, e = state.NewGenesis(header.Root, self.bc.stateCache)
+		st, e = state.NewGenesis(header.Root, self.Bc.stateCache)
 	} else {
-		st, e = state.New(header.Root, self.bc.stateCache, num-1)
+		st, e = state.New(header.Root, self.Bc.stateCache, num-1)
 	}
 	if e != nil {
 		panic(e)
@@ -311,7 +308,7 @@ func (self *State1BlockChain) NewState(hash *common.Hash) *zstate.ZState {
 }
 func (self *State1BlockChain) GetTks() []keys.Uint512 {
 	tks := []keys.Uint512{}
-	for _, w := range self.bc.accountManager.Wallets() {
+	for _, w := range self.Bc.accountManager.Wallets() {
 		tk := w.Accounts()[0].Tk
 		tks = append(tks, *tk.ToUint512())
 	}
