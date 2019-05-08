@@ -32,6 +32,7 @@ type GenTxParam struct {
 type ISSI interface {
 	GetBlocksInfo(start uint64, count uint64) ([]Block, error)
 	Detail(root []keys.Uint256, skr *keys.PKr) ([]light_types.DOut, error)
-	GenTx(param *GenTxParam) (keys.Uint256, error)
+	//GenTx(param *GenTxParam) (keys.Uint256, error)
+	GenTx(param *GenTxParam, refandPkr keys.PKr) (keys.Uint256, error)
 	CommitTx(txhash *keys.Uint256) error
 }

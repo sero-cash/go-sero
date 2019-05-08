@@ -38,11 +38,11 @@ func (s *PublicSSIAPI) GenTx(ctx context.Context, param *light_issi.GenTxParam) 
 	return light.SSI_Inst.GenTx(param)
 }
 
-func (s *PublicSSIAPI) GetTx(ctx context.Context, txhash *keys.Uint256) (tx *light_types.GTx, e error) {
+func (s *PublicSSIAPI) GetTx(ctx context.Context, txhash keys.Uint256) (tx *light_types.GTx, e error) {
 	return light.SSI_Inst.GetTx(txhash)
 }
 
-func (s *PublicSSIAPI) CommitTx(ctx context.Context, txhash *keys.Uint256) (e error) {
+func (s *PublicSSIAPI) CommitTx(ctx context.Context, txhash keys.Uint256) (e error) {
 	if tx, err := light.SSI_Inst.GetTx(txhash); err != nil {
 		e = err
 		return
