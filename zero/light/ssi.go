@@ -2,15 +2,16 @@ package light
 
 import (
 	"fmt"
+	"math/big"
+	"strings"
+	"sync"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/light/light_issi"
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
 	"github.com/sero-cash/go-sero/zero/light/light_types"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"math/big"
-	"strings"
-	"sync"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/localdb"
@@ -30,12 +31,14 @@ func (self *SSI) GetBlocksInfo(start uint64, count uint64) (blocks []light_issi.
 		for _, b := range bs {
 			block := light_issi.Block{}
 			block.Num = b.Num
+			block.Hash = b.Hash
 			block.Nils = b.Nils
 			for _, o := range b.Outs {
 				block.Outs = append(
 					block.Outs,
 					light_issi.Out{
 						o.Root,
+						o.State.TxHash,
 						*o.State.OS.ToPKr(),
 					},
 				)
@@ -141,7 +144,7 @@ func (self *SSI) GenTx(param *light_issi.GenTxParam) (hash keys.Uint256, e error
 		}
 	}
 
-	if (len(amounts) > 0 || len(ticekts) > 0) {
+	if len(amounts) > 0 || len(ticekts) > 0 {
 		for currency, value := range amounts {
 			p.Outs = append(p.Outs, light_types.GOut{PKr: p.From.PKr, Asset: assets.Asset{Tkn: &assets.Token{
 				Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),

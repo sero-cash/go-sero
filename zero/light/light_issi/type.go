@@ -8,10 +8,12 @@ import (
 
 type Out struct {
 	Root keys.Uint256
+	Hash keys.Uint256
 	PKr  keys.PKr
 }
 type Block struct {
 	Num  hexutil.Uint64
+	Hash keys.Uint256
 	Outs []Out
 	Nils []keys.Uint256
 }
@@ -33,6 +35,6 @@ type ISSI interface {
 	GetBlocksInfo(start uint64, count uint64) ([]Block, error)
 	Detail(root []keys.Uint256, skr *keys.PKr) ([]light_types.DOut, error)
 	//GenTx(param *GenTxParam) (keys.Uint256, error)
-	GenTx(param *GenTxParam, refandPkr keys.PKr) (keys.Uint256, error)
+	GenTx(param *GenTxParam) (keys.Uint256, error)
 	CommitTx(txhash *keys.Uint256) error
 }

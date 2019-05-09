@@ -27,6 +27,7 @@ type DOut struct {
 
 type Block struct {
 	Num  hexutil.Uint64
+	Hash keys.Uint256
 	Outs []Out
 	Nils []keys.Uint256
 }

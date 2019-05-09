@@ -33,6 +33,7 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []light_types
 			local_block := localdb.GetBlock(light_ref.Ref_inst.Bc.GetDB(), num, hash.HashToUint256())
 			if local_block != nil {
 				block := light_types.Block{}
+				block.Hash = *hash.HashToUint256()
 				block.Num = hexutil.Uint64(num)
 				for _, k := range local_block.Dels {
 					block.Nils = append(block.Nils, k)
