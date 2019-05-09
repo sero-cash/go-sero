@@ -49,12 +49,12 @@ func outStatName(root *keys.Uint256) (ret []byte) {
 	return
 }
 
-func UpdateOutStat(db serodb.Database, root *keys.Uint256, os *OutStat) {
+func UpdateOutStat(db serodb.Putter, root *keys.Uint256, os *OutStat) {
 	os.Time = time.Now().UnixNano()
 	tri.UpdateDBObj(db, outStatName(root), os)
 }
 
-func GetOutStat(db serodb.Database, root *keys.Uint256) (ret *OutStat) {
+func GetOutStat(db serodb.Getter, root *keys.Uint256) (ret *OutStat) {
 	get := OutStatGet{}
 	tri.GetDBObj(db, outStatName(root), &get)
 	if get.out != nil {

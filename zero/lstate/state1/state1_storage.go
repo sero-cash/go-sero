@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package lstate
+package state1
 
 import (
 	"errors"
@@ -23,6 +23,8 @@ import (
 	"os"
 	"runtime/debug"
 	"sync"
+
+	"github.com/sero-cash/go-sero/zero/lstate"
 
 	"github.com/sero-cash/go-sero/log"
 
@@ -46,42 +48,42 @@ import (
 	"github.com/sero-cash/go-sero/zero/zconfig"
 )
 
-type State struct {
+type State1_storage struct {
 	State *zstate.ZState
 
 	mu          sync.RWMutex
-	G2outs      map[keys.Uint256]*OutState
+	G2outs      map[keys.Uint256]*lstate.OutState
 	G2wouts     []keys.Uint256
-	G2pkgs_from map[keys.Uint256]*Pkg
-	G2pkgs_to   map[keys.Uint256]*Pkg
+	G2pkgs_from map[keys.Uint256]*lstate.Pkg
+	G2pkgs_to   map[keys.Uint256]*lstate.Pkg
 
 	data StateData
 }
 
-func LoadState(zstate *zstate.ZState, loadName string) (state State) {
+func loadState(zstate *zstate.ZState, loadName string) (state State1_storage) {
 	state.State = zstate
 	state.load(loadName)
 	return
 }
 
-func (self *State) add_out_dirty(k *keys.Uint256, state *OutState) {
+func (self *State1_storage) add_out_dirty(k *keys.Uint256, state *lstate.OutState) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.G2outs[*k] = state
 }
 
-func (self *State) del_wout_dirty(i uint) {
+func (self *State1_storage) del_wout_dirty(i uint) {
 	self.G2wouts = append(self.G2wouts[:i], self.G2wouts[i+1:]...)
 }
 
-func (self *State) append_wout_dirty(k *keys.Uint256) {
+func (self *State1_storage) append_wout_dirty(k *keys.Uint256) {
 	self.G2wouts = append(self.G2wouts, *k)
 }
 
-func (state *State) clear_dirty() {
+func (state *State1_storage) clear_dirty() {
 }
 
-func (self *State) load(loadName string) {
+func (self *State1_storage) load(loadName string) {
 	defer func() {
 		if r := recover(); r != nil {
 			if loadName != "" {
@@ -91,10 +93,10 @@ func (self *State) load(loadName string) {
 			}
 		}
 	}()
-	self.G2outs = make(map[keys.Uint256]*OutState)
+	self.G2outs = make(map[keys.Uint256]*lstate.OutState)
 	self.G2wouts = []keys.Uint256{}
-	self.G2pkgs_from = make(map[keys.Uint256]*Pkg)
-	self.G2pkgs_to = make(map[keys.Uint256]*Pkg)
+	self.G2pkgs_from = make(map[keys.Uint256]*lstate.Pkg)
+	self.G2pkgs_to = make(map[keys.Uint256]*lstate.Pkg)
 	self.clear_dirty()
 
 	if loadName != "" {
@@ -111,10 +113,10 @@ func (self *State) load(loadName string) {
 	}
 }
 
-func (self *State) toData() {
+func (self *State1_storage) toData() {
 	self.mu.RLock()
 	defer self.mu.RUnlock()
-	outs := []*OutState{}
+	outs := []*lstate.OutState{}
 	for _, root := range self.G2wouts {
 		if out, ok := self.G2outs[root]; !ok {
 			panic("LState serial but g2outs can not find such root")
@@ -123,13 +125,13 @@ func (self *State) toData() {
 		}
 	}
 
-	pkgs_from := []*Pkg{}
+	pkgs_from := []*lstate.Pkg{}
 	for _, pkg := range self.G2pkgs_from {
 		pkgs_from = append(pkgs_from, pkg)
 	}
 	self.data.Pkgs_from = pkgs_from
 
-	pkgs_to := []*Pkg{}
+	pkgs_to := []*lstate.Pkg{}
 	for _, pkg := range self.G2pkgs_to {
 		pkgs_to = append(pkgs_to, pkg)
 	}
@@ -138,7 +140,7 @@ func (self *State) toData() {
 	self.data.Outs = outs
 }
 
-func (self *State) dataTo() {
+func (self *State1_storage) dataTo() {
 	for _, out := range self.data.Outs {
 		root := keys.Uint256(out.Root)
 		self.G2wouts = append(self.G2wouts, root)
@@ -155,7 +157,7 @@ func (self *State) dataTo() {
 	}
 }
 
-func (self *State) Finalize(saveName string, num uint64) {
+func (self *State1_storage) finalize(saveName string, num uint64) {
 	self.toData()
 	self.clear_dirty()
 	current_file := zconfig.State1_file(saveName)
@@ -168,7 +170,7 @@ func (self *State) Finalize(saveName string, num uint64) {
 	return
 }
 
-func (state *State) GetOut(root *keys.Uint256) (src *OutState, e error) {
+func (state *State1_storage) GetOut(root *keys.Uint256) (src *lstate.OutState, e error) {
 	state.mu.RLock()
 	defer state.mu.RUnlock()
 	if out, ok := state.G2outs[*root]; ok {
@@ -182,7 +184,7 @@ func (state *State) GetOut(root *keys.Uint256) (src *OutState, e error) {
 	}
 }
 
-func (self *State) addOut(tks []keys.Uint512, os *localdb.OutState, root *keys.Uint256, num uint64) {
+func (self *State1_storage) addOut(tks []keys.Uint512, os *localdb.OutState, root *keys.Uint256, num uint64) {
 
 	t := utils.TR_enter(fmt.Sprintf("ADD_OUT num=%v", num))
 
@@ -192,7 +194,7 @@ func (self *State) addOut(tks []keys.Uint512, os *localdb.OutState, root *keys.U
 	return
 }
 
-func (state *State) addWouts(tks []keys.Uint512, os *localdb.OutState, root *keys.Uint256, num uint64) {
+func (state *State1_storage) addWouts(tks []keys.Uint512, os *localdb.OutState, root *keys.Uint256, num uint64) {
 	for _, tk := range tks {
 		if os.IsO() {
 			out_o := os.Out_O
@@ -245,7 +247,7 @@ func (state *State) addWouts(tks []keys.Uint512, os *localdb.OutState, root *key
 					out_z.OutCM = *os.ToOutCM()
 				}
 				state.append_wout_dirty(root)
-				wos := OutState{}
+				wos := lstate.OutState{}
 				wos.Root = *root
 				wos.RootCM = *os.ToRootCM()
 				wos.Tk = tk
@@ -275,7 +277,7 @@ func (state *State) addWouts(tks []keys.Uint512, os *localdb.OutState, root *key
 
 				if e := stx.ConfirmOut_Z(&info_desc, os.Out_Z); e == nil {
 					state.append_wout_dirty(root)
-					wos := OutState{}
+					wos := lstate.OutState{}
 					wos.Out_O.Addr = os.Out_Z.PKr
 					wos.Out_O.Asset = assets.NewAsset(
 						&assets.Token{
@@ -307,7 +309,7 @@ func (state *State) addWouts(tks []keys.Uint512, os *localdb.OutState, root *key
 	}
 }
 
-func (state *State) del(del *keys.Uint256) (e error) {
+func (state *State1_storage) del(del *keys.Uint256) (e error) {
 	if src, err := state.GetOut(del); err != nil {
 		e = err
 		return
@@ -328,7 +330,7 @@ func (state *State) del(del *keys.Uint256) (e error) {
 	return
 }
 
-func (state *State) addPkg(tks []keys.Uint512, id *keys.Uint256, pg *localdb.ZPkg) {
+func (state *State1_storage) addPkg(tks []keys.Uint512, id *keys.Uint256, pg *localdb.ZPkg) {
 	state.mu.Lock()
 	defer state.mu.Unlock()
 
@@ -343,7 +345,7 @@ func (state *State) addPkg(tks []keys.Uint512, id *keys.Uint256, pg *localdb.ZPk
 		insert_from := false
 		insert_to := false
 		for _, tk := range tks {
-			p := &Pkg{
+			p := &lstate.Pkg{
 				pkgstate.OPkg{
 					*pg,
 					pkg.Pkg_O{},
@@ -375,11 +377,11 @@ func (state *State) addPkg(tks []keys.Uint512, id *keys.Uint256, pg *localdb.ZPk
 	}
 }
 
-func (state *State) GetPkgs(tk *keys.Uint512, is_from bool) (ret []*Pkg) {
+func (state *State1_storage) GetPkgs(tk *keys.Uint512, is_from bool) (ret []*lstate.Pkg) {
 	state.mu.Lock()
 	defer state.mu.Unlock()
 
-	var pkgs map[keys.Uint256]*Pkg
+	var pkgs map[keys.Uint256]*lstate.Pkg
 	if is_from {
 		pkgs = state.G2pkgs_from
 	} else {
@@ -403,7 +405,7 @@ func (state *State) GetPkgs(tk *keys.Uint512, is_from bool) (ret []*Pkg) {
 	return
 }
 
-func (state *State) UpdateWitness(tks []keys.Uint512, num uint64, block *localdb.Block) {
+func (state *State1_storage) updateWitness(tks []keys.Uint512, num uint64, block *localdb.Block) {
 	for _, del := range block.Dels {
 		state.del(&del)
 	}
@@ -433,7 +435,7 @@ func (state *State) UpdateWitness(tks []keys.Uint512, num uint64, block *localdb
 	return
 }
 
-func (self *State) GetOuts(tk *keys.Uint512) (outs []*OutState, e error) {
+func (self *State1_storage) GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("GetOuts error : ", "number", self.State.Num(), "recover", r)
@@ -461,6 +463,6 @@ func (self *State) GetOuts(tk *keys.Uint512) (outs []*OutState, e error) {
 			}
 		}
 	}
-	SortOutStats(BC().GetDB(), outs)
+	lstate.SortOutStats(lstate.BC().GetDB(), outs)
 	return
 }

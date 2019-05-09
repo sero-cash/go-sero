@@ -3,15 +3,16 @@ package generate
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/zero/lstate"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/zero/txs/lstate"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
 )
 
 type gen_ctx struct {
-	st           *lstate.State
+	st           lstate.LState
 	seed         *keys.Uint256
 	t            *tx.T
 	p            preTx
@@ -19,7 +20,7 @@ type gen_ctx struct {
 	s            stx.T
 }
 
-func prepareCtx(st *lstate.State, seed *keys.Uint256, t *tx.T) (ret gen_ctx, e error) {
+func prepareCtx(st lstate.LState, seed *keys.Uint256, t *tx.T) (ret gen_ctx, e error) {
 	ret.st = st
 	ret.seed = seed
 	ret.t = t
@@ -192,11 +193,11 @@ func (self *gen_ctx) signTx() (e error) {
 }
 
 func Gen(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
-	st := lstate.CurrentState1()
+	st := lstate.CurrentLState()
 	return Gen_lstate(st, seed, t)
 }
 
-func Gen_lstate(st *lstate.State, seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
+func Gen_lstate(st lstate.LState, seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
 	if ctx, err := prepareCtx(st, seed, t); err != nil {
 		e = err
 		return

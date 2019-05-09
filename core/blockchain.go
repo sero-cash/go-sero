@@ -27,7 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sero-cash/go-sero/zero/txs/lstate"
+	"github.com/sero-cash/go-sero/zero/lstate/state2"
 
 	"github.com/sero-cash/go-sero/zero/txs/verify"
 
@@ -207,11 +207,10 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	go bc.update()
 
 	if !mineMode {
-		lstate.Run(
-			&State1BlockChain{
-				bc,
-			},
-		)
+		state_bc := &State1BlockChain{
+			bc,
+		}
+		state2.InitLState(state_bc)
 	}
 	return bc, nil
 }

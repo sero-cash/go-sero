@@ -3,20 +3,21 @@ package txs
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/zero/lstate"
+
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/zero/txs/lstate"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 func WatchPkg(id *keys.Uint256, key *keys.Uint256) (ret pkg.Pkg_O, pkr keys.PKr, e error) {
-	st1 := lstate.CurrentState1()
+	st1 := lstate.CurrentLState()
 	if st1 == nil {
 		e = errors.New("Watch Pkg but lstate is nil")
 		return
 	}
-	pg := st1.State.Pkgs.GetPkgById(id)
+	pg := st1.ZState().Pkgs.GetPkgById(id)
 	if pg == nil || pg.Closed {
 		e = errors.New("Watch Pkg but has been closed")
 		return
@@ -27,7 +28,7 @@ func WatchPkg(id *keys.Uint256, key *keys.Uint256) (ret pkg.Pkg_O, pkr keys.PKr,
 }
 
 func GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error) {
-	st1 := lstate.CurrentState1()
+	st1 := lstate.CurrentLState()
 	if st1 == nil {
 		e = errors.New("Get outs but lstate is nil")
 		return

@@ -28,9 +28,9 @@ import (
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/zero/light/light_types"
+	"github.com/sero-cash/go-sero/zero/lstate"
 
 	"github.com/sero-cash/go-sero/zero/txs"
-	"github.com/sero-cash/go-sero/zero/txs/lstate"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -707,7 +707,7 @@ func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, addr common.Address, p
 		return nil, err
 	}
 	seed := wallet.Accounts()[0].Tk
-	pkgs := lstate.CurrentState1().GetPkgs(seed.ToUint512(), packed)
+	pkgs := lstate.CurrentLState().GetPkgs(seed.ToUint512(), packed)
 	if len(pkgs) > 0 {
 		result := []map[string]interface{}{}
 		for _, p := range pkgs {
