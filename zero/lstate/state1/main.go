@@ -67,40 +67,45 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 
 	self.begin(&hash, tks)
 
-	for {
-		current_hash := current_header.Hash()
-		current_num := current_header.Number.Uint64()
-		if need_parse, err := self.needParse(current_num, &current_hash); err != nil {
-			time.Sleep(1000 * 1000 * 1000 * 10)
-			return
-		} else {
-			if need_parse {
-				need_load = append(need_load, current_header)
-				parent_hash := current_header.ParentHash
-				current_header = bc.GetHeader(&parent_hash)
-				if current_header == nil {
-					break
-				} else {
-					hash := current_header.Hash()
-					if hash != parent_hash {
-						log.Error(
-							"current.hash not equal the pre.parent_hash : ",
-							"current.h", hexutil.Encode(hash[:])[:8],
-							"pre.p_h",
-							hexutil.Encode(parent_hash[:])[:8],
-						)
-						panic("parse block error")
-					}
-					continue
-				}
+	//var the_first_header *types.Header
+
+	if self.last_num == 0 {
+		for {
+			current_hash := current_header.Hash()
+			current_num := current_header.Number.Uint64()
+			if need_parse, err := self.needParse(current_num, &current_hash); err != nil {
+				time.Sleep(1000 * 1000 * 1000 * 10)
+				return
 			} else {
-				break
+				if need_parse {
+					need_load = append(need_load, current_header)
+					parent_hash := current_header.ParentHash
+					current_header = bc.GetHeader(&parent_hash)
+					if current_header == nil {
+						break
+					} else {
+						hash := current_header.Hash()
+						if hash != parent_hash {
+							log.Error(
+								"current.hash not equal the pre.parent_hash : ",
+								"current.h", hexutil.Encode(hash[:])[:8],
+								"pre.p_h",
+								hexutil.Encode(parent_hash[:])[:8],
+							)
+							panic("parse block error")
+						}
+						continue
+					}
+				} else {
+					break
+				}
 			}
 		}
+		//current_header
 	}
 
 	parse_count := 0
-	for i := len(need_load) - 1; parse_count < 2000 && i >= 0; i-- {
+	for i := len(need_load) - 1; parse_count <= 2000 && i >= 0; i-- {
 
 		header := need_load[i]
 		current_num := header.Number.Uint64()
