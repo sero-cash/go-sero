@@ -63,11 +63,11 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 
 	progress := utils.NewProgress("STATE1_PROCESS : ", current_header.Number.Uint64())
 
-	need_load := []*types.Header{}
+	//need_load := []*types.Header{}
 
 	self.begin(&hash, tks)
 
-	//var the_first_header *types.Header
+	var the_first_header *types.Header
 
 	if self.last_num == 0 {
 		for {
@@ -78,7 +78,7 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 				return
 			} else {
 				if need_parse {
-					need_load = append(need_load, current_header)
+					the_first_header = current_header
 					parent_hash := current_header.ParentHash
 					current_header = bc.GetHeader(&parent_hash)
 					if current_header == nil {
@@ -101,7 +101,8 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 				}
 			}
 		}
-		//current_header
+	} else {
+
 	}
 
 	parse_count := 0
