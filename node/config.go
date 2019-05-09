@@ -402,7 +402,7 @@ func (c *Config) AccountConfig() (int, int, string, error) {
 	case c.KeyStoreDir != "":
 		keydir, err = filepath.Abs(c.KeyStoreDir)
 	}
-	zconfig.Init_State1_dir(c.DataDir)
+	zconfig.Init_State_dir(c.DataDir)
 	return scryptN, scryptP, keydir, err
 }
 

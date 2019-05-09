@@ -64,7 +64,7 @@ func outStatName(root *keys.Uint256) (ret []byte) {
 	return
 }
 
-func UpdateOutStat(db serodb.Database, out *OutState) {
+func UpdateOutStat(db serodb.Putter, out *OutState) {
 	os := localdb.OutStat{}
 	os.Z = out.Z
 	if out.Out_O.Asset.Tkn != nil {
@@ -75,7 +75,7 @@ func UpdateOutStat(db serodb.Database, out *OutState) {
 	localdb.UpdateOutStat(db, &out.Root, &os)
 }
 
-func SortOutStats(db serodb.Database, outs []*OutState) {
+func SortOutStats(db serodb.Getter, outs []*OutState) {
 	wraps := OutStats{}
 	for _, out := range outs {
 		out_root := out.Root
