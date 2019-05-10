@@ -3,6 +3,8 @@ package state1
 import (
 	"os"
 
+	"github.com/syndtr/goleveldb/leveldb"
+
 	"github.com/sero-cash/go-sero/zero/lstate"
 
 	"github.com/pkg/errors"
@@ -17,21 +19,39 @@ import (
 	"github.com/sero-cash/go-sero/zero/zconfig"
 )
 
+type SeroDB struct {
+	db *leveldb.DB
+}
+
+func (self *SeroDB) Get(key []byte) ([]byte, error) {
+	return self.db.Get(key, nil)
+}
+func (self *SeroDB) Has(key []byte) (bool, error) {
+	return self.db.Has(key, nil)
+}
+
+func (self *SeroDB) Put(key []byte, value []byte) error {
+	return self.db.Put(key, value, nil)
+}
+
 type State1 struct {
+	db           SeroDB
 	bc           lstate.BlockChain
 	last_st      *State1_storage
 	st           *State1_storage
 	zst          *zstate.ZState
 	tks          []keys.Uint512
-	next_num     uint64
-	saved_hash   common.Hash
-	saved_num    uint64
 	saveing_name string
 	saveing_num  uint64
 }
 
 func NewState1(bc lstate.BlockChain) (ret State1) {
 	ret.bc = bc
+	if db, err := leveldb.OpenFile(zconfig.State1_db_dir(), nil); err != nil {
+		panic(err)
+	} else {
+		ret.db = SeroDB{db}
+	}
 	return
 }
 
@@ -43,9 +63,15 @@ func (self *State1) valid() bool {
 	}
 }
 
-func (self *State1) begin(select_hash *common.Hash, tks []keys.Uint512) {
-	self.zst = self.bc.NewState(select_hash)
+func (self *State1) begin(last_file_name string, chose_hash *common.Hash, tks []keys.Uint512) {
+	if chose_hash != nil {
+		self.zst = self.bc.NewState(chose_hash)
+	}
 	self.tks = tks
+	if self.last_st == nil {
+		lst := loadState(self.zst, last_file_name)
+		self.last_st = &lst
+	}
 }
 
 func (self *State1) needParse(num uint64, hash *common.Hash) (ret bool, e error) {
@@ -60,8 +86,6 @@ func (self *State1) needParse(num uint64, hash *common.Hash) (ret bool, e error)
 			return
 		}
 	} else {
-		self.saved_num = num
-		self.saved_hash = *hash
 		ret = false
 		return
 	}
@@ -94,17 +118,6 @@ func (self *State1) save() {
 	self.st.finalize(self.saveing_name, self.saveing_num)
 	self.last_st = self.st
 	self.st = nil
-}
-
-func (self *State1) finalize() {
-	if self.last_st == nil {
-		current_num := self.saved_num
-		current_hash := self.saved_hash
-		state_name := state1_file_name(current_num, &current_hash)
-		st := self.bc.NewState(&current_hash)
-		lst := loadState(st, state_name)
-		self.last_st = &lst
-	}
 }
 
 func (self *State1) ZState() *zstate.ZState {

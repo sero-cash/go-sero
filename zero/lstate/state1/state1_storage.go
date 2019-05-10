@@ -438,7 +438,11 @@ func (state *State1_storage) updateWitness(tks []keys.Uint512, num uint64, block
 func (self *State1_storage) GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error("GetOuts error : ", "number", self.State.Num(), "recover", r)
+			if self.State != nil {
+				log.Error("GetOuts error : ", "number", self.State.Num(), "recover", r)
+			} else {
+				log.Error("GetOuts error : ", "recover", r)
+			}
 			debug.PrintStack()
 			e = fmt.Errorf("%v", r)
 		}
@@ -450,11 +454,13 @@ func (self *State1_storage) GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, 
 		} else {
 			if src != nil {
 				if src.IsMine(tk) {
-					if self.State.State.HasIn(&src.Trace) {
-						panic("get outs src.nil in state0")
-					}
-					if root != src.Root {
-						panic("get outs wout.root!=src.Root")
+					if self.State != nil {
+						if self.State.State.HasIn(&src.Trace) {
+							panic("get outs src.nil in state0")
+						}
+						if root != src.Root {
+							panic("get outs wout.root!=src.Root")
+						}
 					}
 					outs = append(outs, src)
 				}

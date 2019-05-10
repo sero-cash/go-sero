@@ -2,6 +2,11 @@ package state1
 
 import (
 	"fmt"
+	"math/big"
+
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
+	"github.com/sero-cash/go-sero/serodb"
 
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
 
@@ -20,13 +25,50 @@ func state1_file_name(num uint64, hash *common.Hash) (ret string) {
 	return
 }
 
+var STATE1_LAST_NUM_KEY = []byte("LSTATE$STATE1$LAST$NUM$KEY")
+var STATE1_LAST_HASH_KEY = []byte("LSTATE$STATE1$LAST$HASH$KEY")
+
+func GetLastNum(getter serodb.Getter) (ret uint64) {
+	if bs, err := getter.Get(STATE1_LAST_NUM_KEY); err != nil {
+		ret = 0
+		return
+	} else {
+		input := big.NewInt(0)
+		if err := input.GobDecode(bs); err != nil {
+			panic(err)
+			return
+		} else {
+			ret = input.Uint64()
+			return
+		}
+	}
+}
+
+func SetLastNum(putter serodb.Putter, num uint64) {
+	if bs, err := big.NewInt(0).SetUint64(num).GobEncode(); err != nil {
+		panic(err)
+		return
+	} else {
+		if err := putter.Put(STATE1_LAST_NUM_KEY, bs); err != nil {
+			panic(err)
+			return
+		} else {
+			return
+		}
+	}
+}
+
 const delay_block_count = 6
 
 func (self *State1) Parse(last_chose uint64) (chose uint64) {
 	bc := light_ref.Ref_inst.Bc
 	tks := bc.GetTks()
+	next_num := GetLastNum(&self.db)
 
-	if self.next_num == 0 {
+	last_num, last_file_name := zconfig.Get_State1_last_num_and_hash()
+	next_num = last_num + 1
+
+	if next_num == 0 {
 		current_header := bc.GetCurrenHeader()
 		for {
 			current_hash := current_header.Hash()
@@ -36,7 +78,7 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 				return
 			} else {
 				if need_parse {
-					self.next_num = current_header.Number.Uint64()
+					next_num = current_header.Number.Uint64()
 					parent_hash := current_header.ParentHash
 					current_header = bc.GetHeader(&parent_hash)
 					if current_header == nil {
@@ -62,26 +104,29 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 	}
 
 	chose = light_ref.Ref_inst.GetDelayedNum(delay_block_count)
-	if self.next_num > chose {
-		return last_chose
-	}
 
 	chose_header := bc.GetHeaderByNumber(chose)
 	hash := chose_header.Hash()
-	self.begin(&hash, tks)
+
+	if next_num > chose {
+		self.begin(last_file_name, nil, tks)
+		return last_chose
+	} else {
+		self.begin(last_file_name, &hash, tks)
+	}
 
 	parse_count := 0
-	for parse_count < 2000 && self.next_num <= chose {
-		header := bc.GetHeaderByNumber(self.next_num)
+	for parse_count < 2000 && next_num <= chose {
+		header := bc.GetHeaderByNumber(next_num)
 		hash := header.Hash()
 
-		block := localdb.GetBlock(bc.GetDB(), self.next_num, hash.HashToUint256())
+		block := localdb.GetBlock(bc.GetDB(), next_num, hash.HashToUint256())
 		if block == nil {
 			temp_state := bc.NewState(&hash)
 			if temp_state == nil {
-				panic(fmt.Sprintf("new zstate error: %v:%v !", self.next_num, hash))
+				panic(fmt.Sprintf("new zstate error: %v:%v !", next_num, hash))
 			} else {
-				log.Debug("STATE1_PARSE GO BACK TO STATE: ", "num", self.next_num, "hash", hash)
+				log.Debug("STATE1_PARSE GO BACK TO STATE: ", "num", next_num, "hash", hash)
 			}
 			block = &localdb.Block{}
 			block.Pkgs = temp_state.Pkgs.GetPkgHashes()
@@ -89,18 +134,19 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 			block.Dels = temp_state.State.GetBlockDels()
 		}
 
-		self.update(&header.ParentHash, self.next_num, &hash, block)
+		self.update(&header.ParentHash, next_num, &hash, block)
 
-		self.next_num++
+		next_num++
 		parse_count++
 	}
 
 	if parse_count > 0 {
 		self.save()
-		log.Info("STATE1 PARSE", "t", chose, "c", self.next_num-1)
+		SetLastNum(&self.db, next_num)
 	}
-
-	self.finalize()
+	if parse_count > 1 {
+		log.Info("STATE1 PARSE", "t", chose, "c", next_num-1)
+	}
 
 	return
 
