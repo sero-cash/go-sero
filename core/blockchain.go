@@ -27,8 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sero-cash/go-sero/zero/lstate/state2"
-
 	"github.com/sero-cash/go-sero/zero/txs/verify"
 
 	"github.com/hashicorp/golang-lru"
@@ -206,12 +204,6 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	// Take ownership of this particular state
 	go bc.update()
 
-	if !mineMode {
-		state_bc := &State1BlockChain{
-			bc,
-		}
-		state2.InitLState(state_bc)
-	}
 	return bc, nil
 }
 
