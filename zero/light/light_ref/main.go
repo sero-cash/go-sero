@@ -3,8 +3,6 @@ package light_ref
 import (
 	"sync/atomic"
 
-	"github.com/sero-cash/go-sero/core"
-
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
@@ -19,23 +17,18 @@ type BlockChain interface {
 	GetTks() []keys.Uint512
 	CashChose() *atomic.Value
 	GetBlockByNumber(num uint64) *types.Block
+	GetHeaderByNumber(num uint64) *types.Header
 	GetDB() serodb.Database
-}
-
-type Sero interface {
-	TxPool() *core.TxPool
 }
 
 type Ref struct {
 	Bc BlockChain
-	Se Sero
 }
 
 var Ref_inst Ref
 
-func (self *Ref) SetBC(bc BlockChain, se Sero) {
+func (self *Ref) SetBC(bc BlockChain) {
 	self.Bc = bc
-	self.Se = se
 }
 
 func (self *Ref) GetDelayedNum(delay uint64) (ret uint64) {

@@ -2,14 +2,8 @@ package ethapi
 
 import (
 	"context"
-	"math/big"
-
-	"github.com/pkg/errors"
 
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
 	"github.com/sero-cash/go-sero/zero/light/light_types"
 
 	"github.com/sero-cash/go-sero/zero/light"
@@ -20,6 +14,7 @@ import (
 )
 
 type PublicSSIAPI struct {
+	b Backend
 }
 
 func (s *PublicSSIAPI) CreateKr() (kr light_types.Kr) {
@@ -47,19 +42,6 @@ func (s *PublicSSIAPI) CommitTx(ctx context.Context, txhash *keys.Uint256) (e er
 		e = err
 		return
 	} else {
-		gasPrice := big.Int(tx.GasPrice)
-		gas := uint64(tx.Gas)
-		if signedTx := types.NewTxWithGTx(gas, &gasPrice, &tx.Tx); signedTx == nil {
-			e = errors.New("CommitTx Failed: signedTx is nil")
-			return
-		} else {
-			log.Info("commitTx", "txhash", signedTx.Hash().String())
-			if err := light_ref.Ref_inst.Se.TxPool().AddLocal(signedTx); err != nil {
-				e = err
-				return
-			} else {
-				return
-			}
-		}
+		return s.b.CommitTx(tx)
 	}
 }

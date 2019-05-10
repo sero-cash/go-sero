@@ -23,7 +23,7 @@ type State1 struct {
 	st           *State1_storage
 	zst          *zstate.ZState
 	tks          []keys.Uint512
-	last_num     uint64
+	next_num     uint64
 	saved_hash   common.Hash
 	saved_num    uint64
 	saveing_name string

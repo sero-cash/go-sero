@@ -3,11 +3,9 @@ package state1
 import (
 	"fmt"
 
-	"github.com/sero-cash/go-sero/zero/lstate"
+	"github.com/sero-cash/go-sero/zero/light/light_ref"
 
 	"github.com/sero-cash/go-sero/zero/localdb"
-
-	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/log"
 
@@ -15,7 +13,6 @@ import (
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
-	"github.com/sero-cash/go-sero/core/types"
 )
 
 func state1_file_name(num uint64, hash *common.Hash) (ret string) {
@@ -26,50 +23,11 @@ func state1_file_name(num uint64, hash *common.Hash) (ret string) {
 const delay_block_count = 6
 
 func (self *State1) Parse(last_chose uint64) (chose uint64) {
-	bc := lstate.BC()
-
-	var current_header *types.Header
-	current_header = bc.GetCurrenHeader()
+	bc := light_ref.Ref_inst.Bc
 	tks := bc.GetTks()
 
-	if current_chose := bc.CashChose(); current_chose != nil {
-		chose := current_chose.Load().(uint64)
-		if chose > 0 {
-			delay := uint64(delay_block_count)
-			if current_header.Number.Uint64() < delay_block_count {
-				delay = 0
-			} else {
-				dist := current_header.Number.Uint64() - delay
-				if delay > dist {
-					delay = dist
-				}
-			}
-			if (current_header.Number.Uint64() - chose) < delay {
-				delay = (current_header.Number.Uint64() - chose)
-			}
-			for i := uint64(0); i < delay; i++ {
-				parent_hash := current_header.ParentHash
-				current_header = bc.GetHeader(&parent_hash)
-				if current_header == nil {
-					return last_chose
-				}
-			}
-		}
-	}
-
-	hash := current_header.Hash()
-
-	chose = current_header.Number.Uint64()
-
-	progress := utils.NewProgress("STATE1_PROCESS : ", current_header.Number.Uint64())
-
-	//need_load := []*types.Header{}
-
-	self.begin(&hash, tks)
-
-	var the_first_header *types.Header
-
-	if self.last_num == 0 {
+	if self.next_num == 0 {
+		current_header := bc.GetCurrenHeader()
 		for {
 			current_hash := current_header.Hash()
 			current_num := current_header.Number.Uint64()
@@ -78,7 +36,7 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 				return
 			} else {
 				if need_parse {
-					the_first_header = current_header
+					self.next_num = current_header.Number.Uint64()
 					parent_hash := current_header.ParentHash
 					current_header = bc.GetHeader(&parent_hash)
 					if current_header == nil {
@@ -101,27 +59,29 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 				}
 			}
 		}
-	} else {
-
 	}
 
+	chose = light_ref.Ref_inst.GetDelayedNum(delay_block_count)
+	if self.next_num > chose {
+		return last_chose
+	}
+
+	chose_header := bc.GetHeaderByNumber(chose)
+	hash := chose_header.Hash()
+	self.begin(&hash, tks)
+
 	parse_count := 0
-	for i := len(need_load) - 1; parse_count <= 2000 && i >= 0; i-- {
+	for parse_count < 2000 && self.next_num <= chose {
+		header := bc.GetHeaderByNumber(self.next_num)
+		hash := header.Hash()
 
-		header := need_load[i]
-		current_num := header.Number.Uint64()
-		current_hash := header.Hash()
-
-		t := utils.TR_enter(fmt.Sprintf("PARSE_BLOCK_CHAIN----NewState(num=%v)", current_num))
-
-		block := localdb.GetBlock(bc.GetDB(), current_num, current_hash.HashToUint256())
-
+		block := localdb.GetBlock(bc.GetDB(), self.next_num, hash.HashToUint256())
 		if block == nil {
-			temp_state := bc.NewState(&current_hash)
+			temp_state := bc.NewState(&hash)
 			if temp_state == nil {
-				panic(fmt.Sprintf("new zstate error: %v:%v !", current_num, current_hash))
+				panic(fmt.Sprintf("new zstate error: %v:%v !", self.next_num, hash))
 			} else {
-				log.Debug("STATE1_PARSE GO BACK TO STATE: ", "num", current_num, "hash", current_hash)
+				log.Debug("STATE1_PARSE GO BACK TO STATE: ", "num", self.next_num, "hash", hash)
 			}
 			block = &localdb.Block{}
 			block.Pkgs = temp_state.Pkgs.GetPkgHashes()
@@ -129,22 +89,15 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 			block.Dels = temp_state.State.GetBlockDels()
 		}
 
-		t.Renter("PARSE_BLOCK_CHAIN----LoadState")
+		self.update(&header.ParentHash, self.next_num, &hash, block)
 
-		self.update(&header.ParentHash, current_num, &current_hash, block)
-
-		t.Renter("PARSE_BLOCK_CHAIN----Finalize")
-
-		if i < 30 {
-			self.save()
-		} else {
-			if parse_count%2000 == 0 {
-				self.save()
-			}
-		}
-		td := t.Leave()
-		progress.Tick(current_num, "len", len(block.Roots), "d", td)
+		self.next_num++
 		parse_count++
+	}
+
+	if parse_count > 0 {
+		self.save()
+		log.Info("STATE1 PARSE", "t", chose, "c", self.next_num-1)
 	}
 
 	self.finalize()

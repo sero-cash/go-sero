@@ -153,7 +153,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	)
 	sero.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, sero.chainConfig, sero.engine, vmConfig, sero.accountManager, config.MineMode)
 
-	light_ref.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain}, sero)
+	light_ref.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain})
 
 	if err != nil {
 		return nil, err

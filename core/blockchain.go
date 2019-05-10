@@ -276,6 +276,10 @@ func (self *State1BlockChain) GetBlockByNumber(num uint64) *types.Block {
 	return self.Bc.GetBlockByNumber(num)
 }
 
+func (self *State1BlockChain) GetHeaderByNumber(num uint64) *types.Header {
+	return self.Bc.GetHeaderByNumber(num)
+}
+
 func (self *State1BlockChain) GetDB() serodb.Database {
 	return self.Bc.db
 }
