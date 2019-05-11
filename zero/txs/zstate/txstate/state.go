@@ -52,11 +52,10 @@ type State struct {
 	num   uint64
 	MTree MerkleTree
 
-	data      data.IData
+	data data.IData
 
 	logs      []data.Log
 	revisions []data.Revision
-
 }
 
 func (self *State) Tri() tri.Tri {
@@ -121,21 +120,27 @@ func (state *State) Revert(revid int) {
 }
 
 func (self *State) AddOut_Log(root *keys.Uint256, out *localdb.OutState, txhash *keys.Uint256) {
-	self.logs = append(self.logs, data.AddOutLog{root, out, txhash})
+	clone := out.Clone()
+	if txhash != nil {
+		self.logs = append(self.logs, data.AddOutLog{root.NewRef(), &clone, txhash.NewRef()})
+	} else {
+		self.logs = append(self.logs, data.AddOutLog{root.NewRef(), &clone, nil})
+	}
+
 	self.data.AddOut(root, out, txhash)
 	return
 }
 func (self *State) AddNil_Log(in *keys.Uint256) {
-	self.logs = append(self.logs, data.AddNilLog{in})
+	self.logs = append(self.logs, data.AddNilLog{in.NewRef()})
 	self.data.AddNil(in)
 }
 func (self *State) AddDel_Log(in *keys.Uint256) {
-	self.logs = append(self.logs, data.AddDelLog{in})
+	self.logs = append(self.logs, data.AddDelLog{in.NewRef()})
 	self.data.AddDel(in)
 }
 
 func (self *State) AddTxOut_Log(pkr *keys.PKr) int {
-	self.logs = append(self.logs, data.AddTxOutLog{pkr})
+	self.logs = append(self.logs, data.AddTxOutLog{pkr.NewRef()})
 	return self.data.AddTxOut(pkr)
 }
 
