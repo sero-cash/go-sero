@@ -66,7 +66,7 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 	next_num := GetLastNum(&self.db)
 
 	last_num, last_file_name := zconfig.Get_State1_last_num_and_hash()
-	next_num = last_num + 1
+	next_num = uint64(last_num + 1)
 
 	if next_num == 0 {
 		current_header := bc.GetCurrenHeader()

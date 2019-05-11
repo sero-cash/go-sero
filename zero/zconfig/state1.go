@@ -44,12 +44,12 @@ func Remove_State1_dir_files(height uint64) {
 	}
 }
 
-func Get_State1_last_num_and_hash() (num uint64, file_name string) {
+func Get_State1_last_num_and_hash() (num int64, file_name string) {
 	reg, err := regexp.Compile(`([0-9]+)\.(.+)`)
 	if err != nil {
 		panic(err)
 	}
-
+	num = -1
 	state1_dir := State1_dir()
 	if files, err := ioutil.ReadDir(state1_dir); err != nil {
 		panic(err)
@@ -64,9 +64,9 @@ func Get_State1_last_num_and_hash() (num uint64, file_name string) {
 				if n, err := strconv.Atoi(strs[1]); err != nil {
 					panic(err)
 				} else {
-					if uint64(n) > num {
+					if int64(n) > num {
 						file_name = name
-						num = uint64(n)
+						num = int64(n)
 					}
 				}
 

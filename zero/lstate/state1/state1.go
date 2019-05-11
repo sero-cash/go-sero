@@ -69,8 +69,10 @@ func (self *State1) begin(last_file_name string, chose_hash *common.Hash, tks []
 	}
 	self.tks = tks
 	if self.last_st == nil {
-		lst := loadState(self.zst, last_file_name)
-		self.last_st = &lst
+		if len(last_file_name) != 0 {
+			lst := loadState(self.zst, last_file_name)
+			self.last_st = &lst
+		}
 	}
 }
 
