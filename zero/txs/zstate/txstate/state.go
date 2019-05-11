@@ -109,8 +109,9 @@ func (state *State) Revert(revid int) {
 		panic(fmt.Errorf("revision id %v cannot be reverted", revid))
 	}
 
-	state.revisions = state.revisions[:idx]
 	index := state.revisions[idx].JournalIndex
+
+	state.revisions = state.revisions[:idx]
 	state.logs = state.logs[:index]
 
 	state.data.Clear()
