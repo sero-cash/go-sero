@@ -18,6 +18,7 @@ package txstate
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/sero-cash/go-sero/serodb"
@@ -52,7 +53,10 @@ type State struct {
 	MTree MerkleTree
 
 	data      data.IData
-	snapshots utils.Snapshots
+
+	logs      []data.Log
+	revisions []data.Revision
+
 }
 
 func (self *State) Tri() tri.Tri {
@@ -92,16 +96,45 @@ func (self *State) Update() {
 	return
 }
 
-func (self *State) Snapshot(revid int) {
-	self.snapshots.Push(revid, self.data)
+func (state *State) Snapshot(revid int) {
+	state.revisions = append(state.revisions, data.Revision{revid, len(state.logs)})
 }
 
-func (self *State) Revert(revid int) {
-	self.data.Clear()
-	self.data = self.snapshots.Revert(revid).(data.IData)
+func (state *State) Revert(revid int) {
+
+	idx := sort.Search(len(state.revisions), func(i int) bool {
+		return state.revisions[i].Id >= revid
+	})
+	if idx == len(state.revisions) || state.revisions[idx].Id != revid {
+		panic(fmt.Errorf("revision id %v cannot be reverted", revid))
+	}
+
+	state.revisions = state.revisions[:idx]
+	index := state.revisions[idx].JournalIndex
+	state.logs = state.logs[:index]
+
+	state.data.Clear()
+	for _, log := range state.logs {
+		log.Op(state.data)
+	}
 }
 
-func (self *State) AddTxOut(pkr *keys.PKr) int {
+func (self *State) AddOut_Log(root *keys.Uint256, out *localdb.OutState, txhash *keys.Uint256) {
+	self.logs = append(self.logs, data.AddOutLog{root, out, txhash})
+	self.data.AddOut(root, out, txhash)
+	return
+}
+func (self *State) AddNil_Log(in *keys.Uint256) {
+	self.logs = append(self.logs, data.AddNilLog{in})
+	self.data.AddNil(in)
+}
+func (self *State) AddDel_Log(in *keys.Uint256) {
+	self.logs = append(self.logs, data.AddDelLog{in})
+	self.data.AddDel(in)
+}
+
+func (self *State) AddTxOut_Log(pkr *keys.PKr) int {
+	self.logs = append(self.logs, data.AddTxOutLog{pkr})
 	return self.data.AddTxOut(pkr)
 }
 
@@ -131,7 +164,7 @@ func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z, txhash *keys.Uint
 
 	root = state.MTree.AppendLeaf(*commitment)
 
-	state.data.AddOut(&root, &os, txhash)
+	state.AddOut_Log(&root, &os, txhash)
 	return
 }
 
@@ -151,15 +184,15 @@ func (state *State) AddStx(st *stx.T) (e error) {
 				e = errors.New("desc_o.in.nil already be used !")
 				return
 			} else {
-				state.data.AddNil(&in.Nil)
-				state.data.AddDel(&in.Root)
+				state.AddNil_Log(&in.Nil)
+				state.AddDel_Log(&in.Root)
 			}
 		} else {
 			if state.data.HasIn(state.tri, &in.Root) {
 				e = errors.New("desc_o.in.root already be used !")
 				return
 			} else {
-				state.data.AddNil(&in.Root)
+				state.AddNil_Log(&in.Root)
 			}
 		}
 	}
@@ -170,8 +203,8 @@ func (state *State) AddStx(st *stx.T) (e error) {
 			e = errors.New("desc_o.nil already be used !")
 			return
 		} else {
-			state.data.AddNil(&in.Nil)
-			state.data.AddDel(&in.Trace)
+			state.AddNil_Log(&in.Nil)
+			state.AddDel_Log(&in.Trace)
 		}
 	}
 
@@ -252,7 +285,7 @@ func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
 			b := ch.GetBlock(hash, number)
 			for _, tx := range b.Transactions() {
 				for _, in := range tx.Stxt().Desc_O.Ins {
-					self.data.AddNil(&in.Nil)
+					self.AddNil_Log(&in.Nil)
 					count++
 				}
 			}

@@ -7,6 +7,50 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 )
 
+
+type Log interface {
+	Op(state IData);
+}
+
+type AddTxOutLog struct {
+	Pkr *keys.PKr
+}
+
+func (log AddTxOutLog) Op(state IData) {
+	state.AddTxOut(log.Pkr)
+}
+
+type AddOutLog struct {
+	Root   *keys.Uint256
+	Out    *localdb.OutState
+	Txhash *keys.Uint256
+}
+
+func (log AddOutLog) Op(state IData) {
+	state.AddOut(log.Root, log.Out, log.Txhash)
+}
+
+type AddNilLog struct {
+	In *keys.Uint256
+}
+
+func (log AddNilLog) Op(state IData) {
+	state.AddNil(log.In)
+}
+
+type AddDelLog struct {
+	In *keys.Uint256
+}
+
+func (log AddDelLog) Op(state IData) {
+	state.AddDel(log.In)
+}
+
+type Revision struct {
+	Id           int
+	JournalIndex int
+}
+
 type IData interface {
 	Clear()
 
