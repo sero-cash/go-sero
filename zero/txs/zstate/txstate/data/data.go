@@ -46,7 +46,8 @@ func (self *Data) appendRoot(root *keys.Uint256) {
 	if root == nil {
 		panic("set_last_out but root is nil")
 	}
-	self.Cur.Index = self.Cur.Index + int64(1)
+	//self.Cur.Index = self.Cur.Index + int64(1)
+	//self.Cur.Index =
 	self.Block.Roots = append(self.Block.Roots, *root)
 }
 
@@ -64,6 +65,7 @@ func (self *Data) AddTxOut(pkr *keys.PKr) int {
 }
 
 func (self *Data) AddOut(root *keys.Uint256, out *localdb.OutState, txhash *keys.Uint256) {
+	self.Cur.Index = int64(out.Index)
 	self.addOutByRoot(root, out)
 	self.appendRoot(root)
 	if txhash != nil {
