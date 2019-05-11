@@ -48,6 +48,9 @@ func (self *Ref) GetState() (ret *zstate.ZState) {
 }
 
 func GetDelayNumber(current uint64, chose uint64, delay uint64) (num uint64) {
+	if chose == 0 {
+		return current
+	}
 	current_delayed := current
 	if current < delay {
 		current_delayed = current
