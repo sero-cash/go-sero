@@ -61,6 +61,8 @@ func SetLastNum(putter serodb.Putter, num uint64) {
 const delay_block_count = 6
 
 func (self *State1) Parse(last_chose uint64) (chose uint64) {
+	self.MakesureEnv()
+
 	bc := light_ref.Ref_inst.Bc
 	tks := bc.GetTks()
 	next_num := GetLastNum(&self.db)
@@ -157,6 +159,6 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 		log.Info("STATE1 PARSE", "t", chose, "c", next_num-1)
 	}
 
-	return
+	return chose
 
 }

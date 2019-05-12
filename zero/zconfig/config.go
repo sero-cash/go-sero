@@ -16,6 +16,8 @@
 
 package zconfig
 
+import "io/ioutil"
+
 var is_dev = false
 
 func Init_Dev(dev bool) {
@@ -40,3 +42,16 @@ var VP0 = uint64(788888)
 var MAX_O_INS_LENGTH = 2500
 
 var MAX_TX_OUT_COUNT_LENGTH = 256
+
+func IsDirExists(path string) bool {
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return false
+	} else {
+		if len(files) > 0 {
+			return true
+		} else {
+			return false
+		}
+	}
+}

@@ -47,12 +47,31 @@ type State1 struct {
 
 func NewState1(bc lstate.BlockChain) (ret State1) {
 	ret.bc = bc
-	if db, err := leveldb.OpenFile(zconfig.State1_db_dir(), nil); err != nil {
-		panic(err)
-	} else {
-		ret.db = SeroDB{db}
-	}
 	return
+}
+
+func (self *State1) MakesureEnv() {
+	var need_open_db bool
+	if !zconfig.IsDirExists(zconfig.State1_dir()) {
+		zconfig.Init_State1()
+		need_open_db = true
+	} else {
+		if !zconfig.IsDirExists(zconfig.State1_db_dir()) {
+			zconfig.Init_State1()
+			need_open_db = true
+		} else {
+			if self.db.db == nil {
+				need_open_db = true
+			}
+		}
+	}
+	if need_open_db {
+		if db, err := leveldb.OpenFile(zconfig.State1_db_dir(), nil); err != nil {
+			panic(err)
+		} else {
+			self.db.db = db
+		}
+	}
 }
 
 func (self *State1) valid() bool {
