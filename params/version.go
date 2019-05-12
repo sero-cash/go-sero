@@ -24,7 +24,7 @@ const (
 	VersionMajor = 0                  // Major version component of the current release
 	VersionMinor = 7                  // Minor version component of the current release
 	VersionPatch = 0                  // Patch version component of the current release
-	VersionMeta  = "beta.r7-hotfix.3" // Version metadata to append to the version string
+	VersionMeta  = "beta.r7-hotfix.4" // Version metadata to append to the version string
 )
 
 // Version holds the textual version string.
