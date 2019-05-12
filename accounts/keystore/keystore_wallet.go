@@ -21,6 +21,7 @@ import (
 
 	"github.com/sero-cash/go-sero/common/address"
 
+	"github.com/sero-cash/go-sero/zero/lstate"
 	"github.com/sero-cash/go-sero/zero/txs"
 	"github.com/sero-cash/go-sero/zero/txs/generate"
 
@@ -33,7 +34,6 @@ import (
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/txs/lstate"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
 )
@@ -171,7 +171,7 @@ func (w *keystoreWallet) EncryptTxWithSeed(seed address.Seed, btx *types.Transac
 	}
 
 	if txt.PkgClose != nil {
-		zpkg := lstate.CurrentState1().State.Pkgs.GetPkgById(&txt.PkgClose.Id)
+		zpkg := lstate.CurrentLState().ZState().Pkgs.GetPkgById(&txt.PkgClose.Id)
 		if zpkg == nil || zpkg.Closed {
 			return nil, errors.New("PkgClose Id is not exists!")
 		}

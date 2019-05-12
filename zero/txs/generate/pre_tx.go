@@ -20,6 +20,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/lstate"
+
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/zero/localdb"
@@ -27,8 +29,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
-
-	"github.com/sero-cash/go-sero/zero/txs/lstate"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
@@ -65,7 +65,7 @@ type preTx struct {
 	desc_pkg prePkgDesc
 }
 
-func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
+func preGen(ts *tx.T, state1 lstate.LState) (p preTx, e error) {
 	ck_state := NewCKState(&ts.Fee)
 
 	force_O := false
@@ -104,7 +104,7 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 	}
 
 	if ts.PkgClose != nil {
-		if zpkg := state1.State.Pkgs.GetPkgById(&ts.PkgClose.Id); zpkg == nil || zpkg.Closed {
+		if zpkg := state1.ZState().Pkgs.GetPkgById(&ts.PkgClose.Id); zpkg == nil || zpkg.Closed {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
 			return
 		} else {
@@ -143,7 +143,7 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 	}
 
 	if ts.PkgCreate != nil {
-		if zpkg := state1.State.Pkgs.GetPkgById(&ts.PkgCreate.Id); zpkg != nil {
+		if zpkg := state1.ZState().Pkgs.GetPkgById(&ts.PkgCreate.Id); zpkg != nil {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgCreate.Id[:]))
 		} else {
 			if _, err := ck_state.AddOut(&ts.PkgCreate.Pkg.Asset); err != nil {
@@ -157,7 +157,7 @@ func preGen(ts *tx.T, state1 *lstate.State) (p preTx, e error) {
 	}
 
 	if ts.PkgTransfer != nil {
-		if zpkg := state1.State.Pkgs.GetPkgById(&ts.PkgTransfer.Id); zpkg == nil || zpkg.Closed {
+		if zpkg := state1.ZState().Pkgs.GetPkgById(&ts.PkgTransfer.Id); zpkg == nil || zpkg.Closed {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgTransfer.Id[:]))
 			return
 		} else {

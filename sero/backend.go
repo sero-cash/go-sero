@@ -27,6 +27,7 @@ import (
 	"sync/atomic"
 
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
+	"github.com/sero-cash/go-sero/zero/lstate/state2"
 
 	"github.com/sero-cash/go-czero-import/keys"
 
@@ -153,7 +154,13 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	)
 	sero.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, sero.chainConfig, sero.engine, vmConfig, sero.accountManager, config.MineMode)
 
-	light_ref.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain}, sero)
+	light_ref.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain})
+	if !config.MineMode {
+		state_bc := &core.State1BlockChain{
+			sero.blockchain,
+		}
+		state2.InitLState(state_bc)
+	}
 
 	if err != nil {
 		return nil, err

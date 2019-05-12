@@ -130,7 +130,7 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 func (state *ZState) AddTxOutWithCheck(addr common.Address, asset assets.Asset) (alarm bool) {
 	alarm = false
 	if state.Num() >= zconfig.VP0 {
-		count := state.State.AddTxOut(addr.ToPKr())
+		count := state.State.AddTxOut_Log(addr.ToPKr())
 		if count > zconfig.MAX_TX_OUT_COUNT_LENGTH {
 			log.Error("[ALARM] ZState AddTxOut Overflow", "MAX_TX_OUT_COUNT_LENGTH", zconfig.MAX_TX_OUT_COUNT_LENGTH)
 			alarm = true

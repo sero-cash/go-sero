@@ -27,8 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sero-cash/go-sero/zero/txs/lstate"
-
 	"github.com/sero-cash/go-sero/zero/txs/verify"
 
 	"github.com/hashicorp/golang-lru"
@@ -206,13 +204,6 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	// Take ownership of this particular state
 	go bc.update()
 
-	if !mineMode {
-		lstate.Run(
-			&State1BlockChain{
-				bc,
-			},
-		)
-	}
 	return bc, nil
 }
 
@@ -275,6 +266,10 @@ type State1BlockChain struct {
 
 func (self *State1BlockChain) GetBlockByNumber(num uint64) *types.Block {
 	return self.Bc.GetBlockByNumber(num)
+}
+
+func (self *State1BlockChain) GetHeaderByNumber(num uint64) *types.Header {
+	return self.Bc.GetHeaderByNumber(num)
 }
 
 func (self *State1BlockChain) GetDB() serodb.Database {

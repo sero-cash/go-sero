@@ -25,8 +25,6 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
 
-	"github.com/sero-cash/go-sero/zero/txs/lstate"
-
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
 
@@ -50,7 +48,7 @@ type Blocks struct {
 	sd  *state.StateDB
 	st  *zstate.ZState
 	st0 *txstate.State
-	st1 *lstate.State
+	st1 *state1.State1_storage
 }
 
 var g_blocks Blocks
@@ -69,7 +67,7 @@ func NewBlock() {
 
 func EndBlock() {
 	if g_blocks.st1 == nil {
-		st1 := lstate.LoadState(g_blocks.st, "")
+		st1 := state1.LoadState(g_blocks.st, "")
 		g_blocks.st1 = &st1
 	} else {
 		g_blocks.st1.State = g_blocks.st
@@ -140,7 +138,7 @@ func (self *user) addTkt(v int) {
 	EndBlock()
 }
 
-func (self *user) GetOuts() (outs []*lstate.OutState) {
+func (self *user) GetOuts() (outs []*state1.OutState) {
 	if os, e := g_blocks.st1.GetOuts(keys.Seed2Tk(&self.seed).NewRef()); e != nil {
 		panic(e)
 		return
@@ -150,7 +148,7 @@ func (self *user) GetOuts() (outs []*lstate.OutState) {
 	}
 }
 
-func (self *user) GetPkgs(is_from bool) (ret []*lstate.Pkg) {
+func (self *user) GetPkgs(is_from bool) (ret []*state1.Pkg) {
 	ret = g_blocks.st1.GetPkgs(keys.Seed2Tk(&self.seed).NewRef(), is_from)
 	return
 }
