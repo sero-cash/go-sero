@@ -104,17 +104,20 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 	}
 
 	chose = bc.CashChose().Load().(uint64)
+	current_header := bc.GetCurrenHeader()
+	current_num := current_header.Number.Uint64()
 
 	if chose == 0 {
 		self.begin(last_file_name, nil, tks)
-		return last_chose
+		return current_num
 	} else {
 		chose = light_ref.Ref_inst.GetDelayedNum(delay_block_count)
+		chose_header := bc.GetHeaderByNumber(chose)
+		chose_hash := chose_header.Hash()
 		if next_num > chose {
-			self.begin(last_file_name, nil, tks)
-			return last_chose
+			self.begin(last_file_name, &chose_hash, tks)
+			return chose
 		} else {
-			chose_header := bc.GetHeaderByNumber(chose)
 			hash := chose_header.Hash()
 			self.begin(last_file_name, &hash, tks)
 		}
