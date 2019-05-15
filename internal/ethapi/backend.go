@@ -90,7 +90,7 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 		{
 			Namespace: "ssi",
 			Version:   "1.0",
-			Service:   &PublicSSIAPI{},
+			Service:   &PublicSSIAPI{apiBackend},
 			Public:    true,
 		},
 		{
