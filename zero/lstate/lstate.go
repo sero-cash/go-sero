@@ -29,6 +29,7 @@ type LState interface {
 	GetOut(root *keys.Uint256) (src *OutState, e error)
 	GetPkgs(tk *keys.Uint512, is_from bool) (ret []*Pkg)
 	GetOuts(tk *keys.Uint512) (outs []*OutState, e error)
+	AddAccount(tk *keys.Uint512) (ret bool)
 }
 
 var current_lstate LState

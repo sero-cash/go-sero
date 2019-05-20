@@ -33,8 +33,6 @@ var last_remove_time = int64(0)
 
 func Init_State_dir(d string) {
 	dir = d
-	Init_State1()
-	Init_State2()
 }
 
 var VP0 = uint64(788888)
