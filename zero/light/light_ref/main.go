@@ -1,8 +1,6 @@
 package light_ref
 
 import (
-	"sync/atomic"
-
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
@@ -15,7 +13,6 @@ type BlockChain interface {
 	GetHeader(hash *common.Hash) *types.Header
 	NewState(hash *common.Hash) *zstate.ZState
 	GetTks() []keys.Uint512
-	CashChose() *atomic.Value
 	GetBlockByNumber(num uint64) *types.Block
 	GetHeaderByNumber(num uint64) *types.Header
 	GetDB() serodb.Database
@@ -34,33 +31,22 @@ func (self *Ref) SetBC(bc BlockChain) {
 func (self *Ref) GetDelayedNum(delay uint64) (ret uint64) {
 	ret = GetDelayNumber(
 		self.Bc.GetCurrenHeader().Number.Uint64(),
-		self.Bc.CashChose().Load().(uint64),
 		delay,
 	)
 	return
 }
 
 func (self *Ref) GetState() (ret *zstate.ZState) {
-	num := self.GetDelayedNum(6)
+	num := self.GetDelayedNum(12)
 	block := self.Bc.GetBlockByNumber(num)
 	hash := block.Hash()
 	return self.Bc.NewState(&hash)
 }
 
-func GetDelayNumber(current uint64, chose uint64, delay uint64) (num uint64) {
-	current_delayed := current
-	if current < delay {
-		current_delayed = current
-	} else if current > delay {
-		if (current - delay) < delay {
-			current_delayed = delay
-		} else {
-			current_delayed = current - delay
-		}
-	}
-	if chose > current_delayed {
-		return chose
+func GetDelayNumber(current uint64, delay uint64) (num uint64) {
+	if current<delay {
+		return 0
 	} else {
-		return current_delayed
+		return current-delay
 	}
 }

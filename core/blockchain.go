@@ -146,8 +146,6 @@ type BlockChain struct {
 	badBlocks *lru.Cache // Bad block cache
 
 	accountManager *accounts.Manager
-
-	cashChose atomic.Value
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -184,7 +182,6 @@ func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *pa
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
 	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
 	bc.accountManager = accountManager
-	bc.cashChose.Store(uint64(0))
 
 	var err error
 	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
@@ -222,10 +219,6 @@ func (self *State1BlockChain) GetHeaderByNumber(num uint64) *types.Header {
 
 func (self *State1BlockChain) GetDB() serodb.Database {
 	return self.Bc.db
-}
-
-func (self *State1BlockChain) CashChose() *atomic.Value {
-	return &self.Bc.cashChose
 }
 
 func (self *State1BlockChain) GetCurrenHeader() *types.Header {

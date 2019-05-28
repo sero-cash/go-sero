@@ -2,7 +2,6 @@ package lstate
 
 import (
 	"runtime/debug"
-	"sync/atomic"
 	"time"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -18,7 +17,6 @@ type BlockChain interface {
 	GetHeader(hash *common.Hash) *types.Header
 	NewState(hash *common.Hash) *zstate.ZState
 	GetTks() []keys.Uint512
-	CashChose() *atomic.Value
 	GetDB() serodb.Database
 }
 
