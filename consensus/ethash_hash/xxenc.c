@@ -9,6 +9,7 @@ Public domain.
 #ifndef XXENC_H
 #define XXENC_H
 
+#include <stdint.h>
 #include <stdlib.h>
 
 /*
