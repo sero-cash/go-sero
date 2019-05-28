@@ -1,27 +1,6 @@
 package state1
 
-import (
-	"fmt"
-	"math/big"
-
-	"github.com/sero-cash/go-sero/zero/lstate"
-
-	"github.com/sero-cash/go-sero/zero/zconfig"
-
-	"github.com/sero-cash/go-sero/serodb"
-
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
-
-	"github.com/sero-cash/go-sero/zero/localdb"
-
-	"github.com/sero-cash/go-sero/log"
-
-	"time"
-
-	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/common/hexutil"
-)
-
+/*
 func CurrentLState() *State1 {
 	if r, ok := lstate.CurrentLState().(*State1); !ok {
 		return nil
@@ -172,3 +151,4 @@ func (self *State1) Parse(last_chose uint64) (chose uint64) {
 	return chose
 
 }
+*/

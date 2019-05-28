@@ -34,10 +34,6 @@ import (
 
 	"github.com/sero-cash/go-sero/common/address"
 
-	"github.com/sero-cash/go-sero/log"
-
-	"github.com/sero-cash/go-sero/zero/zconfig"
-
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/event"
@@ -144,15 +140,15 @@ func (ks *KeyStore) refreshWallets() {
 		// If there are no more wallets or the account is before the next, wrap new wallet
 		if len(ks.wallets) == 0 || ks.wallets[0].URL().Cmp(account.accountByURL.URL) > 0 {
 			wallet := &keystoreWallet{account: account.accountByURL, keystore: ks}
-			if account.update {
-				log.Info("refresWallets improt", "account", account.accountByURL)
-				state1dir := zconfig.State1_file("")
-				err := os.RemoveAll(state1dir)
-				if err != nil {
-					log.Error("refresWallets import remvoe", "state1dir", state1dir)
+			//if account.update {
+			//log.Info("refresWallets improt", "account", account.accountByURL)
+			//state1dir := zconfig.State1_file("")
+			//err := os.RemoveAll(state1dir)
+			//if err != nil {
+			//	log.Error("refresWallets import remvoe", "state1dir", state1dir)
 
-				}
-			}
+			//}
+			//}
 			events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletArrived})
 			wallets = append(wallets, wallet)
 			continue

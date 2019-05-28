@@ -1,15 +1,6 @@
 package zconfig
 
-import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"time"
-)
-
+/*
 func State1_dir() string {
 	return filepath.Join(dir, "state1")
 }
@@ -87,3 +78,4 @@ func Init_State1() {
 	os.Mkdir(State1_dir(), os.ModePerm)
 	os.Mkdir(State1_db_dir(), os.ModePerm)
 }
+*/

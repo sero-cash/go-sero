@@ -16,38 +16,7 @@
 
 package state1
 
-import (
-	"errors"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"runtime/debug"
-	"sync"
-
-	"github.com/sero-cash/go-sero/zero/lstate"
-
-	"github.com/sero-cash/go-sero/log"
-
-	"github.com/sero-cash/go-sero/zero/localdb"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-
-	"github.com/sero-cash/go-sero/common/hexutil"
-
-	"github.com/sero-cash/go-sero/zero/txs/pkg"
-
-	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
-
-	"github.com/sero-cash/go-sero/zero/txs/zstate"
-
-	"github.com/sero-cash/go-czero-import/cpt"
-
-	"github.com/sero-cash/go-sero/zero/txs/stx"
-
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/zero/utils"
-	"github.com/sero-cash/go-sero/zero/zconfig"
-)
-
+/*
 type State1_storage struct {
 	State *zstate.ZState
 
@@ -472,3 +441,4 @@ func (self *State1_storage) GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, 
 	lstate.SortOutStats(lstate.BC().GetDB(), outs)
 	return
 }
+*/

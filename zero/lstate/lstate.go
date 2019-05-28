@@ -23,7 +23,7 @@ type BlockChain interface {
 }
 
 type LState interface {
-	Parse(last_chose uint64) (chose uint64)
+	Parse() (num uint64)
 
 	ZState() *zstate.ZState
 	GetOut(root *keys.Uint256) (src *OutState, e error)
@@ -33,10 +33,6 @@ type LState interface {
 }
 
 var current_lstate LState
-
-func SetCurrentLState(lst LState) {
-	current_lstate = lst
-}
 
 func CurrentLState() LState {
 	return current_lstate
@@ -54,27 +50,21 @@ func Run(bc BlockChain, lst LState) {
 	go run()
 }
 
-func Parse(chose uint64) uint64 {
+func Parse() uint64 {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("parse block chain error : ", "number", BC().GetCurrenHeader().Number, "recover", r)
 			debug.PrintStack()
 		}
 	}()
-	return current_lstate.Parse(chose)
+	return current_lstate.Parse()
 }
 
 func run() {
-	chose := uint64(0)
 	for {
-		last_chose := chose
+		num := Parse()
 
-		chose = Parse(last_chose)
-
-		cashChose := BC().CashChose()
-		cashChose.Store(chose)
-
-		if chose-last_chose <= 1 {
+		if num <= 1 {
 			time.Sleep(1000 * 1000 * 1000 * 8)
 		} else {
 			time.Sleep(1000 * 1000 * 10)

@@ -11,21 +11,13 @@ import (
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
 	"github.com/sero-cash/go-sero/zero/localdb"
 	"github.com/sero-cash/go-sero/zero/lstate"
-	"github.com/sero-cash/go-sero/zero/lstate/state1"
 	"github.com/sero-cash/go-sero/zero/lstate/state2/accounts"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 )
 
 func InitLState(bc lstate.BlockChain) {
-	var ls lstate.LState
-	if zconfig.IsDirExists(zconfig.State1_dir()) {
-		ns := state1.NewState1(bc)
-		ls = &ns
-	} else {
-		ns := NewState2()
-		ls = &ns
-	}
-	lstate.Run(bc, ls)
+	ns := NewState2()
+	lstate.Run(bc, &ns)
 	return
 }
 
@@ -78,7 +70,7 @@ func GetOut(root *keys.Uint256) (src *localdb.OutState) {
 	}
 }
 
-func (self *State2) Parse(last_chose uint64) (chose uint64) {
+func (self *State2) Parse() (num uint64) {
 
 	for light_ref.Ref_inst.Bc == nil {
 		time.Sleep(1000 * 1000 * 1000 * 2)
@@ -89,7 +81,7 @@ func (self *State2) Parse(last_chose uint64) (chose uint64) {
 	tks := light_ref.Ref_inst.Bc.GetTks()
 
 	if len(tks) == 0 {
-		return
+		return uint64(0)
 	}
 
 	next_num := uint64(0)
@@ -195,7 +187,7 @@ func (self *State2) Parse(last_chose uint64) (chose uint64) {
 		log.Info("STATE2 PARSE", "t", target_num, "c", next_num-1)
 	}
 
-	return target_num
+	return uint64(i)
 }
 
 func (self *State2) update(tk *keys.Uint512, num uint64, block *localdb.Block) {

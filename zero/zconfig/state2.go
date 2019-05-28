@@ -6,7 +6,7 @@ import (
 )
 
 func State2_dir() string {
-	return filepath.Join(dir, "state2")
+	return filepath.Join(dir, "balance")
 }
 
 func Init_State2() {

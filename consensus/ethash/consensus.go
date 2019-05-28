@@ -26,8 +26,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 
-	"github.com/sero-cash/go-sero/common/hexutil"
-
 	"github.com/sero-cash/go-sero/crypto"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -361,13 +359,6 @@ func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Head
 		} else {
 			digest, result = progpowLightWithoutCDag(size, cache.cache, header.HashNoNonce().Bytes(), header.Nonce.Uint64(), number)
 		}
-		fmt.Printf(
-			"header:%v ,nonce:%v ,number:%v ,digest:%v \n",
-			hexutil.Encode(header.HashNoNonce().Bytes()),
-			header.Nonce.Uint64(),
-			number,
-			hexutil.Encode(digest),
-		)
 	} else {
 		digest, result = hashimotoLight(size, cache.cache, header.HashNoNonce().Bytes(), header.Nonce.Uint64(), number)
 	}
@@ -437,8 +428,8 @@ var (
 	lReward = new(big.Int).Mul(big.NewInt(176), base)
 	hReward = new(big.Int).Mul(big.NewInt(445), base)
 
-	argA, _ = new(big.Int).SetString("2022556390977440", 10)
-	argB, _ = new(big.Int).SetString("16184210526315800000", 10)
+	argA, _ = new(big.Int).SetString("985347985347985", 10)
+	argB, _ = new(big.Int).SetString("16910256410256400000", 10)
 
 	teamRewardPool      = common.BytesToAddress(crypto.Keccak512([]byte{1}))
 	communityRewardPool = common.BytesToAddress(crypto.Keccak512([]byte{2}))
