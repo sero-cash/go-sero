@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
+typedef unsigned long long uint64_t;
+
 #include "xxenc.c"
 
 /**
