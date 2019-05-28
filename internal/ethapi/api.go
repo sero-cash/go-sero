@@ -29,6 +29,7 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/light/light_types"
 	"github.com/sero-cash/go-sero/zero/lstate"
+	"github.com/sero-cash/go-sero/zero/lstate/state2"
 
 	"github.com/sero-cash/go-sero/zero/txs"
 
@@ -348,6 +349,10 @@ func (s *PrivateAccountAPI) NewAccount(password string) (address.AccountAddress,
 		return address.AccountAddress{}, err
 	}
 
+	if lst := lstate.CurrentLState(); lst != nil {
+		lstate.CurrentLState().AddAccount(acc.Tk.ToUint512())
+	}
+
 	if zconfig.Is_Dev() {
 		fetchKeystore(s.am).TimedUnlock(acc, password, 0)
 	}
@@ -591,6 +596,64 @@ type Balance struct {
 	Tkt map[string][]*common.Hash `json:"tkt"`
 }
 
+func GetBalanceFromAccounts(tk *keys.Uint512) (result Balance) {
+	tkn := map[string]*hexutil.Big{}
+	tkt := map[string][]*common.Hash{}
+	account := state2.CurrentLState().GetAccount(tk)
+	for currency, value := range account.Token {
+		cy := strings.Trim(string(currency[:]), zerobyte)
+		if tkn[cy] == nil {
+			tkn[cy] = (*hexutil.Big)(value.ToIntRef())
+		} else {
+			tkn[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(tkn[cy]), (value.ToIntRef())))
+		}
+	}
+	for category, values := range account.Ticket {
+		catg := strings.Trim(string(category[:]), zerobyte)
+		for _, value := range values {
+			t := common.Hash{}
+			copy(t[:], value[:])
+			tkt[catg] = append(tkt[catg], &t)
+		}
+	}
+	if len(tkn) > 0 {
+		result.Tkn = tkn
+	}
+	if len(tkt) > 0 {
+		result.Tkt = tkt
+	}
+	return
+}
+
+func GetBalanceFromGetOuts(tk *keys.Uint512) (result Balance) {
+	tkn := map[string]*hexutil.Big{}
+	tkt := map[string][]*common.Hash{}
+	outs, _ := txs.GetOuts(tk)
+	for _, out := range outs {
+		if out.Out_O.Asset.Tkn != nil {
+			cy := strings.Trim(string(out.Out_O.Asset.Tkn.Currency[:]), zerobyte)
+			if tkn[cy] == nil {
+				tkn[cy] = (*hexutil.Big)(out.Out_O.Asset.Tkn.Value.ToIntRef())
+			} else {
+				tkn[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(tkn[cy]), (out.Out_O.Asset.Tkn.Value.ToIntRef())))
+			}
+		}
+		if out.Out_O.Asset.Tkt != nil {
+			catg := strings.Trim(string(out.Out_O.Asset.Tkt.Category[:]), zerobyte)
+			t := common.Hash{}
+			copy(t[:], out.Out_O.Asset.Tkt.Value[:])
+			tkt[catg] = append(tkt[catg], &t)
+		}
+	}
+	if len(tkn) > 0 {
+		result.Tkn = tkn
+	}
+	if len(tkt) > 0 {
+		result.Tkt = tkt
+	}
+	return
+}
+
 // GetBalance returns the amount of wei for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
@@ -617,15 +680,8 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 		address = common.AddrToAccountAddr(addr)
 	}
 
-	//currencyHash := common.BytesToHash(common.LeftPadBytes([]byte(currency), 32))
-
 	tkn := map[string]*hexutil.Big{}
-	tkt := map[string][]*common.Hash{}
 	result := Balance{}
-	//t := common.Hash{}
-	//copy(t[:], keys.RandUint256().NewRef()[:])
-	//tkt["tktTest"] = append(tkt["tktTest"], &t)
-	//tkt["tktTest"] = append(tkt["tktTest"], &t)
 	if size := state.GetCodeSize(common.BytesToAddress(address[:])); size > 0 {
 		balances := state.Balances(common.BytesToAddress(address[:]))
 		for key, value := range balances {
@@ -634,7 +690,6 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 		if len(tkn) > 0 {
 			result.Tkn = tkn
 		}
-		//result[currency] = (*hexutil.Big)(state.GetBalance(address, currencyHash))
 		return result, state.Error()
 	} else {
 		// Look up the wallet containing the requested abi
@@ -647,28 +702,10 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 
 		seed := wallet.Accounts()[0].Tk
 
-		outs, err := txs.GetOuts(seed.ToUint512())
-		for _, out := range outs {
-			if out.Out_O.Asset.Tkn != nil {
-				cy := strings.Trim(string(out.Out_O.Asset.Tkn.Currency[:]), zerobyte)
-				if tkn[cy] == nil {
-					tkn[cy] = (*hexutil.Big)(out.Out_O.Asset.Tkn.Value.ToIntRef())
-				} else {
-					tkn[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(tkn[cy]), (out.Out_O.Asset.Tkn.Value.ToIntRef())))
-				}
-			}
-			if out.Out_O.Asset.Tkt != nil {
-				catg := strings.Trim(string(out.Out_O.Asset.Tkt.Category[:]), zerobyte)
-				t := common.Hash{}
-				copy(t[:], out.Out_O.Asset.Tkt.Value[:])
-				tkt[catg] = append(tkt[catg], &t)
-			}
-		}
-		if len(tkn) > 0 {
-			result.Tkn = tkn
-		}
-		if len(tkt) > 0 {
-			result.Tkt = tkt
+		if state2.CurrentLState() != nil {
+			result = GetBalanceFromAccounts(seed.ToUint512())
+		} else {
+			result = GetBalanceFromGetOuts(seed.ToUint512())
 		}
 		return result, state.Error()
 	}

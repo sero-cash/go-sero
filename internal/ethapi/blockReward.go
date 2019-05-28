@@ -3,7 +3,7 @@ package ethapi
 import (
 	"math/big"
 
-	"github.com/sero-cash/go-sero/consensus/ethash"
+	"github.com/sero-cash/go-czero-import/seroparam"
 )
 
 var (
@@ -17,6 +17,12 @@ var (
 	base                = big.NewInt(1e+17)
 	big100              = big.NewInt(100)
 	oneSero             = new(big.Int).Mul(big.NewInt(10), base)
+
+	lReward = new(big.Int).Mul(big.NewInt(176), base)
+	hReward = new(big.Int).Mul(big.NewInt(445), base)
+
+	argA, _ = new(big.Int).SetString("985347985347985", 10)
+	argB, _ = new(big.Int).SetString("16910256410256400000", 10)
 
 	oriReward    = new(big.Int).Mul(big.NewInt(66773505743), big.NewInt(1000000000))
 	interval     = big.NewInt(8294400)
@@ -90,13 +96,35 @@ func accumulateRewardsV2(number, diff *big.Int) [3]*big.Int {
 	return res
 }
 
+func accumulateRewardsV3(number, bdiff *big.Int) [3]*big.Int {
+	var res [3]*big.Int
+	diff := new(big.Int).Div(bdiff, big.NewInt(1000000000))
+	reward := new(big.Int).Add(new(big.Int).Mul(argA, diff), argB)
+
+	if reward.Cmp(lReward) < 0 {
+		reward = new(big.Int).Set(lReward)
+	} else if reward.Cmp(hReward) > 0 {
+		reward = new(big.Int).Set(hReward)
+	}
+
+	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(number, halveNimber), interval), big1)
+	reward.Div(reward, new(big.Int).Exp(big2, i, nil))
+
+	res[0] = reward
+	res[1] = big.NewInt(0)
+	res[2] = new(big.Int).Div(reward, big.NewInt(5))
+	return res
+}
+
 /**
   [0] block reward
   [1] community reward
   [2] team reward
 */
 func GetBlockReward(number, diff *big.Int, gasUsed, gasLimit uint64) [3]*big.Int {
-	if number.Uint64() >= ethash.V2Number {
+	if number.Uint64() >= seroparam.SIP3 {
+		return accumulateRewardsV3(number, diff)
+	} else if number.Uint64() >= seroparam.SIP1 {
 		return accumulateRewardsV2(number, diff)
 	} else {
 		var res [3]*big.Int

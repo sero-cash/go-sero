@@ -20,6 +20,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -93,7 +95,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	}
 
 	for _, in_o := range s.Desc_O.Ins {
-		if state.Num() >= cpt.SIP2 {
+		if state.Num() >= seroparam.SIP2 {
 			if ok := state.State.HasIn(&in_o.Nil); ok {
 				e = errors.New("txs.verify in_o already in nils")
 				return
@@ -241,7 +243,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 
 	z_out_size := len(balance_desc.Zout_acms) / 32
 
-	if state.Num() >= cpt.SIP2 {
+	if state.Num() >= seroparam.SIP2 {
 		if z_out_size > 500 {
 			e = errors.New("verify error: out_size > 500")
 			return

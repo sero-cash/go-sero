@@ -27,7 +27,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-sero/consensus/ethash_hash"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/bitutil"
@@ -343,7 +343,7 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 	binary.LittleEndian.PutUint64(seed[32:], nonce)
 
 	//seed = crypto.Keccak512(seed)
-	seed = cpt.Miner_Hash_0(seed, num)
+	seed = ethash_hash.Miner_Hash_0(seed, num)
 	seedHead := binary.LittleEndian.Uint32(seed)
 
 	// Start the mix with replicated seed
@@ -372,7 +372,7 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 		binary.LittleEndian.PutUint32(digest[i*4:], val)
 	}
 	//return digest, crypto.Keccak256(append(seed, digest...))
-	return digest, cpt.Miner_Hash_1(append(seed, digest...), num)
+	return digest, ethash_hash.Miner_Hash_1(append(seed, digest...), num)
 }
 
 // hashimotoLight aggregates data from the full dataset (using only a small

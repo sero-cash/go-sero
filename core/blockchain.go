@@ -146,68 +146,12 @@ type BlockChain struct {
 	badBlocks *lru.Cache // Bad block cache
 
 	accountManager *accounts.Manager
-
-	cashChose atomic.Value
-
-	mineMode bool
 }
 
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator and
 // Processor.
-func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, accountManager *accounts.Manager, mineMode bool) (*BlockChain, error) {
-	if cacheConfig == nil {
-		cacheConfig = &CacheConfig{
-			TrieNodeLimit: 256 * 1024 * 1024,
-			TrieTimeLimit: 5 * time.Minute,
-		}
-	}
-	bodyCache, _ := lru.New(bodyCacheLimit)
-	bodyRLPCache, _ := lru.New(bodyCacheLimit)
-	blockCache, _ := lru.New(blockCacheLimit)
-	futureBlocks, _ := lru.New(maxFutureBlocks)
-	badBlocks, _ := lru.New(badBlockLimit)
-
-	bc := &BlockChain{
-		chainConfig:  chainConfig,
-		cacheConfig:  cacheConfig,
-		db:           db,
-		triegc:       prque.New(),
-		stateCache:   state.NewDatabase(db),
-		quit:         make(chan struct{}),
-		bodyCache:    bodyCache,
-		bodyRLPCache: bodyRLPCache,
-		blockCache:   blockCache,
-		futureBlocks: futureBlocks,
-		engine:       engine,
-		vmConfig:     vmConfig,
-		badBlocks:    badBlocks,
-	}
-	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
-	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
-	bc.accountManager = accountManager
-	bc.cashChose.Store(uint64(0))
-	bc.mineMode = mineMode
-
-	var err error
-	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
-	if err != nil {
-		return nil, err
-	}
-	bc.genesisBlock = bc.GetBlockByNumber(0)
-	if bc.genesisBlock == nil {
-		return nil, ErrNoGenesis
-	}
-	if err := bc.loadLastState(); err != nil {
-		return nil, err
-	}
-	// Take ownership of this particular state
-	go bc.update()
-
-	return bc, nil
-}
-
-func NewCmdBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, accountManager *accounts.Manager) (*BlockChain, error) {
+func NewBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, accountManager *accounts.Manager) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
 			TrieNodeLimit: 256 * 1024 * 1024,
@@ -253,6 +197,7 @@ func NewCmdBlockChain(db serodb.Database, cacheConfig *CacheConfig, chainConfig 
 	}
 	// Take ownership of this particular state
 	go bc.update()
+
 	return bc, nil
 }
 
@@ -274,10 +219,6 @@ func (self *State1BlockChain) GetHeaderByNumber(num uint64) *types.Header {
 
 func (self *State1BlockChain) GetDB() serodb.Database {
 	return self.Bc.db
-}
-
-func (self *State1BlockChain) CashChose() *atomic.Value {
-	return &self.Bc.cashChose
 }
 
 func (self *State1BlockChain) GetCurrenHeader() *types.Header {
@@ -1045,19 +986,10 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			// Garbage collect anything below our required write retention
 			for !bc.triegc.Empty() {
 				root, number := bc.triegc.Pop()
-				if bc.mineMode {
-					if uint64(-number) > chosen {
-						bc.triegc.Push(root, number)
-						break
-					}
-				} else {
-					chose := bc.cashChose.Load().(uint64)
-					if chose < triesInMemory || uint64(-number) > chose-triesInMemory {
-						bc.triegc.Push(root, number)
-						break
-					}
+				if uint64(-number) > chosen {
+					bc.triegc.Push(root, number)
+					break
 				}
-
 				triedb.Dereference(root.(common.Hash))
 			}
 		}

@@ -16,11 +16,7 @@
 
 package state1
 
-import (
-	"github.com/sero-cash/go-sero/rlp"
-	"github.com/sero-cash/go-sero/zero/lstate"
-)
-
+/*
 type StateData struct {
 	Outs      []*lstate.OutState
 	Pkgs_from []*lstate.Pkg
@@ -57,3 +53,4 @@ func (self *StateDataGet) Unserial(v []byte) {
 		}
 	}
 }
+*/

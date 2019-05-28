@@ -1,24 +1,6 @@
 package state1
 
-import (
-	"os"
-
-	"github.com/syndtr/goleveldb/leveldb"
-
-	"github.com/sero-cash/go-sero/zero/lstate"
-
-	"github.com/pkg/errors"
-
-	"github.com/sero-cash/go-sero/zero/localdb"
-
-	"github.com/sero-cash/go-czero-import/keys"
-
-	"github.com/sero-cash/go-sero/zero/txs/zstate"
-
-	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/zero/zconfig"
-)
-
+/*
 type SeroDB struct {
 	db *leveldb.DB
 }
@@ -169,3 +151,7 @@ func (self *State1) GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error)
 		return
 	}
 }
+func (self *State1) AddAccount(tk *keys.Uint512) (ret bool) {
+	return false
+}
+*/
