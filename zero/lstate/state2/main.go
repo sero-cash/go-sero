@@ -136,7 +136,7 @@ func (self *State2) Parse() (num uint64) {
 		for _, root := range block.Roots {
 			os := GetOut(&root)
 			if os == nil {
-				panic("state2 parse but can not find root -> out")
+				panic("BALANCE parse but can not find root -> out")
 			} else {
 			}
 			for _, account := range amap {
@@ -152,7 +152,7 @@ func (self *State2) Parse() (num uint64) {
 		for _, hash := range block.Pkgs {
 			pg := localdb.GetPkg(light_ref.Ref_inst.Bc.GetDB(), &hash)
 			if pg == nil {
-				panic("state2 parse but can not find hash -> pkg")
+				panic("BALANCE parse but can not find hash -> pkg")
 			} else {
 				for _, account := range amap {
 					if account.NextNum == next_num {
@@ -184,7 +184,7 @@ func (self *State2) Parse() (num uint64) {
 		}
 	}
 	if i > 1 {
-		log.Info("STATE2 PARSE", "t", target_num, "c", next_num-1)
+		log.Info("BALANCE PARSE", "t", target_num, "c", next_num-1)
 	}
 
 	return uint64(i)
