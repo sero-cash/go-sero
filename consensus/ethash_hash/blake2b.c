@@ -1,11 +1,13 @@
 #ifndef __BLAKE2B_C_
 #define __BLAKE2B_C_
 
-#include <stdint.h>
+//#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 typedef unsigned long long uint64_t;
+typedef unsigned char uint8_t;
+typedef unsigned int uint32_t;
 
 #include "xxenc.c"
 
