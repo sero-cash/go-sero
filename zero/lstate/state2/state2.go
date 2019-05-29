@@ -29,7 +29,9 @@ func (self *State2) GetPkgs(tk *keys.Uint512, is_from bool) (ret []*lstate.Pkg) 
 	return
 }
 func (self *State2) GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error) {
-	return self.db.GetOuts(tk)
+	outs, e = self.db.GetOuts(tk)
+	lstate.SortOutStats(light_ref.Ref_inst.Bc.GetDB(), outs)
+	return
 }
 
 func (self *State2) AddAccount(tk *keys.Uint512) (ret bool) {
