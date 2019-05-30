@@ -235,7 +235,7 @@ static inline void blake2b(
 
 #define _VP1 829000
 
-static inline void hash_enter(uint8_t* o,const uint8_t* s,unsigned long long height) {
+static inline void hash_enter(unsigned char* o,const unsigned char* s,unsigned long long height) {
     uint8_t p[16];
     if(height>=_VP1) {
         uint8_t s_enc[40]={0};
@@ -270,7 +270,7 @@ static inline void hash_enter(uint8_t* o,const uint8_t* s,unsigned long long hei
 
 }
 
-static inline void hash_leave(uint8_t* o,const uint8_t* s,unsigned long long height) {
+static inline void hash_leave(unsigned char* o,const unsigned char* s,unsigned long long height) {
     uint8_t p[16];
     if(height>=_VP1) {
         uint8_t s_enc[96]={0};
