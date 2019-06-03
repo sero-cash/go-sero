@@ -2,6 +2,7 @@ package light
 
 import (
 	"fmt"
+	"log"
 	"math/big"
 	"strings"
 	"sync"
@@ -69,6 +70,7 @@ func (self *SSI) Detail(roots []keys.Uint256, skr *keys.PKr) (douts []light_type
 var txMap sync.Map
 
 func (self *SSI) GenTx(param *light_issi.GenTxParam) (hash keys.Uint256, e error) {
+	log.Printf("genTx start")
 	p := light_types.GenTxParam{}
 	p.Gas = param.Gas
 	p.GasPrice = *big.NewInt(0).SetUint64(param.GasPrice)
@@ -173,12 +175,15 @@ func (self *SSI) GenTx(param *light_issi.GenTxParam) (hash keys.Uint256, e error
 		p.Ins = append(p.Ins, in)
 	}
 
+	log.Printf("genTx ins : %v, outs : %v", len(p.Ins), len(p.Outs))
 	if gtx, err := SLI_Inst.GenTx(&p); err != nil {
 		e = err
+		log.Printf("genTx error : %v", err)
 		return
 	} else {
 		hash = gtx.Tx.ToHash()
 		txMap.Store(hash, &gtx)
+		log.Printf("genTx success hash: %s", common.Bytes2Hex(hash[:]))
 	}
 
 	return
