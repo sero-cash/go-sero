@@ -61,6 +61,10 @@ func (self *SLI) DecOuts(outs []light_types.Out, skr *keys.PKr) (douts []light_t
 			info_desc.Flag = flag
 			info_desc.Einfo = out.State.OS.Out_Z.EInfo
 			cpt.DecOutput(&info_desc)
+
+			data, _ := json.Marshal(info_desc)
+			log.Printf("DecOuts info_desc : %s", string(data))
+
 			if e := stx.ConfirmOut_Z(&info_desc, out.State.OS.Out_Z); e == nil {
 				dout.Asset = assets.NewAsset(
 					&assets.Token{
@@ -79,6 +83,9 @@ func (self *SLI) DecOuts(outs []light_types.Out, skr *keys.PKr) (douts []light_t
 			log.Printf("DecOuts Out_O == nil")
 		}
 		douts = append(douts, dout)
+
+		data, _ = json.Marshal(douts)
+		log.Printf("DecOuts douts : %s", string(data))
 	}
 	return
 }
