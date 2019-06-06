@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"github.com/pkg/errors"
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -219,6 +220,7 @@ func (self *DB) AddNil(batch *leveldb.Batch, del *keys.Uint256) (tkroot TkRoot, 
 				tkroot = TkRoot{out.Tk, out.Root}
 				if _, err := self.db.Get(Bytes2Key(TKROOT_ROOT_KEY, tkroot.Bytes()), nil); err != nil {
 					//panic(err)
+					e = errors.New("AddNil already been deleted")
 				} else {
 					batch.Delete(Bytes2Key(TKROOT_ROOT_KEY, tkroot.Bytes()))
 				}
