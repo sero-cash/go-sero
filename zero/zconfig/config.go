@@ -27,6 +27,14 @@ func Is_Dev() bool {
 	return is_dev
 }
 
+func DefaultDelayNum() uint64 {
+	if is_dev {
+		return 0
+	} else {
+		return 12
+	}
+}
+
 var dir = ""
 
 var last_remove_time = int64(0)

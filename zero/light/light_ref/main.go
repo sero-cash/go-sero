@@ -6,6 +6,7 @@ import (
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
+	"github.com/sero-cash/go-sero/zero/zconfig"
 )
 
 type BlockChain interface {
@@ -37,16 +38,16 @@ func (self *Ref) GetDelayedNum(delay uint64) (ret uint64) {
 }
 
 func (self *Ref) GetState() (ret *zstate.ZState) {
-	num := self.GetDelayedNum(12)
+	num := self.GetDelayedNum(zconfig.DefaultDelayNum())
 	block := self.Bc.GetBlockByNumber(num)
 	hash := block.Hash()
 	return self.Bc.NewState(&hash)
 }
 
 func GetDelayNumber(current uint64, delay uint64) (num uint64) {
-	if current<delay {
+	if current < delay {
 		return 0
 	} else {
-		return current-delay
+		return current - delay
 	}
 }

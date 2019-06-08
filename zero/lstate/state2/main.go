@@ -47,8 +47,8 @@ func (self *State2) MakesureEnv() {
 func GetTargetNum() uint64 {
 	target_num := uint64(0)
 
-	if current_header := light_ref.Ref_inst.Bc.GetCurrenHeader(); current_header.Number.Uint64() > 11 {
-		target_num = current_header.Number.Uint64() - 12
+	if current_header := light_ref.Ref_inst.Bc.GetCurrenHeader(); current_header.Number.Uint64()+1 > zconfig.DefaultDelayNum() {
+		target_num = current_header.Number.Uint64() - zconfig.DefaultDelayNum()
 	} else {
 		target_num = 0
 	}
