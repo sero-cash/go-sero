@@ -22,12 +22,18 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-sero/zero/lstate"
+
+	"github.com/sero-cash/go-sero/internal/ethapi"
+	"github.com/sero-cash/go-sero/zero/exchange"
+
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
-	"github.com/sero-cash/go-sero/zero/lstate/state2"
 
 	"github.com/sero-cash/go-czero-import/keys"
 
@@ -43,7 +49,6 @@ import (
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/core/vm"
 	"github.com/sero-cash/go-sero/event"
-	"github.com/sero-cash/go-sero/internal/ethapi"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/miner"
 	"github.com/sero-cash/go-sero/node"
@@ -75,6 +80,7 @@ type Sero struct {
 	// Handlers
 	txPool          *core.TxPool
 	blockchain      *core.BlockChain
+	exchange        *exchange.Exchange
 	protocolManager *ProtocolManager
 	lesServer       LesServer
 
@@ -156,15 +162,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 
 	light_ref.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain})
 	if !config.MineMode {
-		state_bc := &core.State1BlockChain{
-			sero.blockchain,
-		}
-		state2.InitLState(state_bc)
+		lstate.InitLState()
 	}
 
-	if err != nil {
-		return nil, err
-	}
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
@@ -191,6 +191,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	}
 	sero.APIBackend.gpo = gasprice.NewOracle(sero.APIBackend, gpoParams)
 
+	//init exchange
+	if config.StartExchange {
+		split := strings.Split(ctx.ResolvePath(""), "/")
+		path := filepath.Join(strings.Join(split[:len(split)-1], "/"), "exchange")
+		sero.exchange = exchange.NewExchange(path, sero.txPool, sero.accountManager, config.AutoMerge)
+	}
 	return sero, nil
 }
 

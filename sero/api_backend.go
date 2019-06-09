@@ -18,7 +18,11 @@ package sero
 
 import (
 	"context"
+	"errors"
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/zero/exchange"
 
 	"github.com/sero-cash/go-sero/log"
 
@@ -260,4 +264,53 @@ func (b *SeroAPIBackend) CommitTx(tx *light_types.GTx) error {
 	signedTx := types.NewTxWithGTx(gas, &gasPrice, &tx.Tx)
 	log.Info("commitTx", "txhash", signedTx.Hash().String())
 	return b.sero.txPool.AddLocal(signedTx)
+}
+
+func (b *SeroAPIBackend) GetPkNumber(pk keys.Uint512) (number uint64, e error) {
+	if b.sero.exchange == nil {
+		e = errors.New("not start exchange")
+		return
+	}
+	return b.sero.exchange.GetCurrencyNumber(pk), nil
+}
+
+func (b *SeroAPIBackend) GetPkr(address *keys.Uint512, index *keys.Uint256) (pkr keys.PKr, e error) {
+	if b.sero.exchange == nil {
+		e = errors.New("not start exchange")
+		return
+	}
+	return b.sero.exchange.GetPkr(address, index)
+}
+
+func (b *SeroAPIBackend) GetBalances(address keys.Uint512) (balances map[string]*big.Int) {
+	if b.sero.exchange == nil {
+		return
+	}
+	return b.sero.exchange.GetBalances(address)
+}
+
+func (b *SeroAPIBackend) GenTx(param exchange.TxParam) (txParam *light_types.GenTxParam, e error) {
+	if b.sero.exchange == nil {
+		e = errors.New("not start exchange")
+		return
+	}
+	return b.sero.exchange.GenTx(param)
+}
+
+func (b *SeroAPIBackend) GenTxWithSign(param exchange.TxParam) (gtx *light_types.GTx, e error) {
+	if b.sero.exchange == nil {
+		e = errors.New("not start exchange")
+		return
+	}
+	return b.sero.exchange.GenTxWithSign(param)
+}
+
+func (b *SeroAPIBackend) GetRecords(address hexutil.Bytes, begin, end uint64) (records []exchange.Utxo, err error) {
+	if b.sero.exchange == nil {
+		err = errors.New("not start exchange")
+		return
+	}
+	pkr := keys.PKr{}
+	copy(pkr[:], address)
+	return b.sero.exchange.GetRecords(pkr, begin, end)
 }

@@ -30,11 +30,11 @@ import (
 	"time"
 
 	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"gopkg.in/urfave/cli.v1"
 
 	"github.com/sero-cash/go-sero/common/base58"
-	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/elastic/gosigar"
 	"github.com/sero-cash/go-sero/accounts"
@@ -113,6 +113,8 @@ var (
 		utils.DeveloperPasswordFlag,
 		utils.AlphanetFlag,
 		//utils.RinkebyFlag,
+		utils.ExchangeFlag,
+		utils.AutoMergeFlag,
 		utils.DeveloperFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
@@ -367,7 +369,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	// Unlock any account specifically requested
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 
-	if zconfig.Is_Dev() && ctx.GlobalString(utils.DeveloperPasswordFlag.Name) != "" {
+	if seroparam.Is_Dev() && ctx.GlobalString(utils.DeveloperPasswordFlag.Name) != "" {
 		for _, wallet := range ks.Wallets() {
 			err := ks.Unlock(wallet.Accounts()[0], ctx.GlobalString(utils.DeveloperPasswordFlag.Name))
 			if err != nil {

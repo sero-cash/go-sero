@@ -70,7 +70,7 @@ func NewState(tri tri.Tri, num uint64) (state State) {
 	state = State{tri: tri, num: num}
 	state.rw = new(sync.RWMutex)
 	state.MTree = NewMerkleTree(tri)
-	if num >= seroparam.SIP2 {
+	if num >= seroparam.SIP2() {
 		state.data = data_v1.NewData(num)
 	} else {
 		state.data = data.NewData(num)
@@ -185,7 +185,7 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	defer state.rw.Unlock()
 	t := utils.TR_enter("AddStx---ins")
 	for _, in := range st.Desc_O.Ins {
-		if state.num >= seroparam.SIP2 {
+		if state.num >= seroparam.SIP2() {
 			if state.data.HasIn(state.tri, &in.Nil) {
 				e = errors.New("desc_o.in.nil already be used !")
 				return
@@ -281,7 +281,7 @@ func AnalyzeNils(header *types.Header, ch Chain) {
 }
 
 func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
-	if header.Number.Uint64() == (seroparam.SIP2) {
+	if header.Number.Uint64() == (seroparam.SIP2()) {
 		hash := header.ParentHash
 		number := header.Number.Uint64() - 1
 		size := number

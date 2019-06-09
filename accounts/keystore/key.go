@@ -17,7 +17,6 @@
 package keystore
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"fmt"
 	"io"
@@ -26,7 +25,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/keys"
+
 	"github.com/sero-cash/go-sero/common/address"
+	bip39 "github.com/tyler-smith/go-bip39"
 
 	"github.com/pborman/uuid"
 	"github.com/sero-cash/go-sero/accounts"
@@ -47,6 +49,8 @@ type Key struct {
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
 	PrivateKey *ecdsa.PrivateKey
+
+	At uint64
 }
 
 type keyStore interface {
@@ -64,6 +68,7 @@ type encryptedKeyJSONV1 struct {
 	Crypto  cryptoJSON `json:"crypto"`
 	Id      string     `json:"id"`
 	Version int        `json:"version"`
+	At      uint64     `json:"at"`
 }
 
 type cryptoJSON struct {
@@ -79,57 +84,80 @@ type cipherparamsJSON struct {
 	IV string `json:"iv"`
 }
 
-func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
+func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, at uint64) *Key {
 	id := uuid.NewRandom()
 	key := &Key{
 		Id:         id,
 		Address:    crypto.PrivkeyToAddress(privateKeyECDSA),
 		Tk:         crypto.PrivkeyToTk(privateKeyECDSA),
 		PrivateKey: privateKeyECDSA,
+		At:         at,
 	}
 	return key
 }
 
-// NewKeyForDirectICAP generates a key whose address fits into < 155 bits so it can fit
-// into the Direct ICAP spec. for simplicity and easier compatibility with other libs, we
-// retry until the first byte is 0.
-func NewKeyForDirectICAP(rand io.Reader) *Key {
-	randBytes := make([]byte, 64)
-	_, err := rand.Read(randBytes)
-	if err != nil {
-		panic("key generation: could not read from random source: " + err.Error())
+func newKeyFromTk(tk *keys.Uint512) *Key {
+	id := uuid.NewRandom()
+	tkaddress := address.AccountAddress{}
+	copy(tkaddress[:], tk[:])
+	pk := keys.Tk2Pk(tk)
+	address := address.AccountAddress{}
+	copy(address[:], pk[:])
+	key := &Key{
+		Id:      id,
+		Address: address,
+		Tk:      tkaddress,
 	}
-	reader := bytes.NewReader(randBytes)
-	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), reader)
-	if err != nil {
-		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
-	}
-	key := newKeyFromECDSA(privateKeyECDSA)
-	//if !strings.HasPrefix(key.Data.Hex(), "0x00") {
-	//	return NewKeyForDirectICAP(rand)
-	//}
 	return key
 }
 
-func newKey(rand io.Reader) (*Key, error) {
+func newKey(rand io.Reader, at uint64) (*Key, error) {
 	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), rand)
 	if err != nil {
 		return nil, err
 	}
-	return newKeyFromECDSA(privateKeyECDSA), nil
+	return newKeyFromECDSA(privateKeyECDSA, at), nil
 }
 
-func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
-	key, err := newKey(rand)
+func storeNewKey(ks keyStore, rand io.Reader, auth string, at uint64) (*Key, accounts.Account, error) {
+	key, err := newKey(rand, at)
 	if err != nil {
 		return nil, accounts.Account{}, err
 	}
-	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}}
+	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}, At: key.At}
 	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
 		zeroKey(key.PrivateKey)
 		return nil, a, err
 	}
 	return key, a, err
+}
+
+func storeNewKeyWithMnemonic(ks keyStore, auth string, at uint64) (string, *Key, accounts.Account, error) {
+
+	entropy, err := bip39.NewEntropy(256)
+	if err != nil {
+		return "", nil, accounts.Account{}, err
+	}
+
+	mnemonic, err := bip39.NewMnemonic(entropy)
+	if err != nil {
+		return "", nil, accounts.Account{}, err
+	}
+
+	//seed := bip39.NewSeed(mnemonic, "")
+
+	privateKeyECDSA, err := crypto.ToECDSA(entropy)
+	if err != nil {
+		return "", nil, accounts.Account{}, err
+	}
+
+	key := newKeyFromECDSA(privateKeyECDSA, at)
+	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}, At: key.At}
+	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
+		zeroKey(key.PrivateKey)
+		return "", nil, a, err
+	}
+	return mnemonic, key, a, err
 }
 
 func writeKeyFile(file string, content []byte) error {

@@ -352,7 +352,7 @@ func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Head
 
 	var digest []byte
 	var result []byte
-	if number >= seroparam.SIP3 {
+	if number >= seroparam.SIP3() {
 		dataset := ethash.dataset_async(number)
 		if dataset.generated() {
 			digest, result = progpowFull(dataset.dataset, header.HashNoNonce().Bytes(), header.Nonce.Uint64(), number)
@@ -392,11 +392,11 @@ var code = common.Hex2Bytes("6080604052600436106100da5763ffffffff7c0100000000000
 // Finalize implements consensus.Engine, accumulating the block rewards,
 // setting the final state and assembling the block.
 func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, stateDB *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt, gasReward uint64) (*types.Block, error) {
-	if header.Number.Uint64() == seroparam.SIP1 {
+	if header.Number.Uint64() == seroparam.SIP1() {
 		stateDB.SetBalance(state.EmptyAddress, "SERO", new(big.Int))
 	}
 
-	if header.Number.Uint64() == seroparam.SIP3 {
+	if header.Number.Uint64() == seroparam.SIP3() {
 		addr := common.Base58ToAddress("3wKXubLuVfWff5swagTSfXTYb9vhyS1LDf5KKNxQ14Zvwx1jMFbxGBt9UfrTrjK1ocGWTaaknVSHwxhWqBq7STcH")
 		stateDB.SetCode(addr, code)
 	}
@@ -443,9 +443,9 @@ var (
 func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, header *types.Header, gasReward uint64) {
 
 	var reward *big.Int
-	if header.Number.Uint64() >= seroparam.SIP3 {
+	if header.Number.Uint64() >= seroparam.SIP3() {
 		reward = accumulateRewardsV3(statedb, header)
-	} else if header.Number.Uint64() >= seroparam.SIP1 {
+	} else if header.Number.Uint64() >= seroparam.SIP1() {
 		reward = accumulateRewardsV2(statedb, header)
 	} else {
 		reward = accumulateRewardsV1(config, statedb, header)

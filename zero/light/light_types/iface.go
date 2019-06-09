@@ -22,10 +22,17 @@ type GOut struct {
 	Memo  keys.Uint512
 }
 
+//type GTx struct {
+//	Gas      hexutil.Uint64
+//	GasPrice hexutil.Big
+//	Tx       stx.T
+//}
+
 type GTx struct {
 	Gas      hexutil.Uint64
 	GasPrice hexutil.Big
 	Tx       stx.T
+	Hash     keys.Uint256
 }
 
 type GenTxParam struct {

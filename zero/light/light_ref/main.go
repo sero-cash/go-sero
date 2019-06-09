@@ -2,11 +2,11 @@ package light_ref
 
 import (
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
-	"github.com/sero-cash/go-sero/zero/zconfig"
 )
 
 type BlockChain interface {
@@ -38,7 +38,7 @@ func (self *Ref) GetDelayedNum(delay uint64) (ret uint64) {
 }
 
 func (self *Ref) GetState() (ret *zstate.ZState) {
-	num := self.GetDelayedNum(zconfig.DefaultDelayNum())
+	num := self.GetDelayedNum(seroparam.DefaultConfirmedBlock())
 	block := self.Bc.GetBlockByNumber(num)
 	hash := block.Hash()
 	return self.Bc.NewState(&hash)

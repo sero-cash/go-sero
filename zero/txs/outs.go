@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/sero-cash/go-sero/zero/lstate"
+	"github.com/sero-cash/go-sero/zero/lstate/lstate_types"
 
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
@@ -27,7 +28,7 @@ func WatchPkg(id *keys.Uint256, key *keys.Uint256) (ret pkg.Pkg_O, pkr keys.PKr,
 	return
 }
 
-func GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error) {
+func GetOuts(tk *keys.Uint512) (outs []*lstate_types.OutState, e error) {
 	st1 := lstate.CurrentLState()
 	if st1 == nil {
 		e = errors.New("Get outs but lstate is nil")
@@ -102,7 +103,7 @@ func GetRoots(tk *keys.Uint512, costTkns map[keys.Uint256]utils.U256, costTkts m
 
 }
 
-func GetTknRoots(outs []*lstate.OutState, v *utils.U256, currency *keys.Uint256) (roots []keys.Uint256, amount utils.U256, tkts map[keys.Uint256][]keys.Uint256, e error) {
+func GetTknRoots(outs []*lstate_types.OutState, v *utils.U256, currency *keys.Uint256) (roots []keys.Uint256, amount utils.U256, tkts map[keys.Uint256][]keys.Uint256, e error) {
 	tkts = make(map[keys.Uint256][]keys.Uint256)
 	value := v.ToI256()
 	for _, out := range outs {
@@ -139,7 +140,7 @@ func GetTknRoots(outs []*lstate.OutState, v *utils.U256, currency *keys.Uint256)
 
 }
 
-func GeTktRoots(outs []*lstate.OutState, categroy *keys.Uint256, tkts []keys.Uint256, exits []keys.Uint256) (roots []keys.Uint256, tkns map[keys.Uint256]utils.U256, e error) {
+func GeTktRoots(outs []*lstate_types.OutState, categroy *keys.Uint256, tkts []keys.Uint256, exits []keys.Uint256) (roots []keys.Uint256, tkns map[keys.Uint256]utils.U256, e error) {
 	tkns = map[keys.Uint256]utils.U256{}
 	tktSize := len(tkts)
 	for _, out := range outs {
