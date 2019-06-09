@@ -19,6 +19,7 @@ package ethapi
 
 import (
 	"context"
+	"github.com/sero-cash/go-sero/zero/exchange"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/zero/light/light_types"
@@ -82,6 +83,11 @@ type Backend interface {
 	GetBlocksInfo(start uint64, count uint64) ([]light_types.Block, error)
 	GetAnchor(roots []keys.Uint256) ([]light_types.Witness, error)
 	CommitTx(tx *light_types.GTx) error
+
+	GetBalances(address common.Address) (balances map[string]*big.Int)
+	GenTx(param exchange.TxParam) (*light_types.GenTxParam, error)
+	GenTxWithSign(param exchange.TxParam) (*light_types.GTx, error)
+	GetRecords(pkr keys.PKr, begin, end uint64) (records []exchange.Uxto, err error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

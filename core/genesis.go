@@ -231,7 +231,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 	statedb.AddBalance(state.EmptyAddress, "SERO", new(big.Int).Mul(big.NewInt(250000000), big.NewInt(1e+18)))
 
 	sero := common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32))
-	var keys common.Addresses
+	var keys common.AddressList
 	for k := range g.Alloc {
 		keys = append(keys, k)
 	}

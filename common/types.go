@@ -369,15 +369,15 @@ func (a Address) Value() (driver.Value, error) {
 	return a[:], nil
 }
 
-type Addresses []Address
+type AddressList []Address
 
-func (self Addresses) Len() int {
+func (self AddressList) Len() int {
 	return len(self)
 }
-func (self Addresses) Less(i, j int) bool {
+func (self AddressList) Less(i, j int) bool {
 	return bytes.Compare(self[i][:], self[j][:]) < 0
 }
-func (self Addresses) Swap(i, j int) {
+func (self AddressList) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
 }
 

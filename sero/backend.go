@@ -21,7 +21,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/internal/ethapi"
+	"github.com/sero-cash/go-sero/zero/exchange"
 	"math/big"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -43,7 +46,6 @@ import (
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/core/vm"
 	"github.com/sero-cash/go-sero/event"
-	"github.com/sero-cash/go-sero/internal/ethapi"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/miner"
 	"github.com/sero-cash/go-sero/node"
@@ -75,6 +77,7 @@ type Sero struct {
 	// Handlers
 	txPool          *core.TxPool
 	blockchain      *core.BlockChain
+	exchange        *exchange.Exchange
 	protocolManager *ProtocolManager
 	lesServer       LesServer
 
@@ -162,9 +165,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 		state2.InitLState(state_bc)
 	}
 
-	if err != nil {
-		return nil, err
-	}
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
@@ -191,6 +191,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	}
 	sero.APIBackend.gpo = gasprice.NewOracle(sero.APIBackend, gpoParams)
 
+	//exchange
+	db, err := serodb.NewLDBDatabase(filepath.Join(ctx.ResolvePath("exchange")), config.DatabaseCache, config.DatabaseHandles)
+	if err != nil {
+		return nil, err
+	}
+	sero.exchange = exchange.NewExchange(db, sero.txPool, sero.accountManager)
 	return sero, nil
 }
 

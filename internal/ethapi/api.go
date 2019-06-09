@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/exchange"
 	"math/big"
 	"strings"
 	"time"
@@ -834,6 +835,25 @@ func (s *PublicBlockChainAPI) GetBlockInfo(ctx context.Context, start hexutil.Ui
 		return nil, err
 	}
 	return block, err
+}
+
+func (s *PublicBlockChainAPI) GetBalances(address common.Address) (balances map[string]*big.Int) {
+	return s.b.GetBalances(address)
+}
+
+func (s *PublicBlockChainAPI) GenTx(param exchange.TxParam) (*light_types.GenTxParam, error) {
+	return s.b.GenTx(param)
+}
+
+func (s *PublicBlockChainAPI) GenTxWithSign(param exchange.TxParam) (*light_types.GTx, error) {
+	tx, e := s.b.GenTxWithSign(param)
+	return tx, e
+}
+
+func (s *PublicBlockChainAPI) GetRecords(address common.Address, begin, end uint64) (records []exchange.Uxto, err error) {
+	var pkr keys.PKr
+	copy(pkr[:], address[:])
+	return s.b.GetRecords(pkr, begin, end)
 }
 
 func (s *PublicBlockChainAPI) GetAnchor(ctx context.Context, roots []keys.Uint256) ([]light_types.Witness, error) {

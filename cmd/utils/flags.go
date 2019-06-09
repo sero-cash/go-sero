@@ -292,6 +292,12 @@ var (
 	}
 
 	// Miner settings
+	AutoMergeFlag = cli.BoolFlag{
+		Name:  "autoMerge",
+		Usage: "",
+	}
+
+	// Miner settings
 	MiningModeFlag = cli.BoolFlag{
 		Name:  "mineMode",
 		Usage: "Enable mining",
@@ -1079,6 +1085,10 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 
 	if ctx.GlobalIsSet(MiningModeFlag.Name) {
 		cfg.MineMode = true
+	}
+
+	if ctx.GlobalBool(AutoMergeFlag.Name) {
+		cfg.AutoMerge = false
 	}
 
 	// Override any default configs for hard coded networks.
