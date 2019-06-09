@@ -246,6 +246,7 @@ func (w *keystoreWallet) GetSeedWithPassphrase(passphrase string) (*address.Seed
 	}
 	return seed, nil
 
+
 }
 
 func (w *keystoreWallet) IsMine(onceAddress common.Address) bool {
