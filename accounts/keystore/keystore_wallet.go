@@ -228,13 +228,13 @@ func (w *keystoreWallet) EncryptTxWithPassphrase(account accounts.Account, passp
 
 }
 
-*func (w *keystoreWallet) GetSeed() (*address.Seed, error) {
+func (w *keystoreWallet) GetSeed() (*address.Seed, error) {
 	// Make sure the requested account is contained within
-	seed ,err:=w.keystore.GetSeed(w.account)
-	if err != nil{
+	seed, err := w.keystore.GetSeed(w.account)
+	if err != nil {
 		return nil, err
 	}
-	return seed,nil
+	return seed, nil
 
 }
 
