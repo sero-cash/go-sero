@@ -228,7 +228,7 @@ func (w *keystoreWallet) EncryptTxWithPassphrase(account accounts.Account, passp
 
 }
 
-/*func (w *keystoreWallet) GetSeed() (*common.Seed, error) {
+*func (w *keystoreWallet) GetSeed() (*address.Seed, error) {
 	// Make sure the requested account is contained within
 	seed ,err:=w.keystore.GetSeed(w.account)
 	if err != nil{
@@ -236,7 +236,7 @@ func (w *keystoreWallet) EncryptTxWithPassphrase(account accounts.Account, passp
 	}
 	return seed,nil
 
-}*/
+}
 
 func (w *keystoreWallet) IsMine(onceAddress common.Address) bool {
 	tk := w.account.Tk.ToUint512()
