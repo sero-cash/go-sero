@@ -44,17 +44,6 @@ func (self *State2) MakesureEnv() {
 	}
 }
 
-func GetTargetNum() uint64 {
-	target_num := uint64(0)
-
-	if current_header := light_ref.Ref_inst.Bc.GetCurrenHeader(); current_header.Number.Uint64()+1 > zconfig.DefaultDelayNum() {
-		target_num = current_header.Number.Uint64() - zconfig.DefaultDelayNum()
-	} else {
-		target_num = 0
-	}
-	return target_num
-}
-
 func GetOut(root *keys.Uint256) (src *localdb.OutState) {
 	db := light_ref.Ref_inst.Bc.GetDB()
 	rt := localdb.GetRoot(db, root)
@@ -98,7 +87,7 @@ func (self *State2) Parse() (num uint64) {
 		}
 	}
 
-	target_num := GetTargetNum()
+	target_num := light_ref.Ref_inst.GetDelayedNum(zconfig.DefaultDelayNum())
 
 	i := 0
 	for ; (next_num <= target_num) && (i < 2000); i++ {

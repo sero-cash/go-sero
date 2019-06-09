@@ -3,6 +3,8 @@ package light
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-sero/zero/light/light_types"
@@ -21,7 +23,7 @@ type SRI struct {
 var SRI_Inst = SRI{}
 
 func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []light_types.Block, e error) {
-	stable_num := light_ref.Ref_inst.GetDelayedNum(12)
+	stable_num := light_ref.Ref_inst.GetDelayedNum(zconfig.DefaultDelayNum())
 	if start <= stable_num {
 		if stable_num-start+1 < count {
 			count = stable_num - start + 1
