@@ -215,50 +215,38 @@ func (self *Exchange) GetRecords(pkr keys.PKr, begin, end uint64) (records []Uxt
 }
 
 func (self *Exchange) GenTx(param TxParam) (txParam *light_types.GenTxParam, e error) {
-	var roots []keys.Uint256
-	uxtos := []Uxto{}
-	if len(param.Roots) > 0 {
-		roots = param.Roots
-		for _, root := range roots {
-
-			uxto, err := self.getUxto(root)
-			if err != nil {
-				e = err
-				return
-			}
-			uxtos = append(uxtos, uxto)
-		}
-	} else {
-		amounts := map[string]*big.Int{}
-		for _, each := range param.Receptions {
-			if amount, ok := amounts[each.Currency]; ok {
-				amount.Add(amount, each.Value)
-			} else {
-				amounts[each.Currency] = new(big.Int).Set(each.Value)
-			}
-		}
-		for currency, amount := range amounts {
-			if list, err := self.findUxtos(self.account.pk, currency, amount); err != nil {
-				e = err
-				return
-			} else {
-				uxtos = append(uxtos, list...)
-			}
-		}
+	uxtos, err := self.preGenTx(param)
+	if err != nil {
+		return nil, err
 	}
+
 	txParam, e = self.buildTxParam(uxtos, param.Receptions, param.Gas, param.GasPrice)
 	return
 }
 func (self *Exchange) GenTxWithSign(param TxParam) (*light_types.GTx, error) {
+	uxtos, err := self.preGenTx(param)
+	if err != nil {
+		return nil, err
+	}
+
+	gtx, err := self.genTx(uxtos, param.Receptions, param.Gas, param.GasPrice)
+	if err != nil {
+		log.Error("Exchange genTx", "error", err)
+		return nil, err
+	}
+	gtx.Hash = gtx.Tx.ToHash()
+	log.Info("Exchange genTx success")
+	return gtx, nil
+}
+
+func (self *Exchange) preGenTx(param TxParam) (uxtos []Uxto, err error) {
 	var roots []keys.Uint256
-	uxtos := []Uxto{}
 	if len(param.Roots) > 0 {
 		roots = param.Roots
 		for _, root := range roots {
-
 			uxto, err := self.getUxto(root)
 			if err != nil {
-				return nil, err
+				return uxtos, err
 			}
 			uxtos = append(uxtos, uxto)
 		}
@@ -278,21 +266,13 @@ func (self *Exchange) GenTxWithSign(param TxParam) (*light_types.GTx, error) {
 		}
 		for currency, amount := range amounts {
 			if list, err := self.findUxtos(self.account.pk, currency, amount); err != nil {
-				return nil, err
+				return uxtos, err
 			} else {
 				uxtos = append(uxtos, list...)
 			}
 		}
 	}
-
-	gtx, err := self.genTx(uxtos, param.Receptions, param.Gas, param.GasPrice)
-	if err != nil {
-		log.Error("Exchange genTx", "error", err)
-		return nil, err
-	}
-	gtx.Hash = gtx.Tx.ToHash()
-	log.Info("Exchange genTx success", "roots", roots)
-	return gtx, nil
+	return
 }
 
 //func (self *Exchange) CommitTx(gtx light_types.GTx) (err error) {
@@ -391,7 +371,7 @@ func (self *Exchange) buildTxParam(uxtos []Uxto, receptions []Reception, gas, ga
 
 	fee := new(big.Int).Mul(new(big.Int).SetUint64(gas), new(big.Int).SetUint64(gasPrice))
 	if amount, ok := amounts["SERO"]; !ok || amount.Cmp(fee) < 0 {
-		e = fmt.Errorf("SSI GenTx Error: not enough token")
+		e = fmt.Errorf("SSI GenTx Error: not enough")
 		return
 	} else {
 		amount.Sub(amount, fee)
@@ -475,12 +455,6 @@ func (self *Exchange) iteratorUxto(pkr keys.PKr, begin, end uint64, handler Hand
 		if num > end {
 			break
 		}
-
-		//var p keys.PKr
-		//copy(p[:], key[3:99])
-		//if p != pkr {
-		//	break
-		//}
 
 		value := iterator.Value()
 		roots := []keys.Uint256{}
@@ -711,12 +685,11 @@ func (self *Exchange) indexBlocks(uxtos map[PkrKey][]Uxto, nils []keys.Uint256) 
 	batch = self.db.NewBatch()
 	for _, Nil := range nils {
 		data, _ := self.db.Get(nilKey(Nil))
-		log.Info("Index del", "Nil", common.Bytes2Hex(Nil[:]), "Key", common.Bytes2Hex(data[:]))
 		if data != nil {
 			batch.Delete(data)
 			batch.Delete(nilKey(Nil))
-
 			self.usedFlag.Delete(common.Bytes2Hex(Nil[:]))
+			log.Info("Index del", "Nil", common.Bytes2Hex(Nil[:]), "Key", common.Bytes2Hex(data[:]))
 		}
 	}
 	batch.Put(lastBlockNumberKey, encodeNumber(lastBlockNumber))
