@@ -10,6 +10,7 @@ import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/types"
@@ -73,7 +74,7 @@ func (list UxtoList) Less(i, j int) bool {
 }
 
 type Reception struct {
-	Pkr      common.Address
+	Addr     common.Address
 	Currency string
 	Value    *big.Int
 }
@@ -155,7 +156,7 @@ func NewExchange(db *serodb.LDBDatabase, txPool *core.TxPool, accountManager *ac
 	AddJob("0/10 * * * * ?", exchange.fetchAndIndexUxto)
 
 	if autoMerge {
-		AddJob("0 0 0/6 * * ?", exchange.merge)
+		AddJob("0 0/5 * * * ?", exchange.merge)
 	}
 
 	log.Info("Init NewExchange success")
@@ -300,6 +301,11 @@ func (self *Exchange) preGenTx(param TxParam) (uxtos []Uxto, err error) {
 //	return self.commitTx(&gtx)
 //}
 
+func (self *Exchange) isPk(addr common.Address) bool {
+	byte32 := common.Hash{}
+	return bytes.Equal(byte32[:], addr[64:96])
+}
+
 func (self *Exchange) createPkr(pk *keys.Uint512, index uint64) keys.PKr {
 	r := keys.Uint256{}
 	copy(r[:], common.LeftPadBytes(encodeNumber(index), 32))
@@ -378,10 +384,18 @@ func (self *Exchange) buildTxParam(uxtos []Uxto, account *Account, receptions []
 		currency := strings.ToUpper(reception.Currency)
 		if amount, ok := amounts[currency]; ok && amount.Cmp(reception.Value) >= 0 {
 
-			Outs = append(Outs, light_types.GOut{PKr: *reception.Pkr.ToPKr(), Asset: assets.Asset{Tkn: &assets.Token{
-				Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
-				Value:    utils.U256(*reception.Value),
-			}}})
+			if self.isPk(reception.Addr) {
+				pkr := self.createPkr(reception.Addr.ToUint512(), 1)
+				Outs = append(Outs, light_types.GOut{PKr: pkr, Asset: assets.Asset{Tkn: &assets.Token{
+					Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
+					Value:    utils.U256(*reception.Value),
+				}}})
+			} else {
+				Outs = append(Outs, light_types.GOut{PKr: *reception.Addr.ToPKr(), Asset: assets.Asset{Tkn: &assets.Token{
+					Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
+					Value:    utils.U256(*reception.Value),
+				}}})
+			}
 
 			amount.Sub(amount, reception.Value)
 			if amount.Sign() == 0 {
@@ -566,7 +580,7 @@ func DecOuts(outs []light_types.Out, skr *keys.PKr) (douts []light_types.DOut) {
 		if out.State.OS.Out_O != nil {
 			dout.Asset = out.State.OS.Out_O.Asset.Clone()
 			dout.Memo = out.State.OS.Out_O.Memo
-			dout.Nil = out.Root
+			dout.Nil = cpt.GenTil(&sk, out.State.OS.RootCM)
 		} else {
 			key, flag := keys.FetchKey(&sk, &out.State.OS.Out_Z.RPK)
 			info_desc := cpt.InfoDesc{}
@@ -688,8 +702,9 @@ func (self *Exchange) indexBlocks(uxtos map[PkrKey][]Uxto, nils []keys.Uint256) 
 			batch.Put(pkKey, []byte{0})
 			// "NIL" + pk + tkt + root => "PK" + pk + currency + root
 			batch.Put(nilKey(uxto.Nil), pkKey)
+			batch.Put(nilKey(uxto.Root), pkKey)
 			roots = append(roots, uxto.Root)
-			log.Info("Index add", "Nil", common.Bytes2Hex(uxto.Nil[:]), "Key", common.Bytes2Hex(pkKey[:]))
+			log.Info("Index add","PK", base58.EncodeToString(key.account.pk[:]), "Nil", common.Bytes2Hex(uxto.Nil[:]), "Key", common.Bytes2Hex(pkKey[:]), "Value",uxto.Asset.Tkn.Value)
 		}
 
 		data, err := rlp.EncodeToBytes(roots)
@@ -710,11 +725,11 @@ func (self *Exchange) indexBlocks(uxtos map[PkrKey][]Uxto, nils []keys.Uint256) 
 	batch = self.db.NewBatch()
 	for _, Nil := range nils {
 		data, _ := self.db.Get(nilKey(Nil))
+		log.Info("Index del", "nil", common.Bytes2Hex(Nil[:]), "Key", common.Bytes2Hex(data[:]))
 		if data != nil {
 			batch.Delete(data)
 			batch.Delete(nilKey(Nil))
 			self.usedFlag.Delete(common.Bytes2Hex(Nil[:]))
-			log.Info("Index del", "Nil", common.Bytes2Hex(Nil[:]), "Key", common.Bytes2Hex(data[:]))
 		}
 	}
 	batch.Put(lastBlockNumberKey, encodeNumber(lastBlockNumber))
@@ -768,7 +783,7 @@ func (self *Exchange) merge() {
 			amount.Sub(amount, new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000)))
 			var pkr common.Address
 			copy(pkr[:], account.mainPkr[:])
-			gtx, err := self.genTx(uxtos, account, []Reception{{Value: amount, Currency: "SERO", Pkr: pkr}}, 25000, 1000000000)
+			gtx, err := self.genTx(uxtos, account, []Reception{{Value: amount, Currency: "SERO", Addr: pkr}}, 25000, 1000000000)
 			if err != nil {
 				log.Error("Exchange merge uxto", "error", err)
 				continue
