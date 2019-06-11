@@ -30,10 +30,6 @@ import (
 	"sync/atomic"
 )
 
-type ExchangeConfig struct {
-	autoMerge bool
-}
-
 type Account struct {
 	wallet  accounts.Wallet
 	pk      *keys.Uint512
@@ -107,10 +103,8 @@ type PkrKey struct {
 }
 
 type Exchange struct {
-	db     *serodb.LDBDatabase
-	txPool *core.TxPool
-	config ExchangeConfig
-	//pkAccounts  map[keys.Uint512]*PkAccount
+	db             *serodb.LDBDatabase
+	txPool         *core.TxPool
 	accountManager *accounts.Manager
 
 	accounts    map[keys.Uint512]*Account
@@ -125,7 +119,7 @@ type Exchange struct {
 	lastBlockNumber uint64
 }
 
-func NewExchange(db *serodb.LDBDatabase, txPool *core.TxPool, accountManager *accounts.Manager) (exchange *Exchange) {
+func NewExchange(db *serodb.LDBDatabase, txPool *core.TxPool, accountManager *accounts.Manager, autoMerge bool) (exchange *Exchange) {
 	exchange = &Exchange{
 		db:     db,
 		txPool: txPool,
@@ -160,7 +154,9 @@ func NewExchange(db *serodb.LDBDatabase, txPool *core.TxPool, accountManager *ac
 
 	AddJob("0/10 * * * * ?", exchange.fetchAndIndexUxto)
 
-	//AddJob("0 0/3 * * * ?", exchange.merge)
+	if autoMerge {
+		AddJob("0 0 0/6 * * ?", exchange.merge)
+	}
 
 	log.Info("Init NewExchange success")
 	return
@@ -756,13 +752,13 @@ func (self *Exchange) merge() {
 				break
 			}
 		}
-		if uxtos.Len() < 10 {
-			return
+		if uxtos.Len() <= 10 {
+			continue
 		}
 
 		sort.Sort(uxtos)
 
-		uxtos = uxtos[0 : uxtos.Len()-10]
+		uxtos = uxtos[0 : uxtos.Len()-8]
 
 		if uxtos.Len() > 1 {
 			amount := new(big.Int)
@@ -775,7 +771,7 @@ func (self *Exchange) merge() {
 			gtx, err := self.genTx(uxtos, account, []Reception{{Value: amount, Currency: "SERO", Pkr: pkr}}, 25000, 1000000000)
 			if err != nil {
 				log.Error("Exchange merge uxto", "error", err)
-				return
+				continue
 			}
 			self.commitTx(gtx)
 		}

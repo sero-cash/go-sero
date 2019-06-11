@@ -85,6 +85,8 @@ type Config struct {
 	NoPruning bool
 
 	MineMode  bool
+
+	StartExchange bool
 	AutoMerge bool
 
 	// Light client options

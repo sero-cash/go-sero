@@ -113,6 +113,7 @@ var (
 		utils.DeveloperPasswordFlag,
 		utils.AlphanetFlag,
 		//utils.RinkebyFlag,
+		utils.ExchangeFlag,
 		utils.DeveloperFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,

@@ -192,11 +192,13 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	sero.APIBackend.gpo = gasprice.NewOracle(sero.APIBackend, gpoParams)
 
 	//exchange
-	db, err := serodb.NewLDBDatabase(filepath.Join(ctx.ResolvePath("exchange")), config.DatabaseCache, config.DatabaseHandles)
-	if err != nil {
-		return nil, err
+	if config.StartExchange {
+		db, err := serodb.NewLDBDatabase(filepath.Join(ctx.ResolvePath("exchange")), config.DatabaseCache, config.DatabaseHandles)
+		if err != nil {
+			return nil, err
+		}
+		sero.exchange = exchange.NewExchange(db, sero.txPool, sero.accountManager, config.AutoMerge)
 	}
-	sero.exchange = exchange.NewExchange(db, sero.txPool, sero.accountManager)
 	return sero, nil
 }
 
