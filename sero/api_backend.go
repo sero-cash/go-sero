@@ -264,6 +264,13 @@ func (b *SeroAPIBackend) CommitTx(tx *light_types.GTx) error {
 	return b.sero.txPool.AddLocal(signedTx)
 }
 
+func (b *SeroAPIBackend) GetPkr(address common.Address, index uint64) (pkr keys.PKr, e error) {
+	if b.sero.exchange == nil {
+		e = errors.New("not start exchange")
+		return
+	}
+	return b.sero.exchange.GetPkr(address, index)
+}
 func (b *SeroAPIBackend) GetBalances(pkr common.Address) (balances map[string]*big.Int) {
 	if b.sero.exchange == nil {
 		return
