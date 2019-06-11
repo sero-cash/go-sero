@@ -88,6 +88,42 @@ func (b *bridge) NewAccount(call otto.FunctionCall) (response otto.Value) {
 	return ret
 }
 
+func (b *bridge) NewAccountWithMnemonic(call otto.FunctionCall) (response otto.Value) {
+	var (
+		password string
+		confirm  string
+		err      error
+	)
+	switch {
+	// No password was specified, prompt the user for it
+	case len(call.ArgumentList) == 0:
+		if password, err = b.prompter.PromptPassword("Passphrase: "); err != nil {
+			throwJSException(err.Error())
+		}
+		if confirm, err = b.prompter.PromptPassword("Repeat passphrase: "); err != nil {
+			throwJSException(err.Error())
+		}
+		if password != confirm {
+			throwJSException("passphrases don't match!")
+		}
+
+		// A single string password was specified, use that
+	case len(call.ArgumentList) == 1 && call.Argument(0).IsString():
+		password, _ = call.Argument(0).ToString()
+
+		// Otherwise fail with some error
+	default:
+		throwJSException("expected 0 or 1 string argument")
+	}
+
+	// Password acquired, execute the call and return
+	ret, err := call.Otto.Call("jeth.newAccountWithMnemonic", nil, password)
+	if err != nil {
+		throwJSException(err.Error())
+	}
+	return ret
+}
+
 // UnlockAccount is a wrapper around the personal.unlockAccount RPC method that
 // uses a non-echoing password prompt to acquire the passphrase and executes the
 // original RPC method (saved in jeth.unlockAccount) with it to actually execute
@@ -125,6 +161,37 @@ func (b *bridge) UnlockAccount(call otto.FunctionCall) (response otto.Value) {
 	}
 	// Send the request to the backend and return
 	val, err := call.Otto.Call("jeth.unlockAccount", nil, account, passwd, duration)
+	if err != nil {
+		throwJSException(err.Error())
+	}
+	return val
+}
+
+func (b *bridge) ExportMnemonic(call otto.FunctionCall) (response otto.Value) {
+	// Make sure we have an account specified to unlock
+	if !call.Argument(0).IsString() {
+		throwJSException("first argument must be the account to unlock")
+	}
+	account := call.Argument(0)
+
+	// If password is not given or is the null value, prompt the user for it
+	var passwd otto.Value
+
+	if call.Argument(1).IsUndefined() || call.Argument(1).IsNull() {
+		fmt.Fprintf(b.printer, "export account mnemonic %s\n", account)
+		if input, err := b.prompter.PromptPassword("Passphrase: "); err != nil {
+			throwJSException(err.Error())
+		} else {
+			passwd, _ = otto.ToValue(input)
+		}
+	} else {
+		if !call.Argument(1).IsString() {
+			throwJSException("password must be a string")
+		}
+		passwd = call.Argument(1)
+	}
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.exportMnemonic", nil, account, passwd)
 	if err != nil {
 		throwJSException(err.Error())
 	}

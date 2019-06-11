@@ -32,6 +32,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tyler-smith/go-bip39"
+
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/accounts"
@@ -356,6 +358,18 @@ func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
 	return account, nil
 }
 
+func (ks *KeyStore) NewAccountWithMnemonic(passphrase string) (string, accounts.Account, error) {
+	mnemonic, _, account, err := storeNewKeyWithMnemonic(ks.storage, passphrase)
+	if err != nil {
+		return "", accounts.Account{}, err
+	}
+	// Add the account to the cache immediately rather
+	// than waiting for file system notifications to pick it up.
+	ks.cache.add(account, false)
+	ks.refreshWallets()
+	return mnemonic, account, nil
+}
+
 // Export exports as a JSON key, encrypted with newPassphrase.
 func (ks *KeyStore) Export(a accounts.Account, passphrase, newPassphrase string) (keyJSON []byte, err error) {
 	_, key, err := ks.getDecryptedKey(a, passphrase)
@@ -369,6 +383,19 @@ func (ks *KeyStore) Export(a accounts.Account, passphrase, newPassphrase string)
 		N, P = StandardScryptN, StandardScryptP
 	}
 	return EncryptKey(key, newPassphrase, N, P)
+}
+
+func (ks *KeyStore) ExportMnemonic(a accounts.Account, passphrase string) (string, error) {
+	_, key, err := ks.getDecryptedKey(a, passphrase)
+	if err != nil {
+		return "", err
+	}
+	privkey := crypto.FromECDSA(key.PrivateKey)
+	mnemonic, err := bip39.NewMnemonic(privkey)
+	if err != nil {
+		return "", err
+	}
+	return mnemonic, nil
 }
 
 // Import stores the given encrypted JSON key into the key directory.
@@ -390,6 +417,20 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (acco
 		return accounts.Account{}, fmt.Errorf("account already exists")
 	}
 	return ks.importKey(key, passphrase)
+}
+
+func (ks *KeyStore) ImportTk(tk address.AccountAddress) (accounts.Account, error) {
+	key := newKeyFromTk(tk.ToUint512())
+	if ks.cache.hasAddress(key.Address) {
+		return accounts.Account{}, fmt.Errorf("account already exists")
+	}
+	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.Address))}}
+	if err := ks.storage.StoreKey(a.URL.Path, key, ""); err != nil {
+		return accounts.Account{}, err
+	}
+	ks.cache.add(a, true)
+	ks.refreshWallets()
+	return a, nil
 }
 
 func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, error) {

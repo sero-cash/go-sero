@@ -17,7 +17,6 @@
 package keystore
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"fmt"
 	"io"
@@ -26,7 +25,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/keys"
+
 	"github.com/sero-cash/go-sero/common/address"
+	bip39 "github.com/tyler-smith/go-bip39"
 
 	"github.com/pborman/uuid"
 	"github.com/sero-cash/go-sero/accounts"
@@ -90,24 +92,18 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 	return key
 }
 
-// NewKeyForDirectICAP generates a key whose address fits into < 155 bits so it can fit
-// into the Direct ICAP spec. for simplicity and easier compatibility with other libs, we
-// retry until the first byte is 0.
-func NewKeyForDirectICAP(rand io.Reader) *Key {
-	randBytes := make([]byte, 64)
-	_, err := rand.Read(randBytes)
-	if err != nil {
-		panic("key generation: could not read from random source: " + err.Error())
+func newKeyFromTk(tk *keys.Uint512) *Key {
+	id := uuid.NewRandom()
+	tkaddress := address.AccountAddress{}
+	copy(tkaddress[:], tk[:])
+	pk := keys.Tk2Pk(tk)
+	address := address.AccountAddress{}
+	copy(address[:], pk[:])
+	key := &Key{
+		Id:      id,
+		Address: address,
+		Tk:      tkaddress,
 	}
-	reader := bytes.NewReader(randBytes)
-	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), reader)
-	if err != nil {
-		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
-	}
-	key := newKeyFromECDSA(privateKeyECDSA)
-	//if !strings.HasPrefix(key.Data.Hex(), "0x00") {
-	//	return NewKeyForDirectICAP(rand)
-	//}
 	return key
 }
 
@@ -130,6 +126,34 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Accou
 		return nil, a, err
 	}
 	return key, a, err
+}
+
+func storeNewKeyWithMnemonic(ks keyStore, auth string) (string, *Key, accounts.Account, error) {
+
+	entropy, err := bip39.NewEntropy(256)
+	if err != nil {
+		return "", nil, accounts.Account{}, err
+	}
+
+	mnemonic, err := bip39.NewMnemonic(entropy)
+	if err != nil {
+		return "", nil, accounts.Account{}, err
+	}
+
+	//seed := bip39.NewSeed(mnemonic, "")
+
+	privateKeyECDSA, err := crypto.ToECDSA(entropy)
+	if err != nil {
+		return "", nil, accounts.Account{}, err
+	}
+
+	key := newKeyFromECDSA(privateKeyECDSA)
+	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}}
+	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
+		zeroKey(key.PrivateKey)
+		return "", nil, a, err
+	}
+	return mnemonic, key, a, err
 }
 
 func writeKeyFile(file string, content []byte) error {

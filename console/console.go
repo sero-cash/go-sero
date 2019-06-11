@@ -181,13 +181,21 @@ func (c *Console) init(preload []string) error {
 			if _, err = c.jsre.Run(`jeth.newAccount = personal.newAccount;`); err != nil {
 				return fmt.Errorf("personal.newAccount: %v", err)
 			}
+			if _, err = c.jsre.Run(`jeth.newAccountWithMnemonic = personal.newAccountWithMnemonic;`); err != nil {
+				return fmt.Errorf("personal.newAccountWithMnemonic: %v", err)
+			}
 			if _, err = c.jsre.Run(`jeth.sign = personal.sign;`); err != nil {
 				return fmt.Errorf("personal.sign: %v", err)
+			}
+			if _, err = c.jsre.Run(`jeth.exportMnemonic = personal.exportMnemonic;`); err != nil {
+				return fmt.Errorf("personal.exportMnemonic: %v", err)
 			}
 
 			obj.Set("unlockAccount", bridge.UnlockAccount)
 			obj.Set("newAccount", bridge.NewAccount)
+			obj.Set("newAccountWithMnemonic", bridge.NewAccountWithMnemonic)
 			obj.Set("sign", bridge.Sign)
+			obj.Set("exportMnemonic", bridge.ExportMnemonic)
 		}
 
 		sero, err := c.jsre.Get("sero")

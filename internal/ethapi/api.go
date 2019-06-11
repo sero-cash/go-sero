@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tyler-smith/go-bip39"
+
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/zero/light/light_types"
@@ -360,6 +362,26 @@ func (s *PrivateAccountAPI) NewAccount(password string) (address.AccountAddress,
 	return acc.Address, nil
 }
 
+// NewAccount will create a new account and returns the mnemonic 、address for the new account.
+func (s *PrivateAccountAPI) NewAccountWithMnemonic(password string) (map[string]string, error) {
+	mnemonic, acc, err := fetchKeystore(s.am).NewAccountWithMnemonic(password)
+	if err != nil {
+		return nil, err
+	}
+
+	if lst := lstate.CurrentLState(); lst != nil {
+		lstate.CurrentLState().AddAccount(acc.Tk.ToUint512())
+	}
+
+	if zconfig.Is_Dev() {
+		fetchKeystore(s.am).TimedUnlock(acc, password, 0)
+	}
+	result := map[string]string{}
+	result["mnemonic"] = mnemonic
+	result["address"] = acc.Address.Base58()
+	return result, nil
+}
+
 // fetchKeystore retrives the encrypted keystore from the account manager.
 func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
@@ -369,6 +391,31 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 // encrypting it with the passphrase.
 func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (address.AccountAddress, error) {
 	key, err := crypto.HexToECDSA(privkey)
+	if err != nil {
+		return address.AccountAddress{}, err
+	}
+	acc, err := fetchKeystore(s.am).ImportECDSA(key, password)
+	return acc.Address, err
+}
+
+func (s *PrivateAccountAPI) ImportTk(tk address.AccountAddress) (address.AccountAddress, error) {
+	acc, err := fetchKeystore(s.am).ImportTk(tk)
+	return acc.Address, err
+}
+
+func (s *PrivateAccountAPI) ImportMnemonic(mnemonic string, password string) (address.AccountAddress, error) {
+	_, err := bip39.MnemonicToByteArray(mnemonic)
+	if err != nil {
+		return address.AccountAddress{}, err
+	}
+	seed, err := bip39.EntropyFromMnemonic(mnemonic)
+	if err != nil {
+		return address.AccountAddress{}, err
+	}
+	if len(seed) != 32 {
+		return address.AccountAddress{}, errors.New("EntropyFromMnemonic error seed not 256bits")
+	}
+	key, err := crypto.ToECDSA(seed[:32])
 	if err != nil {
 		return address.AccountAddress{}, err
 	}
@@ -394,6 +441,10 @@ func (s *PrivateAccountAPI) UnlockAccount(addr address.AccountAddress, password 
 	}
 	err := fetchKeystore(s.am).TimedUnlock(accounts.Account{Address: addr}, password, d)
 	return err == nil, err
+}
+
+func (s *PrivateAccountAPI) ExportMnemonic(addr address.AccountAddress, password string) (string, error) {
+	return fetchKeystore(s.am).ExportMnemonic(accounts.Account{Address: addr}, password)
 }
 
 // LockAccount will lock the account associated with the given address when it's unlocked.
