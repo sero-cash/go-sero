@@ -100,7 +100,7 @@ func (ks keyStorePassphrase) GetKey(addr address.AccountAddress, filename, auth 
 
 // StoreKey generates a key, encrypts with 'auth' and stores in the given directory
 func StoreKey(dir, auth string, scryptN, scryptP int) (address.AccountAddress, error) {
-	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP}, rand.Reader, auth)
+	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP}, rand.Reader, auth, 0)
 	return a.Address, err
 }
 
@@ -173,6 +173,7 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 		cryptoStruct,
 		key.Id.String(),
 		version,
+		key.At,
 	}
 	return json.Marshal(encryptedKeyJSONV1)
 }
@@ -221,6 +222,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		Address:    crypto.PrivkeyToAddress(key),
 		Tk:         crypto.PrivkeyToTk(key),
 		PrivateKey: key,
+		At:         k.At,
 	}, nil
 }
 

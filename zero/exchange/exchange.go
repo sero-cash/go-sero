@@ -5,6 +5,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
+	"sort"
+	"strings"
+	"sync"
+	"sync/atomic"
+
 	"github.com/robfig/cron"
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
@@ -24,11 +30,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"math/big"
-	"sort"
-	"strings"
-	"sync"
-	"sync/atomic"
 )
 
 type Account struct {
@@ -190,7 +191,7 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 	copy(account.skr[:], account.tk[:])
 	account.mainPkr = self.createPkr(account.pk, 1)
 	self.accounts[*account.pk] = &account
-	self.numbers.Store(*account.pk, uint64(0))
+	self.numbers.Store(*account.pk, w.Accounts()[0].At)
 	log.Info("PK", "address", w.Accounts()[0].Address)
 }
 
@@ -958,7 +959,7 @@ func decodeNumber(data []byte) uint64 {
 	return binary.BigEndian.Uint64(data)
 }
 
-func AddJob(spec string, run RunFunc) (*cron.Cron) {
+func AddJob(spec string, run RunFunc) *cron.Cron {
 	c := cron.New()
 	c.AddJob(spec, &RunJob{run: run})
 	c.Start()

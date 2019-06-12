@@ -49,6 +49,8 @@ type Key struct {
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
 	PrivateKey *ecdsa.PrivateKey
+
+	At uint64
 }
 
 type keyStore interface {
@@ -66,6 +68,7 @@ type encryptedKeyJSONV1 struct {
 	Crypto  cryptoJSON `json:"crypto"`
 	Id      string     `json:"id"`
 	Version int        `json:"version"`
+	At      uint64     `json:"at"`
 }
 
 type cryptoJSON struct {
@@ -81,13 +84,14 @@ type cipherparamsJSON struct {
 	IV string `json:"iv"`
 }
 
-func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
+func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, at uint64) *Key {
 	id := uuid.NewRandom()
 	key := &Key{
 		Id:         id,
 		Address:    crypto.PrivkeyToAddress(privateKeyECDSA),
 		Tk:         crypto.PrivkeyToTk(privateKeyECDSA),
 		PrivateKey: privateKeyECDSA,
+		At:         at,
 	}
 	return key
 }
@@ -107,20 +111,20 @@ func newKeyFromTk(tk *keys.Uint512) *Key {
 	return key
 }
 
-func newKey(rand io.Reader) (*Key, error) {
+func newKey(rand io.Reader, at uint64) (*Key, error) {
 	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), rand)
 	if err != nil {
 		return nil, err
 	}
-	return newKeyFromECDSA(privateKeyECDSA), nil
+	return newKeyFromECDSA(privateKeyECDSA, at), nil
 }
 
-func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
-	key, err := newKey(rand)
+func storeNewKey(ks keyStore, rand io.Reader, auth string, at uint64) (*Key, accounts.Account, error) {
+	key, err := newKey(rand, at)
 	if err != nil {
 		return nil, accounts.Account{}, err
 	}
-	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}}
+	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}, At: at}
 	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
 		zeroKey(key.PrivateKey)
 		return nil, a, err
@@ -128,7 +132,7 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Accou
 	return key, a, err
 }
 
-func storeNewKeyWithMnemonic(ks keyStore, auth string) (string, *Key, accounts.Account, error) {
+func storeNewKeyWithMnemonic(ks keyStore, auth string, at uint64) (string, *Key, accounts.Account, error) {
 
 	entropy, err := bip39.NewEntropy(256)
 	if err != nil {
@@ -147,7 +151,7 @@ func storeNewKeyWithMnemonic(ks keyStore, auth string) (string, *Key, accounts.A
 		return "", nil, accounts.Account{}, err
 	}
 
-	key := newKeyFromECDSA(privateKeyECDSA)
+	key := newKeyFromECDSA(privateKeyECDSA, at)
 	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}}
 	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
 		zeroKey(key.PrivateKey)

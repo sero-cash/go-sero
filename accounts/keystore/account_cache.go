@@ -279,6 +279,7 @@ func (ac *accountCache) scanAccounts() error {
 		key struct {
 			Address string `json:"address"`
 			Tk      string `json:"tk"`
+			At      uint64 `json:"at"`
 		}
 	)
 	readAccount := func(path string) *accounts.Account {
@@ -294,13 +295,14 @@ func (ac *accountCache) scanAccounts() error {
 		err = json.NewDecoder(buf).Decode(&key)
 		addr := address.Base58ToAccount(key.Address)
 		tk := address.Base58ToAccount(key.Tk)
+		at := key.At
 		switch {
 		case err != nil:
 			log.Debug("Failed to decode keystore key", "path", path, "err", err)
 		case (addr == address.AccountAddress{}):
 			log.Debug("Failed to decode keystore key", "path", path, "err", "missing or zero address")
 		default:
-			return &accounts.Account{Address: addr, Tk: tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: path}}
+			return &accounts.Account{Address: addr, Tk: tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: path}, At: at}
 		}
 		return nil
 	}

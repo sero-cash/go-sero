@@ -346,8 +346,8 @@ func (ks *KeyStore) expire(addr address.AccountAddress, u *unlocked, timeout tim
 
 // NewAccount generates a new key and stores it into the key directory,
 // encrypting it with the passphrase.
-func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
-	_, account, err := storeNewKey(ks.storage, crand.Reader, passphrase)
+func (ks *KeyStore) NewAccount(passphrase string, at uint64) (accounts.Account, error) {
+	_, account, err := storeNewKey(ks.storage, crand.Reader, passphrase, at)
 	if err != nil {
 		return accounts.Account{}, err
 	}
@@ -358,8 +358,8 @@ func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
 	return account, nil
 }
 
-func (ks *KeyStore) NewAccountWithMnemonic(passphrase string) (string, accounts.Account, error) {
-	mnemonic, _, account, err := storeNewKeyWithMnemonic(ks.storage, passphrase)
+func (ks *KeyStore) NewAccountWithMnemonic(passphrase string, at uint64) (string, accounts.Account, error) {
+	mnemonic, _, account, err := storeNewKeyWithMnemonic(ks.storage, passphrase, at)
 	if err != nil {
 		return "", accounts.Account{}, err
 	}
@@ -412,7 +412,7 @@ func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (ac
 
 // ImportECDSA stores the given key into the key directory, encrypting it with the passphrase.
 func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
-	key := newKeyFromECDSA(priv)
+	key := newKeyFromECDSA(priv, 0)
 	if ks.cache.hasAddress(key.Address) {
 		return accounts.Account{}, fmt.Errorf("account already exists")
 	}
