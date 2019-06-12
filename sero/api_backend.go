@@ -19,6 +19,7 @@ package sero
 import (
 	"context"
 	"errors"
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/zero/exchange"
@@ -295,10 +296,17 @@ func (b *SeroAPIBackend) GenTxWithSign(param exchange.TxParam) (gtx *light_types
 	return b.sero.exchange.GenTxWithSign(param)
 }
 
-func (b *SeroAPIBackend) GetRecords(pkr keys.PKr, begin, end uint64) (records []exchange.Utxo, err error) {
+
+func (b *SeroAPIBackend) GetRecords(address hexutil.Bytes, begin, end uint64) (records []exchange.Utxo, err error) {
 	if b.sero.exchange == nil {
 		err = errors.New("not start exchange")
 		return
 	}
-	return b.sero.exchange.GetRecords(pkr, begin, end)
+	pkr := keys.PKr{}
+	copy(pkr[:], address)
+	utxos, err := b.sero.exchange.GetRecords(pkr, begin, end)
+	if err != nil {
+
+	}
+	return utxos, err
 }

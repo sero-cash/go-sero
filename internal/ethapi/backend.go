@@ -19,6 +19,7 @@ package ethapi
 
 import (
 	"context"
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/zero/exchange"
@@ -89,7 +90,7 @@ type Backend interface {
 	GetBalances(address keys.Uint512) (balances map[string]*big.Int)
 	GenTx(param exchange.TxParam) (*light_types.GenTxParam, error)
 	GenTxWithSign(param exchange.TxParam) (*light_types.GTx, error)
-	GetRecords(address keys.PKr, begin, end uint64) (records []exchange.Utxo, err error)
+	GetRecords(address hexutil.Bytes, begin, end uint64) (records []exchange.Utxo, err error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
