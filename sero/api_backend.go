@@ -50,7 +50,7 @@ import (
 	"github.com/sero-cash/go-sero/serodb"
 )
 
-// SeroAPIBackend implements seroapi.Backend for full nodes
+// SeroAPIBackend implements ethapi.Backend for full nodes
 type SeroAPIBackend struct {
 	sero *Sero
 	gpo  *gasprice.Oracle

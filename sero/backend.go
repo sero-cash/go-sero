@@ -28,7 +28,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/sero-cash/go-sero/internal/seroapi"
+	"github.com/sero-cash/go-sero/internal/ethapi"
 	"github.com/sero-cash/go-sero/zero/exchange"
 
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
@@ -100,7 +100,7 @@ type Sero struct {
 	serobase address.AccountAddress
 
 	networkID     uint64
-	netRPCService *seroapi.PublicNetAPI
+	netRPCService *ethapi.PublicNetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (s.g. gas price and serobase)
 }
@@ -261,7 +261,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chai
 // APIs return the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Sero) APIs() []rpc.API {
-	apis := seroapi.GetAPIs(s.APIBackend)
+	apis := ethapi.GetAPIs(s.APIBackend)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
@@ -413,7 +413,7 @@ func (s *Sero) Start(srvr *p2p.Server) error {
 	s.startBloomHandlers()
 
 	// Start the RPC service
-	s.netRPCService = seroapi.NewPublicNetAPI(srvr, s.NetVersion())
+	s.netRPCService = ethapi.NewPublicNetAPI(srvr, s.NetVersion())
 
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers

@@ -1,4 +1,4 @@
-package seroapi
+package ethapi
 
 import (
 	"context"

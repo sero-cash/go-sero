@@ -102,7 +102,7 @@ type Wallet interface {
 
 	AddressUnlocked(account Account) (bool, error)
 
-	//GetSeed() (*address.Seed, error)
+	GetSeed() (*address.Seed, error)
 }
 
 // Backend is a "wallet provider" that may contain a batch of accounts they can

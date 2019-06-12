@@ -2791,12 +2791,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             if (isStrictAddress(address)) {
                 return address;
             }
-
-            if (/^[0-9a-f]{40}$/.test(address)) {
-                return '0x' + address;
-            }
-
-            return '0x' + padLeft(toHex(address).substr(2), 40);
         };
 
         /**
@@ -2918,6 +2912,35 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return String.fromCharCode.apply(String, array);
         }
 
+
+        var addressToHex = function (addr) {
+            if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addr)) {
+                bytes = base58ToBytes(addr)
+                if (bytes.length !== 96 && bytes.length !=64) {
+                    throw new Error("not a public address or collection address")
+                }
+                return bytesToHex(bytes)
+
+            }else{
+                throw new Error("not base58 string")
+            }
+        };
+
+        var base58ToHex = function (value) {
+            if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(value)) {
+                bytes = base58ToBytes(value)
+                return bytesToHex(bytes)
+            }else{
+                throw new Error("not base58 string")
+            }
+        };
+
+        var hexToBase58 = function (value) {
+            b=hexToBytes(value)
+            return bytesToBase58(b)
+        };
+
+
         module.exports = {
             padLeft: padLeft,
             padRight: padRight,
@@ -2957,6 +2980,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             bytesToBase58: bytesToBase58,
             base58ToBytes: base58ToBytes,
             bytesToString: bytesToString,
+            addressToHex:addressToHex,
+            base58ToHex:base58ToHex,
+            hexToBase58:hexToBase58,
         };
 
     },{"./base58":17,"./sha3.js":20,"bignumber.js":"bignumber.js","utf8":85}],22:[function(require,module,exports){
@@ -3065,6 +3091,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         Web3.prototype.toChecksumAddress = utils.toChecksumAddress;
         Web3.prototype.padLeft = utils.padLeft;
         Web3.prototype.padRight = utils.padRight;
+        Web3.prototype.addressToHex = utils.addressToHex;
+        Web3.prototype.base58ToHex = utils.base58ToHex;
+        Web3.prototype.hexToBase58 = utils.hexToBase58;
 
 
         Web3.prototype.sha3 = function(string, options) {

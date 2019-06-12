@@ -35,7 +35,7 @@ import (
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/internal/seroapi"
+	"github.com/sero-cash/go-sero/internal/ethapi"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/miner"
 	"github.com/sero-cash/go-sero/params"
@@ -385,7 +385,7 @@ func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]*BadBlockArgs, 
 		} else {
 			results[i].RLP = fmt.Sprintf("0x%x", rlpBytes)
 		}
-		if results[i].Block, err = seroapi.RPCMarshalBlock(block, true, true); err != nil {
+		if results[i].Block, err = ethapi.RPCMarshalBlock(block, true, true); err != nil {
 			results[i].Block = map[string]interface{}{"error": err.Error()}
 		}
 	}

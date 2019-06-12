@@ -690,11 +690,11 @@ web3._extend({
 `
 const Exchange_JS = `
 web3._extend({
-	property: 'ssi',
+	property: 'exchange',
 	methods: [
 		new web3._extend.Method({
 			name: 'getPkr',
-			call: 'exchange_getPkr,
+			call: 'exchange_getPkr',
 			params: 2,
             inputFormatter: [
 				null,
@@ -718,7 +718,7 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'getRecords',
-			call: 'ssi_getRecords,
+			call: 'ssi_getRecords',
 			params: 3,
             inputFormatter: [
 				null,
