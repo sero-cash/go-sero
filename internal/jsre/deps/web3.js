@@ -5959,7 +5959,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         "use strict";
 
         var Method = require('../method');
-        var formatters = require('../formatters');
 
         function Exchange(web3) {
             this._requestManager = web3._requestManager;
@@ -5969,11 +5968,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             methods().forEach(function(method) {
                 method.attachToObject(self);
                 method.setRequestManager(self._requestManager);
-            });
-
-            properties().forEach(function(p) {
-                p.attachToObject(self);
-                p.setRequestManager(self._requestManager);
             });
         }
 
@@ -6020,7 +6014,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         module.exports = Exchange;
 
-    },{"../formatters":31,"../method":37}],40:[function(require,module,exports){
+    },{"../method":37}],40:[function(require,module,exports){
         /*
     This file is part of web3.js.
 
