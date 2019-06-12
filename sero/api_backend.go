@@ -294,7 +294,7 @@ func (b *SeroAPIBackend) GenTxWithSign(param exchange.TxParam) (gtx *light_types
 	return b.sero.exchange.GenTxWithSign(param)
 }
 
-func (b *SeroAPIBackend) GetRecords(pkr keys.PKr, begin, end uint64) (records []exchange.Uxto, err error) {
+func (b *SeroAPIBackend) GetRecords(pkr keys.PKr, begin, end uint64) (records []exchange.Utxo, err error) {
 	if b.sero.exchange == nil {
 		err = errors.New("not start exchange")
 		return

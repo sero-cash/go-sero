@@ -841,8 +841,10 @@ func (s *PublicBlockChainAPI) GetPkr(address keys.Uint512, index uint64) (pkr ke
 	return s.b.GetPkr(address, index)
 }
 
-func (s *PublicBlockChainAPI) GetBalances(address keys.PKr) (balances map[string]*big.Int) {
-	return s.b.GetBalances(address)
+func (s *PublicBlockChainAPI) GetBalances(address hexutil.Bytes) (balances map[string]*big.Int) {
+	var pkr keys.PKr
+	copy(pkr[:], address[:])
+	return s.b.GetBalances(pkr)
 }
 
 func (s *PublicBlockChainAPI) GenTx(param exchange.TxParam) (*light_types.GenTxParam, error) {
@@ -854,7 +856,7 @@ func (s *PublicBlockChainAPI) GenTxWithSign(param exchange.TxParam) (*light_type
 	return tx, e
 }
 
-func (s *PublicBlockChainAPI) GetRecords(address common.Address, begin, end uint64) (records []exchange.Uxto, err error) {
+func (s *PublicBlockChainAPI) GetRecords(address common.Address, begin, end uint64) (records []exchange.Utxo, err error) {
 	var pkr keys.PKr
 	copy(pkr[:], address[:])
 	return s.b.GetRecords(pkr, begin, end)
