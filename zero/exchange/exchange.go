@@ -119,9 +119,8 @@ type Exchange struct {
 	sli light.SLI
 
 	usedFlag sync.Map
-	inits    sync.Map
+	//inits    sync.Map
 
-	jobs []FetchJob
 
 	//numbers map[keys.Uint512]uint64
 	numbers sync.Map
@@ -170,12 +169,12 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 
 	exchange.pkrAccounts = sync.Map{}
 	exchange.usedFlag = sync.Map{}
-	exchange.inits = sync.Map{}
+	//exchange.inits = sync.Map{}
 
 	AddJob("0/10 * * * * ?", exchange.fetchBlockInfo)
 
 	if autoMerge {
-		AddJob("0 0/1 * * * ?", exchange.merge)
+		AddJob("0 0 0/6 * * ?", exchange.merge)
 	}
 
 	go exchange.updateAccount()
@@ -262,21 +261,6 @@ func (self *Exchange) GetBalances(pk keys.Uint512) (balances map[string]*big.Int
 		}
 	}
 	return
-
-	//pk := pkr.ToUint512()
-	//if account, ok := self.accounts[pk]; ok {
-	//
-	//} else {
-	//	if _, ok := self.inits.LoadOrStore(pkr, 1); !ok {
-	//		self.initAccount(pkr)
-	//		self.inits.Delete(pkr)
-	//	}
-	//	if value, ok := self.pkrAccounts.Load(pkr); ok {
-	//		return value.(*PkrAccount).balances
-	//	}
-	//}
-
-	//return map[string]*big.Int{}
 }
 
 func (self *Exchange) GetRecords(pkr keys.PKr, begin, end uint64) (records []Utxo, err error) {
@@ -692,8 +676,8 @@ func (self *Exchange) fetchBlockInfo() {
 			if self.fetchAndIndexUtxo(num, pks) < 1000 {
 				break
 			}
-			log.Info("Exchange indexed", "blockNumber", num)
 			num += 1000
+			log.Info("Exchange indexed", "blockNumber", num)
 		}
 	}
 }

@@ -291,9 +291,14 @@ var (
 		Value: runtime.NumCPU(),
 	}
 
-	ExchangeFlag = cli.StringFlag{
+	ExchangeFlag = cli.BoolFlag{
 		Name:  "exchange",
 		Usage: "start exchange",
+	}
+
+	AutoMergeFlag = cli.BoolFlag{
+		Name:  "autoMerge",
+		Usage: "autoMerge outs",
 	}
 
 	// Miner settings
@@ -1088,8 +1093,8 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 
 	if ctx.GlobalIsSet(ExchangeFlag.Name) {
 		cfg.StartExchange = true
-		str := ctx.GlobalString(ExchangeFlag.Name)
-		if strings.Contains(str, "autoMerge") {
+
+		if ctx.GlobalIsSet(AutoMergeFlag.Name) {
 			cfg.AutoMerge = true
 		}
 	}

@@ -114,6 +114,7 @@ var (
 		utils.AlphanetFlag,
 		//utils.RinkebyFlag,
 		utils.ExchangeFlag,
+		utils.AutoMergeFlag,
 		utils.DeveloperFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
