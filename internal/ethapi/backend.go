@@ -88,7 +88,7 @@ type Backend interface {
 	GetBalances(address keys.PKr) (balances map[string]*big.Int)
 	GenTx(param exchange.TxParam) (*light_types.GenTxParam, error)
 	GenTxWithSign(param exchange.TxParam) (*light_types.GTx, error)
-	GetRecords(pkr keys.PKr, begin, end uint64) (records []exchange.Utxo, err error)
+	GetRecords(address keys.PKr, begin, end uint64) (records []exchange.Utxo, err error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

@@ -856,9 +856,7 @@ func (s *PublicBlockChainAPI) GenTxWithSign(param exchange.TxParam) (*light_type
 	return tx, e
 }
 
-func (s *PublicBlockChainAPI) GetRecords(address common.Address, begin, end uint64) (records []exchange.Utxo, err error) {
-	var pkr keys.PKr
-	copy(pkr[:], address[:])
+func (s *PublicBlockChainAPI) GetRecords(pkr keys.PKr, begin, end uint64) (records []exchange.Utxo, err error) {
 	return s.b.GetRecords(pkr, begin, end)
 }
 
