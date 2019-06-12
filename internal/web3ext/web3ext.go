@@ -695,11 +695,8 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getPkr',
 			call: 'exchange_getPkr',
-			params: 2,
-            inputFormatter: [
-				null,
-				web3._extend.utils.toHex
-			]
+			params: 2
+           
 		}),
 		new web3._extend.Method({
 			name: 'getBalances',
@@ -708,7 +705,7 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'genTx',
-			call: 'ssi_genTx',
+			call: 'exchange_genTx',
 			params: 1
 		}),
 		new web3._extend.Method({
@@ -718,13 +715,9 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'getRecords',
-			call: 'ssi_getRecords',
-			params: 3,
-            inputFormatter: [
-				null,
-				web3._extend.utils.toHex,
-                web3._extend.utils.toHex
-			]
+			call: 'exchange_getRecords',
+			params: 3
+            
 		})
 	]
 });
