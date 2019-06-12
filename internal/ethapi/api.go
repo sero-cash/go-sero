@@ -837,11 +837,11 @@ func (s *PublicBlockChainAPI) GetBlockInfo(ctx context.Context, start hexutil.Ui
 	return block, err
 }
 
-func (s *PublicBlockChainAPI) GetPkr(address common.Address, index uint64) (pkr keys.PKr, e error) {
+func (s *PublicBlockChainAPI) GetPkr(address keys.Uint512, index uint64) (pkr keys.PKr, e error) {
 	return s.b.GetPkr(address, index)
 }
 
-func (s *PublicBlockChainAPI) GetBalances(address common.Address) (balances map[string]*big.Int) {
+func (s *PublicBlockChainAPI) GetBalances(address keys.PKr) (balances map[string]*big.Int) {
 	return s.b.GetBalances(address)
 }
 

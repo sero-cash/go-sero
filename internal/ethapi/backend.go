@@ -84,8 +84,8 @@ type Backend interface {
 	GetAnchor(roots []keys.Uint256) ([]light_types.Witness, error)
 	CommitTx(tx *light_types.GTx) error
 
-	GetPkr(address common.Address, index uint64) (keys.PKr, error)
-	GetBalances(address common.Address) (balances map[string]*big.Int)
+	GetPkr(address keys.Uint512, index uint64) (keys.PKr, error)
+	GetBalances(address keys.PKr) (balances map[string]*big.Int)
 	GenTx(param exchange.TxParam) (*light_types.GenTxParam, error)
 	GenTxWithSign(param exchange.TxParam) (*light_types.GTx, error)
 	GetRecords(pkr keys.PKr, begin, end uint64) (records []exchange.Uxto, err error)
