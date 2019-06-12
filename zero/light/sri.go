@@ -57,7 +57,6 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []light_types
 							},
 						}
 						block.Outs=append(block.Outs,out)
-						return
 					}
 				}
 				blocks = append(blocks, block)

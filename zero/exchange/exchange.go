@@ -10,7 +10,6 @@ import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/types"
@@ -192,7 +191,7 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 	copy(account.skr[:], account.tk[:])
 	account.mainPkr = self.createPkr(account.pk, 1)
 	self.accounts[*account.pk] = &account
-	self.numbers.Store(*account.pk, uint64(1))
+	self.numbers.Store(*account.pk, uint64(0))
 	log.Info("PK", "address", w.Accounts()[0].Address)
 }
 
@@ -689,15 +688,12 @@ func (self *Exchange) fetchBlockInfo() {
 	})
 
 	for num, pks := range indexs {
-		list := []string{}
-		for _, pk := range pks {
-			list = append(list, base58.EncodeToString(pk[:]))
-		}
 		for {
-			log.Info("Exchange fetchAndIndexUtxo", "num", num, "pks", list)
 			if self.fetchAndIndexUtxo(num, pks) < 1000 {
 				break
 			}
+			log.Info("Exchange indexed", "blockNumber", num)
+			num += 1000
 		}
 	}
 }
@@ -811,7 +807,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[keys.Uint512]
 				ops[common.Bytes2Hex(rootkey)] = common.Bytes2Hex(pkKey)
 
 				roots = append(roots, utxo.Root)
-				log.Info("Index add", "PK", base58.EncodeToString(pk[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "Key", common.Bytes2Hex(pkKey[:]), "Value", utxo.Asset.Tkn.Value)
+				//log.Info("Index add", "PK", base58.EncodeToString(pk[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "Key", common.Bytes2Hex(pkKey[:]), "Value", utxo.Asset.Tkn.Value)
 			}
 
 			data, err := rlp.EncodeToBytes(roots)
@@ -845,13 +841,13 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[keys.Uint512]
 		if value, ok := ops[hex]; ok {
 			delete(ops, hex)
 			delete(ops, value)
-			log.Info("Index del", "nil", common.Bytes2Hex(Nil[:]), "key", value)
+			//log.Info("Index del", "nil", common.Bytes2Hex(Nil[:]), "key", value)
 		} else {
 			data, _ := self.db.Get(key)
 			if data != nil {
 				batch.Delete(data)
 				batch.Delete(nilKey(Nil))
-				log.Info("Index del", "nil", common.Bytes2Hex(Nil[:]), "key", common.Bytes2Hex(data))
+				//log.Info("Index del", "nil", common.Bytes2Hex(Nil[:]), "key", common.Bytes2Hex(data))
 			}
 		}
 		self.usedFlag.Delete(common.Bytes2Hex(Nil[:]))
