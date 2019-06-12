@@ -272,11 +272,11 @@ func (b *SeroAPIBackend) GetPkr(address keys.Uint512, index uint64) (pkr keys.PK
 	}
 	return b.sero.exchange.GetPkr(address, index)
 }
-func (b *SeroAPIBackend) GetBalances(pkr keys.PKr) (balances map[string]*big.Int) {
+func (b *SeroAPIBackend) GetBalances(address keys.Uint512) (balances map[string]*big.Int) {
 	if b.sero.exchange == nil {
 		return
 	}
-	return b.sero.exchange.GetBalances(pkr)
+	return b.sero.exchange.GetBalances(address)
 }
 
 func (b *SeroAPIBackend) GenTx(param exchange.TxParam) (txParam *light_types.GenTxParam, e error) {

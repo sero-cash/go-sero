@@ -45,7 +45,18 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []light_types
 					if root != nil {
 						block.Outs = append(block.Outs, light_types.Out{k, *root})
 					} else {
-						e = fmt.Errorf("GetBlocksInfo.GetOut Failed, num: %v root: %v", num, k)
+						top_hash := light_ref.Ref_inst.Bc.GetCurrenHeader().Hash()
+						zst := light_ref.Ref_inst.Bc.NewState(&top_hash)
+						os := zst.State.GetOut(&k)
+						out:=light_types.Out{
+							k,
+							localdb.RootState{
+								*os,
+								keys.Uint256{},
+								num,
+							},
+						}
+						block.Outs=append(block.Outs,out)
 						return
 					}
 				}
