@@ -14,14 +14,13 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package ethapi
+package seroapi
 
 import (
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/exchange"
 	"math/big"
 	"strings"
 	"time"
@@ -886,29 +885,6 @@ func (s *PublicBlockChainAPI) GetBlockInfo(ctx context.Context, start hexutil.Ui
 		return nil, err
 	}
 	return block, err
-}
-
-func (s *PublicBlockChainAPI) GetPkr(address keys.Uint512, index uint64) (pkr keys.PKr, e error) {
-	return s.b.GetPkr(address, index)
-}
-
-func (s *PublicBlockChainAPI) GetBalances(address hexutil.Bytes) (balances map[string]*big.Int) {
-	var pkr keys.PKr
-	copy(pkr[:], address[:])
-	return s.b.GetBalances(pkr)
-}
-
-func (s *PublicBlockChainAPI) GenTx(param exchange.TxParam) (*light_types.GenTxParam, error) {
-	return s.b.GenTx(param)
-}
-
-func (s *PublicBlockChainAPI) GenTxWithSign(param exchange.TxParam) (*light_types.GTx, error) {
-	tx, e := s.b.GenTxWithSign(param)
-	return tx, e
-}
-
-func (s *PublicBlockChainAPI) GetRecords(pkr keys.PKr, begin, end uint64) (records []exchange.Utxo, err error) {
-	return s.b.GetRecords(pkr, begin, end)
 }
 
 func (s *PublicBlockChainAPI) GetAnchor(ctx context.Context, roots []keys.Uint256) ([]light_types.Witness, error) {

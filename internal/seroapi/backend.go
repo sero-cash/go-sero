@@ -14,13 +14,14 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package ethapi implements the general Ethereum API functions.
-package ethapi
+// Package seroapi implements the general Ethereum API functions.
+package seroapi
 
 import (
 	"context"
-	"github.com/sero-cash/go-sero/zero/exchange"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/zero/exchange"
 
 	"github.com/sero-cash/go-sero/zero/light/light_types"
 
@@ -98,6 +99,12 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Namespace: "ssi",
 			Version:   "1.0",
 			Service:   &PublicSSIAPI{apiBackend},
+			Public:    true,
+		},
+		{
+			Namespace: "exchange",
+			Version:   "1.0",
+			Service:   &PublicExchangeAPI{apiBackend},
 			Public:    true,
 		},
 		{

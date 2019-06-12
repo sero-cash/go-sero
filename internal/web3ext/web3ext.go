@@ -31,6 +31,7 @@ var Modules = map[string]string{
 	"swarmfs":    SWARMFS_JS,
 	"txpool":     TxPool_JS,
 	"ssi":        SSI_JS,
+	"exchange":   Exchange_JS,
 }
 
 const Chequebook_JS = `
@@ -683,6 +684,47 @@ web3._extend({
 			name: 'committx',
 			call: 'ssi_commitTx',
 			params: 1
+		})
+	]
+});
+`
+const Exchange_JS = `
+web3._extend({
+	property: 'ssi',
+	methods: [
+		new web3._extend.Method({
+			name: 'getPkr',
+			call: 'exchange_getPkr,
+			params: 2,
+            inputFormatter: [
+				null,
+				web3._extend.utils.toHex
+			]
+		}),
+		new web3._extend.Method({
+			name: 'getBalances',
+			call: 'exchange_getBalances',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'genTx',
+			call: 'ssi_genTx',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'genTxWithSign',
+			call: 'exchange_genTxWithSign',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getRecords',
+			call: 'ssi_getRecords,
+			params: 3,
+            inputFormatter: [
+				null,
+				web3._extend.utils.toHex,
+                web3._extend.utils.toHex
+			]
 		})
 	]
 });

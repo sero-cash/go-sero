@@ -24,7 +24,6 @@ import (
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/internal/ethapi"
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rpc"
 )

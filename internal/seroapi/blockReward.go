@@ -1,4 +1,4 @@
-package ethapi
+package seroapi
 
 import (
 	"math/big"

@@ -19,8 +19,9 @@ package sero
 import (
 	"context"
 	"errors"
-	"github.com/sero-cash/go-sero/zero/exchange"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/zero/exchange"
 
 	"github.com/sero-cash/go-sero/log"
 
@@ -49,7 +50,7 @@ import (
 	"github.com/sero-cash/go-sero/serodb"
 )
 
-// SeroAPIBackend implements ethapi.Backend for full nodes
+// SeroAPIBackend implements seroapi.Backend for full nodes
 type SeroAPIBackend struct {
 	sero *Sero
 	gpo  *gasprice.Oracle
