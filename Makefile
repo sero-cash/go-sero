@@ -90,3 +90,18 @@ gero-windows-amd64:
 	build/env.sh windows-amd64 go run build/ci.go xgo -- --go=$(GO)  --targets=windows/amd64 -v ./cmd/gero
 	@echo "Windows amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/gero-windows-* | grep amd64
+
+gerotx-linux-amd64-v3:
+	build/env.sh linux-v3 go run build/ci.go xgo -- --go=$(GO) --out=gerotx-v3 --targets=linux/amd64 -v ./cmd/tx
+	@echo "Linux centos amd64 cross compilation done:"
+	@ls -ld $(GOBIN)/gero-v3-linux-* | grep amd64
+
+gerotx-linux-amd64-v4:
+	build/env.sh linux-v4 go run build/ci.go xgo -- --go=$(GO) --out=gerotx-v4 --targets=linux/amd64 -v ./cmd/tx
+	@echo "Linux  ubuntu amd64 cross compilation done:"
+	@ls -ld $(GOBIN)/gero-v4-linux-* | grep amd64
+
+gerotx-windows-amd64:
+	build/env.sh windows-amd64 go run build/ci.go xgo -- --go=$(GO) --out=gerotx --targets=windows/amd64 -v ./cmd/tx
+	@echo "Windows amd64 cross compilation done:"
+	@ls -ld $(GOBIN)/gero-windows-* | grep amd64
