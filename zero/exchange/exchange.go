@@ -120,11 +120,7 @@ type Exchange struct {
 	sli light.SLI
 
 	usedFlag sync.Map
-	//inits    sync.Map
-
-
-	//numbers map[keys.Uint512]uint64
-	numbers sync.Map
+	numbers  sync.Map
 
 	feed    event.Feed
 	updater event.Subscription        // Wallet update subscriptions for all backends
@@ -170,7 +166,6 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 
 	exchange.pkrAccounts = sync.Map{}
 	exchange.usedFlag = sync.Map{}
-	//exchange.inits = sync.Map{}
 
 	AddJob("0/10 * * * * ?", exchange.fetchBlockInfo)
 
@@ -184,15 +179,17 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 }
 
 func (self *Exchange) initWallet(w accounts.Wallet) {
-	account := Account{}
-	account.wallet = w
-	account.pk = w.Accounts()[0].Address.ToUint512()
-	account.tk = w.Accounts()[0].Tk.ToUint512()
-	copy(account.skr[:], account.tk[:])
-	account.mainPkr = self.createPkr(account.pk, 1)
-	self.accounts[*account.pk] = &account
-	self.numbers.Store(*account.pk, w.Accounts()[0].At)
-	log.Info("PK", "address", w.Accounts()[0].Address)
+	if _, ok := self.accounts[*w.Accounts()[0].Address.ToUint512()]; !ok {
+		account := Account{}
+		account.wallet = w
+		account.pk = w.Accounts()[0].Address.ToUint512()
+		account.tk = w.Accounts()[0].Tk.ToUint512()
+		copy(account.skr[:], account.tk[:])
+		account.mainPkr = self.createPkr(account.pk, 1)
+		self.accounts[*account.pk] = &account
+		self.numbers.Store(*account.pk, w.Accounts()[0].At)
+		log.Info("Add PK", "address", w.Accounts()[0].Address)
+	}
 }
 
 func (self *Exchange) updateAccount() {
@@ -869,44 +866,52 @@ func (self *Exchange) isMyPkr(pkr keys.PKr) (account *Account, ok bool) {
 }
 
 func (self *Exchange) merge() {
-	for key, account := range self.accounts {
-		prefix := utxoPkKey(key, common.LeftPadBytes([]byte("SERO"), 32), nil)
-		iterator := self.db.NewIteratorWithPrefix(prefix)
-		utxos := UtxoList{}
-		for iterator.Next() {
-			key := iterator.Key()
-			var root keys.Uint256
-			copy(root[:], key[98:130])
+	for _, account := range self.accounts {
+		go func(account *Account) {
+			for {
+				prefix := utxoPkKey(*account.pk, common.LeftPadBytes([]byte("SERO"), 32), nil)
+				iterator := self.db.NewIteratorWithPrefix(prefix)
+				utxos := UtxoList{}
+				for iterator.Next() {
+					key := iterator.Key()
+					var root keys.Uint256
+					copy(root[:], key[98:130])
 
-			if utxo, err := self.getUtxo(root); err == nil {
-				utxos = append(utxos, utxo)
+					if utxo, err := self.getUtxo(root); err == nil {
+						if _, ok := self.usedFlag.Load(utxo.Nil); !ok {
+							utxos = append(utxos, utxo)
+						}
+					}
+
+					if utxos.Len() > 108 {
+						break
+					}
+				}
+				if utxos.Len() <= 10 {
+					break
+				}
+
+				sort.Sort(utxos)
+
+				utxos = utxos[0 : utxos.Len()-8]
+
+				if utxos.Len() > 1 {
+					amount := new(big.Int)
+					for _, utxo := range utxos {
+						amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
+					}
+					amount.Sub(amount, new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000)))
+					gtx, err := self.genTx(utxos, account, []Reception{{Value: amount, Currency: "SERO", Addr: account.mainPkr}}, 25000, 1000000000)
+					if err != nil {
+						log.Error("Exchange merge utxo", "error", err)
+						continue
+					}
+					self.commitTx(gtx)
+				}
 			}
 
-			if utxos.Len() > 150 {
-				break
-			}
-		}
-		if utxos.Len() <= 10 {
-			continue
-		}
+		}(account)
 
-		sort.Sort(utxos)
-
-		utxos = utxos[0 : utxos.Len()-8]
-
-		if utxos.Len() > 1 {
-			amount := new(big.Int)
-			for _, utxo := range utxos {
-				amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
-			}
-			amount.Sub(amount, new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000)))
-			gtx, err := self.genTx(utxos, account, []Reception{{Value: amount, Currency: "SERO", Addr: account.mainPkr}}, 25000, 1000000000)
-			if err != nil {
-				log.Error("Exchange merge utxo", "error", err)
-				continue
-			}
-			self.commitTx(gtx)
-		}
 	}
 
 }
