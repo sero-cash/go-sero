@@ -17,10 +17,21 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"runtime"
+
+	"github.com/sero-cash/go-sero/zero/txs/generate"
+
+	"github.com/sero-cash/go-sero/common/hexutil"
+
+	"github.com/sero-cash/go-czero-import/keys"
+
+	"github.com/sero-cash/go-sero/zero/light"
 
 	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-sero/zero/light/light_types"
 )
 
 var txParam = ""
@@ -32,9 +43,44 @@ func init() {
 }
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	fmt.Printf("PThread: %v \n", generate.G_p_thread_num)
 	flag.Parse()
 	cpt.ZeroInit_OnlyInOuts()
-	fmt.Println(txParam)
-	fmt.Println(sk)
 
+	fmt.Println("[OUTPUT-BEGIN]")
+	sk_bytes := keys.Uint512{}
+	if sk[1] != 'x' {
+		sk = "0x" + sk
+	}
+	if bs, e := hexutil.Decode(sk); e != nil {
+		fmt.Println("ERROR: DecodeSK-", e)
+	} else {
+		copy(sk_bytes[:], bs)
+		if len(txParam) > 0 && len(sk) > 0 {
+			var gtp light_types.GenTxParam
+			if e := json.Unmarshal([]byte(txParam), &gtp); e != nil {
+				fmt.Println("ERROR: Unmarshal-", e)
+			} else {
+				pk_bytes := keys.Sk2PK(&sk_bytes)
+				copy(gtp.From.SKr[:], sk_bytes[:])
+				copy(gtp.From.PKr[:], pk_bytes[:])
+				for i := range gtp.Ins {
+					copy(gtp.Ins[i].SKr[:], sk_bytes[:])
+				}
+				if gtx, e := light.SLI_Inst.GenTx(&gtp); e != nil {
+					fmt.Println("ERROR: GenTx-", e)
+				} else {
+					if jtx, e := json.Marshal(&gtx); e != nil {
+						fmt.Println("ERROR: Marshal-", e)
+					} else {
+						fmt.Println(string(jtx))
+					}
+				}
+			}
+		} else {
+			fmt.Println("ERROR: Input params invalid")
+		}
+	}
+	fmt.Println("[OUTPUT-END]")
 }
