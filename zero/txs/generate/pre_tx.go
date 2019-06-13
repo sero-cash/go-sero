@@ -20,9 +20,9 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/sero-cash/go-sero/zero/lstate"
+	"github.com/sero-cash/go-czero-import/seroparam"
 
-	"github.com/sero-cash/go-sero/zero/zconfig"
+	"github.com/sero-cash/go-sero/zero/lstate"
 
 	"github.com/sero-cash/go-sero/zero/localdb"
 
@@ -98,8 +98,8 @@ func preGen(ts *tx.T, state1 lstate.LState) (p preTx, e error) {
 		}
 	}
 
-	if len(p.desc_o.ins) > zconfig.MAX_O_INS_LENGTH {
-		e = fmt.Errorf("pre gen tx O ins length > %v,current is %v", zconfig.MAX_O_INS_LENGTH, len(p.desc_o.ins))
+	if len(p.desc_o.ins) > seroparam.MAX_O_INS_LENGTH {
+		e = fmt.Errorf("pre gen tx O ins length > %v,current is %v", seroparam.MAX_O_INS_LENGTH, len(p.desc_o.ins))
 		return
 	}
 

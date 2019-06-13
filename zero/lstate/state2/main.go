@@ -7,6 +7,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
 	"github.com/sero-cash/go-sero/zero/localdb"
@@ -87,7 +88,7 @@ func (self *State2) Parse() (num uint64) {
 		}
 	}
 
-	target_num := light_ref.Ref_inst.GetDelayedNum(zconfig.DefaultDelayNum())
+	target_num := light_ref.Ref_inst.GetDelayedNum(seroparam.DefaultDelayNum())
 
 	i := 0
 	for ; (next_num <= target_num) && (i < 2000); i++ {

@@ -22,8 +22,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 
-	"github.com/sero-cash/go-sero/zero/zconfig"
-
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
@@ -87,15 +85,15 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	var verify_input_o_procs = verify_input_o_procs_pool.GetProcs()
 	defer verify_input_o_procs_pool.PutProcs(verify_input_o_procs)
 
-	if state.State.Num() >= zconfig.VP0 {
-		if len(s.Desc_O.Ins) > zconfig.MAX_O_INS_LENGTH {
-			e = fmt.Errorf("txs.verify O ins length > %v, current is %v", zconfig.MAX_O_INS_LENGTH, len(s.Desc_O.Ins))
+	if state.State.Num() >= seroparam.VP0() {
+		if len(s.Desc_O.Ins) > seroparam.MAX_O_INS_LENGTH {
+			e = fmt.Errorf("txs.verify O ins length > %v, current is %v", seroparam.MAX_O_INS_LENGTH, len(s.Desc_O.Ins))
 			return
 		}
 	}
 
 	for _, in_o := range s.Desc_O.Ins {
-		if state.Num() >= seroparam.SIP2 {
+		if state.Num() >= seroparam.SIP2() {
 			if ok := state.State.HasIn(&in_o.Nil); ok {
 				e = errors.New("txs.verify in_o already in nils")
 				return
@@ -243,7 +241,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 
 	z_out_size := len(balance_desc.Zout_acms) / 32
 
-	if state.Num() >= seroparam.SIP2 {
+	if state.Num() >= seroparam.SIP2() {
 		if z_out_size > 500 {
 			e = errors.New("verify error: out_size > 500")
 			return

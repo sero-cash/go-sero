@@ -28,12 +28,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/zero/txs/generate"
 	"github.com/sero-cash/go-sero/zero/txs/verify"
-
-	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/accounts/keystore"
@@ -918,7 +917,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.ListenAddr = ":0"
 		cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
-		zconfig.Init_Dev(true)
+		seroparam.Init_Dev(true)
 	}
 }
 

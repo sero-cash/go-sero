@@ -37,7 +37,7 @@ func OutName0(k *keys.Uint256) (ret []byte) {
 }
 
 func (self *Data) RecordState(putter serodb.Putter, root *keys.Uint256) {
-	if int64(self.Num) > int64(seroparam.SIP2)-13000 {
+	if int64(self.Num) > int64(seroparam.SIP2())-13000 {
 		if out, ok := self.G2outs[*root]; ok {
 			rs := localdb.RootState{}
 			rs.Num = self.Num

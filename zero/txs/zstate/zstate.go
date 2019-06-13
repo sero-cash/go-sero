@@ -17,12 +17,12 @@
 package zstate
 
 import (
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/log"
 
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/localdb"
-	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
@@ -129,10 +129,10 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 
 func (state *ZState) AddTxOutWithCheck(addr common.Address, asset assets.Asset) (alarm bool) {
 	alarm = false
-	if state.Num() >= zconfig.VP0 {
+	if state.Num() >= seroparam.VP0() {
 		count := state.State.AddTxOut_Log(addr.ToPKr())
-		if count > zconfig.MAX_TX_OUT_COUNT_LENGTH {
-			log.Error("[ALARM] ZState AddTxOut Overflow", "MAX_TX_OUT_COUNT_LENGTH", zconfig.MAX_TX_OUT_COUNT_LENGTH)
+		if count > seroparam.MAX_TX_OUT_COUNT_LENGTH {
+			log.Error("[ALARM] ZState AddTxOut Overflow", "MAX_TX_OUT_COUNT_LENGTH", seroparam.MAX_TX_OUT_COUNT_LENGTH)
 			alarm = true
 		}
 	}

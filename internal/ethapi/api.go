@@ -40,6 +40,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/accounts/keystore"
 	"github.com/sero-cash/go-sero/common"
@@ -59,7 +60,6 @@ import (
 	"github.com/sero-cash/go-sero/rpc"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	ztx "github.com/sero-cash/go-sero/zero/txs/tx"
-	"github.com/sero-cash/go-sero/zero/zconfig"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
@@ -360,7 +360,7 @@ func (s *PrivateAccountAPI) NewAccount(password string) (address.AccountAddress,
 		lstate.CurrentLState().AddAccount(acc.Tk.ToUint512())
 	}
 
-	if zconfig.Is_Dev() {
+	if seroparam.Is_Dev() {
 		fetchKeystore(s.am).TimedUnlock(acc, password, 0)
 	}
 	return acc.Address, nil
@@ -382,7 +382,7 @@ func (s *PrivateAccountAPI) NewAccountWithMnemonic(password string) (map[string]
 		lstate.CurrentLState().AddAccount(acc.Tk.ToUint512())
 	}
 
-	if zconfig.Is_Dev() {
+	if seroparam.Is_Dev() {
 		fetchKeystore(s.am).TimedUnlock(acc, password, 0)
 	}
 	result := map[string]string{}
@@ -445,7 +445,7 @@ func (s *PrivateAccountAPI) UnlockAccount(addr address.AccountAddress, password 
 	} else {
 		d = time.Duration(*duration) * time.Second
 	}
-	if zconfig.Is_Dev() {
+	if seroparam.Is_Dev() {
 		d = 0
 	}
 	err := fetchKeystore(s.am).TimedUnlock(accounts.Account{Address: addr}, password, d)
