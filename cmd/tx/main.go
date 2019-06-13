@@ -62,9 +62,7 @@ func main() {
 			if e := json.Unmarshal([]byte(txParam), &gtp); e != nil {
 				fmt.Println("ERROR: Unmarshal-", e)
 			} else {
-				pk_bytes := keys.Sk2PK(&sk_bytes)
 				copy(gtp.From.SKr[:], sk_bytes[:])
-				copy(gtp.From.PKr[:], pk_bytes[:])
 				for i := range gtp.Ins {
 					copy(gtp.Ins[i].SKr[:], sk_bytes[:])
 				}
