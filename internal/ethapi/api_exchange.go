@@ -14,9 +14,8 @@ type PublicExchangeAPI struct {
 	b Backend
 }
 
-
-func (s *PublicExchangeAPI) GetPkNumber(ctx context.Context, pk *keys.Uint512) (pkr keys.PKr, e error) {
-	return s.b.GetPkr(address, index)
+func (s *PublicExchangeAPI) GetPkNumber(ctx context.Context, pk *keys.Uint512) (uint64, error) {
+	return s.b.GetPkNumber(*pk)
 }
 
 func (s *PublicExchangeAPI) GetPkr(ctx context.Context, address *keys.Uint512, index *keys.Uint256) (pkr keys.PKr, e error) {
@@ -38,4 +37,8 @@ func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param exchange.Tx
 
 func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address hexutil.Bytes, begin, end uint64) (records []exchange.Utxo, err error) {
 	return s.b.GetRecords(address, begin, end)
+}
+
+func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *light_types.GTx) error {
+	return s.b.CommitTx(args)
 }

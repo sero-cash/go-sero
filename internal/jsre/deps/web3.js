@@ -3059,7 +3059,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 properties: properties()
             });
         }
-
 // expose providers on the class
         Web3.providers = {
             HttpProvider: HttpProvider,
@@ -6001,13 +6000,19 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 call: 'exchange_getRecords',
                 params: 3
             });
+            var commitTx = new Method({
+                name: 'commitTx',
+                call: 'exchange_commitTx',
+                params: 1
+            });
 
             return [
                 getPkr,
                 getBalances,
                 genTx,
                 genTxWithSign,
-                getRecords
+                getRecords,
+                commitTx
             ];
         };
 
@@ -6122,12 +6127,29 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [null]
             });
 
+            var newAccountWithMnemonic = new Method({
+                name: 'newAccountWithMnemonic',
+                call: 'personal_newAccountWithMnemonic',
+                params: 1,
+                inputFormatter: [null]
+            });
+            var importMnemonic = new Method({
+                name: 'importMnemonic',
+                call: 'personal_importMnemonic',
+                params: 2
+            });
             var importRawKey = new Method({
                 name: 'importRawKey',
                 call: 'personal_importRawKey',
                 params: 2
             });
 
+            var importTk = new Method({
+                name: 'importTk',
+                call: 'sero_importTk',
+                params: 1,
+                inputFormatter: [formatters.inputAddressFormatter]
+            });
             var sign = new Method({
                 name: 'sign',
                 call: 'personal_sign',
@@ -6164,7 +6186,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
             return [
                 newAccount,
+                newAccountWithMnemonic,
                 importRawKey,
+                importMnemonic,
+                importTk,
                 unlockAccount,
                 ecRecover,
                 sign,
@@ -6295,6 +6320,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 2,
                 inputFormatter: [formatters.inputParamAddressFormatter,formatters.inputDefaultBlockNumberFormatter],
                 outputFormatter: formatters.outputBalanceFormatter
+            });
+
+            var getTk = new Method({
+                name: 'getTk',
+                call: 'sero_getTk',
+                params: 1,
+                inputFormatter: [formatters.inputParamAddressFormatter]
             });
 
             var getPkg = new Method({
@@ -6540,6 +6572,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return [
                 isMinePKr,
                 getBalance,
+                getTk,
                 getPkg,
                 watchPkg,
                 getStorageAt,

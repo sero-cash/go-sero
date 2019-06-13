@@ -24,9 +24,7 @@ import (
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/light"
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
 	"github.com/sero-cash/go-sero/zero/light/light_types"
-	"github.com/sero-cash/go-sero/zero/localdb"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -239,7 +237,7 @@ func (self *Exchange) updateAccount() {
 	}
 }
 
-func (self *Exchange) GetCurrencyNumber(pk keys.Uint512) (uint64) {
+func (self *Exchange) GetCurrencyNumber(pk keys.Uint512) uint64 {
 	value, ok := self.numbers.Load(pk)
 	if !ok {
 		return 0
@@ -248,7 +246,7 @@ func (self *Exchange) GetCurrencyNumber(pk keys.Uint512) (uint64) {
 }
 
 func (self *Exchange) GetPkr(pk *keys.Uint512, index *keys.Uint256) (pkr keys.PKr, err error) {
-	if new(big.Int).SetBytes(index[:]).Cmp(big.NewInt(100)) < 100 {
+	if new(big.Int).SetBytes(index[:]).Cmp(big.NewInt(100)) < 0 {
 		return pkr, errors.New("index must > 100")
 	}
 	if _, ok := self.accounts[*pk]; !ok {
@@ -395,7 +393,7 @@ func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Recepti
 	}
 
 	txParam.From.SKr = *account.sk
-	for index, _ := range txParam.Ins {
+	for index := range txParam.Ins {
 		txParam.Ins[index].SKr = *account.sk
 	}
 
@@ -427,7 +425,7 @@ func (self *Exchange) buildTxParam(utxos []Utxo, account *Account, receptions []
 	amounts := make(map[string]*big.Int)
 	ticekts := make(map[keys.Uint256]keys.Uint256)
 	for index, utxo := range utxos {
-		if out := localdb.GetRoot(light_ref.Ref_inst.Bc.GetDB(), &utxo.Root); out != nil {
+		if out := light.GetOut(&utxo.Root, 0); out != nil {
 			Ins = append(Ins, light_types.GIn{Out: light_types.Out{Root: utxo.Root, State: *out}, Witness: wits[index]})
 
 			if utxo.Asset.Tkn != nil {
@@ -742,7 +740,7 @@ func (self *Exchange) fetchAndIndexUtxo(start uint64, pks []keys.Uint512) (count
 					pkrMap[key] = []Utxo{utxo}
 				}
 			} else {
-				utxosMap[*account.pk] = map[PkrKey][]Utxo{key: []Utxo{utxo}}
+				utxosMap[*account.pk] = map[PkrKey][]Utxo{key: {utxo}}
 			}
 		}
 		if len(block.Nils) > 0 {

@@ -513,22 +513,6 @@ web3._extend({
 			call: 'personal_importRawKey',
 			params: 2
 		}),
-        new web3._extend.Method({
-			name: 'newAccountWithMnemonic',
-			call: 'personal_newAccountWithMnemonic',
-			params: 1,
-			inputFormatter: [null]
-		}),
-        new web3._extend.Method({
-			name: 'importMnemonic',
-			call: 'personal_importMnemonic',
-			params: 2
-		}),
-        new web3._extend.Method({
-			name: 'importTk',
-			call: 'personal_importTk',
-			params: 1
-		}),
 		new web3._extend.Method({
 			name: 'sign',
 			call: 'personal_sign',

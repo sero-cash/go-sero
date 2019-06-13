@@ -221,6 +221,30 @@ func (s *PublicAccountAPI) Accounts() []address.AccountAddress {
 	return addresses
 }
 
+func (s *PublicAccountAPI) GetTk(addr common.Address) address.AccountAddress {
+	flag, err := common.IsPkr(&addr)
+	if err != nil {
+		return address.AccountAddress{}
+	}
+	var pk address.AccountAddress
+	wallets := s.am.Wallets()
+	if flag {
+		pkAddrr := getLocalAccountAddressByPkr(wallets, addr)
+		if pkAddrr != nil {
+			pk = *pkAddrr
+		}
+	} else {
+		pk = common.AddrToAccountAddr(addr)
+	}
+	for _, wallet := range wallets {
+		account := accounts.Account{Address: pk}
+		if wallet.Contains(account) {
+			return wallet.Accounts()[0].Tk
+		}
+	}
+	return address.AccountAddress{}
+}
+
 func (s *PublicAccountAPI) IsMinePKr(PKr common.Address) *address.AccountAddress {
 	flag, err := common.IsPkr(&PKr)
 	if err != nil {
