@@ -769,7 +769,7 @@ func (self *Exchange) fetchAndIndexUtxo(start uint64, pks []keys.Uint512) (count
 			self.numbers.Store(pk, num)
 		}
 	}
-	log.Info("Exchange indexed", "blockNumber", num)
+	log.Info("Exchange indexed", "blockNumber", num-1)
 	return
 }
 
