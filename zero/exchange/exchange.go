@@ -187,9 +187,23 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 		copy(account.skr[:], account.tk[:])
 		account.mainPkr = self.createPkr(account.pk, 1)
 		self.accounts[*account.pk] = &account
-		self.numbers.Store(*account.pk, w.Accounts()[0].At)
+
+		if num := self.starNum(account.pk); num > 0 {
+			self.numbers.Store(*account.pk, num)
+		} else {
+			self.numbers.Store(*account.pk, w.Accounts()[0].At)
+		}
+
 		log.Info("Add PK", "address", w.Accounts()[0].Address)
 	}
+}
+
+func (self *Exchange) starNum(pk *keys.Uint512) uint64 {
+	value, err := self.db.Get(numKey(*pk))
+	if err != nil {
+		return 0
+	}
+	return decodeNumber(value)
 }
 
 func (self *Exchange) updateAccount() {
@@ -675,7 +689,6 @@ func (self *Exchange) fetchBlockInfo() {
 				break
 			}
 			num += 1000
-			log.Info("Exchange indexed", "blockNumber", num)
 		}
 	}
 }
@@ -750,6 +763,7 @@ func (self *Exchange) fetchAndIndexUtxo(start uint64, pks []keys.Uint512) (count
 			self.numbers.Store(pk, num)
 		}
 	}
+	log.Info("Exchange indexed", "blockNumber", num)
 	return
 }
 

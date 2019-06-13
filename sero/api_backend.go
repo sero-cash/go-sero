@@ -304,9 +304,5 @@ func (b *SeroAPIBackend) GetRecords(address hexutil.Bytes, begin, end uint64) (r
 	}
 	pkr := keys.PKr{}
 	copy(pkr[:], address)
-	utxos, err := b.sero.exchange.GetRecords(pkr, begin, end)
-	if err != nil {
-
-	}
-	return utxos, err
+	return b.sero.exchange.GetRecords(pkr, begin, end)
 }
