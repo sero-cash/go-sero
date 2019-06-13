@@ -2,12 +2,14 @@ package ethapi
 
 import (
 	"context"
-	"github.com/sero-cash/go-sero/common"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/zero/exchange"
+
+	"github.com/sero-cash/go-sero/common"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/hexutil"
-	"github.com/sero-cash/go-sero/zero/exchange"
 	"github.com/sero-cash/go-sero/zero/light/light_types"
 )
 
@@ -27,12 +29,63 @@ func (s *PublicExchangeAPI) GetBalances(ctx context.Context, address keys.Uint51
 	return s.b.GetBalances(address)
 }
 
-func (s *PublicExchangeAPI) GenTx(ctx context.Context, param exchange.TxParam) (*light_types.GenTxParam, error) {
-	return s.b.GenTx(param)
+type Big big.Int
+
+func (b Big) MarshalJSON() ([]byte, error) {
+	i := big.Int(b)
+	return i.MarshalText()
 }
 
-func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param exchange.TxParam) (*light_types.GTx, error) {
-	tx, e := s.b.GenTxWithSign(param)
+// UnmarshalJSON implements json.Unmarshaler.
+func (b *Big) UnmarshalJSON(input []byte) error {
+	if isString(input) {
+		input = input[1 : len(input)-1]
+	}
+	i := big.Int{}
+	if e := i.UnmarshalText(input); e != nil {
+		return e
+	} else {
+		*b = Big(i)
+		return nil
+	}
+}
+
+func isString(input []byte) bool {
+	return len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"'
+}
+
+type ReceptionArgs struct {
+	Addr     keys.PKr
+	Currency string
+	Value    *Big
+}
+
+type GenTxArgs struct {
+	From       keys.Uint512
+	Receptions []ReceptionArgs
+	Gas        uint64
+	GasPrice   uint64
+	Roots      []keys.Uint256
+}
+
+func (args GenTxArgs) toTxParam() exchange.TxParam {
+	receptions := []exchange.Reception{}
+	for _, rec := range args.Receptions {
+		receptions = append(receptions, exchange.Reception{
+			rec.Addr,
+			rec.Currency,
+			(*big.Int)(rec.Value),
+		})
+	}
+	return exchange.TxParam{args.From, receptions, args.Gas, args.GasPrice, args.Roots}
+}
+
+func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*light_types.GenTxParam, error) {
+	return s.b.GenTx(param.toTxParam())
+}
+
+func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param GenTxArgs) (*light_types.GTx, error) {
+	tx, e := s.b.GenTxWithSign(param.toTxParam())
 	return tx, e
 }
 
