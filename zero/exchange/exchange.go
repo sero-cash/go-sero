@@ -168,7 +168,7 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 	AddJob("0/10 * * * * ?", exchange.fetchBlockInfo)
 
 	if autoMerge {
-		AddJob("0 0 0/6 * * ?", exchange.merge)
+		AddJob("0 0/5 * * * ?", exchange.merge)
 	}
 
 	go exchange.updateAccount()
@@ -906,7 +906,7 @@ func (self *Exchange) merge() {
 						break
 					}
 				}
-				if utxos.Len() <= 10 {
+				if utxos.Len() <= 100 {
 					break
 				}
 
@@ -925,6 +925,7 @@ func (self *Exchange) merge() {
 						log.Error("Exchange merge utxo", "error", err)
 						continue
 					}
+					log.Info("Exchange merge utxo success ", "count", utxos.Len())
 					self.commitTx(gtx)
 				}
 			}

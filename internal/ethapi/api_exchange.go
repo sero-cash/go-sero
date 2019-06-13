@@ -2,6 +2,7 @@ package ethapi
 
 import (
 	"context"
+	"github.com/sero-cash/go-sero/common"
 	"math/big"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -35,8 +36,28 @@ func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param exchange.Tx
 	return tx, e
 }
 
-func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address hexutil.Bytes, begin, end uint64) (records []exchange.Utxo, err error) {
-	return s.b.GetRecords(address, begin, end)
+type Record struct {
+	Pkr      keys.PKr
+	Root     keys.Uint256
+	TxHash   keys.Uint256
+	Nil      keys.Uint256
+	Num      uint64
+	Currency string
+	Value    *big.Int
+}
+
+func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address hexutil.Bytes, begin, end uint64) (records []Record, err error) {
+
+	utxos, err := s.b.GetRecords(address, begin, end)
+	if err != nil {
+		return
+	}
+	for _, utxo := range utxos {
+		if utxo.Asset.Tkn != nil {
+			records = append(records, Record{Pkr: utxo.Pkr, Root: utxo.Root, TxHash: utxo.TxHash, Nil: utxo.Nil, Num: utxo.Num, Currency: common.BytesToString(utxo.Asset.Tkn.Currency[:]), Value: utxo.Asset.Tkn.Value.ToIntRef()})
+		}
+	}
+	return
 }
 
 func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *light_types.GTx) error {
