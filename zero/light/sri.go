@@ -3,6 +3,8 @@ package light
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-sero/log"
+
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -21,6 +23,26 @@ type SRI struct {
 }
 
 var SRI_Inst = SRI{}
+
+func GetOut(root *keys.Uint256, num uint64) (out *localdb.RootState) {
+	rs := localdb.GetRoot(light_ref.Ref_inst.Bc.GetDB(), root)
+	if rs != nil {
+		return rs
+	} else {
+		top_hash := light_ref.Ref_inst.Bc.GetCurrenHeader().Hash()
+		zst := light_ref.Ref_inst.Bc.NewState(&top_hash)
+		if os := zst.State.GetOut(root); os == nil {
+			return nil
+		} else {
+			out := localdb.RootState{
+				*os,
+				keys.Uint256{},
+				num,
+			}
+			return &out
+		}
+	}
+}
 
 func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []light_types.Block, e error) {
 	stable_num := light_ref.Ref_inst.GetDelayedNum(zconfig.DefaultDelayNum())
@@ -41,22 +63,10 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []light_types
 					block.Nils = append(block.Nils, k)
 				}
 				for _, k := range local_block.Roots {
-					root := localdb.GetRoot(light_ref.Ref_inst.Bc.GetDB(), &k)
-					if root != nil {
-						block.Outs = append(block.Outs, light_types.Out{k, *root})
+					if out := GetOut(&k, num); out == nil {
+						log.Error("GetBlocksInfo ERROR", "num", num, "root", k)
 					} else {
-						top_hash := light_ref.Ref_inst.Bc.GetCurrenHeader().Hash()
-						zst := light_ref.Ref_inst.Bc.NewState(&top_hash)
-						os := zst.State.GetOut(&k)
-						out:=light_types.Out{
-							k,
-							localdb.RootState{
-								*os,
-								keys.Uint256{},
-								num,
-							},
-						}
-						block.Outs=append(block.Outs,out)
+						block.Outs = append(block.Outs, light_types.Out{k, *out})
 					}
 				}
 				blocks = append(blocks, block)
@@ -76,16 +86,16 @@ func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []light_types.Witness, e 
 	if state != nil {
 		for _, root := range roots {
 			wit := light_types.Witness{}
-			out := localdb.GetRoot(light_ref.Ref_inst.Bc.GetDB(), &root)
-			if out == nil {
+			if out := GetOut(&root, 0); out == nil {
 				e = errors.New("GetAnchor use root but out is nil !!!")
 				return
+			} else {
+				pos, paths, anchor := state.State.MTree.GetPaths(*out.OS.RootCM)
+				wit.Pos = hexutil.Uint64(pos)
+				wit.Paths = paths
+				wit.Anchor = anchor
+				wits = append(wits, wit)
 			}
-			pos, paths, anchor := state.State.MTree.GetPaths(*out.OS.RootCM)
-			wit.Pos = hexutil.Uint64(pos)
-			wit.Paths = paths
-			wit.Anchor = anchor
-			wits = append(wits, wit)
 		}
 		return
 	} else {
