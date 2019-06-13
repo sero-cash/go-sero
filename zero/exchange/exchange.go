@@ -860,7 +860,6 @@ func (self *Exchange) ownPkr(pks []keys.Uint512, pkr keys.PKr) (account *Account
 	for _, pk := range pks {
 		account = self.accounts[pk]
 		if account == nil {
-			log.Warn("error")
 			continue
 		}
 		if keys.IsMyPKr(account.tk, &pkr) {
