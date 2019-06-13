@@ -239,15 +239,23 @@ func (self *Exchange) updateAccount() {
 	}
 }
 
-func (self *Exchange) GetPkr(pk keys.Uint512, index uint64) (pkr keys.PKr, err error) {
-	if index < 100 {
+func (self *Exchange) GetCurrencyNumber(pk keys.Uint512) (uint64) {
+	value, ok := self.numbers.Load(pk)
+	if !ok {
+		return 0
+	}
+	return value.(uint64) - 1
+}
+
+func (self *Exchange) GetPkr(pk *keys.Uint512, index *keys.Uint256) (pkr keys.PKr, err error) {
+	if new(big.Int).SetBytes(index[:]).Cmp(big.NewInt(100)) < 100 {
 		return pkr, errors.New("index must > 100")
 	}
-	if _, ok := self.accounts[pk]; !ok {
+	if _, ok := self.accounts[*pk]; !ok {
 		return pkr, errors.New("not found Pk")
 	}
 
-	return self.createPkr(&pk, index), nil
+	return keys.Addr2PKr(pk, index), nil
 }
 
 func (self *Exchange) GetBalances(pk keys.Uint512) (balances map[string]*big.Int) {

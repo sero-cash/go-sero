@@ -14,7 +14,12 @@ type PublicExchangeAPI struct {
 	b Backend
 }
 
-func (s *PublicExchangeAPI) GetPkr(ctx context.Context, address keys.Uint512, index uint64) (pkr keys.PKr, e error) {
+
+func (s *PublicExchangeAPI) GetPkNumber(ctx context.Context, pk *keys.Uint512) (pkr keys.PKr, e error) {
+	return s.b.GetPkr(address, index)
+}
+
+func (s *PublicExchangeAPI) GetPkr(ctx context.Context, address *keys.Uint512, index *keys.Uint256) (pkr keys.PKr, e error) {
 	return s.b.GetPkr(address, index)
 }
 

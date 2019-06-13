@@ -266,13 +266,22 @@ func (b *SeroAPIBackend) CommitTx(tx *light_types.GTx) error {
 	return b.sero.txPool.AddLocal(signedTx)
 }
 
-func (b *SeroAPIBackend) GetPkr(address keys.Uint512, index uint64) (pkr keys.PKr, e error) {
+func (b *SeroAPIBackend) GetPkNumber(pk keys.Uint512) (number uint64, e error) {
+	if b.sero.exchange == nil {
+		e = errors.New("not start exchange")
+		return
+	}
+	return b.sero.exchange.GetCurrencyNumber(pk), nil
+}
+
+func (b *SeroAPIBackend) GetPkr(address *keys.Uint512, index *keys.Uint256) (pkr keys.PKr, e error) {
 	if b.sero.exchange == nil {
 		e = errors.New("not start exchange")
 		return
 	}
 	return b.sero.exchange.GetPkr(address, index)
 }
+
 func (b *SeroAPIBackend) GetBalances(address keys.Uint512) (balances map[string]*big.Int) {
 	if b.sero.exchange == nil {
 		return
@@ -295,7 +304,6 @@ func (b *SeroAPIBackend) GenTxWithSign(param exchange.TxParam) (gtx *light_types
 	}
 	return b.sero.exchange.GenTxWithSign(param)
 }
-
 
 func (b *SeroAPIBackend) GetRecords(address hexutil.Bytes, begin, end uint64) (records []exchange.Utxo, err error) {
 	if b.sero.exchange == nil {
