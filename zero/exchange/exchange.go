@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/mine-pool/build/_workspace/src/github.com/sero-cash/go-sero/common/base58"
 	"math/big"
 	"sort"
 	"strings"
@@ -151,15 +152,6 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 	exchange.accounts = map[keys.Uint512]*Account{}
 	for _, w := range accountManager.Wallets() {
 		exchange.initWallet(w)
-	}
-
-	iterator := exchange.db.NewIteratorWithPrefix(numPrefix)
-	for iterator.Next() {
-		key := iterator.Key()
-		num := decodeNumber(iterator.Value())
-		var pk keys.Uint512
-		copy(pk[:], key[3:])
-		exchange.numbers.Store(pk, num)
 	}
 
 	exchange.pkrAccounts = sync.Map{}
@@ -675,33 +667,72 @@ func DecOuts(outs []light_types.Out, skr *keys.PKr) (douts []light_types.DOut) {
 	return
 }
 
+type uint64Slice []uint64
+
+func (c uint64Slice) Len() int {
+	return len(c)
+}
+func (c uint64Slice) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+func (c uint64Slice) Less(i, j int) bool {
+	return c[i] < c[j]
+}
+
+var fetchCount = uint64(5000)
+
 func (self *Exchange) fetchBlockInfo() {
-
-	indexs := map[uint64][]keys.Uint512{}
-	self.numbers.Range(func(key, value interface{}) bool {
-		pk := key.(keys.Uint512)
-		num := value.(uint64)
-		if list, ok := indexs[num]; ok {
-			indexs[num] = append(list, pk)
-		} else {
-			indexs[num] = []keys.Uint512{pk}
-		}
-		return true
-	})
-
-	for num, pks := range indexs {
-		for {
-			if self.fetchAndIndexUtxo(num, pks) < 1000 {
-				break
+	for {
+		indexs := map[uint64][]keys.Uint512{}
+		orders := uint64Slice{}
+		self.numbers.Range(func(key, value interface{}) bool {
+			pk := key.(keys.Uint512)
+			num := value.(uint64)
+			if list, ok := indexs[num]; ok {
+				indexs[num] = append(list, pk)
+			} else {
+				indexs[num] = []keys.Uint512{pk}
+				orders = append(orders, num)
 			}
-			num += 1000
+			return true
+		})
+		if orders.Len() == 0 {
+			return
+		}
+
+		sort.Sort(orders)
+		start := orders[0]
+		end := start + fetchCount
+		if orders.Len() > 1 {
+			end = orders[1]
+		}
+
+		pks := indexs[start]
+		list := []string{}
+		for _, pk := range pks {
+			list = append(list, base58.EncodeToString(pk[:]))
+		}
+
+		for end > start {
+			count := fetchCount
+			if end-start < fetchCount {
+				count = end - start
+			}
+			if count == 0 {
+				return
+			}
+			log.Info("fetchAndIndexUtxo", "start", start, "count", count, "pks", list)
+			if self.fetchAndIndexUtxo(start, count, pks) < int(count) {
+				return
+			}
+			start += count
 		}
 	}
 }
 
-func (self *Exchange) fetchAndIndexUtxo(start uint64, pks []keys.Uint512) (count int) {
+func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uint512) (count int) {
 
-	blocks, err := self.sri.GetBlocksInfo(start, 1000)
+	blocks, err := self.sri.GetBlocksInfo(start, countBlock)
 	if err != nil {
 		log.Info("Exchange GetBlocksInfo", "error", err)
 		return
@@ -843,12 +874,20 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[keys.Uint512]
 		if value, ok := ops[hex]; ok {
 			delete(ops, hex)
 			delete(ops, value)
+			var root keys.Uint256
+			copy(root[:], value[98:130])
+			delete(ops, common.Bytes2Hex(nilKey(root)))
+
 			//log.Info("Index del", "nil", common.Bytes2Hex(Nil[:]), "key", value)
 		} else {
 			data, _ := self.db.Get(key)
 			if data != nil {
 				batch.Delete(data)
 				batch.Delete(nilKey(Nil))
+
+				var root keys.Uint256
+				copy(root[:], data[98:130])
+				batch.Delete(nilKey(root))
 				//log.Info("Index del", "nil", common.Bytes2Hex(Nil[:]), "key", common.Bytes2Hex(data))
 			}
 		}
