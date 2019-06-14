@@ -17,8 +17,22 @@ type PublicExchangeAPI struct {
 	b Backend
 }
 
-func (s *PublicExchangeAPI) GetPkNumber(ctx context.Context, pk *keys.Uint512) (uint64, error) {
-	return s.b.GetPkNumber(*pk)
+func (s *PublicExchangeAPI) GetPkSynced(ctx context.Context, pk *keys.Uint512) (map[string]uint64, error) {
+	currentPKBlock, err := s.b.GetPkNumber(*pk)
+	if err != nil {
+		return nil, err
+	}
+	progress := s.b.Downloader().Progress()
+	if progress.CurrentBlock >= progress.HighestBlock {
+		progress.HighestBlock = progress.CurrentBlock
+	}
+	// Otherwise gather the block sync stats
+	return map[string]uint64{
+		"currentPKBlock": currentPKBlock,
+		"currentBlock":   progress.CurrentBlock,
+		"highestBlock":   progress.HighestBlock,
+	}, nil
+
 }
 
 func (s *PublicExchangeAPI) GetPkr(ctx context.Context, address *keys.Uint512, index *keys.Uint256) (pkr keys.PKr, e error) {

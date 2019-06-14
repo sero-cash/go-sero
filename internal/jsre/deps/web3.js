@@ -4606,6 +4606,30 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             throw new Error('invalid address');
         };
 
+        var inputHexAddressFormatter = function (address) {
+            var bytes=utils.hexToBytes(address);
+            if ( bytes.length!=64 && bytes.length!=96 ) {
+                throw new Error('invalid hex address');
+            }
+            return utils.bytesToHex(bytes)
+        };
+
+        var inputHexPKFormatter = function (address) {
+            var bytes=utils.hexToBytes(address);
+            if ( bytes.length!=64) {
+                throw new Error('invalid hex PK');
+            }
+            return utils.bytesToHex(bytes)
+        };
+
+        var inputHexPKrFormatter = function (address) {
+            var bytes=utils.hexToBytes(address);
+            if ( bytes.length!=96) {
+                throw new Error('invalid hex PKr');
+            }
+            return utils.bytesToHex(bytes)
+        };
+
         var inputParamAddressFormatter = function (address) {
             if (utils.paramAddress(address)) {
                 return address
@@ -4658,6 +4682,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             inputTransactionFormatter: inputTransactionFormatter,
             inputParamAddressFormatter:inputParamAddressFormatter,
             inputAddressFormatter: inputAddressFormatter,
+            inputHexAddressFormatter: inputHexAddressFormatter,
+            inputHexPKrFormatter: inputHexPKrFormatter,
+            inputHexPKFormatter: inputHexPKFormatter,
             inputPostFormatter: inputPostFormatter,
             outputBigNumberFormatter: outputBigNumberFormatter,
             outputTransactionFormatter: outputTransactionFormatter,
@@ -5958,6 +5985,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         "use strict";
 
         var Method = require('../method');
+        var formatters = require('../formatters');
 
         function Exchange(web3) {
             this._requestManager = web3._requestManager;
@@ -5974,13 +6002,22 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var getPkr = new Method({
                 name: 'getPkr',
                 call: 'exchange_getPkr',
-                params: 2
+                params: 2,
+                inputFormatter: [formatters.inputHexPFormatter,null]
             });
 
             var getBalances = new Method({
                 name: 'getBalances',
                 call: 'exchange_getBalances',
-                params: 1
+                params: 1,
+                inputFormatter: [formatters.inputHexPKFormatter]
+            });
+
+            var getPkSynced = new Method({
+                name: 'getPkSynced',
+                call: 'exchange_getPkSynced',
+                params: 1,
+                inputFormatter: [formatters.inputHexPKFormatter]
             });
 
             var genTx = new Method({
@@ -5998,7 +6035,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var getRecords = new Method({
                 name: 'getRecords',
                 call: 'exchange_getRecords',
-                params: 3
+                params: 3,
+                inputFormatter: [formatters.inputHexAddressFormatter,null,null]
             });
             var commitTx = new Method({
                 name: 'commitTx',
@@ -6008,6 +6046,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
             return [
                 getPkr,
+                getPkSynced,
                 getBalances,
                 genTx,
                 genTxWithSign,
@@ -6019,7 +6058,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         module.exports = Exchange;
 
-    },{"../method":37}],40:[function(require,module,exports){
+    },{"../formatters":31,"../method":37}],40:[function(require,module,exports){
         /*
     This file is part of web3.js.
 
@@ -6146,7 +6185,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
             var importTk = new Method({
                 name: 'importTk',
-                call: 'sero_importTk',
+                call: 'personal_importTk',
                 params: 1,
                 inputFormatter: [formatters.inputAddressFormatter]
             });
