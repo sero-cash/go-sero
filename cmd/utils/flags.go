@@ -300,6 +300,11 @@ var (
 		Usage: "autoMerge outs",
 	}
 
+	BalanceDelayFlag = cli.Uint64Flag{
+		Name:  "balanceDelay",
+		Usage: "delay block counts for balance analyze",
+	}
+
 	// Miner settings
 	MiningModeFlag = cli.BoolFlag{
 		Name:  "mineMode",
@@ -909,6 +914,11 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 			Fatalf("Option %q: %v", NetrestrictFlag.Name, err)
 		}
 		cfg.NetRestrict = list
+	}
+
+	balanceDelay := ctx.GlobalUint64(BalanceDelayFlag.Name)
+	if balanceDelay > 0 {
+		seroparam.InitBalanceDelay(balanceDelay)
 	}
 
 	if ctx.GlobalBool(DeveloperFlag.Name) {
