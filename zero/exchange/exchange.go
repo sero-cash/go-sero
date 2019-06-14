@@ -952,9 +952,7 @@ func (self *Exchange) merge() {
 			}
 			if utxos.Len() > 100 || time.Now().After(account.nextMergeTime) {
 				sort.Sort(utxos)
-
 				utxos = utxos[0 : utxos.Len()-8]
-
 				if utxos.Len() > 1 {
 					amount := new(big.Int)
 					for _, utxo := range utxos {
@@ -970,8 +968,9 @@ func (self *Exchange) merge() {
 					self.commitTx(gtx)
 				}
 			}
+			account.nextMergeTime = time.Now().Add(time.Hour * 6)
 		}
-		account.nextMergeTime = time.Now().Add(time.Hour * 6)
+
 	}
 }
 
