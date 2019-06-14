@@ -44,8 +44,8 @@ fi
 
 for os in ${os_version[@]}
     do
-      echo "make gero-${os}"
-      make "gero-"${os}
+      echo "make gerotx-${os}"
+      make "gerotx-"${os}
       rm -rf $BUILD_PATH/gerotxpkg/bin
       rm -rf $BUILD_PATH/gerotxpkg/czero
       mkdir -p $BUILD_PATH/gerotxpkg/bin
@@ -55,23 +55,23 @@ for os in ${os_version[@]}
       cp -rf $CZERO_PATH/czero/data/* $SERO_PATH/build/gerotxpkg/czero/data/
       cp -rf $CZERO_PATH/czero/include/* $SERO_PATH/build/gerotxpkg/czero/include/
       if [ $os == "windows-amd64" ];then
-        mv $BUILD_PATH/bin/gero*.exe $BUILD_PATH/gerotxpkg/bin/tx.exe
+        mv $BUILD_PATH/bin/gerotx*.exe $BUILD_PATH/gerotxpkg/bin/tx.exe
         cp -rf  $CZERO_PATH/czero/lib_WINDOWS_AMD64/* $SERO_PATH/build/gerotxpkg/czero/lib/
       elif [ $os == "linux-amd64-v3" ];then
-        mv $BUILD_PATH/bin/gero-v3* $BUILD_PATH/gerotxpkg/bin/tx
+        mv $BUILD_PATH/bin/gerotx-v3* $BUILD_PATH/gerotxpkg/bin/tx
         cp -rf  $CZERO_PATH/czero/lib_LINUX_AMD64_V3/* $SERO_PATH/build/gerotxpkg/czero/lib/
       elif [ $os == "linux-amd64-v4" ];then
-        mv $BUILD_PATH/bin/gero-v4* $BUILD_PATH/gerotxpkg/bin/tx
+        mv $BUILD_PATH/bin/gerotx-v4* $BUILD_PATH/gerotxpkg/bin/tx
         cp -rf  $CZERO_PATH/czero/lib_LINUX_AMD64_V4/* $SERO_PATH/build/gerotxpkg/czero/lib/
       else
-        mv $BUILD_PATH/bin/gero-darwin* $BUILD_PATH/gerotxpkg/bin/tx
+        mv $BUILD_PATH/bin/gerotx-darwin* $BUILD_PATH/gerotxpkg/bin/tx
         cp -rf  $CZERO_PATH/czero/lib_DARWIN_AMD64/* $SERO_PATH/build/gerotxpkg/czero/lib/
       fi
       cd $BUILD_PATH
 
       if [ $os == "windows-amd64" ];then
         rm -rf ./gerotx-*-$os.zip
-        zip -r gero-$version-$os.zip gerotxpkg/*
+        zip -r gerotx-$version-$os.zip gerotxpkg/*
       else
          rm -rf ./gerotx-*-$os.tar.gz
          tar czvf gerotx-$version-$os.tar.gz gerotxpkg/*
