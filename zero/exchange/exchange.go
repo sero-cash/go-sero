@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/robfig/cron"
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -32,12 +33,13 @@ import (
 )
 
 type Account struct {
-	wallet  accounts.Wallet
-	pk      *keys.Uint512
-	tk      *keys.Uint512
-	sk      *keys.PKr
-	skr     keys.PKr
-	mainPkr keys.PKr
+	wallet        accounts.Wallet
+	pk            *keys.Uint512
+	tk            *keys.Uint512
+	sk            *keys.PKr
+	skr           keys.PKr
+	mainPkr       keys.PKr
+	nextMergeTime time.Time
 }
 
 type PkrAccount struct {
@@ -176,6 +178,7 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 		account.tk = w.Accounts()[0].Tk.ToUint512()
 		copy(account.skr[:], account.tk[:])
 		account.mainPkr = self.createPkr(account.pk, 1)
+		account.nextMergeTime = time.Now()
 		self.accounts[*account.pk] = &account
 
 		if num := self.starNum(account.pk); num > 0 {
@@ -708,10 +711,10 @@ func (self *Exchange) fetchBlockInfo() {
 		}
 
 		pks := indexs[start]
-		list := []string{}
-		for _, pk := range pks {
-			list = append(list, base58.EncodeToString(pk[:]))
-		}
+		//list := []string{}
+		//for _, pk := range pks {
+		//	list = append(list, base58.EncodeToString(pk[:]))
+		//}
 
 		for end > start {
 			count := fetchCount
@@ -721,7 +724,7 @@ func (self *Exchange) fetchBlockInfo() {
 			if count == 0 {
 				return
 			}
-			log.Info("fetchAndIndexUtxo", "start", start, "count", count, "pks", list)
+			//log.Info("fetchAndIndexUtxo", "start", start, "count", count, "pks", list)
 			if self.fetchAndIndexUtxo(start, count, pks) < int(count) {
 				return
 			}
@@ -925,30 +928,30 @@ func (self *Exchange) isMyPkr(pkr keys.PKr) (account *Account, ok bool) {
 
 func (self *Exchange) merge() {
 	for _, account := range self.accounts {
-		go func(account *Account) {
-			for {
-				prefix := utxoPkKey(*account.pk, common.LeftPadBytes([]byte("SERO"), 32), nil)
-				iterator := self.db.NewIteratorWithPrefix(prefix)
-				utxos := UtxoList{}
-				for iterator.Next() {
-					key := iterator.Key()
-					var root keys.Uint256
-					copy(root[:], key[98:130])
+		seed, err := account.wallet.GetSeed()
+		if err != nil || seed == nil {
+			continue
+		}
+		for {
+			prefix := utxoPkKey(*account.pk, common.LeftPadBytes([]byte("SERO"), 32), nil)
+			iterator := self.db.NewIteratorWithPrefix(prefix)
+			utxos := UtxoList{}
+			for iterator.Next() {
+				key := iterator.Key()
+				var root keys.Uint256
+				copy(root[:], key[98:130])
 
-					if utxo, err := self.getUtxo(root); err == nil {
-						if _, ok := self.usedFlag.Load(utxo.Nil); !ok {
-							utxos = append(utxos, utxo)
-						}
-					}
-
-					if utxos.Len() > 108 {
-						break
+				if utxo, err := self.getUtxo(root); err == nil {
+					if _, ok := self.usedFlag.Load(utxo.Nil); !ok {
+						utxos = append(utxos, utxo)
 					}
 				}
-				if utxos.Len() <= 100 {
+
+				if utxos.Len() >= 108 {
 					break
 				}
-
+			}
+			if utxos.Len() > 100 || time.Now().After(account.nextMergeTime) {
 				sort.Sort(utxos)
 
 				utxos = utxos[0 : utxos.Len()-8]
@@ -968,11 +971,9 @@ func (self *Exchange) merge() {
 					self.commitTx(gtx)
 				}
 			}
-
-		}(account)
-
+		}
+		account.nextMergeTime = time.Now().Add(time.Hour * 6)
 	}
-
 }
 
 var (
