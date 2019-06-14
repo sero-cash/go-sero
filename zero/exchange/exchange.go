@@ -967,8 +967,12 @@ func (self *Exchange) merge() {
 					log.Info("Exchange merge utxo success ", "count", utxos.Len())
 					self.commitTx(gtx)
 				}
+				if utxos.Len() < 100 {
+					account.nextMergeTime = time.Now().Add(time.Hour * 6)
+				}
+			} else {
+				break
 			}
-			account.nextMergeTime = time.Now().Add(time.Hour * 6)
 		}
 
 	}
