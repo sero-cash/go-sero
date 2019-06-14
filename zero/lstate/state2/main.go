@@ -88,7 +88,7 @@ func (self *State2) Parse() (num uint64) {
 		}
 	}
 
-	target_num := light_ref.Ref_inst.GetDelayedNum(seroparam.DefaultDelayNum())
+	target_num := light_ref.Ref_inst.GetDelayedNum(seroparam.DefaultConfirmedBlock())
 
 	i := 0
 	for ; (next_num <= target_num) && (i < 2000); i++ {

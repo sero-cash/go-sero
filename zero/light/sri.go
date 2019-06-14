@@ -45,7 +45,7 @@ func GetOut(root *keys.Uint256, num uint64) (out *localdb.RootState) {
 }
 
 func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []light_types.Block, e error) {
-	stable_num := light_ref.Ref_inst.GetDelayedNum(seroparam.DefaultDelayNum())
+	stable_num := light_ref.Ref_inst.GetDelayedNum(seroparam.DefaultConfirmedBlock())
 	if start <= stable_num {
 		if stable_num-start+1 < count {
 			count = stable_num - start + 1

@@ -4,6 +4,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
 	"github.com/sero-cash/go-sero/zero/exchange"
 
 	"github.com/sero-cash/go-sero/common"
@@ -26,9 +28,11 @@ func (s *PublicExchangeAPI) GetPkSynced(ctx context.Context, pk *keys.Uint512) (
 	if progress.CurrentBlock >= progress.HighestBlock {
 		progress.HighestBlock = progress.CurrentBlock
 	}
+
 	// Otherwise gather the block sync stats
 	return map[string]uint64{
 		"currentPKBlock": currentPKBlock,
+		"confirmedBlick": seroparam.DefaultConfirmedBlock(),
 		"currentBlock":   progress.CurrentBlock,
 		"highestBlock":   progress.HighestBlock,
 	}, nil

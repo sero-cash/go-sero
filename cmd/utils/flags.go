@@ -300,9 +300,9 @@ var (
 		Usage: "autoMerge outs",
 	}
 
-	BalanceDelayFlag = cli.Uint64Flag{
-		Name:  "balanceDelay",
-		Usage: "delay block counts for balance analyze",
+	ConfirmedBlockFlag = cli.Uint64Flag{
+		Name:  "confirmedBlock",
+		Usage: "The balance will be confirmed after the current block of number,default is 12",
 	}
 
 	// Miner settings
@@ -916,9 +916,9 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NetRestrict = list
 	}
 
-	balanceDelay := ctx.GlobalUint64(BalanceDelayFlag.Name)
+	balanceDelay := ctx.GlobalUint64(ConfirmedBlockFlag.Name)
 	if balanceDelay > 0 {
-		seroparam.InitBalanceDelay(balanceDelay)
+		seroparam.InitComfirmedBlock(balanceDelay)
 	}
 
 	if ctx.GlobalBool(DeveloperFlag.Name) {
