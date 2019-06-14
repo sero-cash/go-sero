@@ -32,7 +32,7 @@ func (s *PublicExchangeAPI) GetPkSynced(ctx context.Context, pk *keys.Uint512) (
 	// Otherwise gather the block sync stats
 	return map[string]uint64{
 		"currentPKBlock": currentPKBlock,
-		"confirmedBlick": seroparam.DefaultConfirmedBlock(),
+		"confirmedBlock": seroparam.DefaultConfirmedBlock(),
 		"currentBlock":   progress.CurrentBlock,
 		"highestBlock":   progress.HighestBlock,
 	}, nil
