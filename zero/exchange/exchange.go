@@ -982,7 +982,7 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 			}
 		}
 
-		if zutxos.Len() >= 100 || outxos.Len() >= 1000 {
+		if zutxos.Len() >= 100 || outxos.Len() >= 2400 {
 			break
 		}
 	}
