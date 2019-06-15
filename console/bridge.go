@@ -391,6 +391,129 @@ func (b *bridge) ClosePkg(call otto.FunctionCall) (response otto.Value) {
 	return val
 }
 
+func (b *bridge) Merge(call otto.FunctionCall) (response otto.Value) {
+	var (
+		addr = call.Argument(0)
+		cy   = call.Argument(1)
+	)
+	if !addr.IsString() {
+		throwJSException("first argument must be the pkr to merge")
+	}
+	if !cy.IsString() {
+		throwJSException("first argument must be the currency to merge")
+	}
+
+	finish := make(chan struct{})
+	progress := uiprogress.New()
+	//bar := progress.AddBar(120).PrependElapsed()
+	bar := progress.AddBar(120)
+	bar.PrependFunc(func(b *uiprogress.Bar) string {
+		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 10, ' ')
+	})
+	progress.Start()
+	go progressBar(bar, finish)
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.merge", nil, addr, cy)
+
+	if err != nil {
+		progress.Stop()
+		finish <- struct{}{}
+		throwJSException(err.Error())
+	}
+	bar.Set(bar.Total)
+	progress.Stop()
+	finish <- struct{}{}
+
+	if fn := call.Argument(1); fn.Class() == "Function" {
+		fn.Call(otto.NullValue(), otto.NullValue(), val)
+		return otto.UndefinedValue()
+	}
+
+	return val
+}
+
+func (b *bridge) GenTxWithSign(call otto.FunctionCall) (response otto.Value) {
+	var (
+		args = call.Argument(0)
+	)
+	if !args.IsObject() {
+		throwJSException("first argument must be the exchange GenTxWithSign to send")
+	}
+
+	finish := make(chan struct{})
+	progress := uiprogress.New()
+	//bar := progress.AddBar(120).PrependElapsed()
+	bar := progress.AddBar(120)
+	bar.PrependFunc(func(b *uiprogress.Bar) string {
+		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 10, ' ')
+	})
+	progress.Start()
+	go progressBar(bar, finish)
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.genTxWithSign", nil, args)
+
+	if err != nil {
+		progress.Stop()
+		finish <- struct{}{}
+		throwJSException(err.Error())
+	}
+	bar.Set(bar.Total)
+	progress.Stop()
+	finish <- struct{}{}
+
+	if fn := call.Argument(1); fn.Class() == "Function" {
+		fn.Call(otto.NullValue(), otto.NullValue(), val)
+		return otto.UndefinedValue()
+	}
+
+	return val
+}
+
+func (b *bridge) GetRecords(call otto.FunctionCall) (response otto.Value) {
+	var (
+		address = call.Argument(0)
+		start   = call.Argument(1)
+		end     = call.Argument(2)
+	)
+	if !address.IsString() {
+		throwJSException("first argument must be the exchange getRecords hex address to send")
+	}
+	if !start.IsNumber() {
+		throwJSException("sencond argument must be the exchange getRecords start to send")
+	}
+	if !end.IsNumber() {
+		throwJSException("third argument must be the exchange getRecords end to send")
+	}
+
+	finish := make(chan struct{})
+	progress := uiprogress.New()
+	//bar := progress.AddBar(120).PrependElapsed()
+	bar := progress.AddBar(120)
+	bar.PrependFunc(func(b *uiprogress.Bar) string {
+		return strutil.PadLeft(prettyTime(b.TimeElapsed()), 10, ' ')
+	})
+	progress.Start()
+	go progressBar(bar, finish)
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.getRecords", nil, address, start, end)
+
+	if err != nil {
+		progress.Stop()
+		finish <- struct{}{}
+		throwJSException(err.Error())
+	}
+	bar.Set(bar.Total)
+	progress.Stop()
+	finish <- struct{}{}
+
+	if fn := call.Argument(1); fn.Class() == "Function" {
+		fn.Call(otto.NullValue(), otto.NullValue(), val)
+		return otto.UndefinedValue()
+	}
+
+	return val
+}
+
 // Sleep will block the console for the specified number of seconds.
 func (b *bridge) Sleep(call otto.FunctionCall) (response otto.Value) {
 	if call.Argument(0).IsNumber() {

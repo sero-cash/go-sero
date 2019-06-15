@@ -221,6 +221,26 @@ func (c *Console) init(preload []string) error {
 			obj.Set("transferPkg", bridge.TransferPkg)
 			obj.Set("closePkg", bridge.ClosePkg)
 		}
+
+		exchange, err := c.jsre.Get("exchange")
+		if err != nil {
+			return err
+		}
+
+		if obj := exchange.Object(); obj != nil {
+			if _, err = c.jsre.Run(`jeth.genTxWithSign = exchange.genTxWithSign;`); err != nil {
+				return fmt.Errorf("exchange.genTxWithSign: %v", err)
+			}
+			if _, err = c.jsre.Run(`jeth.getRecords = exchange.getRecords;`); err != nil {
+				return fmt.Errorf("exchange.getRecords: %v", err)
+			}
+			if _, err = c.jsre.Run(`jeth.merge = exchange.merge;`); err != nil {
+				return fmt.Errorf("exchange.merge: %v", err)
+			}
+			obj.Set("genTxWithSign", bridge.GenTxWithSign)
+			obj.Set("getRecords", bridge.GetRecords)
+			obj.Set("merge", bridge.Merge)
+		}
 	}
 	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.
 	admin, err := c.jsre.Get("admin")

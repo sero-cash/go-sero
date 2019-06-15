@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/log"
+
+	"github.com/pkg/errors"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/zero/exchange"
@@ -20,7 +24,7 @@ type PublicExchangeAPI struct {
 	b Backend
 }
 
-func (s *PublicExchangeAPI) GetPkSynced(ctx context.Context, pk *keys.Uint512) (map[string]uint64, error) {
+func (s *PublicExchangeAPI) GetPkSynced(ctx context.Context, pk *keys.Uint512) (map[string]interface{}, error) {
 	currentPKBlock, err := s.b.GetPkNumber(*pk)
 	if err != nil {
 		return nil, err
@@ -29,13 +33,19 @@ func (s *PublicExchangeAPI) GetPkSynced(ctx context.Context, pk *keys.Uint512) (
 	if progress.CurrentBlock >= progress.HighestBlock {
 		progress.HighestBlock = progress.CurrentBlock
 	}
+	exchangeInstance := exchange.CurrentExchange()
+	if exchangeInstance == nil {
+		return nil, errors.New("exchange mode no start")
+	}
+	numbers := exchangeInstance.GetUtxoNum(*pk)
 
 	// Otherwise gather the block sync stats
-	return map[string]uint64{
+	return map[string]interface{}{
 		"currentPKBlock": currentPKBlock,
 		"confirmedBlock": seroparam.DefaultConfirmedBlock(),
 		"currentBlock":   progress.CurrentBlock,
 		"highestBlock":   progress.HighestBlock,
+		"utxoCount":      numbers,
 	}, nil
 
 }
@@ -145,6 +155,33 @@ func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address hexutil.Byte
 		}
 	}
 	return
+}
+
+func (s *PublicExchangeAPI) Merge(ctx context.Context, address *keys.Uint512, cy Smbol) (map[string]interface{}, error) {
+	if address == nil {
+		return nil, errors.New("pk can not bi nil")
+
+	}
+	if cy == "" {
+		return nil, errors.New("cy can not bi nil")
+
+	}
+	exchangeInstance := exchange.CurrentExchange()
+	if exchangeInstance == nil {
+		return nil, errors.New("exchange mode no start")
+	}
+	count, hash, err := exchangeInstance.Merge(address, string(cy))
+	log.Info("merge query utxo", "cy=", cy, "count=", count)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("merge query utxo", "count=", count)
+	txhash := common.Hash{}
+	copy(txhash[:], hash[:])
+	return map[string]interface{}{
+		"utxoCount": count,
+		"txhash":    txhash,
+	}, nil
 }
 
 func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *light_types.GTx) error {
