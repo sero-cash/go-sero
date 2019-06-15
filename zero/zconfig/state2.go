@@ -31,6 +31,10 @@ func State2_dir() string {
 	return filepath.Join(dir, "balance")
 }
 
+func Exchange_dir() string {
+	return filepath.Join(dir, "exchange")
+}
+
 func Init_State2() {
 	os.Mkdir(State2_dir(), os.ModePerm)
 }

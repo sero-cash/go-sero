@@ -22,11 +22,11 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"path/filepath"
 	"runtime"
-	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/zero/lstate"
 
@@ -193,9 +193,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 
 	//init exchange
 	if config.StartExchange {
-		split := strings.Split(ctx.ResolvePath(""), "/")
-		path := filepath.Join(strings.Join(split[:len(split)-1], "/"), "exchange")
-		sero.exchange = exchange.NewExchange(path, sero.txPool, sero.accountManager, config.AutoMerge)
+		sero.exchange = exchange.NewExchange(zconfig.Exchange_dir(), sero.txPool, sero.accountManager, config.AutoMerge)
 	}
 	return sero, nil
 }
