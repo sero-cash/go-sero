@@ -431,15 +431,13 @@ func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Recepti
 		return nil, err
 	}
 
-	if account.sk == nil {
-		seed, err := account.wallet.GetSeed()
-		if err != nil {
-			return nil, err
-		}
-		sk := keys.Seed2Sk(seed.SeedToUint256())
-		account.sk = new(keys.PKr)
-		copy(account.sk[:], sk[:])
+	seed, err := account.wallet.GetSeed()
+	if err != nil {
+		return nil, err
 	}
+	sk := keys.Seed2Sk(seed.SeedToUint256())
+	account.sk = new(keys.PKr)
+	copy(account.sk[:], sk[:])
 
 	txParam.From.SKr = *account.sk
 	for index := range txParam.Ins {
@@ -450,6 +448,7 @@ func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Recepti
 	if err != nil {
 		return nil, err
 	}
+	account.sk = nil
 	return &gtx, nil
 }
 
