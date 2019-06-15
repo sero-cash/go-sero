@@ -89,7 +89,7 @@ func isString(input []byte) bool {
 
 type ReceptionArgs struct {
 	Addr     hexutil.Bytes
-	Currency string
+	Currency Smbol
 	Value    *Big
 }
 
@@ -113,6 +113,9 @@ func (args GenTxArgs) check() error {
 		_, err := validAddress(rec.Addr)
 		if err != nil {
 			return err
+		}
+		if rec.Currency.IsEmpty() {
+			return errors.Errorf("%v reception currency is nil", hexutil.Encode(rec.Addr[:]))
 		}
 		if rec.Value == nil {
 			return errors.Errorf("%v reception value is nil", hexutil.Encode(rec.Addr[:]))
@@ -145,7 +148,7 @@ func (args GenTxArgs) toTxParam() exchange.TxParam {
 		pkr := byteToPkr(rec.Addr)
 		receptions = append(receptions, exchange.Reception{
 			pkr,
-			rec.Currency,
+			string(rec.Currency),
 			(*big.Int)(rec.Value),
 		})
 	}
