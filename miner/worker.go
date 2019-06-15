@@ -23,11 +23,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sero-cash/go-sero/zero/zconfig"
-
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core"
@@ -487,7 +486,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 			break
 		}
 
-		if env.header.Number.Uint64() == zconfig.VP0 {
+		if env.header.Number.Uint64() == seroparam.VP0() {
 			txs.Shift()
 			env.errHandledTxs = append(env.errHandledTxs, tx)
 			continue

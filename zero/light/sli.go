@@ -2,6 +2,8 @@ package light
 
 import (
 	"encoding/json"
+	"log"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -10,7 +12,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"log"
 )
 
 type SLI struct {
@@ -99,6 +100,21 @@ func (self *SLI) GenTx(param *light_types.GenTxParam) (gtx light_types.GTx, e er
 		gtx.Tx = tx
 		gtx.Gas = hexutil.Uint64(param.Gas)
 		gtx.GasPrice = hexutil.Big(param.GasPrice)
+		gtx.Hash = tx.ToHash()
+		return
+	}
+}
+
+func SignTx(sk *keys.Uint512, paramTx *light_types.GenTxParam) (tx light_types.GTx, err error) {
+	copy(paramTx.From.SKr[:], sk[:])
+	for i := range paramTx.Ins {
+		copy(paramTx.Ins[i].SKr[:], sk[:])
+	}
+	if gtx, e := SLI_Inst.GenTx(paramTx); e != nil {
+		err = e
+		return
+	} else {
+		tx = gtx
 		return
 	}
 }

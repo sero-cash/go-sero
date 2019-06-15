@@ -33,6 +33,7 @@ type Account struct {
 	Address address.AccountAddress `json:"address"` // Sero account address derived from the key
 	Tk      address.AccountAddress `json:"tk"`      // Sero account tk derived from the key
 	URL     URL                    `json:"url"`     // Optional resource locator within a backend
+	At      uint64                 `json:'at'`      //account create at blocknum
 }
 
 // Wallet represents a software or hardware wallet that might contain one or more
@@ -101,6 +102,10 @@ type Wallet interface {
 	IsMine(onceAddress common.Address) bool
 
 	AddressUnlocked(account Account) (bool, error)
+
+	GetSeed() (*address.Seed, error)
+
+	GetSeedWithPassphrase(passphrase string) (*address.Seed, error)
 }
 
 // Backend is a "wallet provider" that may contain a batch of accounts they can

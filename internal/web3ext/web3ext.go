@@ -518,6 +518,12 @@ web3._extend({
 			params: 3,
 			inputFormatter: [null, web3._extend.formatters.inputAddressFormatter, null]
 		}),
+        new web3._extend.Method({
+			name: 'exportMnemonic',
+			call: 'personal_exportMnemonic',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null]
+		}),
 		new web3._extend.Method({
 			name: 'ecRecover',
 			call: 'personal_ecRecover',

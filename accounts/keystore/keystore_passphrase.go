@@ -100,7 +100,7 @@ func (ks keyStorePassphrase) GetKey(addr address.AccountAddress, filename, auth 
 
 // StoreKey generates a key, encrypts with 'auth' and stores in the given directory
 func StoreKey(dir, auth string, scryptN, scryptP int) (address.AccountAddress, error) {
-	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP}, rand.Reader, auth)
+	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP}, rand.Reader, auth, 0)
 	return a.Address, err
 }
 
@@ -122,56 +122,60 @@ func (ks keyStorePassphrase) JoinPath(filename string) string {
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
 // blob that can be decrypted later on.
 func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
-	authArray := []byte(auth)
+	var cryptoStruct cryptoJSON
+	if key.PrivateKey != nil {
+		authArray := []byte(auth)
 
-	salt := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
-		panic("reading from crypto/rand failed: " + err.Error())
-	}
-	derivedKey, err := scrypt.Key(authArray, salt, scryptN, scryptR, scryptP, scryptDKLen)
-	if err != nil {
-		return nil, err
-	}
-	encryptKey := derivedKey[:16]
-	keyBytes := math.PaddedBigBytes(key.PrivateKey.D, 32)
+		salt := make([]byte, 32)
+		if _, err := io.ReadFull(rand.Reader, salt); err != nil {
+			panic("reading from crypto/rand failed: " + err.Error())
+		}
+		derivedKey, err := scrypt.Key(authArray, salt, scryptN, scryptR, scryptP, scryptDKLen)
+		if err != nil {
+			return nil, err
+		}
+		encryptKey := derivedKey[:16]
+		keyBytes := math.PaddedBigBytes(key.PrivateKey.D, 32)
 
-	iv := make([]byte, aes.BlockSize) // 16
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		panic("reading from crypto/rand failed: " + err.Error())
-	}
-	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
-	if err != nil {
-		return nil, err
-	}
-	mac := crypto.Keccak256(derivedKey[16:32], cipherText)
+		iv := make([]byte, aes.BlockSize) // 16
+		if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+			panic("reading from crypto/rand failed: " + err.Error())
+		}
+		cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
+		if err != nil {
+			return nil, err
+		}
+		mac := crypto.Keccak256(derivedKey[16:32], cipherText)
 
-	scryptParamsJSON := make(map[string]interface{}, 5)
-	scryptParamsJSON["n"] = scryptN
-	scryptParamsJSON["r"] = scryptR
-	scryptParamsJSON["p"] = scryptP
-	scryptParamsJSON["dklen"] = scryptDKLen
-	scryptParamsJSON["salt"] = hex.EncodeToString(salt)
+		scryptParamsJSON := make(map[string]interface{}, 5)
+		scryptParamsJSON["n"] = scryptN
+		scryptParamsJSON["r"] = scryptR
+		scryptParamsJSON["p"] = scryptP
+		scryptParamsJSON["dklen"] = scryptDKLen
+		scryptParamsJSON["salt"] = hex.EncodeToString(salt)
 
-	cipherParamsJSON := cipherparamsJSON{
-		IV: hex.EncodeToString(iv),
-	}
+		cipherParamsJSON := cipherparamsJSON{
+			IV: hex.EncodeToString(iv),
+		}
 
-	cryptoStruct := cryptoJSON{
-		Cipher:       "aes-128-ctr",
-		CipherText:   hex.EncodeToString(cipherText),
-		CipherParams: cipherParamsJSON,
-		KDF:          keyHeaderKDF,
-		KDFParams:    scryptParamsJSON,
-		MAC:          hex.EncodeToString(mac),
+		cryptoStruct = cryptoJSON{
+			Cipher:       "aes-128-ctr",
+			CipherText:   hex.EncodeToString(cipherText),
+			CipherParams: cipherParamsJSON,
+			KDF:          keyHeaderKDF,
+			KDFParams:    scryptParamsJSON,
+			MAC:          hex.EncodeToString(mac),
+		}
 	}
-	encryptedKeyJSONV3 := encryptedKeyJSONV1{
+	encryptedKeyJSONV1 := encryptedKeyJSONV1{
 		base58.EncodeToString(key.Address.Bytes()),
 		base58.EncodeToString(key.Tk.Bytes()),
 		cryptoStruct,
 		key.Id.String(),
 		version,
+		key.At,
 	}
-	return json.Marshal(encryptedKeyJSONV3)
+	return json.Marshal(encryptedKeyJSONV1)
 }
 
 func GetAddress(keyjson []byte) (string, error) {
@@ -218,10 +222,15 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		Address:    crypto.PrivkeyToAddress(key),
 		Tk:         crypto.PrivkeyToTk(key),
 		PrivateKey: key,
+		At:         k.At,
 	}, nil
 }
 
 func decryptKeyV3(keyProtected *encryptedKeyJSONV1, auth string) (keyBytes []byte, keyId []byte, err error) {
+
+	if keyProtected.Crypto.CipherText == "" {
+		return nil, nil, fmt.Errorf("has no privatekey for tk:%v", keyProtected.Tk)
+	}
 	if keyProtected.Version != version {
 		return nil, nil, fmt.Errorf("Version not supported: %v", keyProtected.Version)
 	}

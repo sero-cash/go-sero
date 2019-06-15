@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sero-cash/go-sero/zero/zconfig"
+	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
@@ -459,7 +459,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 		return ErrGasLimit
 	}
 
-	err := verify.Verify(tx.GetZZSTX(), pool.currentState.GetZState())
+	err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
 	if err != nil {
 		log.Error("validateTx error", "hash", tx.Hash().Hex(), "verify stx err", err)
 		return ErrVerifyError
@@ -504,8 +504,10 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 
 	currentBlockNum := pool.chain.CurrentBlock().NumberU64()
 
-	if (zconfig.VP0-50) < currentBlockNum && currentBlockNum < (zconfig.VP0+50) {
-		return false, fmt.Errorf("protect vp0:%v", zconfig.VP0)
+	if false {
+		if (seroparam.VP0()-50) < currentBlockNum && currentBlockNum < (seroparam.VP0()+50) {
+			return false, fmt.Errorf("protect vp0:%v", seroparam.VP0)
+		}
 	}
 
 	// If the transaction fails basic validation, discard it

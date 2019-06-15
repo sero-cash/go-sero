@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/event"
@@ -230,7 +232,7 @@ func TestWalletNotifications(t *testing.T) {
 
 	// Randomly add and remove accounts.
 	var (
-		live       = make(map[common.Address]accounts.Account)
+		live       = make(map[address.AccountAddress]accounts.Account)
 		wantEvents []walletEvent
 	)
 	for i := 0; i < 1024; i++ {
@@ -265,7 +267,7 @@ func TestWalletNotifications(t *testing.T) {
 }
 
 // checkAccounts checks that all known live accounts are present in the wallet list.
-func checkAccounts(t *testing.T, live map[common.Address]accounts.Account, wallets []accounts.Wallet) {
+func checkAccounts(t *testing.T, live map[address.AccountAddress]accounts.Account, wallets []accounts.Wallet) {
 	if len(live) != len(wallets) {
 		t.Errorf("wallet list doesn't match required accounts: have %d, want %d", len(wallets), len(live))
 		return

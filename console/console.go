@@ -181,13 +181,21 @@ func (c *Console) init(preload []string) error {
 			if _, err = c.jsre.Run(`jeth.newAccount = personal.newAccount;`); err != nil {
 				return fmt.Errorf("personal.newAccount: %v", err)
 			}
+			if _, err = c.jsre.Run(`jeth.newAccountWithMnemonic = personal.newAccountWithMnemonic;`); err != nil {
+				return fmt.Errorf("personal.newAccountWithMnemonic: %v", err)
+			}
 			if _, err = c.jsre.Run(`jeth.sign = personal.sign;`); err != nil {
 				return fmt.Errorf("personal.sign: %v", err)
+			}
+			if _, err = c.jsre.Run(`jeth.exportMnemonic = personal.exportMnemonic;`); err != nil {
+				return fmt.Errorf("personal.exportMnemonic: %v", err)
 			}
 
 			obj.Set("unlockAccount", bridge.UnlockAccount)
 			obj.Set("newAccount", bridge.NewAccount)
+			obj.Set("newAccountWithMnemonic", bridge.NewAccountWithMnemonic)
 			obj.Set("sign", bridge.Sign)
+			obj.Set("exportMnemonic", bridge.ExportMnemonic)
 		}
 
 		sero, err := c.jsre.Get("sero")
@@ -212,6 +220,26 @@ func (c *Console) init(preload []string) error {
 			obj.Set("createPkg", bridge.CreatePkg)
 			obj.Set("transferPkg", bridge.TransferPkg)
 			obj.Set("closePkg", bridge.ClosePkg)
+		}
+
+		exchange, err := c.jsre.Get("exchange")
+		if err != nil {
+			return err
+		}
+
+		if obj := exchange.Object(); obj != nil {
+			if _, err = c.jsre.Run(`jeth.genTxWithSign = exchange.genTxWithSign;`); err != nil {
+				return fmt.Errorf("exchange.genTxWithSign: %v", err)
+			}
+			if _, err = c.jsre.Run(`jeth.getRecords = exchange.getRecords;`); err != nil {
+				return fmt.Errorf("exchange.getRecords: %v", err)
+			}
+			if _, err = c.jsre.Run(`jeth.merge = exchange.merge;`); err != nil {
+				return fmt.Errorf("exchange.merge: %v", err)
+			}
+			obj.Set("genTxWithSign", bridge.GenTxWithSign)
+			obj.Set("getRecords", bridge.GetRecords)
+			obj.Set("merge", bridge.Merge)
 		}
 	}
 	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.

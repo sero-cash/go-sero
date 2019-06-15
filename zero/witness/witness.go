@@ -19,9 +19,10 @@ package witness
 import (
 	"unsafe"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
 	"github.com/sero-cash/go-sero/zero/utils"
 	"github.com/sero-cash/go-sero/zero/witness/merkle"
-	"github.com/sero-cash/go-sero/zero/zconfig"
 )
 
 type WitnessBase struct {
@@ -65,7 +66,7 @@ func (w *Witness) Root() merkle.Leaf {
 }
 
 func (w *Witness) Append(leaf merkle.Leaf) {
-	if zconfig.Is_Dev() {
+	if seroparam.Is_Dev() {
 		w.Logs = append(w.Logs, leaf)
 		if len(w.Logs) > 10 {
 			w.Logs = append(w.Logs[:0], w.Logs[1:]...)

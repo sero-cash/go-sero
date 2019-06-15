@@ -28,12 +28,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/zero/txs/generate"
 	"github.com/sero-cash/go-sero/zero/txs/verify"
-
-	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/accounts/keystore"
@@ -289,6 +288,21 @@ var (
 		Name:  "pthreads",
 		Usage: "Number of CPU threads to use for zero prove",
 		Value: runtime.NumCPU(),
+	}
+
+	ExchangeFlag = cli.BoolFlag{
+		Name:  "exchange",
+		Usage: "start exchange",
+	}
+
+	AutoMergeFlag = cli.BoolFlag{
+		Name:  "autoMerge",
+		Usage: "autoMerge outs",
+	}
+
+	ConfirmedBlockFlag = cli.Uint64Flag{
+		Name:  "confirmedBlock",
+		Usage: "The balance will be confirmed after the current block of number,default is 12",
 	}
 
 	// Miner settings
@@ -902,13 +916,18 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NetRestrict = list
 	}
 
+	balanceDelay := ctx.GlobalUint64(ConfirmedBlockFlag.Name)
+	if balanceDelay > 0 {
+		seroparam.InitComfirmedBlock(balanceDelay)
+	}
+
 	if ctx.GlobalBool(DeveloperFlag.Name) {
 		// --dev mode can't use p2p networking.
 		//cfg.MaxPeers = 0
 		cfg.ListenAddr = ":0"
 		cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
-		zconfig.Init_Dev(true)
+		seroparam.Init_Dev(true)
 	}
 }
 
@@ -1079,6 +1098,14 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 
 	if ctx.GlobalIsSet(MiningModeFlag.Name) {
 		cfg.MineMode = true
+	}
+
+	if ctx.GlobalIsSet(ExchangeFlag.Name) {
+		seroparam.InitExchange(true)
+		cfg.StartExchange = true
+		if ctx.GlobalIsSet(AutoMergeFlag.Name) {
+			cfg.AutoMerge = true
+		}
 	}
 
 	// Override any default configs for hard coded networks.

@@ -1,4 +1,4 @@
-package lstate
+package lstate_types
 
 import (
 	"github.com/sero-cash/go-czero-import/keys"

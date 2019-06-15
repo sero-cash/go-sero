@@ -122,9 +122,9 @@ func accumulateRewardsV3(number, bdiff *big.Int) [3]*big.Int {
   [2] team reward
 */
 func GetBlockReward(number, diff *big.Int, gasUsed, gasLimit uint64) [3]*big.Int {
-	if number.Uint64() >= seroparam.SIP3 {
+	if number.Uint64() >= seroparam.SIP3() {
 		return accumulateRewardsV3(number, diff)
-	} else if number.Uint64() >= seroparam.SIP1 {
+	} else if number.Uint64() >= seroparam.SIP1() {
 		return accumulateRewardsV2(number, diff)
 	} else {
 		var res [3]*big.Int

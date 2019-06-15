@@ -79,7 +79,7 @@ func (self *gen_output_desc) Run() bool {
 	}
 }
 
-func genDesc_Zs(state lstate.LState, seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc, tx *stx.T) (e error) {
+func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc, tx *stx.T) (e error) {
 	var gen_pkg_procs = gen_pkg_procs_pool.GetProcs()
 	defer gen_pkg_procs_pool.PutProcs(gen_pkg_procs)
 	if ptx.desc_pkg.create != nil {
@@ -107,7 +107,7 @@ func genDesc_Zs(state lstate.LState, seed *keys.Uint256, ptx *preTx, balance_des
 		g.desc.RPK = in.Out_Z.RPK
 		g.desc.Einfo = in.Out_Z.EInfo
 		g.desc.Index = in.OutIndex
-		pos, paths, anchor := state.ZState().State.MTree.GetPaths(in.RootCM)
+		pos, paths, anchor := lstate.CurrentLState().ZState().State.MTree.GetPaths(in.RootCM)
 		g.desc.Position = uint32(pos)
 		g.desc.Anchor = anchor
 		for i, path := range paths {
@@ -131,7 +131,7 @@ func genDesc_Zs(state lstate.LState, seed *keys.Uint256, ptx *preTx, balance_des
 		g.desc.Tkt_value = asset.Tkt.Value
 		g.desc.Memo = out.Memo
 		g.desc.Pkr = out.Addr
-		g.desc.Height = state.ZState().Num()
+		g.desc.Height = lstate.CurrentLState().ZState().Num()
 		g.index = i
 
 		gen_output_procs.StartProc(&g)

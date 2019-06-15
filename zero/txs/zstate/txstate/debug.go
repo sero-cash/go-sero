@@ -20,8 +20,9 @@ import (
 	"runtime"
 	"runtime/debug"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
 	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/zero/zconfig"
 )
 
 func Need_debug() bool {
@@ -29,7 +30,7 @@ func Need_debug() bool {
 	if false {
 		return true
 	} else {
-		return zconfig.Is_Dev()
+		return seroparam.Is_Dev()
 	}
 }
 

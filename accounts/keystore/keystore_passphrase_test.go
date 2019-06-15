@@ -20,7 +20,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/address"
 )
 
 // Tests that a json key file can be decrypted and encrypted in multiple rounds.
@@ -30,7 +30,7 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 		t.Fatal(err)
 	}
 	password := ""
-	address := common.Base58ToAddress("4oGNhAf3JRE1an7TPvKcxpfqHMY7rW6y1fupGcsn8krhWeUEAThkY4QsjHZqqacjMAENDE15tsXmdfsJvdeFVJDA")
+	address := address.Base58ToAccount("4oGNhAf3JRE1an7TPvKcxpfqHMY7rW6y1fupGcsn8krhWeUEAThkY4QsjHZqqacjMAENDE15tsXmdfsJvdeFVJDA")
 
 	// Do a few rounds of decryption and encryption
 	for i := 0; i < 3; i++ {
