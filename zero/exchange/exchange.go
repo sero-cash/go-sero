@@ -1005,8 +1005,8 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 			}
 			if utxos.Len() < 100 {
 				account.nextMergeTime = time.Now().Add(time.Hour * 6)
-				return
 			}
+			return
 		} else {
 			e = fmt.Errorf("no need to merge the account, utxo count == %v", utxos.Len())
 			return
