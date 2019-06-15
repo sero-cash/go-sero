@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 	"sort"
 	"strings"
@@ -40,6 +39,9 @@ type Account struct {
 	sk            *keys.PKr
 	skr           keys.PKr
 	mainPkr       keys.PKr
+	balances      map[string]*big.Int
+	utxoNums      map[string]uint64
+	isChanged     bool
 	nextMergeTime time.Time
 }
 
@@ -115,7 +117,7 @@ type Exchange struct {
 	txPool         *core.TxPool
 	accountManager *accounts.Manager
 
-	accounts    map[keys.Uint512]*Account
+	accounts    sync.Map
 	pkrAccounts sync.Map
 
 	sri light.SRI
@@ -159,7 +161,7 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 	exchange.db = db
 
 	exchange.numbers = sync.Map{}
-	exchange.accounts = map[keys.Uint512]*Account{}
+	exchange.accounts = sync.Map{}
 	for _, w := range accountManager.Wallets() {
 		exchange.initWallet(w)
 	}
@@ -179,15 +181,17 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 }
 
 func (self *Exchange) initWallet(w accounts.Wallet) {
-	if _, ok := self.accounts[*w.Accounts()[0].Address.ToUint512()]; !ok {
+
+	if _, ok := self.accounts.Load(*w.Accounts()[0].Address.ToUint512()); !ok {
 		account := Account{}
 		account.wallet = w
 		account.pk = w.Accounts()[0].Address.ToUint512()
 		account.tk = w.Accounts()[0].Tk.ToUint512()
 		copy(account.skr[:], account.tk[:])
 		account.mainPkr = self.createPkr(account.pk, 1)
+		account.isChanged = true
 		account.nextMergeTime = time.Now()
-		self.accounts[*account.pk] = &account
+		self.accounts.Store(*account.pk, &account)
 
 		if num := self.starNum(account.pk); num > 0 {
 			self.numbers.Store(*account.pk, num)
@@ -240,6 +244,13 @@ func (self *Exchange) updateAccount() {
 	}
 }
 
+func (self *Exchange) GetUtxoNum(pk keys.Uint512) map[string]uint64 {
+	if account := self.getAccountByPk(pk); account != nil {
+		return account.utxoNums
+	}
+	return map[string]uint64{}
+}
+
 func (self *Exchange) GetCurrencyNumber(pk keys.Uint512) uint64 {
 	value, ok := self.numbers.Load(pk)
 	if !ok {
@@ -255,7 +266,7 @@ func (self *Exchange) GetPkr(pk *keys.Uint512, index *keys.Uint256) (pkr keys.PK
 	if new(big.Int).SetBytes(index[:]).Cmp(big.NewInt(100)) < 0 {
 		return pkr, errors.New("index must > 100")
 	}
-	if _, ok := self.accounts[*pk]; !ok {
+	if _, ok := self.accounts.Load(*pk); !ok {
 		return pkr, errors.New("not found Pk")
 	}
 
@@ -263,30 +274,38 @@ func (self *Exchange) GetPkr(pk *keys.Uint512, index *keys.Uint256) (pkr keys.PK
 }
 
 func (self *Exchange) GetBalances(pk keys.Uint512) (balances map[string]*big.Int) {
-
-	prefix := append(pkPrefix, pk[:]...)
-	iterator := self.db.NewIteratorWithPrefix(prefix)
-
-	balances = map[string]*big.Int{}
-	var count int
-	for iterator.Next() {
-		key := iterator.Key()
-		var root keys.Uint256
-		copy(root[:], key[98:130])
-
-		if utxo, err := self.getUtxo(root); err == nil {
-			if utxo.Asset.Tkn != nil {
-				currency := common.BytesToString(utxo.Asset.Tkn.Currency[:])
-				if amount, ok := balances[currency]; ok {
-					amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
-				} else {
-					balances[currency] = new(big.Int).Set(utxo.Asset.Tkn.Value.ToIntRef())
+	if value, ok := self.accounts.Load(pk); ok {
+		account := value.(*Account)
+		if account.isChanged {
+			prefix := append(pkPrefix, pk[:]...)
+			iterator := self.db.NewIteratorWithPrefix(prefix)
+			balances = map[string]*big.Int{}
+			utxoNums := map[string]uint64{}
+			for iterator.Next() {
+				key := iterator.Key()
+				var root keys.Uint256
+				copy(root[:], key[98:130])
+				if utxo, err := self.getUtxo(root); err == nil {
+					if utxo.Asset.Tkn != nil {
+						currency := common.BytesToString(utxo.Asset.Tkn.Currency[:])
+						if amount, ok := balances[currency]; ok {
+							amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
+							utxoNums[currency] += 1
+						} else {
+							balances[currency] = new(big.Int).Set(utxo.Asset.Tkn.Value.ToIntRef())
+							utxoNums[currency] = 1
+						}
+					}
 				}
 			}
+			account.balances = balances
+			account.utxoNums = utxoNums
+			account.isChanged = false
+		} else {
+			return account.balances
 		}
-
-		count++
 	}
+
 	return
 }
 
@@ -303,11 +322,13 @@ func (self *Exchange) GenTx(param TxParam) (txParam *light_types.GenTxParam, e e
 		return nil, err
 	}
 
-	if _, ok := self.accounts[param.From]; !ok {
+	if value, ok := self.accounts.Load(param.From); ok {
+		account := value.(*Account)
+		txParam, e = self.buildTxParam(utxos, account, param.Receptions, param.Gas, param.GasPrice)
+	} else {
 		return nil, errors.New("not found Pk")
 	}
 
-	txParam, e = self.buildTxParam(utxos, self.accounts[param.From], param.Receptions, param.Gas, param.GasPrice)
 	return
 }
 
@@ -318,10 +339,11 @@ func (self *Exchange) GenTxWithSign(param TxParam) (*light_types.GTx, error) {
 	}
 
 	var account *Account
-	if _, ok := self.accounts[param.From]; !ok {
-		return nil, errors.New("not found Pk")
+	if value, ok := self.accounts.Load(param.From); ok {
+		account = value.(*Account)
 	} else {
-		account = self.accounts[param.From]
+		return nil, errors.New("not found Pk")
+
 	}
 
 	gtx, err := self.genTx(utxos, account, param.Receptions, param.Gas, param.GasPrice)
@@ -332,6 +354,36 @@ func (self *Exchange) GenTxWithSign(param TxParam) (*light_types.GTx, error) {
 	gtx.Hash = gtx.Tx.ToHash()
 	log.Info("Exchange genTx success")
 	return gtx, nil
+}
+
+func (self *Exchange) getAccountByPk(pk keys.Uint512) *Account {
+	if value, ok := self.accounts.Load(pk); ok {
+		return value.(*Account)
+	}
+	return nil
+}
+
+func (self *Exchange) getAccountByPkr(pkr keys.PKr) (account *Account) {
+	self.accounts.Range(func(key, value interface{}) bool {
+		account := value.(*Account)
+		if keys.IsMyPKr(account.tk, &pkr) {
+			return false
+		}
+		return true
+
+	})
+	return
+}
+
+func (self *Exchange) isPk(addr keys.PKr) bool {
+	byte32 := common.Hash{}
+	return bytes.Equal(byte32[:], addr[64:96])
+}
+
+func (self *Exchange) createPkr(pk *keys.Uint512, index uint64) keys.PKr {
+	r := keys.Uint256{}
+	copy(r[:], common.LeftPadBytes(encodeNumber(index), 32))
+	return keys.Addr2PKr(pk, &r)
 }
 
 func (self *Exchange) preGenTx(param TxParam) (utxos []Utxo, err error) {
@@ -368,21 +420,6 @@ func (self *Exchange) preGenTx(param TxParam) (utxos []Utxo, err error) {
 		}
 	}
 	return
-}
-
-//func (self *Exchange) CommitTx(gtx light_types.GTx) (err error) {
-//	return self.commitTx(&gtx)
-//}
-
-func (self *Exchange) isPk(addr keys.PKr) bool {
-	byte32 := common.Hash{}
-	return bytes.Equal(byte32[:], addr[64:96])
-}
-
-func (self *Exchange) createPkr(pk *keys.Uint512, index uint64) keys.PKr {
-	r := keys.Uint256{}
-	copy(r[:], common.LeftPadBytes(encodeNumber(index), 32))
-	return keys.Addr2PKr(pk, &r)
 }
 
 func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Reception, gas uint64, gasPrice *big.Int) (*light_types.GTx, error) {
@@ -524,37 +561,6 @@ func (self *Exchange) commitTx(tx *light_types.GTx) (err error) {
 	log.Info("Exchange commitTx", "txhash", signedTx.Hash().String())
 	err = self.txPool.AddLocal(signedTx)
 	return err
-}
-
-func (self *Exchange) initAccount(pkr keys.PKr) (err error) {
-	if _, ok := self.isMyPkr(pkr); !ok {
-		return
-	}
-
-	var account *PkrAccount
-	if value, ok := self.pkrAccounts.Load(pkr); ok {
-		account = value.(*PkrAccount)
-
-	} else {
-		account = &PkrAccount{}
-		account.Pkr = pkr
-		account.balances = map[string]*big.Int{}
-		self.pkrAccounts.Store(pkr, account)
-	}
-
-	err = self.iteratorUtxo(pkr, account.num+1, math.MaxUint64, func(utxo Utxo) {
-		if utxo.Asset.Tkn != nil {
-			curency := strings.ToUpper(common.BytesToString(utxo.Asset.Tkn.Currency[:]))
-			if balance, ok := account.balances[curency]; ok {
-				balance.Add(balance, utxo.Asset.Tkn.Value.ToIntRef())
-			} else {
-				account.balances[curency] = new(big.Int).Set(utxo.Asset.Tkn.Value.ToIntRef())
-			}
-			account.num = utxo.Num
-		}
-	})
-
-	return
 }
 
 func (self *Exchange) iteratorUtxo(pkr keys.PKr, begin, end uint64, handler HandleUtxoFunc) (e error) {
@@ -725,11 +731,6 @@ func (self *Exchange) fetchBlockInfo() {
 		}
 
 		pks := indexs[start]
-		//list := []string{}
-		//for _, pk := range pks {
-		//	list = append(list, base58.EncodeToString(pk[:]))
-		//}
-
 		for end > start {
 			count := fetchCount
 			if end-start < fetchCount {
@@ -738,7 +739,6 @@ func (self *Exchange) fetchBlockInfo() {
 			if count == 0 {
 				return
 			}
-			//log.Info("fetchAndIndexUtxo", "start", start, "count", count, "pks", list)
 			if self.fetchAndIndexUtxo(start, count, pks) < int(count) {
 				return
 			}
@@ -882,10 +882,15 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[keys.Uint512]
 			copy(pkr[:], pk[:])
 			batch.Put(utxoPkrKey(pkr, num), data)
 		}
+
+		if account := self.getAccountByPk(pk); account != nil {
+			account.isChanged = true
+		}
 	}
 
 	for _, Nil := range nils {
 
+		var pk keys.Uint512
 		key := nilKey(Nil)
 		hex := common.Bytes2Hex(key)
 		if value, ok := ops[hex]; ok {
@@ -895,18 +900,23 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[keys.Uint512]
 			copy(root[:], value[98:130])
 			delete(ops, common.Bytes2Hex(nilKey(root)))
 
-			//log.Info("Index del", "nil", common.Bytes2Hex(Nil[:]), "key", value)
+			copy(pk[:], value[2:66])
 		} else {
-			data, _ := self.db.Get(key)
-			if data != nil {
-				batch.Delete(data)
+			value, _ := self.db.Get(key)
+			if value != nil {
+				batch.Delete(value)
 				batch.Delete(nilKey(Nil))
 
 				var root keys.Uint256
-				copy(root[:], data[98:130])
+				copy(root[:], value[98:130])
 				batch.Delete(nilKey(root))
-				//log.Info("Index del", "nil", common.Bytes2Hex(Nil[:]), "key", common.Bytes2Hex(data))
+
+				copy(pk[:], value[2:66])
 			}
+		}
+
+		if account := self.getAccountByPk(pk); account != nil {
+			account.isChanged = true
 		}
 		self.usedFlag.Delete(common.Bytes2Hex(Nil[:]))
 	}
@@ -920,10 +930,11 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[keys.Uint512]
 
 func (self *Exchange) ownPkr(pks []keys.Uint512, pkr keys.PKr) (account *Account, ok bool) {
 	for _, pk := range pks {
-		account = self.accounts[pk]
-		if account == nil {
+		value, ok := self.accounts.Load(pk)
+		if !ok {
 			continue
 		}
+		account = value.(*Account)
 		if keys.IsMyPKr(account.tk, &pkr) {
 			return account, true
 		}
@@ -931,26 +942,13 @@ func (self *Exchange) ownPkr(pks []keys.Uint512, pkr keys.PKr) (account *Account
 	return
 }
 
-func (self *Exchange) isMyPkr(pkr keys.PKr) (account *Account, ok bool) {
-	for _, account := range self.accounts {
-		if keys.IsMyPKr(account.tk, &pkr) {
-			return account, true
-		}
-	}
-	return nil, false
-}
-
 func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhash keys.Uint256, e error) {
-	var account *Account
-	for _, a := range self.accounts {
-		if a.pk == pk {
-			account = a
-		}
-	}
+	account := self.getAccountByPk(*pk)
 	if account == nil {
 		e = errors.New("account is nil")
 		return
 	}
+
 	seed, err := account.wallet.GetSeed()
 	if err != nil || seed == nil {
 		e = errors.New("account is locked")
@@ -1010,14 +1008,16 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 }
 
 func (self *Exchange) merge() {
-	for _, account := range self.accounts {
+	self.accounts.Range(func(key, value interface{}) bool {
+		account := value.(*Account)
 		if count, txhash, err := self.Merge(account.pk, "SERO"); err != nil {
 			log.Error("autoMerge fail", "pk", cpt.Base58Encode(account.pk[:]), "count", count, "error", err)
-			continue
 		} else {
 			log.Error("autoMerge succ", "pk", cpt.Base58Encode(account.pk[:]), "tx", hexutil.Encode(txhash[:]), "count", count)
 		}
-	}
+		return true
+	})
+
 }
 
 var (
