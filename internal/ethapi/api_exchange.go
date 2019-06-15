@@ -2,6 +2,7 @@ package ethapi
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -68,6 +69,10 @@ func (b *Big) UnmarshalJSON(input []byte) error {
 	}
 }
 
+func (b *Big) ToInt() *big.Int {
+	return (*big.Int)(b)
+}
+
 func isString(input []byte) bool {
 	return len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"'
 }
@@ -82,11 +87,16 @@ type GenTxArgs struct {
 	From       keys.Uint512
 	Receptions []ReceptionArgs
 	Gas        uint64
-	GasPrice   uint64
+	GasPrice   *Big
 	Roots      []keys.Uint256
 }
 
 func (args GenTxArgs) toTxParam() exchange.TxParam {
+	gasPrice := args.GasPrice.ToInt()
+
+	if gasPrice.Sign() == 0 {
+		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
+	}
 	receptions := []exchange.Reception{}
 	for _, rec := range args.Receptions {
 		receptions = append(receptions, exchange.Reception{
@@ -95,14 +105,20 @@ func (args GenTxArgs) toTxParam() exchange.TxParam {
 			(*big.Int)(rec.Value),
 		})
 	}
-	return exchange.TxParam{args.From, receptions, args.Gas, args.GasPrice, args.Roots}
+	return exchange.TxParam{args.From, receptions, args.Gas, gasPrice, args.Roots}
 }
 
 func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*light_types.GenTxParam, error) {
+	if param.GasPrice == nil {
+		return nil, fmt.Errorf("gasPrice not specified")
+	}
 	return s.b.GenTx(param.toTxParam())
 }
 
 func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param GenTxArgs) (*light_types.GTx, error) {
+	if param.GasPrice == nil {
+		return nil, fmt.Errorf("gasPrice not specified")
+	}
 	tx, e := s.b.GenTxWithSign(param.toTxParam())
 	return tx, e
 }

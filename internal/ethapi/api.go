@@ -25,6 +25,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/light"
+
+	"github.com/sero-cash/go-sero/zero/exchange"
+
 	"github.com/tyler-smith/go-bip39"
 
 	"github.com/sero-cash/go-sero/common/address"
@@ -530,7 +534,28 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 			defer th.SetThreads(threads)
 		}
 	}
-	return wallet.EncryptTxWithPassphrase(account, passwd, tx, txt, state)
+	if args.To == nil || state.IsContract(*args.To) || !seroparam.IsExchange() {
+		return wallet.EncryptTxWithPassphrase(account, passwd, tx, txt, state)
+	} else {
+		genTxParam, err := s.b.GenTx(args.toTxParam())
+		if err != nil {
+			return nil, err
+		}
+		seed, err := wallet.GetSeedWithPassphrase(passwd)
+		if err != nil {
+			return nil, err
+		}
+		sk := keys.Seed2Sk(seed.SeedToUint256())
+		gtx, err := light.SignTx(&sk, genTxParam)
+		if err != nil {
+			return nil, err
+		}
+		gasPrice := big.Int(gtx.GasPrice)
+		gas := uint64(gtx.Gas)
+		signedTx := types.NewTxWithGTx(gas, &gasPrice, &gtx.Tx)
+		return signedTx, nil
+	}
+
 }
 
 // SendTransaction will create a transaction from the given arguments and
@@ -713,6 +738,24 @@ func GetBalanceFromAccounts(tk *keys.Uint512) (result Balance) {
 	return
 }
 
+func GetBalanceFromExchange(tkns map[string]*big.Int) (result Balance) {
+	tkn := map[string]*hexutil.Big{}
+	if tkns != nil {
+		for cy, value := range tkns {
+			if tkn[cy] == nil {
+				tkn[cy] = (*hexutil.Big)(value)
+			} else {
+				tkn[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(tkn[cy]), value))
+			}
+		}
+	}
+	if len(tkn) > 0 {
+		result.Tkn = tkn
+	}
+
+	return
+}
+
 // GetBalance returns the amount of wei for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
@@ -751,18 +794,24 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 		}
 		return result, state.Error()
 	} else {
-		// Look up the wallet containing the requested abi
-		account := accounts.Account{Address: address}
 
-		wallet, err := s.b.AccountManager().Find(account)
-		if err != nil {
-			return Balance{}, err
+		if seroparam.IsExchange() {
+			exchangBalance := s.b.GetBalances(*address.ToUint512())
+			return GetBalanceFromExchange(exchangBalance), nil
+		} else {
+			// Look up the wallet containing the requested abi
+			account := accounts.Account{Address: address}
+
+			wallet, err := s.b.AccountManager().Find(account)
+			if err != nil {
+				return Balance{}, err
+			}
+
+			seed := wallet.Accounts()[0].Tk
+
+			result = GetBalanceFromAccounts(seed.ToUint512())
+			return result, state.Error()
 		}
-
-		seed := wallet.Accounts()[0].Tk
-
-		result = GetBalanceFromAccounts(seed.ToUint512())
-		return result, state.Error()
 	}
 
 }
@@ -1654,6 +1703,15 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		if len(input) > 0 {
 			return errors.New(`not create or call contract data must be nil`)
 		}
+		flag, err := common.IsPkr(args.To)
+		if err != nil {
+			return err
+		}
+		if !flag {
+			if !keys.IsPKValid(args.To.ToUint512()) {
+				return errors.New("invalid to address")
+			}
+		}
 	}
 
 	if args.To == nil || !state.IsContract(common.BytesToAddress(args.To[:])) {
@@ -1709,6 +1767,30 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		}
 	}
 	return nil
+}
+
+func (args *SendTxArgs) toTxParam() exchange.TxParam {
+
+	flag, err := common.IsPkr(args.To)
+	if err != nil {
+
+	}
+	var topkr keys.PKr
+
+	if flag {
+		topkr = *args.To.ToPKr()
+	} else {
+		topkr = keys.Addr2PKr(args.To.ToUint512(), nil)
+
+	}
+	receptions := []exchange.Reception{{Addr: topkr, Currency: string(args.Currency), Value: (*big.Int)(args.Value)}}
+
+	return exchange.TxParam{From: *args.From.ToUint512(),
+		Receptions: receptions,
+		Gas:        uint64(*args.Gas),
+		GasPrice:   (*big.Int)(args.GasPrice),
+	}
+
 }
 
 func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
@@ -1794,29 +1876,7 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	s.nonceLock.mu.Lock()
 	defer s.nonceLock.mu.Unlock()
 	// Look up the wallet containing the requested abi
-	account := accounts.Account{Address: args.From}
 
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	// Set some sanity defaults and terminate on failure
-	if err := args.setDefaults(ctx, s.b); err != nil {
-		return common.Hash{}, err
-	}
-
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
-
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	// Assemble the transaction and sign with the wallet
-	tx, txt, err := args.toTransaction(state)
-	if err != nil {
-		return common.Hash{}, err
-	}
 	if th, ok := s.b.GetEngin().(threaded); ok {
 		miner := s.b.GetMiner()
 		if miner.CanStart() {
@@ -1829,11 +1889,53 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 			defer th.SetThreads(threads)
 		}
 	}
-	encrypted, err := wallet.EncryptTx(account, tx, txt, state)
+	return commitSendTxArgs(ctx, s.b, args)
+
+}
+
+func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.Hash, error) {
+
+	// Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, b); err != nil {
+		return common.Hash{}, err
+	}
+
+	state, _, err := b.StateAndHeaderByNumber(ctx, -1)
+
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return submitTransaction(ctx, s.b, encrypted, args.To)
+
+	if args.To == nil || state.IsContract(*args.To) || !seroparam.IsExchange() {
+
+		account := accounts.Account{Address: args.From}
+
+		wallet, err := b.AccountManager().Find(account)
+		if err != nil {
+			return common.Hash{}, err
+		}
+
+		// Assemble the transaction and sign with the wallet
+		tx, txt, err := args.toTransaction(state)
+		if err != nil {
+			return common.Hash{}, err
+		}
+		encrypted, err := wallet.EncryptTx(account, tx, txt, state)
+		if err != nil {
+			return common.Hash{}, err
+		}
+		return submitTransaction(ctx, b, encrypted, args.To)
+	} else {
+		gtx, err := b.GenTxWithSign(args.toTxParam())
+		if err != nil {
+			return common.Hash{}, err
+		}
+		err = b.CommitTx(gtx)
+		if err != nil {
+			return common.Hash{}, err
+		}
+		return common.BytesToHash(gtx.Hash[:]), nil
+	}
 }
 
 func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args *light_types.GTx) error {
@@ -2147,19 +2249,6 @@ func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args 
 		return nil, err
 	}
 
-	// Assemble the transaction and sign with the wallet
-	tx, txt, err := args.toTransaction(state)
-
-	if err != nil {
-		return nil, err
-	}
-
-	account := accounts.Account{Address: args.From}
-
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return nil, err
-	}
 	if th, ok := s.b.GetEngin().(threaded); ok {
 		miner := s.b.GetMiner()
 		if miner.CanStart() {
@@ -2172,10 +2261,35 @@ func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args 
 			defer th.SetThreads(threads)
 		}
 	}
-	signed, err := wallet.EncryptTx(account, tx, txt, state)
-	if err != nil {
-		return nil, err
+	var signed *types.Transaction
+	if args.To == nil || state.IsContract(*args.To) || !seroparam.IsExchange() {
+		// Assemble the transaction and sign with the wallet
+		tx, txt, err := args.toTransaction(state)
+
+		if err != nil {
+			return nil, err
+		}
+
+		account := accounts.Account{Address: args.From}
+
+		wallet, err := s.b.AccountManager().Find(account)
+		if err != nil {
+			return nil, err
+		}
+		signed, err = wallet.EncryptTx(account, tx, txt, state)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		gtx, err := s.b.GenTxWithSign(args.toTxParam())
+		if err != nil {
+			return nil, err
+		}
+		gasPrice := big.Int(gtx.GasPrice)
+		gas := uint64(gtx.Gas)
+		signed = types.NewTxWithGTx(gas, &gasPrice, &gtx.Tx)
 	}
+
 	data, err := rlp.EncodeToBytes(signed)
 	if err != nil {
 		return nil, err

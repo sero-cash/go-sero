@@ -85,7 +85,7 @@ type TxParam struct {
 	From       keys.Uint512
 	Receptions []Reception
 	Gas        uint64
-	GasPrice   uint64
+	GasPrice   *big.Int
 	Roots      []keys.Uint256
 }
 
@@ -350,9 +350,9 @@ func (self *Exchange) preGenTx(param TxParam) (utxos []Utxo, err error) {
 			}
 		}
 		if amount, ok := amounts["SERO"]; ok {
-			amount.Add(amount, new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), new(big.Int).SetUint64(param.GasPrice)))
+			amount.Add(amount, new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), param.GasPrice))
 		} else {
-			amount = new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), new(big.Int).SetUint64(param.GasPrice))
+			amount = new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), param.GasPrice)
 		}
 		for currency, amount := range amounts {
 			if list, err := self.findUtxos(&param.From, currency, amount); err != nil {
@@ -380,7 +380,7 @@ func (self *Exchange) createPkr(pk *keys.Uint512, index uint64) keys.PKr {
 	return keys.Addr2PKr(pk, &r)
 }
 
-func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Reception, gas, gasPrice uint64) (*light_types.GTx, error) {
+func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Reception, gas uint64, gasPrice *big.Int) (*light_types.GTx, error) {
 	txParam, err := self.buildTxParam(utxos, account, receptions, gas, gasPrice)
 	if err != nil {
 		return nil, err
@@ -408,10 +408,10 @@ func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Recepti
 	return &gtx, nil
 }
 
-func (self *Exchange) buildTxParam(utxos []Utxo, account *Account, receptions []Reception, gas, gasPrice uint64) (txParam *light_types.GenTxParam, e error) {
+func (self *Exchange) buildTxParam(utxos []Utxo, account *Account, receptions []Reception, gas uint64, gasPrice *big.Int) (txParam *light_types.GenTxParam, e error) {
 	txParam = new(light_types.GenTxParam)
 	txParam.Gas = gas
-	txParam.GasPrice = *big.NewInt(int64(gasPrice))
+	txParam.GasPrice = *gasPrice
 
 	txParam.From = light_types.Kr{PKr: account.mainPkr}
 
@@ -474,7 +474,7 @@ func (self *Exchange) buildTxParam(utxos []Utxo, account *Account, receptions []
 
 	}
 
-	fee := new(big.Int).Mul(new(big.Int).SetUint64(gas), new(big.Int).SetUint64(gasPrice))
+	fee := new(big.Int).Mul(new(big.Int).SetUint64(gas), gasPrice)
 	if amount, ok := amounts["SERO"]; !ok || amount.Cmp(fee) < 0 {
 		e = fmt.Errorf("SSI GenTx Error: not enough")
 		return
@@ -969,7 +969,7 @@ func (self *Exchange) merge() {
 						amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
 					}
 					amount.Sub(amount, new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000)))
-					gtx, err := self.genTx(utxos, account, []Reception{{Value: amount, Currency: "SERO", Addr: account.mainPkr}}, 25000, 1000000000)
+					gtx, err := self.genTx(utxos, account, []Reception{{Value: amount, Currency: "SERO", Addr: account.mainPkr}}, 25000, big.NewInt(1000000000))
 					if err != nil {
 						log.Error("Exchange merge utxo", "error", err)
 						continue
