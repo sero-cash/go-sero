@@ -363,17 +363,17 @@ func (self *Exchange) getAccountByPk(pk keys.Uint512) *Account {
 	return nil
 }
 
-func (self *Exchange) getAccountByPkr(pkr keys.PKr) (account *Account) {
-	self.accounts.Range(func(key, value interface{}) bool {
-		account := value.(*Account)
-		if keys.IsMyPKr(account.tk, &pkr) {
-			return false
-		}
-		return true
-
-	})
-	return
-}
+//func (self *Exchange) getAccountByPkr(pkr keys.PKr) (account *Account) {
+//	self.accounts.Range(func(key, value interface{}) bool {
+//		account := value.(*Account)
+//		if keys.IsMyPKr(account.tk, &pkr) {
+//			return false
+//		}
+//		return true
+//
+//	})
+//	return
+//}
 
 func (self *Exchange) isPk(addr keys.PKr) bool {
 	byte32 := common.Hash{}
@@ -969,14 +969,18 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 				}
 			}
 
-			if utxos.Len() >= 108 {
+			if utxos.Len() >= 109 {
 				break
 			}
 		}
 		count = utxos.Len()
 		if utxos.Len() > 100 || time.Now().After(account.nextMergeTime) {
 			sort.Sort(utxos)
-			utxos = utxos[0 : utxos.Len()-8]
+			if utxos.Len() <= 10 {
+				e = fmt.Errorf("no need to merge the account, utxo count == %v", utxos.Len())
+				return
+			}
+			utxos = utxos[0 : utxos.Len()-9]
 			if utxos.Len() > 1 {
 				amount := new(big.Int)
 				for _, utxo := range utxos {
