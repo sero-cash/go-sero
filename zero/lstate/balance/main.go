@@ -33,9 +33,7 @@ func GetOut(root *keys.Uint256) (src *localdb.OutState) {
 	db := light_ref.Ref_inst.Bc.GetDB()
 	rt := localdb.GetRoot(db, root)
 	if rt == nil {
-		top_header := light_ref.Ref_inst.Bc.GetCurrenHeader()
-		top_hash := top_header.Hash()
-		zst := light_ref.Ref_inst.Bc.NewState(&top_hash)
+		zst := light_ref.Ref_inst.GetState()
 		os := zst.State.GetOut(root)
 		return os
 	} else {
