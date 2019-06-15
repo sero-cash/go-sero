@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -709,7 +708,7 @@ func (c uint64Slice) Less(i, j int) bool {
 var fetchCount = uint64(5000)
 
 func (self *Exchange) fetchBlockInfo() {
-	if light_ref.Ref_inst.Bc == nil || light_ref.Ref_inst.Bc.GetCurrenHeader().Number.Uint64() <= seroparam.DefaultConfirmedBlock() {
+	if light_ref.Ref_inst.Bc == nil || !light_ref.Ref_inst.Bc.IsValid() {
 		return
 	}
 	for {
