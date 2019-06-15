@@ -195,7 +195,6 @@ func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address hexutil.Byte
 func (s *PublicExchangeAPI) Merge(ctx context.Context, address *keys.Uint512, cy Smbol) (map[string]interface{}, error) {
 	if address == nil {
 		return nil, errors.New("pk can not bi nil")
-
 	}
 	if cy == "" {
 		return nil, errors.New("cy can not bi nil")

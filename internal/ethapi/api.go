@@ -537,23 +537,27 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 	if args.To == nil || state.IsContract(*args.To) || !seroparam.IsExchange() {
 		return wallet.EncryptTxWithPassphrase(account, passwd, tx, txt, state)
 	} else {
-		genTxParam, err := s.b.GenTx(args.toTxParam())
-		if err != nil {
+		if txParam, err := args.toTxParam(); err != nil {
+			genTxParam, err := s.b.GenTx(txParam)
+			if err != nil {
+				return nil, err
+			}
+			seed, err := wallet.GetSeedWithPassphrase(passwd)
+			if err != nil {
+				return nil, err
+			}
+			sk := keys.Seed2Sk(seed.SeedToUint256())
+			gtx, err := light.SignTx(&sk, genTxParam)
+			if err != nil {
+				return nil, err
+			}
+			gasPrice := big.Int(gtx.GasPrice)
+			gas := uint64(gtx.Gas)
+			signedTx := types.NewTxWithGTx(gas, &gasPrice, &gtx.Tx)
+			return signedTx, nil
+		} else {
 			return nil, err
 		}
-		seed, err := wallet.GetSeedWithPassphrase(passwd)
-		if err != nil {
-			return nil, err
-		}
-		sk := keys.Seed2Sk(seed.SeedToUint256())
-		gtx, err := light.SignTx(&sk, genTxParam)
-		if err != nil {
-			return nil, err
-		}
-		gasPrice := big.Int(gtx.GasPrice)
-		gas := uint64(gtx.Gas)
-		signedTx := types.NewTxWithGTx(gas, &gasPrice, &gtx.Tx)
-		return signedTx, nil
 	}
 
 }
@@ -1769,11 +1773,12 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
-func (args *SendTxArgs) toTxParam() exchange.TxParam {
+func (args *SendTxArgs) toTxParam() (txParam exchange.TxParam, e error) {
 
 	flag, err := common.IsPkr(args.To)
 	if err != nil {
-
+		e = err
+		return
 	}
 	var topkr keys.PKr
 
@@ -1785,11 +1790,12 @@ func (args *SendTxArgs) toTxParam() exchange.TxParam {
 	}
 	receptions := []exchange.Reception{{Addr: topkr, Currency: string(args.Currency), Value: (*big.Int)(args.Value)}}
 
-	return exchange.TxParam{From: *args.From.ToUint512(),
+	txParam = exchange.TxParam{From: *args.From.ToUint512(),
 		Receptions: receptions,
 		Gas:        uint64(*args.Gas),
 		GasPrice:   (*big.Int)(args.GasPrice),
 	}
+	return
 
 }
 
@@ -1926,15 +1932,19 @@ func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.H
 		}
 		return submitTransaction(ctx, b, encrypted, args.To)
 	} else {
-		gtx, err := b.GenTxWithSign(args.toTxParam())
-		if err != nil {
+		if txParam, err := args.toTxParam(); err != nil {
+			gtx, err := b.GenTxWithSign(txParam)
+			if err != nil {
+				return common.Hash{}, err
+			}
+			err = b.CommitTx(gtx)
+			if err != nil {
+				return common.Hash{}, err
+			}
+			return common.BytesToHash(gtx.Hash[:]), nil
+		} else {
 			return common.Hash{}, err
 		}
-		err = b.CommitTx(gtx)
-		if err != nil {
-			return common.Hash{}, err
-		}
-		return common.BytesToHash(gtx.Hash[:]), nil
 	}
 }
 
@@ -2281,13 +2291,18 @@ func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args 
 			return nil, err
 		}
 	} else {
-		gtx, err := s.b.GenTxWithSign(args.toTxParam())
-		if err != nil {
+
+		if txParam, err := args.toTxParam(); err != nil {
+			gtx, err := s.b.GenTxWithSign(txParam)
+			if err != nil {
+				return nil, err
+			}
+			gasPrice := big.Int(gtx.GasPrice)
+			gas := uint64(gtx.Gas)
+			signed = types.NewTxWithGTx(gas, &gasPrice, &gtx.Tx)
+		} else {
 			return nil, err
 		}
-		gasPrice := big.Int(gtx.GasPrice)
-		gas := uint64(gtx.Gas)
-		signed = types.NewTxWithGTx(gas, &gasPrice, &gtx.Tx)
 	}
 
 	data, err := rlp.EncodeToBytes(signed)
