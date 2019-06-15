@@ -173,7 +173,7 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 	AddJob("0/10 * * * * ?", exchange.fetchBlockInfo)
 
 	if autoMerge {
-		AddJob("0 0/2 * * * ?", exchange.merge)
+		AddJob("0 0/5 * * * ?", exchange.merge)
 	}
 
 	go exchange.updateAccount()
