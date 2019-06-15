@@ -548,7 +548,7 @@ func (self *Exchange) buildTxParam(utxos []Utxo, account *Account, receptions []
 	txParam.Outs = Outs
 
 	for _, utxo := range utxos {
-		self.usedFlag.Store(utxo.Nil, 1)
+		self.usedFlag.Store(utxo.Root, 1)
 	}
 
 	return
@@ -602,7 +602,7 @@ func (self *Exchange) getUtxo(root keys.Uint256) (utxo Utxo, e error) {
 		return
 	}
 
-	if value, ok := self.usedFlag.Load(utxo.Nil); ok {
+	if value, ok := self.usedFlag.Load(utxo.Root); ok {
 		utxo.flag = value.(int)
 	}
 	return
@@ -620,7 +620,7 @@ func (self *Exchange) findUtxos(pk *keys.Uint512, currency string, amount *big.I
 		copy(root[:], key[98:130])
 
 		if utxo, err := self.getUtxo(root); err == nil {
-			if _, ok := self.usedFlag.Load(utxo.Nil); !ok {
+			if _, ok := self.usedFlag.Load(utxo.Root); !ok {
 				utxos = append(utxos, utxo)
 				amount.Sub(amount, utxo.Asset.Tkn.Value.ToIntRef())
 			} else {
@@ -899,6 +899,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[keys.Uint512]
 			var root keys.Uint256
 			copy(root[:], value[98:130])
 			delete(ops, common.Bytes2Hex(nilKey(root)))
+			self.usedFlag.Delete(root)
 
 			copy(pk[:], value[2:66])
 		} else {
@@ -910,6 +911,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[keys.Uint512]
 				var root keys.Uint256
 				copy(root[:], value[98:130])
 				batch.Delete(nilKey(root))
+				self.usedFlag.Delete(root)
 
 				copy(pk[:], value[2:66])
 			}
@@ -918,7 +920,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[keys.Uint512]
 		if account := self.getAccountByPk(pk); account != nil {
 			account.isChanged = true
 		}
-		self.usedFlag.Delete(common.Bytes2Hex(Nil[:]))
+
 	}
 
 	for key, value := range ops {
@@ -964,7 +966,7 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 			copy(root[:], key[98:130])
 
 			if utxo, err := self.getUtxo(root); err == nil {
-				if _, ok := self.usedFlag.Load(utxo.Nil); !ok {
+				if _, ok := self.usedFlag.Load(utxo.Root); !ok {
 					utxos = append(utxos, utxo)
 				}
 			}
@@ -977,6 +979,7 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 		if utxos.Len() > 100 || time.Now().After(account.nextMergeTime) {
 			sort.Sort(utxos)
 			if utxos.Len() <= 10 {
+				account.nextMergeTime = time.Now().Add(time.Hour * 6)
 				e = fmt.Errorf("no need to merge the account, utxo count == %v", utxos.Len())
 				return
 			}
@@ -1002,8 +1005,8 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 			}
 			if utxos.Len() < 100 {
 				account.nextMergeTime = time.Now().Add(time.Hour * 6)
+				return
 			}
-			return
 		} else {
 			e = fmt.Errorf("no need to merge the account, utxo count == %v", utxos.Len())
 			return
@@ -1017,7 +1020,7 @@ func (self *Exchange) merge() {
 		if count, txhash, err := self.Merge(account.pk, "SERO"); err != nil {
 			log.Error("autoMerge fail", "pk", cpt.Base58Encode(account.pk[:]), "count", count, "error", err)
 		} else {
-			log.Error("autoMerge succ", "pk", cpt.Base58Encode(account.pk[:]), "tx", hexutil.Encode(txhash[:]), "count", count)
+			log.Info("autoMerge succ", "pk", cpt.Base58Encode(account.pk[:]), "tx", hexutil.Encode(txhash[:]), "count", count)
 		}
 		return true
 	})
