@@ -1012,10 +1012,10 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 func (self *Exchange) merge() {
 	for _, account := range self.accounts {
 		if count, txhash, err := self.Merge(account.pk, "SERO"); err != nil {
-			log.Error("autoMerge fail", "pk", account.pk, count, "error", err)
+			log.Error("autoMerge fail", "pk", cpt.Base58Encode(account.pk[:]), "count", count, "error", err)
 			continue
 		} else {
-			log.Error("autoMerge succ", "pk", account.pk, "tx", hexutil.Encode(txhash[:]), "count", count)
+			log.Error("autoMerge succ", "pk", cpt.Base58Encode(account.pk[:]), "tx", hexutil.Encode(txhash[:]), "count", count)
 		}
 	}
 }
