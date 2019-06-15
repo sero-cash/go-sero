@@ -58,6 +58,7 @@ type Utxo struct {
 	Nil    keys.Uint256
 	Num    uint64
 	Asset  assets.Asset
+	IsZ    bool
 	flag   int
 }
 
@@ -172,7 +173,7 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 	AddJob("0/10 * * * * ?", exchange.fetchBlockInfo)
 
 	if autoMerge {
-		AddJob("0 0/5 * * * ?", exchange.merge)
+		AddJob("0 0/2 * * * ?", exchange.merge)
 	}
 
 	go exchange.updateAccount()
@@ -780,7 +781,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 			}
 
 			dout := DecOuts([]light_types.Out{out}, &account.skr)[0]
-			utxo := Utxo{Pkr: pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset}
+			utxo := Utxo{Pkr: pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset, IsZ: out.State.OS.Out_Z != nil}
 			if pkrMap, ok := utxosMap[*account.pk]; ok {
 				if list, ok := pkrMap[key]; ok {
 					pkrMap[key] = append(list, utxo)
@@ -956,61 +957,65 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 		e = errors.New("account is locked")
 		return
 	}
-	for {
-		prefix := utxoPkKey(*account.pk, common.LeftPadBytes([]byte(currency), 32), nil)
-		iterator := self.db.NewIteratorWithPrefix(prefix)
-		utxos := UtxoList{}
-		for iterator.Next() {
-			key := iterator.Key()
-			var root keys.Uint256
-			copy(root[:], key[98:130])
+	prefix := utxoPkKey(*account.pk, common.LeftPadBytes([]byte(currency), 32), nil)
+	iterator := self.db.NewIteratorWithPrefix(prefix)
+	outxos := UtxoList{}
+	zutxos := UtxoList{}
+	for iterator.Next() {
+		key := iterator.Key()
+		var root keys.Uint256
+		copy(root[:], key[98:130])
 
-			if utxo, err := self.getUtxo(root); err == nil {
-				if _, ok := self.usedFlag.Load(utxo.Root); !ok {
-					utxos = append(utxos, utxo)
+		if utxo, err := self.getUtxo(root); err == nil {
+			if _, ok := self.usedFlag.Load(utxo.Root); !ok {
+				if utxo.IsZ {
+					zutxos = append(zutxos, utxo)
+				} else {
+					outxos = append(outxos, utxo)
 				}
-			}
 
-			if utxos.Len() >= 109 {
-				break
 			}
 		}
-		count = utxos.Len()
-		if utxos.Len() > 100 || time.Now().After(account.nextMergeTime) {
-			sort.Sort(utxos)
-			if utxos.Len() <= 10 {
-				account.nextMergeTime = time.Now().Add(time.Hour * 6)
-				e = fmt.Errorf("no need to merge the account, utxo count == %v", utxos.Len())
-				return
-			}
-			utxos = utxos[0 : utxos.Len()-9]
-			if utxos.Len() > 1 {
-				amount := new(big.Int)
-				for _, utxo := range utxos {
-					amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
-				}
-				amount.Sub(amount, new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000)))
-				gtx, err := self.genTx(utxos, account, []Reception{{Value: amount, Currency: currency, Addr: account.mainPkr}}, 25000, big.NewInt(1000000000))
-				if err != nil {
-					account.nextMergeTime = time.Now().Add(time.Hour * 6)
-					e = err
-					return
-				}
-				txhash = gtx.Hash
-				if err := self.commitTx(gtx); err != nil {
-					account.nextMergeTime = time.Now().Add(time.Hour * 6)
-					e = err
-					return
-				}
-			}
-			if utxos.Len() < 100 {
-				account.nextMergeTime = time.Now().Add(time.Hour * 6)
-			}
-			return
-		} else {
+
+		if zutxos.Len() >= 100 || outxos.Len() >= 1000 {
+			break
+		}
+	}
+	utxos := append(zutxos, outxos...)
+	count = utxos.Len()
+	if utxos.Len() >= 100 || time.Now().After(account.nextMergeTime) {
+		if utxos.Len() <= 10 {
+			account.nextMergeTime = time.Now().Add(time.Hour * 6)
 			e = fmt.Errorf("no need to merge the account, utxo count == %v", utxos.Len())
 			return
 		}
+
+		sort.Sort(utxos)
+		list := utxos[0 : utxos.Len()-9]
+		amount := new(big.Int)
+		for _, utxo := range list {
+			amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
+		}
+		amount.Sub(amount, new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000)))
+		gtx, err := self.genTx(list, account, []Reception{{Value: amount, Currency: currency, Addr: account.mainPkr}}, 25000, big.NewInt(1000000000))
+		if err != nil {
+			account.nextMergeTime = time.Now().Add(time.Hour * 6)
+			e = err
+			return
+		}
+		txhash = gtx.Hash
+		if err := self.commitTx(gtx); err != nil {
+			account.nextMergeTime = time.Now().Add(time.Hour * 6)
+			e = err
+			return
+		}
+		if utxos.Len() < 100 {
+			account.nextMergeTime = time.Now().Add(time.Hour * 6)
+		}
+		return
+	} else {
+		e = fmt.Errorf("no need to merge the account, utxo count == %v", utxos.Len())
+		return
 	}
 }
 
