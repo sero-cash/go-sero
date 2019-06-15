@@ -88,7 +88,7 @@ func isString(input []byte) bool {
 }
 
 type ReceptionArgs struct {
-	Addr     keys.PKr
+	Addr     hexutil.Bytes
 	Currency string
 	Value    *Big
 }
@@ -101,6 +101,39 @@ type GenTxArgs struct {
 	Roots      []keys.Uint256
 }
 
+func (args GenTxArgs) check() error {
+	if len(args.Receptions) == 0 {
+		return errors.New("have no receptions")
+	}
+	if args.GasPrice == nil {
+		return fmt.Errorf("gasPrice not specified")
+	}
+
+	for _, rec := range args.Receptions {
+		_, err := validAddress(rec.Addr)
+		if err != nil {
+			return err
+		}
+		if rec.Value == nil {
+			return errors.Errorf("%v reception value is nil", hexutil.Encode(rec.Addr[:]))
+		}
+	}
+	return nil
+
+}
+
+func byteToPkr(addr hexutil.Bytes) keys.PKr {
+	pkr := keys.PKr{}
+	if len(addr) == 64 {
+		pk := keys.Uint512{}
+		copy(pk[:], addr[:])
+		pkr = keys.Addr2PKr(&pk, nil)
+	} else {
+		copy(pkr[:], addr[:])
+	}
+	return pkr
+}
+
 func (args GenTxArgs) toTxParam() exchange.TxParam {
 	gasPrice := args.GasPrice.ToInt()
 
@@ -109,8 +142,9 @@ func (args GenTxArgs) toTxParam() exchange.TxParam {
 	}
 	receptions := []exchange.Reception{}
 	for _, rec := range args.Receptions {
+		pkr := byteToPkr(rec.Addr)
 		receptions = append(receptions, exchange.Reception{
-			rec.Addr,
+			pkr,
 			rec.Currency,
 			(*big.Int)(rec.Value),
 		})
@@ -119,15 +153,16 @@ func (args GenTxArgs) toTxParam() exchange.TxParam {
 }
 
 func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*light_types.GenTxParam, error) {
-	if param.GasPrice == nil {
-		return nil, fmt.Errorf("gasPrice not specified")
+	if err := param.check(); err != nil {
+		return nil, err
 	}
+
 	return s.b.GenTx(param.toTxParam())
 }
 
 func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param GenTxArgs) (*light_types.GTx, error) {
-	if param.GasPrice == nil {
-		return nil, fmt.Errorf("gasPrice not specified")
+	if err := param.check(); err != nil {
+		return nil, err
 	}
 	tx, e := s.b.GenTxWithSign(param.toTxParam())
 	return tx, e
@@ -182,6 +217,33 @@ func (s *PublicExchangeAPI) Merge(ctx context.Context, address *keys.Uint512, cy
 		"utxoCount": count,
 		"txhash":    txhash,
 	}, nil
+}
+
+func validAddress(addr hexutil.Bytes) (bool, error) {
+	if len(addr) != 64 && len(addr) != 96 {
+		return false, errors.Errorf("invalid addr %v", hexutil.Encode(addr[:]))
+	}
+
+	if len(addr) == 64 {
+		pk := keys.Uint512{}
+		copy(pk[:], addr[:])
+		if !keys.IsPKValid(&pk) {
+			return false, errors.Errorf("invalid pk %v", hexutil.Encode(addr[:]))
+		}
+	}
+	if len(addr) == 96 {
+		pkr := keys.PKr{}
+		copy(pkr[:], addr[:])
+		if !keys.PKrValid(&pkr) {
+			return false, errors.Errorf("invalid  pkr %v", hexutil.Encode(addr[:]))
+		}
+	}
+	return true, nil
+}
+
+func (s *PublicExchangeAPI) ValidAddress(ctx context.Context, addr hexutil.Bytes) (bool, error) {
+	return validAddress(addr)
+
 }
 
 func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *light_types.GTx) error {
