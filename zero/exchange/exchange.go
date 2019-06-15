@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-sero/common/hexutil"
+
 	"github.com/robfig/cron"
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
@@ -266,6 +268,7 @@ func (self *Exchange) GetBalances(pk keys.Uint512) (balances map[string]*big.Int
 	iterator := self.db.NewIteratorWithPrefix(prefix)
 
 	balances = map[string]*big.Int{}
+	var count int
 	for iterator.Next() {
 		key := iterator.Key()
 		var root keys.Uint256
@@ -281,6 +284,8 @@ func (self *Exchange) GetBalances(pk keys.Uint512) (balances map[string]*big.Int
 				}
 			}
 		}
+
+		count++
 	}
 	return
 }
@@ -935,56 +940,83 @@ func (self *Exchange) isMyPkr(pkr keys.PKr) (account *Account, ok bool) {
 	return nil, false
 }
 
-func (self *Exchange) merge() {
-	for _, account := range self.accounts {
-		seed, err := account.wallet.GetSeed()
-		if err != nil || seed == nil {
-			continue
+func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhash keys.Uint256, e error) {
+	var account *Account
+	for _, a := range self.accounts {
+		if a.pk == pk {
+			account = a
 		}
-		for {
-			prefix := utxoPkKey(*account.pk, common.LeftPadBytes([]byte("SERO"), 32), nil)
-			iterator := self.db.NewIteratorWithPrefix(prefix)
-			utxos := UtxoList{}
-			for iterator.Next() {
-				key := iterator.Key()
-				var root keys.Uint256
-				copy(root[:], key[98:130])
+	}
+	if account == nil {
+		e = errors.New("account is nil")
+		return
+	}
+	seed, err := account.wallet.GetSeed()
+	if err != nil || seed == nil {
+		e = errors.New("account is locked")
+		return
+	}
+	for {
+		prefix := utxoPkKey(*account.pk, common.LeftPadBytes([]byte(currency), 32), nil)
+		iterator := self.db.NewIteratorWithPrefix(prefix)
+		utxos := UtxoList{}
+		for iterator.Next() {
+			key := iterator.Key()
+			var root keys.Uint256
+			copy(root[:], key[98:130])
 
-				if utxo, err := self.getUtxo(root); err == nil {
-					if _, ok := self.usedFlag.Load(utxo.Nil); !ok {
-						utxos = append(utxos, utxo)
-					}
-				}
-
-				if utxos.Len() >= 108 {
-					break
+			if utxo, err := self.getUtxo(root); err == nil {
+				if _, ok := self.usedFlag.Load(utxo.Nil); !ok {
+					utxos = append(utxos, utxo)
 				}
 			}
-			if utxos.Len() > 100 || time.Now().After(account.nextMergeTime) {
-				sort.Sort(utxos)
-				utxos = utxos[0 : utxos.Len()-8]
-				if utxos.Len() > 1 {
-					amount := new(big.Int)
-					for _, utxo := range utxos {
-						amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
-					}
-					amount.Sub(amount, new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000)))
-					gtx, err := self.genTx(utxos, account, []Reception{{Value: amount, Currency: "SERO", Addr: account.mainPkr}}, 25000, big.NewInt(1000000000))
-					if err != nil {
-						log.Error("Exchange merge utxo", "error", err)
-						continue
-					}
-					log.Info("Exchange merge utxo success ", "count", utxos.Len())
-					self.commitTx(gtx)
-				}
-				if utxos.Len() < 100 {
-					account.nextMergeTime = time.Now().Add(time.Hour * 6)
-				}
-			} else {
+
+			if utxos.Len() >= 108 {
 				break
 			}
 		}
+		count = utxos.Len()
+		if utxos.Len() > 100 || time.Now().After(account.nextMergeTime) {
+			sort.Sort(utxos)
+			utxos = utxos[0 : utxos.Len()-8]
+			if utxos.Len() > 1 {
+				amount := new(big.Int)
+				for _, utxo := range utxos {
+					amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
+				}
+				amount.Sub(amount, new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000)))
+				gtx, err := self.genTx(utxos, account, []Reception{{Value: amount, Currency: currency, Addr: account.mainPkr}}, 25000, big.NewInt(1000000000))
+				if err != nil {
+					account.nextMergeTime = time.Now().Add(time.Hour * 6)
+					e = err
+					return
+				}
+				txhash = gtx.Hash
+				if err := self.commitTx(gtx); err != nil {
+					account.nextMergeTime = time.Now().Add(time.Hour * 6)
+					e = err
+					return
+				}
+			}
+			if utxos.Len() < 100 {
+				account.nextMergeTime = time.Now().Add(time.Hour * 6)
+			}
+			return
+		} else {
+			e = fmt.Errorf("no need to merge the account, utxo count == %v", utxos.Len())
+			return
+		}
+	}
+}
 
+func (self *Exchange) merge() {
+	for _, account := range self.accounts {
+		if count, txhash, err := self.Merge(account.pk, "SERO"); err != nil {
+			log.Error("autoMerge fail", "pk", account.pk, count, "error", err)
+			continue
+		} else {
+			log.Error("autoMerge succ", "pk", account.pk, "tx", hexutil.Encode(txhash[:]), "count", count)
+		}
 	}
 }
 
