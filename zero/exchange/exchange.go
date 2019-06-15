@@ -1026,7 +1026,7 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 }
 
 func (self *Exchange) merge() {
-	if light_ref.Ref_inst.Bc == nil || light_ref.Ref_inst.Bc.GetCurrenHeader().Number.Uint64() <= seroparam.DefaultConfirmedBlock() {
+	if light_ref.Ref_inst.Bc == nil || !light_ref.Ref_inst.Bc.IsValid() {
 		return
 	}
 	self.accounts.Range(func(key, value interface{}) bool {

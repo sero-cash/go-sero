@@ -10,6 +10,7 @@ import (
 )
 
 type BlockChain interface {
+	IsValid() bool
 	GetCurrenHeader() *types.Header
 	GetHeader(hash *common.Hash) *types.Header
 	NewState(hash *common.Hash) *zstate.ZState

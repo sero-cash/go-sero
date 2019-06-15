@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
 	"github.com/sero-cash/go-sero/zero/txs/verify"
 
 	"github.com/hashicorp/golang-lru"
@@ -224,9 +226,22 @@ func (self *State1BlockChain) GetDB() serodb.Database {
 func (self *State1BlockChain) GetCurrenHeader() *types.Header {
 	return self.Bc.CurrentBlock().Header()
 }
+
 func (self *State1BlockChain) GetHeader(hash *common.Hash) *types.Header {
 	return self.Bc.GetHeaderByHash(*hash)
 }
+
+func (self *State1BlockChain) IsValid() bool {
+	header := self.Bc.CurrentHeader()
+	if header.Number.Uint64() < seroparam.DefaultConfirmedBlock() {
+		return false
+	}
+	if _, e := state.New(header.Root, self.Bc.stateCache, header.Number.Uint64()); e != nil {
+		return false
+	}
+	return true
+}
+
 func (self *State1BlockChain) NewState(hash *common.Hash) *zstate.ZState {
 	header := self.Bc.GetHeaderByHash(*hash)
 	num := header.Number.Uint64()

@@ -43,7 +43,7 @@ func GetOut(root *keys.Uint256) (src *localdb.OutState) {
 
 func (self *Balance) Parse() (num uint64) {
 
-	if light_ref.Ref_inst.Bc == nil || light_ref.Ref_inst.Bc.GetCurrenHeader().Number.Uint64() <= seroparam.DefaultConfirmedBlock() {
+	if light_ref.Ref_inst.Bc == nil || !light_ref.Ref_inst.Bc.IsValid() {
 		return 0
 	}
 
