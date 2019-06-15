@@ -62,12 +62,8 @@ func main() {
 			if e := json.Unmarshal([]byte(txParam), &gtp); e != nil {
 				fmt.Println("ERROR: Unmarshal-", e)
 			} else {
-				copy(gtp.From.SKr[:], sk_bytes[:])
-				for i := range gtp.Ins {
-					copy(gtp.Ins[i].SKr[:], sk_bytes[:])
-				}
-				if gtx, e := light.SLI_Inst.GenTx(&gtp); e != nil {
-					fmt.Println("ERROR: GenTx-", e)
+				if gtx, e := light.SignTx(&sk_bytes, &gtp); e != nil {
+					fmt.Println("ERROR: SignTx-", e)
 				} else {
 					if jtx, e := json.Marshal(&gtx); e != nil {
 						fmt.Println("ERROR: Marshal-", e)

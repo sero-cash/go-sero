@@ -104,3 +104,17 @@ func (self *SLI) GenTx(param *light_types.GenTxParam) (gtx light_types.GTx, e er
 		return
 	}
 }
+
+func SignTx(sk *keys.Uint512, paramTx *light_types.GenTxParam) (tx light_types.GTx, err error) {
+	copy(paramTx.From.SKr[:], sk[:])
+	for i := range paramTx.Ins {
+		copy(paramTx.Ins[i].SKr[:], sk[:])
+	}
+	if gtx, e := SLI_Inst.GenTx(paramTx); e != nil {
+		err = e
+		return
+	} else {
+		tx = gtx
+		return
+	}
+}

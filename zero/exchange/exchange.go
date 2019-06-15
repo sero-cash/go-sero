@@ -247,6 +247,9 @@ func (self *Exchange) GetCurrencyNumber(pk keys.Uint512) uint64 {
 }
 
 func (self *Exchange) GetPkr(pk *keys.Uint512, index *keys.Uint256) (pkr keys.PKr, err error) {
+	if index == nil {
+		return pkr, errors.New("index must not be empty")
+	}
 	if new(big.Int).SetBytes(index[:]).Cmp(big.NewInt(100)) < 0 {
 		return pkr, errors.New("index must > 100")
 	}
