@@ -537,7 +537,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 	if args.To == nil || state.IsContract(*args.To) || !seroparam.IsExchange() {
 		return wallet.EncryptTxWithPassphrase(account, passwd, tx, txt, state)
 	} else {
-		if txParam, err := args.toTxParam(); err != nil {
+		if txParam, err := args.toTxParam(); err == nil {
 			genTxParam, err := s.b.GenTx(txParam)
 			if err != nil {
 				return nil, err
@@ -1932,7 +1932,7 @@ func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.H
 		}
 		return submitTransaction(ctx, b, encrypted, args.To)
 	} else {
-		if txParam, err := args.toTxParam(); err != nil {
+		if txParam, err := args.toTxParam(); err == nil {
 			gtx, err := b.GenTxWithSign(txParam)
 			if err != nil {
 				return common.Hash{}, err
@@ -2292,7 +2292,7 @@ func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args 
 		}
 	} else {
 
-		if txParam, err := args.toTxParam(); err != nil {
+		if txParam, err := args.toTxParam(); err == nil {
 			gtx, err := s.b.GenTxWithSign(txParam)
 			if err != nil {
 				return nil, err
