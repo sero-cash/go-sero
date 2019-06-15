@@ -28,11 +28,12 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-sero/zero/lstate"
+
 	"github.com/sero-cash/go-sero/internal/ethapi"
 	"github.com/sero-cash/go-sero/zero/exchange"
 
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
-	"github.com/sero-cash/go-sero/zero/lstate/state2"
 
 	"github.com/sero-cash/go-czero-import/keys"
 
@@ -161,10 +162,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 
 	light_ref.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain})
 	if !config.MineMode {
-		state_bc := &core.State1BlockChain{
-			sero.blockchain,
-		}
-		state2.InitLState(state_bc)
+		lstate.InitLState()
 	}
 
 	// Rewind the chain in case of an incompatible config upgrade.

@@ -1,36 +1,20 @@
-package state2
+package balance
 
 import (
 	"fmt"
 	"time"
-
-	"github.com/syndtr/goleveldb/leveldb"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
 	"github.com/sero-cash/go-sero/zero/localdb"
-	"github.com/sero-cash/go-sero/zero/lstate"
-	"github.com/sero-cash/go-sero/zero/lstate/state2/accounts"
+	"github.com/sero-cash/go-sero/zero/lstate/balance/accounts"
 	"github.com/sero-cash/go-sero/zero/zconfig"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func InitLState(bc lstate.BlockChain) {
-	ns := NewState2()
-	lstate.Run(bc, &ns)
-	return
-}
-
-func CurrentLState() *State2 {
-	if r, ok := lstate.CurrentLState().(*State2); !ok {
-		return nil
-	} else {
-		return r
-	}
-}
-
-func (self *State2) MakesureEnv() {
+func (self *Balance) MakesureEnv() {
 	if !zconfig.IsDirExists(zconfig.State2_dir()) {
 		zconfig.Init_State2()
 		if self.db != nil {
@@ -60,7 +44,7 @@ func GetOut(root *keys.Uint256) (src *localdb.OutState) {
 	}
 }
 
-func (self *State2) Parse() (num uint64) {
+func (self *Balance) Parse() (num uint64) {
 
 	for light_ref.Ref_inst.Bc == nil {
 		time.Sleep(1000 * 1000 * 1000 * 2)
@@ -180,6 +164,6 @@ func (self *State2) Parse() (num uint64) {
 	return uint64(i)
 }
 
-func (self *State2) update(tk *keys.Uint512, num uint64, block *localdb.Block) {
+func (self *Balance) update(tk *keys.Uint512, num uint64, block *localdb.Block) {
 	return
 }

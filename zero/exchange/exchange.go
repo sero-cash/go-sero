@@ -129,6 +129,12 @@ type Exchange struct {
 	lock    sync.RWMutex
 }
 
+var current_exchange *Exchange
+
+func CurrentExchange() *Exchange {
+	return current_exchange
+}
+
 func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Manager, autoMerge bool) (exchange *Exchange) {
 
 	update := make(chan accounts.WalletEvent, 1)
@@ -142,6 +148,7 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 		update:         update,
 		updater:        updater,
 	}
+	current_exchange = exchange
 
 	db, err := serodb.NewLDBDatabase(dbpath, 1024, 1024)
 	if err != nil {

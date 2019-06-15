@@ -8,7 +8,7 @@ import (
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/localdb"
-	"github.com/sero-cash/go-sero/zero/lstate"
+	"github.com/sero-cash/go-sero/zero/lstate/lstate_types"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -20,7 +20,7 @@ type Out struct {
 	OS localdb.OutState
 }
 
-func (self *DB) GetStateOut(tk *keys.Uint512, num uint64, root *keys.Uint256, os *localdb.OutState) (ret *lstate.OutState) {
+func (self *DB) GetStateOut(tk *keys.Uint512, num uint64, root *keys.Uint256, os *localdb.OutState) (ret *lstate_types.OutState) {
 	if os.IsO() {
 		out_o := os.Out_O
 		if out_o.Asset.Tkn == nil && out_o.Asset.Tkt == nil {
@@ -69,7 +69,7 @@ func (self *DB) GetStateOut(tk *keys.Uint512, num uint64, root *keys.Uint256, os
 				out_z.EInfo = desc_info.Einfo
 				out_z.OutCM = *os.ToOutCM()
 			}
-			ret = &lstate.OutState{}
+			ret = &lstate_types.OutState{}
 			ret.Root = *root
 			ret.RootCM = *os.ToRootCM()
 			ret.Tk = *tk
@@ -95,7 +95,7 @@ func (self *DB) GetStateOut(tk *keys.Uint512, num uint64, root *keys.Uint256, os
 			cpt.DecOutput(&info_desc)
 
 			if e := stx.ConfirmOut_Z(&info_desc, os.Out_Z); e == nil {
-				ret = &lstate.OutState{}
+				ret = &lstate_types.OutState{}
 				ret.Out_O.Addr = os.Out_Z.PKr
 				ret.Out_O.Asset = assets.NewAsset(
 					&assets.Token{
@@ -146,7 +146,7 @@ const ROOT_OUT_KEY = "ROOT$OUT$KEY-"
 const NIL_ROOT_KEY = "NIL$ROOT$KEY-"
 const TKROOT_ROOT_KEY = "TKROOT$ROOT$KEY-"
 
-func (self *DB) GetOut(root *keys.Uint256) (out lstate.OutState, e error) {
+func (self *DB) GetOut(root *keys.Uint256) (out lstate_types.OutState, e error) {
 	if v, err := self.db.Get(Bytes2Key(ROOT_OUT_KEY, root[:]), nil); err != nil {
 		e = err
 		return
@@ -159,7 +159,7 @@ func (self *DB) GetOut(root *keys.Uint256) (out lstate.OutState, e error) {
 		}
 	}
 }
-func (self *DB) GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error) {
+func (self *DB) GetOuts(tk *keys.Uint512) (outs []*lstate_types.OutState, e error) {
 	iter := self.db.NewIterator(util.BytesPrefix(Bytes2Key(TKROOT_ROOT_KEY, tk[:])), nil)
 	defer iter.Release()
 	for iter.Next() {
@@ -168,7 +168,7 @@ func (self *DB) GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error) {
 			e = err
 			return
 		} else {
-			var out lstate.OutState
+			var out lstate_types.OutState
 			if err := rlp.DecodeBytes(vo, &out); err != nil {
 				panic(err)
 			} else {
@@ -202,7 +202,7 @@ func (self *DB) AddOut(batch *leveldb.Batch, a *Account, num uint64, root *keys.
 	}
 }
 
-func (self *DB) AddNil(batch *leveldb.Batch, del *keys.Uint256) (tkroot TkRoot, out lstate.OutState, e error) {
+func (self *DB) AddNil(batch *leveldb.Batch, del *keys.Uint256) (tkroot TkRoot, out lstate_types.OutState, e error) {
 	if root, err := self.db.Get(Bytes2Key(NIL_ROOT_KEY, del[:]), nil); err != nil {
 		e = err
 	} else {

@@ -20,9 +20,11 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/sero-cash/go-czero-import/seroparam"
-
 	"github.com/sero-cash/go-sero/zero/lstate"
+
+	"github.com/sero-cash/go-sero/zero/lstate/lstate_types"
+
+	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/zero/localdb"
 
@@ -35,7 +37,7 @@ import (
 )
 
 type preTxDesc struct {
-	ins  []lstate.OutState
+	ins  []lstate_types.OutState
 	outs []tx.Out
 }
 
@@ -59,13 +61,13 @@ type prePkgDesc struct {
 }
 
 type preTx struct {
-	uouts    []lstate.OutState
+	uouts    []lstate_types.OutState
 	desc_o   preTxDesc
 	desc_z   preTxDesc
 	desc_pkg prePkgDesc
 }
 
-func preGen(ts *tx.T, state1 lstate.LState) (p preTx, e error) {
+func preGen(ts *tx.T) (p preTx, e error) {
 	ck_state := NewCKState(&ts.Fee)
 
 	force_O := false
@@ -74,7 +76,7 @@ func preGen(ts *tx.T, state1 lstate.LState) (p preTx, e error) {
 	}
 
 	for _, in := range ts.Ins {
-		if src, err := state1.GetOut(&in.Root); err == nil {
+		if src, err := lstate.CurrentLState().GetOut(&in.Root); err == nil {
 			if added, err := ck_state.AddIn(&src.Out_O.Asset); err != nil {
 				e = err
 				return
@@ -104,7 +106,7 @@ func preGen(ts *tx.T, state1 lstate.LState) (p preTx, e error) {
 	}
 
 	if ts.PkgClose != nil {
-		if zpkg := state1.ZState().Pkgs.GetPkgById(&ts.PkgClose.Id); zpkg == nil || zpkg.Closed {
+		if zpkg := lstate.CurrentLState().ZState().Pkgs.GetPkgById(&ts.PkgClose.Id); zpkg == nil || zpkg.Closed {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
 			return
 		} else {
@@ -143,7 +145,7 @@ func preGen(ts *tx.T, state1 lstate.LState) (p preTx, e error) {
 	}
 
 	if ts.PkgCreate != nil {
-		if zpkg := state1.ZState().Pkgs.GetPkgById(&ts.PkgCreate.Id); zpkg != nil {
+		if zpkg := lstate.CurrentLState().ZState().Pkgs.GetPkgById(&ts.PkgCreate.Id); zpkg != nil {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgCreate.Id[:]))
 		} else {
 			if _, err := ck_state.AddOut(&ts.PkgCreate.Pkg.Asset); err != nil {
@@ -157,7 +159,7 @@ func preGen(ts *tx.T, state1 lstate.LState) (p preTx, e error) {
 	}
 
 	if ts.PkgTransfer != nil {
-		if zpkg := state1.ZState().Pkgs.GetPkgById(&ts.PkgTransfer.Id); zpkg == nil || zpkg.Closed {
+		if zpkg := lstate.CurrentLState().ZState().Pkgs.GetPkgById(&ts.PkgTransfer.Id); zpkg == nil || zpkg.Closed {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgTransfer.Id[:]))
 			return
 		} else {

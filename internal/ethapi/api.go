@@ -31,7 +31,6 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/light/light_types"
 	"github.com/sero-cash/go-sero/zero/lstate"
-	"github.com/sero-cash/go-sero/zero/lstate/state2"
 
 	"github.com/sero-cash/go-sero/zero/txs"
 
@@ -684,8 +683,8 @@ type Balance struct {
 func GetBalanceFromAccounts(tk *keys.Uint512) (result Balance) {
 	tkn := map[string]*hexutil.Big{}
 	tkt := map[string][]*common.Hash{}
-	account := state2.CurrentLState().GetAccount(tk)
-	for currency, value := range account.Token {
+	tkns, tkts := lstate.CurrentLState().GetAccount(tk)
+	for currency, value := range tkns {
 		cy := strings.Trim(string(currency[:]), zerobyte)
 		if tkn[cy] == nil {
 			tkn[cy] = (*hexutil.Big)(value.ToIntRef())
@@ -693,40 +692,11 @@ func GetBalanceFromAccounts(tk *keys.Uint512) (result Balance) {
 			tkn[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(tkn[cy]), (value.ToIntRef())))
 		}
 	}
-	for category, values := range account.Ticket {
+	for category, values := range tkts {
 		catg := strings.Trim(string(category[:]), zerobyte)
 		for _, value := range values {
 			t := common.Hash{}
 			copy(t[:], value[:])
-			tkt[catg] = append(tkt[catg], &t)
-		}
-	}
-	if len(tkn) > 0 {
-		result.Tkn = tkn
-	}
-	if len(tkt) > 0 {
-		result.Tkt = tkt
-	}
-	return
-}
-
-func GetBalanceFromGetOuts(tk *keys.Uint512) (result Balance) {
-	tkn := map[string]*hexutil.Big{}
-	tkt := map[string][]*common.Hash{}
-	outs, _ := txs.GetOuts(tk)
-	for _, out := range outs {
-		if out.Out_O.Asset.Tkn != nil {
-			cy := strings.Trim(string(out.Out_O.Asset.Tkn.Currency[:]), zerobyte)
-			if tkn[cy] == nil {
-				tkn[cy] = (*hexutil.Big)(out.Out_O.Asset.Tkn.Value.ToIntRef())
-			} else {
-				tkn[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(tkn[cy]), (out.Out_O.Asset.Tkn.Value.ToIntRef())))
-			}
-		}
-		if out.Out_O.Asset.Tkt != nil {
-			catg := strings.Trim(string(out.Out_O.Asset.Tkt.Category[:]), zerobyte)
-			t := common.Hash{}
-			copy(t[:], out.Out_O.Asset.Tkt.Value[:])
 			tkt[catg] = append(tkt[catg], &t)
 		}
 	}
@@ -787,11 +757,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 
 		seed := wallet.Accounts()[0].Tk
 
-		if state2.CurrentLState() != nil {
-			result = GetBalanceFromAccounts(seed.ToUint512())
-		} else {
-			result = GetBalanceFromGetOuts(seed.ToUint512())
-		}
+		result = GetBalanceFromAccounts(seed.ToUint512())
 		return result, state.Error()
 	}
 

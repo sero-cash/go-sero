@@ -1101,8 +1101,8 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	}
 
 	if ctx.GlobalIsSet(ExchangeFlag.Name) {
+		seroparam.InitExchange(true)
 		cfg.StartExchange = true
-
 		if ctx.GlobalIsSet(AutoMergeFlag.Name) {
 			cfg.AutoMerge = true
 		}

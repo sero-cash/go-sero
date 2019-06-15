@@ -1,71 +1,52 @@
 package lstate
 
 import (
-	"runtime/debug"
-	"time"
-
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/zero/light/light_ref"
+	"github.com/sero-cash/go-sero/zero/lstate/balance"
+	"github.com/sero-cash/go-sero/zero/lstate/lstate_types"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
+	"github.com/sero-cash/go-sero/zero/utils"
 )
-
-type BlockChain interface {
-	GetCurrenHeader() *types.Header
-	GetHeader(hash *common.Hash) *types.Header
-	NewState(hash *common.Hash) *zstate.ZState
-	GetTks() []keys.Uint512
-	GetDB() serodb.Database
-}
-
-type LState interface {
-	Parse() (num uint64)
-
-	ZState() *zstate.ZState
-	GetOut(root *keys.Uint256) (src *OutState, e error)
-	GetPkgs(tk *keys.Uint512, is_from bool) (ret []*Pkg)
-	GetOuts(tk *keys.Uint512) (outs []*OutState, e error)
-	AddAccount(tk *keys.Uint512) (ret bool)
-}
 
 var current_lstate LState
 
-func CurrentLState() LState {
-	return current_lstate
+type LState struct {
+	b *balance.Balance
 }
 
-var current_bc BlockChain
-
-func BC() BlockChain {
-	return current_bc
+func (self *LState) ZState() *zstate.ZState {
+	return light_ref.Ref_inst.GetState()
 }
 
-func Run(bc BlockChain, lst LState) {
-	current_bc = bc
-	current_lstate = lst
-	go run()
+func (self *LState) GetOut(root *keys.Uint256) (src *lstate_types.OutState, e error) {
+	return self.b.GetOut(root)
 }
 
-func Parse() uint64 {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error("parse block chain error : ", "number", BC().GetCurrenHeader().Number, "recover", r)
-			debug.PrintStack()
-		}
-	}()
-	return current_lstate.Parse()
+func (self *LState) GetPkgs(tk *keys.Uint512, is_from bool) (ret []*lstate_types.Pkg) {
+	return self.b.GetPkgs(tk, is_from)
 }
 
-func run() {
-	for {
-		num := Parse()
+func (self *LState) GetOuts(tk *keys.Uint512) (outs []*lstate_types.OutState, e error) {
+	return self.b.GetOuts(tk)
+}
 
-		if num <= 1 {
-			time.Sleep(1000 * 1000 * 1000 * 8)
-		} else {
-			time.Sleep(1000 * 1000 * 10)
-		}
-	}
+func (self *LState) AddAccount(tk *keys.Uint512) (ret bool) {
+	return self.b.AddAccount(tk)
+}
+
+func (self *LState) GetAccount(tk *keys.Uint512) (tkn map[keys.Uint256]*utils.U256, tkt map[keys.Uint256][]keys.Uint256) {
+	a := self.b.GetAccount(tk)
+	tkn = a.Token
+	tkt = a.Ticket
+	return
+}
+
+func CurrentLState() *LState {
+	return &current_lstate
+}
+
+func InitLState() {
+	current_lstate.b = balance.NewBalance()
+	return
 }
