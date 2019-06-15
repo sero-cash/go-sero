@@ -986,6 +986,9 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 			break
 		}
 	}
+	if outxos.Len() > 100 {
+		zutxos = UtxoList{}
+	}
 	utxos := append(zutxos, outxos...)
 	count = utxos.Len()
 	if utxos.Len() >= 100 || time.Now().After(account.nextMergeTime) {
