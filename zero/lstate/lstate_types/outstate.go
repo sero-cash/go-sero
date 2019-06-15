@@ -34,14 +34,6 @@ type OutState struct {
 	Z        bool
 }
 
-func (self *OutState) IsMine(tk *keys.Uint512) bool {
-	if self.Tk == *tk {
-		return true
-	} else {
-		return false
-	}
-}
-
 func (self *OutState) Serial() (ret []byte, e error) {
 	return rlp.EncodeToBytes(self)
 }

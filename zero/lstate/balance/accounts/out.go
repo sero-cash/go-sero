@@ -20,7 +20,7 @@ type Out struct {
 	OS localdb.OutState
 }
 
-func (self *DB) GetStateOut(tk *keys.Uint512, num uint64, root *keys.Uint256, os *localdb.OutState) (ret *lstate_types.OutState) {
+func (self *DB) getStateOut(tk *keys.Uint512, num uint64, root *keys.Uint256, os *localdb.OutState) (ret *lstate_types.OutState) {
 	if os.IsO() {
 		out_o := os.Out_O
 		if out_o.Asset.Tkn == nil && out_o.Asset.Tkt == nil {
@@ -180,7 +180,7 @@ func (self *DB) GetOuts(tk *keys.Uint512) (outs []*lstate_types.OutState, e erro
 }
 
 func (self *DB) AddOut(batch *leveldb.Batch, a *Account, num uint64, root *keys.Uint256, os *localdb.OutState) (ret bool) {
-	if out := self.GetStateOut(&a.Tk, num, root, os); out != nil {
+	if out := self.getStateOut(&a.Tk, num, root, os); out != nil {
 		if out.Out_O.Asset.Tkn != nil {
 			a.AddToken(out.Out_O.Asset.Tkn)
 		}

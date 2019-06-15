@@ -684,20 +684,24 @@ func GetBalanceFromAccounts(tk *keys.Uint512) (result Balance) {
 	tkn := map[string]*hexutil.Big{}
 	tkt := map[string][]*common.Hash{}
 	tkns, tkts := lstate.CurrentLState().GetAccount(tk)
-	for currency, value := range tkns {
-		cy := strings.Trim(string(currency[:]), zerobyte)
-		if tkn[cy] == nil {
-			tkn[cy] = (*hexutil.Big)(value.ToIntRef())
-		} else {
-			tkn[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(tkn[cy]), (value.ToIntRef())))
+	if tkns != nil {
+		for currency, value := range tkns {
+			cy := strings.Trim(string(currency[:]), zerobyte)
+			if tkn[cy] == nil {
+				tkn[cy] = (*hexutil.Big)(value.ToIntRef())
+			} else {
+				tkn[cy] = (*hexutil.Big)(new(big.Int).Add((*big.Int)(tkn[cy]), (value.ToIntRef())))
+			}
 		}
 	}
-	for category, values := range tkts {
-		catg := strings.Trim(string(category[:]), zerobyte)
-		for _, value := range values {
-			t := common.Hash{}
-			copy(t[:], value[:])
-			tkt[catg] = append(tkt[catg], &t)
+	if tkts != nil {
+		for category, values := range tkts {
+			catg := strings.Trim(string(category[:]), zerobyte)
+			for _, value := range values {
+				t := common.Hash{}
+				copy(t[:], value[:])
+				tkt[catg] = append(tkt[catg], &t)
+			}
 		}
 	}
 	if len(tkn) > 0 {
