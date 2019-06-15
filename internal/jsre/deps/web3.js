@@ -6050,6 +6050,11 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 call: 'exchange_commitTx',
                 params: 1
             });
+            var validAddress = new Method({
+                name: 'validAddress',
+                call: 'exchange_validAddress',
+                params: 1
+            });
 
             return [
                 getPkr,
@@ -6059,7 +6064,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 genTx,
                 genTxWithSign,
                 getRecords,
-                commitTx
+                commitTx,
+                validAddress
             ];
         };
 
