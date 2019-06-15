@@ -2,7 +2,6 @@ package balance
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -44,8 +43,8 @@ func GetOut(root *keys.Uint256) (src *localdb.OutState) {
 
 func (self *Balance) Parse() (num uint64) {
 
-	for light_ref.Ref_inst.Bc == nil {
-		time.Sleep(1000 * 1000 * 1000 * 2)
+	if light_ref.Ref_inst.Bc == nil || light_ref.Ref_inst.Bc.GetCurrenHeader().Number.Uint64() <= seroparam.DefaultConfirmedBlock() {
+		return 0
 	}
 
 	self.MakesureEnv()

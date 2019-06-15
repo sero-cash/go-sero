@@ -12,6 +12,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-sero/zero/light/light_ref"
+
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/robfig/cron"
@@ -706,6 +709,9 @@ func (c uint64Slice) Less(i, j int) bool {
 var fetchCount = uint64(5000)
 
 func (self *Exchange) fetchBlockInfo() {
+	if light_ref.Ref_inst.Bc == nil || light_ref.Ref_inst.Bc.GetCurrenHeader().Number.Uint64() <= seroparam.DefaultConfirmedBlock() {
+		return
+	}
 	for {
 		indexs := map[uint64][]keys.Uint512{}
 		orders := uint64Slice{}
@@ -1020,6 +1026,9 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 }
 
 func (self *Exchange) merge() {
+	if light_ref.Ref_inst.Bc == nil || light_ref.Ref_inst.Bc.GetCurrenHeader().Number.Uint64() <= seroparam.DefaultConfirmedBlock() {
+		return
+	}
 	self.accounts.Range(func(key, value interface{}) bool {
 		account := value.(*Account)
 		if count, txhash, err := self.Merge(account.pk, "SERO"); err != nil {
