@@ -92,6 +92,8 @@ type Backend interface {
 	GenTx(param exchange.TxParam) (*light_types.GenTxParam, error)
 	GenTxWithSign(param exchange.TxParam) (*light_types.GTx, error)
 	GetRecords(address hexutil.Bytes, begin, end uint64) (records []exchange.Utxo, err error)
+	GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int)
+	GetMaxAvailable(pk keys.Uint512, currency string) (amount *big.Int)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

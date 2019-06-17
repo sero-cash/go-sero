@@ -276,6 +276,62 @@ func (self *Exchange) GetPkr(pk *keys.Uint512, index *keys.Uint256) (pkr keys.PK
 	return keys.Addr2PKr(pk, index), nil
 }
 
+func (self *Exchange) GetLockedBalances(pk keys.Uint512) (balances map[string]*big.Int) {
+	if _, ok := self.accounts.Load(pk); ok {
+		prefix := append(pkPrefix, pk[:]...)
+		iterator := self.db.NewIteratorWithPrefix(prefix)
+		balances = map[string]*big.Int{}
+
+		for iterator.Next() {
+			key := iterator.Key()
+			var root keys.Uint256
+			copy(root[:], key[98:130])
+			if utxo, err := self.getUtxo(root); err == nil {
+				if utxo.Asset.Tkn != nil {
+					if _, flag := self.usedFlag.Load(utxo.Root); flag {
+						currency := common.BytesToString(utxo.Asset.Tkn.Currency[:])
+						if amount, ok := balances[currency]; ok {
+							amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
+						} else {
+							balances[currency] = new(big.Int).Set(utxo.Asset.Tkn.Value.ToIntRef())
+						}
+					}
+				}
+			}
+		}
+		return balances
+	}
+	return
+}
+
+func (self *Exchange) GetMaxAvailable(pk keys.Uint512, currency string) (amount *big.Int) {
+	currency = strings.ToUpper(currency)
+	prefix := append(pkPrefix, append(pk[:], common.LeftPadBytes([]byte(currency), 32)...)...)
+	iterator := self.db.NewIteratorWithPrefix(prefix)
+
+	amount = new(big.Int)
+	count := 0
+	for iterator.Next() {
+		key := iterator.Key()
+		var root keys.Uint256
+		copy(root[:], key[98:130])
+
+		if utxo, err := self.getUtxo(root); err == nil {
+			if utxo.Asset.Tkn != nil {
+				if utxo.IsZ {
+					amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
+				} else {
+					if count < 2500 {
+						amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
+						count++
+					}
+				}
+			}
+		}
+	}
+	return
+}
+
 func (self *Exchange) GetBalances(pk keys.Uint512) (balances map[string]*big.Int) {
 	if value, ok := self.accounts.Load(pk); ok {
 		account := value.(*Account)
@@ -366,18 +422,6 @@ func (self *Exchange) getAccountByPk(pk keys.Uint512) *Account {
 	return nil
 }
 
-//func (self *Exchange) getAccountByPkr(pkr keys.PKr) (account *Account) {
-//	self.accounts.Range(func(key, value interface{}) bool {
-//		account := value.(*Account)
-//		if keys.IsMyPKr(account.tk, &pkr) {
-//			return false
-//		}
-//		return true
-//
-//	})
-//	return
-//}
-
 func (self *Exchange) isPk(addr keys.PKr) bool {
 	byte32 := common.Hash{}
 	return bytes.Equal(byte32[:], addr[64:96])
@@ -415,8 +459,9 @@ func (self *Exchange) preGenTx(param TxParam) (utxos []Utxo, err error) {
 			amount = new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), param.GasPrice)
 		}
 		for currency, amount := range amounts {
-			if list, err := self.findUtxos(&param.From, currency, amount); err != nil {
-				return utxos, err
+			list, remain := self.findUtxos(&param.From, currency, amount);
+			if remain.Sign() > 0 {
+				return utxos, errors.New(fmt.Sprintf("not enough token, maximum available token is %s", new(big.Int).Sub(amount, remain).String()))
 			} else {
 				utxos = append(utxos, list...)
 			}
@@ -610,12 +655,14 @@ func (self *Exchange) getUtxo(root keys.Uint256) (utxo Utxo, e error) {
 	return
 }
 
-func (self *Exchange) findUtxos(pk *keys.Uint512, currency string, amount *big.Int) (utxos []Utxo, e error) {
+func (self *Exchange) findUtxos(pk *keys.Uint512, currency string, amount *big.Int) (utxos []Utxo, remain *big.Int) {
+	remain = new(big.Int).Set(amount)
+
 	currency = strings.ToUpper(currency)
 	prefix := append(pkPrefix, append(pk[:], common.LeftPadBytes([]byte(currency), 32)...)...)
 	iterator := self.db.NewIteratorWithPrefix(prefix)
 
-	list := UtxoList{}
+	list := []Utxo{}
 	for iterator.Next() {
 		key := iterator.Key()
 		var root keys.Uint256
@@ -624,31 +671,24 @@ func (self *Exchange) findUtxos(pk *keys.Uint512, currency string, amount *big.I
 		if utxo, err := self.getUtxo(root); err == nil {
 			if _, ok := self.usedFlag.Load(utxo.Root); !ok {
 				utxos = append(utxos, utxo)
-				amount.Sub(amount, utxo.Asset.Tkn.Value.ToIntRef())
+				remain.Sub(remain, utxo.Asset.Tkn.Value.ToIntRef())
 			} else {
 				list = append(list, utxo)
 			}
 		}
-		if amount.Sign() <= 0 {
+		if remain.Sign() <= 0 {
 			break
 		}
 	}
 
-	if amount.Sign() > 0 {
-		if list.Len() > 0 {
-			sort.Sort(list)
-			for _, utxo := range list {
-				utxos = append(utxos, utxo)
-				amount.Sub(amount, utxo.Asset.Tkn.Value.ToIntRef())
-				if amount.Sign() <= 0 {
-					break
-				}
+	if remain.Sign() > 0 {
+		for _, utxo := range list {
+			utxos = append(utxos, utxo)
+			remain.Sub(remain, utxo.Asset.Tkn.Value.ToIntRef())
+			if remain.Sign() <= 0 {
+				break
 			}
 		}
-	}
-
-	if amount.Sign() > 0 {
-		e = errors.New("not enough token")
 	}
 	return
 }

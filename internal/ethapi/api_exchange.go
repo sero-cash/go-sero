@@ -54,6 +54,14 @@ func (s *PublicExchangeAPI) GetPkr(ctx context.Context, address *keys.Uint512, i
 	return s.b.GetPkr(address, index)
 }
 
+func (s *PublicExchangeAPI) GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int) {
+	return s.b.GetLockedBalances(address)
+}
+
+func (s *PublicExchangeAPI) GetMaxAvailable(address keys.Uint512, currency string) (amount *big.Int) {
+	return s.b.GetMaxAvailable(address, currency)
+}
+
 func (s *PublicExchangeAPI) GetBalances(ctx context.Context, address keys.Uint512) (balances map[string]*big.Int) {
 	return s.b.GetBalances(address)
 }

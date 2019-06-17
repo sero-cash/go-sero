@@ -282,6 +282,20 @@ func (b *SeroAPIBackend) GetPkr(address *keys.Uint512, index *keys.Uint256) (pkr
 	return b.sero.exchange.GetPkr(address, index)
 }
 
+func (b *SeroAPIBackend) GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int) {
+	if b.sero.exchange == nil {
+		return
+	}
+	return b.sero.exchange.GetLockedBalances(address)
+}
+
+func (b *SeroAPIBackend) GetMaxAvailable(pk keys.Uint512, currency string) (amount *big.Int) {
+	if b.sero.exchange == nil {
+		return
+	}
+	return b.sero.exchange.GetMaxAvailable(pk, currency)
+}
+
 func (b *SeroAPIBackend) GetBalances(address keys.Uint512) (balances map[string]*big.Int) {
 	if b.sero.exchange == nil {
 		return
