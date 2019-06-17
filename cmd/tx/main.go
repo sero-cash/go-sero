@@ -17,10 +17,13 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
 	"runtime"
+	"strings"
 
 	"github.com/sero-cash/go-sero/zero/txs/generate"
 
@@ -48,33 +51,57 @@ func main() {
 	flag.Parse()
 	cpt.ZeroInit_OnlyInOuts()
 
-	fmt.Println("[OUTPUT-BEGIN]")
+	stdin := bufio.NewReader(os.Stdin)
+	if len(sk) == 0 {
+		fmt.Println("input sk:")
+		var err error
+		sk, err = stdin.ReadString('\n')
+		if err != nil {
+			fmt.Println("[OUTPUT-BEGIN] ERROR: SK READ ERROR")
+		}
+		sk = strings.Trim(sk, "\n")
+		fmt.Println(sk)
+	}
+
+	if len(txParam) == 0 {
+		fmt.Println("input txParam:")
+		var err error
+		txParam, err = stdin.ReadString('\n')
+		if err != nil {
+			fmt.Println("[OUTPUT-BEGIN] ERROR: TXPARAM READ ERROR - ", err)
+		}
+		txParam = strings.Trim(txParam, "\n")
+		fmt.Println(txParam)
+	}
+
+	sk = strings.Trim(sk, "'")
+	txParam = strings.Trim(txParam, "'")
+
 	sk_bytes := keys.Uint512{}
 	if sk[1] != 'x' {
 		sk = "0x" + sk
 	}
 	if bs, e := hexutil.Decode(sk); e != nil {
-		fmt.Println("ERROR: DecodeSK-", e)
+		fmt.Println("[OUTPUT-BEGIN] ERROR: DecodeSK-", e)
 	} else {
 		copy(sk_bytes[:], bs)
 		if len(txParam) > 0 && len(sk) > 0 {
 			var gtp light_types.GenTxParam
 			if e := json.Unmarshal([]byte(txParam), &gtp); e != nil {
-				fmt.Println("ERROR: Unmarshal-", e)
+				fmt.Println("[OUTPUT-BEGIN] ERROR: Unmarshal-", e)
 			} else {
 				if gtx, e := light.SignTx(&sk_bytes, &gtp); e != nil {
-					fmt.Println("ERROR: SignTx-", e)
+					fmt.Println("[OUTPUT-BEGIN] ERROR: SignTx-", e)
 				} else {
 					if jtx, e := json.Marshal(&gtx); e != nil {
-						fmt.Println("ERROR: Marshal-", e)
+						fmt.Println("[OUTPUT-BEGIN] ERROR: Marshal-", e)
 					} else {
-						fmt.Println(string(jtx))
+						fmt.Println("[OUTPUT-BEGIN] " + string(jtx))
 					}
 				}
 			}
 		} else {
-			fmt.Println("ERROR: Input params invalid")
+			fmt.Println("[OUTPUT-BEGIN] ERROR: Input params invalid")
 		}
 	}
-	fmt.Println("[OUTPUT-END]")
 }
