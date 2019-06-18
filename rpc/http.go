@@ -36,9 +36,14 @@ import (
 )
 
 const (
-	contentType             = "application/json"
-	maxRequestContentLength = 1024 * 128
+	contentType = "application/json"
 )
+
+var maxRequestContentLength = int64(1024 * 512)
+
+func SetMaxRequestContentLength(l int64) {
+	maxRequestContentLength = l
+}
 
 var nullAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
 

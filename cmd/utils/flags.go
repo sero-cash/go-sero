@@ -28,6 +28,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-sero/rpc"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common/address"
 
@@ -419,6 +421,11 @@ var (
 		Usage: "API's offered over the HTTP-RPC interface",
 		Value: "",
 	}
+	RPCRequestContentLength = cli.Uint64Flag{
+		Name:  "rpcRequestContentLength",
+		Usage: "Specify the maximum length of the rpc request content",
+		Value: 1024 * 512,
+	}
 	IPCDisabledFlag = cli.BoolFlag{
 		Name:  "ipcdisable",
 		Usage: "Disable the IPC-RPC server",
@@ -742,6 +749,8 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(RPCIdleTimeoutFlag.Name) {
 		cfg.HTTPTimeouts.IdleTimeout = time.Duration(ctx.GlobalInt64(RPCIdleTimeoutFlag.Name)) * time.Second
 	}
+	l := ctx.GlobalInt64(RPCRequestContentLength.Name)
+	rpc.SetMaxRequestContentLength(l)
 }
 
 // setWS creates the WebSocket RPC listener interface string from the set
