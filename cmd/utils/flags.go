@@ -749,8 +749,11 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(RPCIdleTimeoutFlag.Name) {
 		cfg.HTTPTimeouts.IdleTimeout = time.Duration(ctx.GlobalInt64(RPCIdleTimeoutFlag.Name)) * time.Second
 	}
-	l := ctx.GlobalInt64(RPCRequestContentLength.Name)
-	rpc.SetMaxRequestContentLength(l)
+	if ctx.GlobalIsSet(RPCRequestContentLength.Name) {
+		l := ctx.GlobalInt64(RPCRequestContentLength.Name)
+		rpc.SetMaxRequestContentLength(l)
+	}
+
 }
 
 // setWS creates the WebSocket RPC listener interface string from the set
