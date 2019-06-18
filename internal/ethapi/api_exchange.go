@@ -259,3 +259,8 @@ func (s *PublicExchangeAPI) ValidAddress(ctx context.Context, addr hexutil.Bytes
 func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *light_types.GTx) error {
 	return s.b.CommitTx(args)
 }
+
+func (s *PublicExchangeAPI) ClearUsedFlag(ctx context.Context) error {
+	s.b.ClearUsedFlag()
+	return nil
+}

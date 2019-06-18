@@ -282,6 +282,13 @@ func (b *SeroAPIBackend) GetPkr(address *keys.Uint512, index *keys.Uint256) (pkr
 	return b.sero.exchange.GetPkr(address, index)
 }
 
+func (b *SeroAPIBackend) ClearUsedFlag() {
+	if b.sero.exchange == nil {
+		return
+	}
+	b.sero.exchange.ClearFlag()
+}
+
 func (b *SeroAPIBackend) GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int) {
 	if b.sero.exchange == nil {
 		return
