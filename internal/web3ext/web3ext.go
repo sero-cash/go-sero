@@ -688,7 +688,7 @@ web3._extend({
 			call: 'exchange_getMaxAvailable',
 			params: 2,
             inputFormatter: [web3._extend.formatters.inputHexPKFormatter, null]
-		})
+		}),
        new web3._extend.Method({
 			name: 'clearUsedFlag',
 			call: 'exchange_clearUsedFlag',
