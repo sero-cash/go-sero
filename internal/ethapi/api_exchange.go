@@ -58,8 +58,8 @@ func (s *PublicExchangeAPI) GetLockedBalances(address keys.Uint512) (balances ma
 	return s.b.GetLockedBalances(address)
 }
 
-func (s *PublicExchangeAPI) GetMaxAvailable(address keys.Uint512, currency string) (amount *big.Int) {
-	return s.b.GetMaxAvailable(address, currency)
+func (s *PublicExchangeAPI) GetMaxAvailable(address keys.Uint512, currency Smbol) (amount *big.Int) {
+	return s.b.GetMaxAvailable(address, string(currency))
 }
 
 func (s *PublicExchangeAPI) GetBalances(ctx context.Context, address keys.Uint512) (balances map[string]*big.Int) {

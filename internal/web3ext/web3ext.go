@@ -31,6 +31,7 @@ var Modules = map[string]string{
 	"swarmfs":    SWARMFS_JS,
 	"txpool":     TxPool_JS,
 	"ssi":        SSI_JS,
+	"exchange":   Exchange_JS,
 }
 
 const Chequebook_JS = `
@@ -667,6 +668,26 @@ web3._extend({
 			name: 'committx',
 			call: 'ssi_commitTx',
 			params: 1
+		})
+	]
+});
+`
+
+const Exchange_JS = `
+web3._extend({
+	property: 'exchange',
+	methods: [
+		new web3._extend.Method({
+			name: 'getLockedBalances',
+			call: 'exchange_getLockedBalances',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputHexPKFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getMaxAvailable',
+			call: 'exchange_getMaxAvailable',
+			params: 2,
+            inputFormatter: [web3._extend.formatters.inputHexPKFormatter, null]
 		})
 	]
 });
