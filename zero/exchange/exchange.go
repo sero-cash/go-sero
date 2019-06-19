@@ -696,13 +696,16 @@ func (self *Exchange) findUtxos(pk *keys.Uint512, currency string, amount *big.I
 		copy(root[:], key[98:130])
 
 		if utxo, err := self.getUtxo(root); err == nil {
-			if _, ok := self.usedFlag.Load(utxo.Root); !ok {
-				utxos = append(utxos, utxo)
-				remain.Sub(remain, utxo.Asset.Tkn.Value.ToIntRef())
-				if remain.Sign() <= 0 {
-					break
+			if utxo.Asset.Tkn != nil {
+				if _, ok := self.usedFlag.Load(utxo.Root); !ok {
+					utxos = append(utxos, utxo)
+					remain.Sub(remain, utxo.Asset.Tkn.Value.ToIntRef())
+					if remain.Sign() <= 0 {
+						break
+					}
 				}
 			}
+
 			//else {
 			//	list = append(list, utxo)
 			//}
