@@ -321,13 +321,15 @@ func (self *Exchange) GetMaxAvailable(pk keys.Uint512, currency string) (amount 
 		copy(root[:], key[98:130])
 
 		if utxo, err := self.getUtxo(root); err == nil {
-			if utxo.Asset.Tkn != nil {
-				if utxo.IsZ {
-					amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
-				} else {
-					if count < 2500 {
+			if _, flag := self.usedFlag.Load(utxo.Root); flag {
+				if utxo.Asset.Tkn != nil {
+					if utxo.IsZ {
 						amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
-						count++
+					} else {
+						if count < 2500 {
+							amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
+							count++
+						}
 					}
 				}
 			}
