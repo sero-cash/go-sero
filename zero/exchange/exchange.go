@@ -689,7 +689,7 @@ func (self *Exchange) findUtxos(pk *keys.Uint512, currency string, amount *big.I
 	prefix := append(pkPrefix, append(pk[:], common.LeftPadBytes([]byte(currency), 32)...)...)
 	iterator := self.db.NewIteratorWithPrefix(prefix)
 
-	list := []Utxo{}
+	//list := []Utxo{}
 	for iterator.Next() {
 		key := iterator.Key()
 		var root keys.Uint256
@@ -699,24 +699,25 @@ func (self *Exchange) findUtxos(pk *keys.Uint512, currency string, amount *big.I
 			if _, ok := self.usedFlag.Load(utxo.Root); !ok {
 				utxos = append(utxos, utxo)
 				remain.Sub(remain, utxo.Asset.Tkn.Value.ToIntRef())
-			} else {
-				list = append(list, utxo)
+				if remain.Sign() <= 0 {
+					break
+				}
 			}
-		}
-		if remain.Sign() <= 0 {
-			break
+			//else {
+			//	list = append(list, utxo)
+			//}
 		}
 	}
-
-	if remain.Sign() > 0 {
-		for _, utxo := range list {
-			utxos = append(utxos, utxo)
-			remain.Sub(remain, utxo.Asset.Tkn.Value.ToIntRef())
-			if remain.Sign() <= 0 {
-				break
-			}
-		}
-	}
+	//
+	//if remain.Sign() > 0 {
+	//	for _, utxo := range list {
+	//		utxos = append(utxos, utxo)
+	//		remain.Sub(remain, utxo.Asset.Tkn.Value.ToIntRef())
+	//		if remain.Sign() <= 0 {
+	//			break
+	//		}
+	//	}
+	//}
 	return
 }
 
