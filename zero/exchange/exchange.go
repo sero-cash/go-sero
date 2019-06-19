@@ -473,6 +473,15 @@ func (self *Exchange) preGenTx(param TxParam) (utxos []Utxo, err error) {
 			}
 		}
 	}
+	count := 0
+	for _, each := range utxos {
+		if !each.IsZ {
+			count++
+		}
+	}
+	if count > 2500 {
+		err = errors.New("ins.len > 2500")
+	}
 	return
 }
 
