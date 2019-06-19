@@ -276,8 +276,20 @@ func (self *Exchange) GetPkr(pk *keys.Uint512, index *keys.Uint256) (pkr keys.PK
 	return keys.Addr2PKr(pk, index), nil
 }
 
-func (self *Exchange) ClearFlag() {
-	self.usedFlag = sync.Map{}
+func (self *Exchange) ClearFlag(pk keys.Uint512) {
+	if _, ok := self.accounts.Load(pk); ok {
+		prefix := append(pkPrefix, pk[:]...)
+		iterator := self.db.NewIteratorWithPrefix(prefix)
+
+		for iterator.Next() {
+			key := iterator.Key()
+			var root keys.Uint256
+			copy(root[:], key[98:130])
+			if _, flag := self.usedFlag.Load(root); flag {
+				self.usedFlag.Delete(root)
+			}
+		}
+	}
 }
 
 func (self *Exchange) GetLockedBalances(pk keys.Uint512) (balances map[string]*big.Int) {

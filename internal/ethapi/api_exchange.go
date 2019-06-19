@@ -260,7 +260,7 @@ func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *light_types.GTx)
 	return s.b.CommitTx(args)
 }
 
-func (s *PublicExchangeAPI) ClearUsedFlag(ctx context.Context) error {
-	s.b.ClearUsedFlag()
+func (s *PublicExchangeAPI) ClearUsedFlag(ctx context.Context, address keys.Uint512) error {
+	s.b.ClearUsedFlag(address)
 	return nil
 }
