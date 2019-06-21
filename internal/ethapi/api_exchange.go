@@ -126,6 +126,7 @@ type ReceptionArgs struct {
 
 type GenTxArgs struct {
 	From       keys.Uint512
+	RefoundTo  *keys.PKr
 	Receptions []ReceptionArgs
 	Gas        uint64
 	GasPrice   *Big
@@ -138,6 +139,12 @@ func (args GenTxArgs) check() error {
 	}
 	if args.GasPrice == nil {
 		return fmt.Errorf("gasPrice not specified")
+	}
+
+	if args.RefoundTo != nil {
+		if !keys.PKrValid(args.RefoundTo) {
+			return errors.New("RefoundTo is not a valid pkr")
+		}
 	}
 
 	for _, rec := range args.Receptions {
@@ -183,7 +190,7 @@ func (args GenTxArgs) toTxParam() exchange.TxParam {
 			(*big.Int)(rec.Value),
 		})
 	}
-	return exchange.TxParam{args.From, receptions, args.Gas, gasPrice, args.Roots}
+	return exchange.TxParam{args.From, args.RefoundTo, receptions, args.Gas, gasPrice, args.Roots}
 }
 
 func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*light_types.GenTxParam, error) {
@@ -238,7 +245,7 @@ func (s *PublicExchangeAPI) Merge(ctx context.Context, address *keys.Uint512, cy
 	if exchangeInstance == nil {
 		return nil, errors.New("exchange mode no start")
 	}
-	count, hash, err := exchangeInstance.Merge(address, string(cy))
+	count, hash, err := exchangeInstance.Merge(address, string(cy), true)
 	log.Info("merge query utxo", "cy=", cy, "count=", count)
 	if err != nil {
 		return nil, err
@@ -283,7 +290,16 @@ func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *light_types.GTx)
 	return s.b.CommitTx(args)
 }
 
-func (s *PublicExchangeAPI) ClearUsedFlag(ctx context.Context, address keys.Uint512) error {
-	s.b.ClearUsedFlag(address)
-	return nil
+func (s *PublicExchangeAPI) ClearUsedFlag(ctx context.Context, address keys.Uint512) (count int, e error) {
+	count = exchange.CurrentExchange().ClearUsedFlagForPK(&address)
+	return
+}
+
+func (s *PublicExchangeAPI) ClearUsedFlagForRoot(ctx context.Context, roots []keys.Uint256) (count int, e error) {
+	if len(roots) > 0 {
+		for _, root := range roots {
+			count += exchange.CurrentExchange().ClearUsedFlagForRoot(&root)
+		}
+	}
+	return
 }

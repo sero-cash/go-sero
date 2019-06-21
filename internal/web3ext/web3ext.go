@@ -694,6 +694,11 @@ web3._extend({
 			call: 'exchange_clearUsedFlag',
 			params: 1,
             inputFormatter: [web3._extend.formatters.inputHexPKFormatter]
+		}),
+       new web3._extend.Method({
+			name: 'clearUsedFlagForRoot',
+			call: 'exchange_clearUsedFlagForRoot',
+			params: 1
 		})
 	]
 });

@@ -90,6 +90,7 @@ type Reception struct {
 
 type TxParam struct {
 	From       keys.Uint512
+	RefoundTo  *keys.PKr
 	Receptions []Reception
 	Gas        uint64
 	GasPrice   *big.Int
@@ -196,7 +197,7 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 		account.nextMergeTime = time.Now()
 		self.accounts.Store(*account.pk, &account)
 
-		if num := self.starNum(account.pk); num > 0 {
+		if num := self.starNum(account.pk); num > w.Accounts()[0].At {
 			self.numbers.Store(*account.pk, num)
 		} else {
 			self.numbers.Store(*account.pk, w.Accounts()[0].At+1)
@@ -276,7 +277,7 @@ func (self *Exchange) GetPkr(pk *keys.Uint512, index *keys.Uint256) (pkr keys.PK
 	return keys.Addr2PKr(pk, index), nil
 }
 
-func (self *Exchange) ClearFlag(pk keys.Uint512) {
+func (self *Exchange) ClearUsedFlagForPK(pk *keys.Uint512) (count int) {
 	if _, ok := self.accounts.Load(pk); ok {
 		prefix := append(pkPrefix, pk[:]...)
 		iterator := self.db.NewIteratorWithPrefix(prefix)
@@ -287,9 +288,19 @@ func (self *Exchange) ClearFlag(pk keys.Uint512) {
 			copy(root[:], key[98:130])
 			if _, flag := self.usedFlag.Load(root); flag {
 				self.usedFlag.Delete(root)
+				count++
 			}
 		}
 	}
+	return
+}
+
+func (self *Exchange) ClearUsedFlagForRoot(root *keys.Uint256) (count int) {
+	if _, flag := self.usedFlag.Load(root); flag {
+		self.usedFlag.Delete(root)
+		count++
+	}
+	return
 }
 
 func (self *Exchange) GetLockedBalances(pk keys.Uint512) (balances map[string]*big.Int) {
@@ -400,8 +411,14 @@ func (self *Exchange) GenTx(param TxParam) (txParam *light_types.GenTxParam, e e
 	}
 
 	if value, ok := self.accounts.Load(param.From); ok {
-		account := value.(*Account)
-		txParam, e = self.buildTxParam(utxos, account, param.Receptions, param.Gas, param.GasPrice)
+		var refoundTo keys.PKr
+		if param.RefoundTo == nil {
+			account := value.(*Account)
+			refoundTo = account.mainPkr
+		} else {
+			refoundTo = *param.RefoundTo
+		}
+		txParam, e = self.buildTxParam(utxos, &refoundTo, param.Receptions, param.Gas, param.GasPrice)
 	} else {
 		return nil, errors.New("not found Pk")
 	}
@@ -524,12 +541,18 @@ func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Recepti
 	return &gtx, nil
 }
 
-func (self *Exchange) buildTxParam(utxos []Utxo, account *Account, receptions []Reception, gas uint64, gasPrice *big.Int) (txParam *light_types.GenTxParam, e error) {
+func (self *Exchange) buildTxParam(
+	utxos []Utxo,
+	refoundTo *keys.PKr,
+	receptions []Reception,
+	gas uint64,
+	gasPrice *big.Int) (txParam *light_types.GenTxParam, e error) {
+
 	txParam = new(light_types.GenTxParam)
 	txParam.Gas = gas
 	txParam.GasPrice = *gasPrice
 
-	txParam.From = light_types.Kr{PKr: account.mainPkr}
+	txParam.From = light_types.Kr{PKr: *refoundTo}
 
 	roots := []keys.Uint256{}
 	for _, utxo := range utxos {
@@ -603,7 +626,7 @@ func (self *Exchange) buildTxParam(utxos []Utxo, account *Account, receptions []
 
 	if len(amounts) > 0 {
 		for currency, value := range amounts {
-			Outs = append(Outs, light_types.GOut{PKr: account.mainPkr, Asset: assets.Asset{Tkn: &assets.Token{
+			Outs = append(Outs, light_types.GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkn: &assets.Token{
 				Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
 				Value:    utils.U256(*value),
 			}}})
@@ -611,7 +634,7 @@ func (self *Exchange) buildTxParam(utxos []Utxo, account *Account, receptions []
 	}
 	if len(ticekts) > 0 {
 		for value, category := range ticekts {
-			Outs = append(Outs, light_types.GOut{PKr: account.mainPkr, Asset: assets.Asset{Tkt: &assets.Ticket{
+			Outs = append(Outs, light_types.GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkt: &assets.Ticket{
 				Category: category,
 				Value:    value,
 			}}})
@@ -1020,7 +1043,7 @@ func (self *Exchange) ownPkr(pks []keys.Uint512, pkr keys.PKr) (account *Account
 	return
 }
 
-func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhash keys.Uint256, e error) {
+func (self *Exchange) Merge(pk *keys.Uint512, currency string, force bool) (count int, txhash keys.Uint256, e error) {
 	account := self.getAccountByPk(*pk)
 	if account == nil {
 		e = errors.New("account is nil")
@@ -1056,12 +1079,12 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string) (count int, txhas
 			break
 		}
 	}
-	if outxos.Len() > 100 {
+	if outxos.Len() >= 2400 {
 		zutxos = UtxoList{}
 	}
 	utxos := append(zutxos, outxos...)
 	count = utxos.Len()
-	if utxos.Len() >= 100 || time.Now().After(account.nextMergeTime) {
+	if zutxos.Len() >= 100 || outxos.Len() >= 2400 || time.Now().After(account.nextMergeTime) || force {
 		if utxos.Len() <= 10 {
 			account.nextMergeTime = time.Now().Add(time.Hour * 6)
 			e = fmt.Errorf("no need to merge the account, utxo count == %v", utxos.Len())
@@ -1103,7 +1126,7 @@ func (self *Exchange) merge() {
 	}
 	self.accounts.Range(func(key, value interface{}) bool {
 		account := value.(*Account)
-		if count, txhash, err := self.Merge(account.pk, "SERO"); err != nil {
+		if count, txhash, err := self.Merge(account.pk, "SERO", false); err != nil {
 			log.Error("autoMerge fail", "pk", cpt.Base58Encode(account.pk[:]), "count", count, "error", err)
 		} else {
 			log.Info("autoMerge succ", "pk", cpt.Base58Encode(account.pk[:]), "tx", hexutil.Encode(txhash[:]), "count", count)

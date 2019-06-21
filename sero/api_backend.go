@@ -19,8 +19,9 @@ package sero
 import (
 	"context"
 	"errors"
-	"github.com/sero-cash/go-sero/common/hexutil"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-sero/zero/exchange"
 
@@ -280,13 +281,6 @@ func (b *SeroAPIBackend) GetPkr(address *keys.Uint512, index *keys.Uint256) (pkr
 		return
 	}
 	return b.sero.exchange.GetPkr(address, index)
-}
-
-func (b *SeroAPIBackend) ClearUsedFlag(address keys.Uint512) {
-	if b.sero.exchange == nil {
-		return
-	}
-	b.sero.exchange.ClearFlag(address)
 }
 
 func (b *SeroAPIBackend) GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int) {
