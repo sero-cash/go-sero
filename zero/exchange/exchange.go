@@ -35,10 +35,9 @@ import (
 )
 
 type Account struct {
-	wallet        accounts.Wallet
-	pk            *keys.Uint512
-	tk            *keys.Uint512
-	sk            *keys.PKr
+	wallet accounts.Wallet
+	pk     *keys.Uint512
+	tk     *keys.Uint512
 	skr           keys.PKr
 	mainPkr       keys.PKr
 	balances      map[string]*big.Int
@@ -441,9 +440,6 @@ func (self *Exchange) GenTxWithSign(param TxParam) (*light_types.GTx, error) {
 
 	gtx, err := self.genTx(utxos, account, param.Receptions, param.Gas, param.GasPrice)
 	if err != nil {
-		for _, each := range utxos {
-			self.ClearUsedFlagForRoot(each.Root)
-		}
 		log.Error("Exchange genTx", "error", err)
 		return nil, err
 	}
@@ -524,22 +520,19 @@ func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Recepti
 
 	seed, err := account.wallet.GetSeed()
 	if err != nil {
+		for _, each := range utxos {
+			self.ClearUsedFlagForRoot(each.Root)
+		}
 		return nil, err
 	}
 	sk := keys.Seed2Sk(seed.SeedToUint256())
-	account.sk = new(keys.PKr)
-	copy(account.sk[:], sk[:])
-
-	txParam.From.SKr = *account.sk
-	for index := range txParam.Ins {
-		txParam.Ins[index].SKr = *account.sk
-	}
-
-	gtx, err := self.sli.GenTx(txParam)
+	gtx, err := light.SignTx(&sk, txParam)
 	if err != nil {
+		for _, each := range utxos {
+			self.ClearUsedFlagForRoot(each.Root)
+		}
 		return nil, err
 	}
-	account.sk = nil
 	return &gtx, nil
 }
 
