@@ -65,10 +65,15 @@ func (b *U256) DecodeRLP(s *rlp.Stream) error {
 	}
 }
 
-func (b U256) MarshalJSON() ([]byte, error) {
-	i := big.Int(b)
-	return i.MarshalJSON()
+func isString(input []byte) bool {
+	return len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"'
 }
+
+//func (b U256) MarshalJSON() ([]byte, error) {
+//	i := big.Int(b)
+//
+//	return i.MarshalJSON()
+//}
 
 func (b U256) MarshalText() ([]byte, error) {
 	i := big.Int(b)
@@ -76,6 +81,9 @@ func (b U256) MarshalText() ([]byte, error) {
 }
 
 func (b *U256) UnmarshalJSON(input []byte) error {
+	if isString(input) {
+		input = input[1 : len(input)-1]
+	}
 	i := big.Int{}
 	if e := i.UnmarshalJSON(input); e != nil {
 		return e
