@@ -77,7 +77,7 @@ func (b U256) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if seroparam.IsExchangeVlueStr() {
+	if seroparam.IsExchangeValueStr() {
 		bytes := make([]byte, len(by)+2)
 		copy(bytes[1:len(bytes)-1], by[:])
 		bytes[0] = '"'

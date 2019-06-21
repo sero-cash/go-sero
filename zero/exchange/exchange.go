@@ -296,8 +296,8 @@ func (self *Exchange) ClearUsedFlagForPK(pk *keys.Uint512) (count int) {
 }
 
 func (self *Exchange) ClearUsedFlagForRoot(root *keys.Uint256) (count int) {
-	if _, flag := self.usedFlag.Load(root); flag {
-		self.usedFlag.Delete(root)
+	if _, flag := self.usedFlag.Load(*root); flag {
+		self.usedFlag.Delete(*root)
 		count++
 	}
 	return
@@ -515,7 +515,7 @@ func (self *Exchange) preGenTx(param TxParam) (utxos []Utxo, err error) {
 }
 
 func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Reception, gas uint64, gasPrice *big.Int) (*light_types.GTx, error) {
-	txParam, err := self.buildTxParam(utxos, account, receptions, gas, gasPrice)
+	txParam, err := self.buildTxParam(utxos, &account.mainPkr, receptions, gas, gasPrice)
 	if err != nil {
 		return nil, err
 	}
