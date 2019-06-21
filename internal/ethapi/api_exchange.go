@@ -298,7 +298,7 @@ func (s *PublicExchangeAPI) ClearUsedFlag(ctx context.Context, address keys.Uint
 func (s *PublicExchangeAPI) ClearUsedFlagForRoot(ctx context.Context, roots []keys.Uint256) (count int, e error) {
 	if len(roots) > 0 {
 		for _, root := range roots {
-			count += exchange.CurrentExchange().ClearUsedFlagForRoot(&root)
+			count += exchange.CurrentExchange().ClearUsedFlagForRoot(root)
 		}
 	}
 	return

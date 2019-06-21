@@ -295,9 +295,9 @@ func (self *Exchange) ClearUsedFlagForPK(pk *keys.Uint512) (count int) {
 	return
 }
 
-func (self *Exchange) ClearUsedFlagForRoot(root *keys.Uint256) (count int) {
-	if _, flag := self.usedFlag.Load(*root); flag {
-		self.usedFlag.Delete(*root)
+func (self *Exchange) ClearUsedFlagForRoot(root keys.Uint256) (count int) {
+	if _, flag := self.usedFlag.Load(root); flag {
+		self.usedFlag.Delete(root)
 		count++
 	}
 	return
@@ -436,12 +436,18 @@ func (self *Exchange) GenTxWithSign(param TxParam) (*light_types.GTx, error) {
 	if value, ok := self.accounts.Load(param.From); ok {
 		account = value.(*Account)
 	} else {
+		for _, each := range utxos {
+			self.ClearUsedFlagForRoot(each.Root)
+		}
 		return nil, errors.New("not found Pk")
 
 	}
 
 	gtx, err := self.genTx(utxos, account, param.Receptions, param.Gas, param.GasPrice)
 	if err != nil {
+		for _, each := range utxos {
+			self.ClearUsedFlagForRoot(each.Root)
+		}
 		log.Error("Exchange genTx", "error", err)
 		return nil, err
 	}
