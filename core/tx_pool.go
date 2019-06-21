@@ -165,6 +165,7 @@ type TxPool struct {
 	newQueue   *txPricedList
 	newPending *txPricedList
 	beats      map[common.Hash]time.Time
+	faileds    map[common.Hash]time.Time
 
 	wg sync.WaitGroup // for shutdown sync
 
@@ -183,6 +184,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		chainconfig: chainconfig,
 		chain:       chain,
 		beats:       make(map[common.Hash]time.Time),
+		faileds:     make(map[common.Hash]time.Time),
 		all:         newTxLookup(),
 		chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
 		gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
@@ -251,6 +253,16 @@ func (pool *TxPool) loop() {
 			}
 			for _, tx := range drop {
 				pool.removeTx(tx.Hash())
+			}
+
+			dropFaileds := []common.Hash{}
+			for k, v := range pool.faileds {
+				if time.Since(v) > pool.config.Lifetime {
+					dropFaileds = append(dropFaileds, k)
+				}
+			}
+			for _, h := range dropFaileds {
+				delete(pool.faileds, h)
 			}
 			pool.mu.Unlock()
 		}
@@ -462,6 +474,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
 	if err != nil {
 		log.Error("validateTx error", "hash", tx.Hash().Hex(), "verify stx err", err)
+		pool.faileds[tx.Hash()] = time.Now()
 		return ErrVerifyError
 	}
 
@@ -500,6 +513,11 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	if pool.all.Get(hash) != nil && !local {
 		log.Trace("Discarding already known transaction", "hash", hash)
 		return false, fmt.Errorf("known transaction: %x", hash)
+	}
+
+	if _, ok := pool.faileds[hash]; ok {
+		log.Trace("Discarding already known failed transaction", "hash", hash)
+		return false, fmt.Errorf("known failed transaction: %x", hash)
 	}
 
 	currentBlockNum := pool.chain.CurrentBlock().NumberU64()
@@ -657,6 +675,7 @@ func (pool *TxPool) removeTx(hash common.Hash) {
 	}
 
 	pool.priced.Remove(tx)
+	delete(pool.beats, hash)
 	//Remove it from the list of known transactions
 	if pool.newQueue.Remove(tx) {
 		return
