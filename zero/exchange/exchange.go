@@ -436,11 +436,7 @@ func (self *Exchange) GenTxWithSign(param TxParam) (*light_types.GTx, error) {
 	if value, ok := self.accounts.Load(param.From); ok {
 		account = value.(*Account)
 	} else {
-		for _, each := range utxos {
-			self.ClearUsedFlagForRoot(each.Root)
-		}
 		return nil, errors.New("not found Pk")
-
 	}
 
 	gtx, err := self.genTx(utxos, account, param.Receptions, param.Gas, param.GasPrice)
