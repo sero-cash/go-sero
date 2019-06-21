@@ -278,7 +278,7 @@ func (self *Exchange) GetPkr(pk *keys.Uint512, index *keys.Uint256) (pkr keys.PK
 }
 
 func (self *Exchange) ClearUsedFlagForPK(pk *keys.Uint512) (count int) {
-	if _, ok := self.accounts.Load(pk); ok {
+	if _, ok := self.accounts.Load(*pk); ok {
 		prefix := append(pkPrefix, pk[:]...)
 		iterator := self.db.NewIteratorWithPrefix(prefix)
 
