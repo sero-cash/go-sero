@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/txtool/verify"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/common"
@@ -34,7 +36,6 @@ import (
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/metrics"
 	"github.com/sero-cash/go-sero/params"
-	"github.com/sero-cash/go-sero/zero/txs/verify"
 )
 
 const (
@@ -467,11 +468,23 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	}
 
 	// Ensure the transaction doesn't exceed the current block limit gas.
-	if pool.currentMaxGas < tx.Gas() {
+	var gaslimit uint64
+	if gaslimit, e = pool.currentState.GetTxGasLimit(tx); e != nil {
+		return
+	}
+	if pool.currentMaxGas < gaslimit {
 		return ErrGasLimit
 	}
 
-	err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
+	state := pool.currentState.Copy().GetZState()
+	if err := verify.VerifyWithoutState(tx.Ehash().NewRef(), tx.GetZZSTX(), state.Num()); err != nil {
+		log.Error("validateTx verify without state error", "hash", tx.Hash().Hex(), "verify stx err", err)
+		pool.faileds[tx.Hash()] = time.Now()
+		return ErrVerifyError
+	}
+
+	err := verify.VerifyWithState(tx.GetZZSTX(), state)
+	//err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
 	if err != nil {
 		log.Error("validateTx error", "hash", tx.Hash().Hex(), "verify stx err", err)
 		pool.faileds[tx.Hash()] = time.Now()
@@ -493,7 +506,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	if err != nil {
 		return err
 	}
-	if tx.Gas() < intrGas {
+	if gaslimit < intrGas {
 		return ErrIntrinsicGas
 	}
 	return nil

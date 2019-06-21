@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Account - SERO</title>
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/fonts/fontawesome-all.min.css">
+
+</head>
+
+<body id="page-top">
+    <div id="wrapper">
+        <div class="d-flex flex-column" id="content-wrapper">
+            <div id="content">
+                <nav class="navbar navbar-light navbar-expand fixed-top bg-primary shadow mb-4 topbar static-top">
+                    <div class="container-fluid"><button class="btn btn-link d-md-none rounded-circle mr-3" id="sidebarToggleTop" type="button"><i class="fas fa-bars"></i></button>
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item" role="presentation"><a class="nav-link active" href="index.html">Home</a></li>
+                            <li class="nav-item" role="presentation"><a class="nav-link" href="transfer.html">Send</a></li>
+                            <li class="nav-item" role="presentation"><a class="nav-link" href="#">Stake</a></li>
+                        </ul>
+                    </div>
+                </nav>
+                <div class="container-fluid" style="margin-top: 100px;">
+                    <div class="d-sm-flex justify-content-between align-items-center mb-4">
+                        <h3 class="text-dark mb-0">Account</h3>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 col-xl-4 mb-4">
+                            <div class="card shadow border-left-primary py-2">
+                                <div class="card-body">
+                                    <div class="row align-items-center no-gutters">
+                                        <div class="col mr-2">
+                                            <div class="text-uppercase text-primary font-weight-bold text-xs mb-1"><span>Total</span></div>
+                                            <div class="text-dark font-weight-bold h5 mb-0 dashboard"><span>0</span> SERO</div>
+                                        </div>
+                                        <div class="col-auto"><i class="fas fa-dollar-sign fa-2x text-gray-300"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-xl-4 mb-4">
+                            <div class="card shadow border-left-warning py-2">
+                                <div class="card-body">
+                                    <div class="row align-items-center no-gutters">
+                                        <div class="col mr-2">
+                                            <div class="text-uppercase text-warning font-weight-bold text-xs mb-1"><span>Block height</span></div>
+                                            <div class="text-dark font-weight-bold h5 mb-0 dashboard"><span></span></div>
+                                        </div>
+                                        <div class="col-auto"><i class="fas fa-cubes fa-2x text-gray-300"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-xl-4 mb-4">
+                            <div class="card shadow border-left-info py-2">
+                                <div class="card-body">
+                                    <div class="row align-items-center no-gutters">
+                                        <div class="col mr-2">
+                                            <div class="text-uppercase text-info font-weight-bold text-xs mb-1"><span>Network</span></div>
+                                            <div class="row no-gutters align-items-center">
+                                                <div class="col-auto">
+                                                    <div class="text-dark font-weight-bold h5 mb-0 mr-3 dashboard"><span>128.1.2.4</span></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-auto"><i class="fas fa-network-wired fa-2x text-gray-300"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="row pkrs">
+                            </div>
+                            <div class="row">
+                                <div class="col-lg-12 mb-4">
+                                    <button class="btn btn-outline-primary btn-block" type="button" onclick="window.location.href='account-new.html'">Add Account</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card shadow">
+                                <div class="card-header py-3">
+                                    <p class="text-success m-0 font-weight-bold">Pendding Transaction</p>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 text-nowrap">
+                                            <div id="dataTable_length" class="dataTables_length" aria-controls="dataTable">
+                                                <label>Show&nbsp;
+                                                    <select class="form-control form-control-sm custom-select custom-select-sm">
+                                                        <option value="10" selected="">10</option>
+                                                        <option value="25">25</option>
+                                                        <option value="50">50</option>
+                                                        <option value="100">100</option>
+                                                    </select>&nbsp;
+                                                </label></div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="text-md-right dataTables_filter" id="dataTable_filter"><label><input type="search" class="form-control form-control-sm" aria-controls="dataTable" placeholder="Search"></label></div>
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive table mt-2" id="dataTable" role="grid" aria-describedby="dataTable_info">
+                                        <table class="table dataTable my-0" id="dataTable">
+                                            <thead>
+                                                <tr>
+                                                    <td></td>
+                                                    <td><strong>Hash</strong></td>
+                                                    <td><strong>From</strong></td>
+                                                    <td><strong>TO</strong></td>
+                                                    <td><strong>Currency</strong></td>
+                                                    <td><strong>State</strong></td>
+                                                    <td><strong>Date</strong></td>
+                                                    <td><strong>Amount</strong></td>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>1</td>
+                                                    <td><a href="account-detail.html">0x0bac0fba99...ca8f623</a></td>
+                                                    <td>UZ476o...Y65xcW</td>
+                                                    <td>UZ476o...Y65xcW</td>
+                                                    <td>SERO</td>
+                                                    <td><span class="text-success">PEDDING</span></td>
+                                                    <td>15:00 11/28</td>
+                                                    <td>162,700</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>2</td>
+                                                    <td><a href="account-detail.html">0x0bac0fba99...ca8f623</a></td>
+                                                    <td>UZ476o...Y65xcW</td>
+                                                    <td>UZ476o...Y65xcW</td>
+                                                    <td>London</td>
+                                                    <td><span class="text-success">PEDDING</span></td>
+                                                    <td>15:00 11/28</td>
+                                                    <td>1,200,000</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 align-self-center">
+                                            <p id="dataTable_info" class="dataTables_info" role="status" aria-live="polite">Showing 1 to 10 of 27</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <nav class="d-lg-flex justify-content-lg-end dataTables_paginate paging_simple_numbers">
+                                                <ul class="pagination">
+                                                    <li class="page-item disabled"><a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">«</span></a></li>
+                                                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                                                    <li class="page-item"><a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">»</span></a></li>
+                                                </ul>
+                                            </nav>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><a class="border rounded d-inline scroll-to-top" href="#page-top"><i class="fas fa-angle-up"></i></a></div>
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="assets/js/theme.js"></script>
+
+    <script src="assets/js/bignumber.js"></script>
+    <script src="assets/js/common.js"></script>
+    <script src="assets/js/index.js"></script>
+
+    <script>
+        $(function () {
+            Common.app = Index;
+            Common.app.init();
+        })
+    </script>
+
+</body>
+
+</html>

@@ -642,9 +642,15 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 		if idx == txIndex {
 			return msg, context, statedb, nil
 		}
+		var gaslimit uint64
+		if gas, e := statedb.GetTxGasLimit(tx); e != nil {
+			return nil, vm.Context{}, nil, e
+		} else {
+			gaslimit = gas
+		}
 		// Not yet the searched for transaction, execute on top of the current state
 		vmenv := vm.NewEVM(context, statedb, api.config, vm.Config{})
-		if _, _, _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas())); err != nil {
+		if _, _, _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(gaslimit)); err != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("tx %x failed: %v", tx.Hash(), err)
 		}
 		// Ensure any modifications are committed to the state

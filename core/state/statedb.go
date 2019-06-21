@@ -24,11 +24,16 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sero-cash/go-sero/serodb"
+	"github.com/pkg/errors"
 
-	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
+	"github.com/sero-cash/go-sero/common/hexutil"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/utils"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
+	"github.com/sero-cash/go-sero/zero/consensus"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/crypto"
@@ -71,6 +76,7 @@ type StateDB struct {
 	// This map holds 'live' objects, which will get modified while processing a state transition.
 	stateObjects      map[common.Address]*stateObject
 	stateObjectsDirty map[common.Address]struct{}
+	stakeState        *consensus.Cons
 	zstate            *zstate.ZState
 
 	// DB error.
@@ -96,77 +102,28 @@ type StateDB struct {
 	validRevisions []revision
 	nextRevisionId int
 
-	seeds  []keys.Uint512
+	//seeds  []keys.Uint512
 	number uint64
 	lock   sync.Mutex
 }
 
+func (self *StateDB) SetStakeState(key common.Hash, value common.Hash) {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		stateObject.SetState(self.db, key, value)
+	}
+}
+
+func (self *StateDB) GetStakeState(key common.Hash) common.Hash {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		return stateObject.GetState(self.db, key)
+	}
+	return common.Hash{}
+}
+
 func (self *StateDB) IsContract(addr common.Address) bool {
 	return self.getStateObject(addr) != nil
-}
-
-func (self *StateDB) GetSeeds() []keys.Uint512 {
-	return self.seeds
-}
-
-func (self *StateDB) SetSeeds(seeds []keys.Uint512) {
-	self.seeds = seeds
-}
-
-type StateDbPut interface {
-	Put(key, value []byte) error
-}
-type StateTri struct {
-	db    *StateDB
-	Tri   Trie
-	Dbget serodb.Getter
-	Dbput serodb.Putter
-}
-
-func (self *StateTri) TryGet(key []byte) ([]byte, error) {
-	return self.Tri.TryGet(key)
-}
-
-func (self *StateTri) TryUpdate(key, value []byte) error {
-	return self.Tri.TryUpdate(key, value)
-}
-
-func (self *StateTri) SetState(key *keys.Uint256, value *keys.Uint256) {
-	self.db.SetState(EmptyAddress, common.Hash(*key), common.Hash(*value))
-}
-func (self *StateTri) GetState(key *keys.Uint256) (ret keys.Uint256) {
-	v := self.db.GetState(EmptyAddress, common.Hash(*key))
-	ret = keys.Uint256(v)
-	return
-}
-
-func (self *StateTri) TryGlobalGet(key []byte) ([]byte, error) {
-	return self.Dbget.Get(key)
-}
-
-func (self *StateTri) TryGlobalPut(key, value []byte) error {
-	return self.Dbput.Put(key, value)
-}
-
-func (self *StateTri) GlobalGetter() serodb.Getter {
-	return self.Dbget
-}
-
-func (self *StateDB) GetZState() *zstate.ZState {
-	if self.zstate == nil {
-		st := StateTri{
-			self,
-			self.trie,
-			self.db.TrieDB().DiskDB(),
-			self.db.TrieDB().WDiskDB(),
-		}
-		self.zstate = zstate.NewState(&st, self.number)
-	}
-	return self.zstate
-}
-
-func (self *StateDB) GetPkgState() *pkgstate.PkgState {
-	return &self.GetZState().Pkgs
 }
 
 func NewGenesis(root common.Hash, db Database) (*StateDB, error) {
@@ -207,28 +164,6 @@ func New(root common.Hash, db Database, number uint64) (*StateDB, error) {
 		journal:           newJournal(),
 		number:            number + 1,
 	}, nil
-}
-
-func (self *StateDB) GetAvgUsedGas(number uint64) *big.Int {
-	stateObject := self.GetOrNewStateObject(EmptyAddress)
-	if stateObject != nil {
-		value := stateObject.GetState(self.db, self.usedGasKey(number))
-		return big.NewInt(0).SetBytes(value.Bytes())
-	}
-	return new(big.Int)
-}
-
-func (self *StateDB) SetAvgUsedGas(number uint64, avgGsedGas *big.Int) {
-	stateObject := self.GetOrNewStateObject(EmptyAddress)
-	if stateObject != nil {
-		stateObject.SetState(self.db, self.usedGasKey(number), common.BigToHash(avgGsedGas))
-	}
-}
-
-func (self *StateDB) usedGasKey(number uint64) common.Hash {
-	bytes, _ := rlp.EncodeToBytes([]interface{}{"usedGas", number})
-	key := crypto.Keccak256Hash(bytes)
-	return key
 }
 
 func (self *StateDB) registerAddressByState(name string, contractAddr common.Address, key string) bool {
@@ -298,6 +233,51 @@ func (self *StateDB) GetTokenRate(contractAddr common.Address, coinName string) 
 		return new(big.Int).SetBytes(hash0[:]), new(big.Int).SetBytes(hash1[:])
 	}
 	return new(big.Int), new(big.Int)
+}
+
+func (self *StateDB) GetSeroFee(contractAddr *common.Address, tfee *assets.Token) (sfee utils.U256, e error) {
+	tcurrency := utils.Uint256ToCurrency(&tfee.Currency)
+	if tcurrency != "SERO" {
+		if contractAddr != nil {
+			if trate, srate := self.GetTokenRate(*contractAddr, tcurrency); trate.Sign() != 0 && srate.Sign() != 0 {
+				tvalue := big.Int(tfee.Value)
+				sfee = utils.U256(*big.NewInt(0).Div(big.NewInt(0).Mul(&tvalue, srate), trate))
+				return
+			} else {
+				e = fmt.Errorf("current address(%v) can not support the token(%v) fee", hexutil.Encode(contractAddr[:]), tcurrency)
+				return
+			}
+		} else {
+			e = fmt.Errorf("contractAddr is nil for token(%v) fee", tcurrency)
+			return
+		}
+	} else {
+		sfee = tfee.Value
+		return
+	}
+}
+
+func (self *StateDB) GetSeroGasLimit(to *common.Address, tfee *assets.Token, gasPrice *big.Int) (gaslimit uint64, e error) {
+	if gasPrice == nil || gasPrice.Sign() <= 0 {
+		e = errors.New("gas must > 0")
+		return
+	}
+	if sero_fee, err := self.GetSeroFee(to, tfee); err != nil {
+		e = err
+		return
+	} else {
+		gaslimit = big.NewInt(0).Div(sero_fee.ToInt(), gasPrice).Uint64()
+		return
+	}
+
+}
+
+func (self *StateDB) GetTxGasLimit(tx *types.Transaction) (gaslimit uint64, e error) {
+	if gaslimit, e = self.GetSeroGasLimit(tx.To(), &tx.Stxt().Fee, tx.GasPrice()); e != nil {
+		return
+	} else {
+		return
+	}
 }
 
 func (self *StateDB) SetTokenRate(contractAddr common.Address, coinName string, tokens *big.Int, tas *big.Int) bool {
@@ -822,6 +802,7 @@ func (self *StateDB) Snapshot() int {
 	id := self.nextRevisionId
 	self.nextRevisionId++
 	self.validRevisions = append(self.validRevisions, revision{id, self.journal.length()})
+	self.GetStakeCons().CreateSnapshot(id)
 	self.GetZState().Snapshot(id)
 	return id
 }
@@ -841,6 +822,7 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 	self.journal.revert(self, snapshot)
 	self.validRevisions = self.validRevisions[:idx]
 
+	self.GetStakeCons().RevertToSnapshot(revid)
 	self.GetZState().Revert(revid)
 }
 
@@ -881,6 +863,7 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 // goes into transaction receipts.
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	s.GetZState().Update()
+	s.GetStakeCons().Update()
 	s.Finalise(deleteEmptyObjects)
 	return s.trie.Hash()
 }

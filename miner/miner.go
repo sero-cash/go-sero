@@ -43,6 +43,16 @@ type Backend interface {
 	ChainDb() serodb.Database
 }
 
+type voter interface {
+	SubscribeWorkerVoteEvent(ch chan<- core.NewVoteEvent) event.Subscription
+
+	SendLotteryEvent(lottery *types.Lottery)
+
+	SendVoteEvent(vote *types.Vote)
+
+	AddLottery(lottery *types.Lottery)
+}
+
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
 	mux *event.TypeMux
@@ -58,12 +68,12 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(sero Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
+func New(sero Backend, config *params.ChainConfig, mux *event.TypeMux, voter voter, engine consensus.Engine) *Miner {
 	miner := &Miner{
 		sero:     sero,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, address.AccountAddress{}, sero, mux),
+		worker:   newWorker(config, engine, address.AccountAddress{}, voter, sero, mux),
 		canStart: 1,
 	}
 	miner.Register(NewCpuAgent(sero.BlockChain(), engine))

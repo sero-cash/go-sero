@@ -27,9 +27,15 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
+	"github.com/sero-cash/go-sero/zero/txtool/verify"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 
-	"github.com/sero-cash/go-sero/zero/txs/verify"
+	"github.com/sero-cash/go-sero/zero/stake"
 
 	"github.com/hashicorp/golang-lru"
 
@@ -242,6 +248,15 @@ func (self *State1BlockChain) IsValid() bool {
 	return true
 }
 
+func (self *State1BlockChain) GetSeroGasLimit(to *common.Address, tfee *assets.Token, gas *big.Int) (gaslimit uint64, e error) {
+	if state, err := self.Bc.State(); err != nil {
+		e = err
+		return
+	} else {
+		return state.GetSeroGasLimit(to, tfee, gas)
+	}
+}
+
 func (self *State1BlockChain) NewState(hash *common.Hash) *zstate.ZState {
 	header := self.Bc.GetHeaderByHash(*hash)
 	num := header.Number.Uint64()
@@ -273,6 +288,9 @@ func (self *State1BlockChain) GetTkAt(tk *keys.Uint512) uint64 {
 		}
 	}
 	return 0
+}
+func (bc *BlockChain) GetDB() serodb.Database {
+	return bc.db
 }
 
 // loadLastState loads the last known chain state from the database. This method
@@ -960,8 +978,17 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Write other block data using a batch.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
-	state.GetZState().RecordBlock(batch, block.Header().Hash().HashToUint256())
-	//rawdb.WriteHash(bc.db, block.Number().Uint64(), block.Hash())
+	blockhash := block.Hash()
+	state.GetStakeCons().Record(&blockhash, batch)
+	state.GetZState().RecordBlock(batch, blockhash.HashToUint256())
+
+	stakeState := stake.NewStakeState(state)
+	_, shares, _ := stakeState.SeleteShare(block.Header().HashPos())
+	voteHashs := []common.Hash{}
+	for _, share := range shares {
+		voteHashs = append(voteHashs, common.BytesToHash(share.Id()))
+	}
+	rawdb.WriteBlockVotes(batch, block.Hash(), voteHashs)
 
 	root, err := state.Commit(true)
 	if root != block.Root() {
@@ -995,8 +1022,16 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			header := bc.GetHeaderByNumber(current - triesInMemory)
 			chosen := header.Number.Uint64()
 
+			var needCommit bool
+
+			if zconfig.IsSnapshotMode() {
+				needCommit = zconfig.NeedSnapshot(block.NumberU64())
+			} else {
+				needCommit = (bc.gcproc > bc.cacheConfig.TrieTimeLimit) || (header.Number.Uint64()%10000 == 0)
+			}
+
 			// If we exceeded out time allowance, flush an entire trie to disk
-			if bc.gcproc > bc.cacheConfig.TrieTimeLimit || header.Number.Uint64()%10000 == 0 {
+			if needCommit {
 				// If we're exceeding limits but haven't reached a large enough memory gap,
 				// warn the user that the system is becoming unstable.
 				if chosen < lastWrite+triesInMemory && bc.gcproc >= 2*bc.cacheConfig.TrieTimeLimit {
@@ -1077,6 +1112,8 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	return n, err
 }
 
+func test(i interface{}) {}
+
 // insertChain will execute the actual chain insertion and event aggregation. The
 // only reason this method exists as a separate one is to make locking cleaner
 // with deferred statements.
@@ -1126,6 +1163,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 
 	// Start a parallel signature recovery (abi will fluke on fork transition, minimal perf loss)
 	//senderCacher.recoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number()), chain)
+	tx_abort, tx_results := NewTxChecker(bc, chain)
+	defer close(tx_abort)
 
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
@@ -1213,21 +1252,26 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		}
 		state, err := state.New(parent.Root(), bc.stateCache, parent.NumberU64())
 
-		if bc.accountManager != nil {
-			seeds := []keys.Uint512{}
-			for _, w := range bc.accountManager.Wallets() {
-				seed := w.Accounts()[0].Tk
-				seeds = append(seeds, *seed.ToUint512())
-			}
-			state.SetSeeds(seeds)
-		}
-
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
 
+
 		for _, tx := range block.Transactions() {
-			err := verify.Verify(tx.GetZZSTX(), state.GetZState())
+			err := <-tx_results
+			if err == nil {
+				err = verify.VerifyWithState(tx.GetZZSTX(), state.GetZState())
+			}
+			//err := verify.Verify(tx.GetZZSTX(), state.GetZState())
+			if err != nil {
+				return i, events, coalescedLogs, err
+			}
+		}
+
+		stakeState := stake.NewStakeState(state)
+		stakeState.ProcessBeforeApply(bc, block.Header())
+		if seroparam.SIP4() <= block.NumberU64() {
+			err = stakeState.CheckVotes(block, bc)
 			if err != nil {
 				return i, events, coalescedLogs, err
 			}
@@ -1278,10 +1322,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		cache, _ := bc.stateCache.TrieDB().Size()
 		stats.report(chain, i, cache)
 	}
+
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.CurrentBlock().Hash() == lastCanon.Hash() {
 		events = append(events, ChainHeadEvent{lastCanon})
 	}
+
 	return 0, events, coalescedLogs, nil
 }
 

@@ -210,9 +210,14 @@ func NewCreatePkg(Pkr keys.PKr, currency string, value *big.Int, catg string, tk
 }
 
 func (tx *Transaction) Pkg() *assets.Asset {
-	for _, desc_o := range tx.data.Stxt.Desc_O.Outs {
-		return &desc_o.Asset
+	if tx.GetZZSTX().Desc_Cmd.Contract != nil {
+		return &tx.GetZZSTX().Desc_Cmd.Contract.Asset
+	} else {
+		for _, desc_o := range tx.data.Stxt.Desc_O.Outs {
+			return &desc_o.Asset
+		}
 	}
+
 	return nil
 }
 
@@ -250,7 +255,14 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Data() []byte { return common.CopyBytes(tx.data.Payload) }
+func (tx *Transaction) Data() []byte {
+	if tx.GetZZSTX().Desc_Cmd.Contract != nil {
+		return common.CopyBytes(tx.GetZZSTX().Desc_Cmd.Contract.Data)
+	} else {
+		return common.CopyBytes(tx.data.Payload)
+	}
+}
+
 func (tx *Transaction) Gas() uint64 {
 	return tx.data.GasLimit
 }
@@ -261,10 +273,20 @@ func (tx *Transaction) GetZZSTX() *zstx.T {
 }
 
 func (tx *Transaction) To() *common.Address {
-	for _, out := range tx.data.Stxt.Desc_O.Outs {
-		if out.Addr != (keys.PKr{}) {
-			addr := common.BytesToAddress(out.Addr[:])
-			return &addr
+	if tx.GetZZSTX().Desc_Cmd.Contract != nil {
+		to := tx.GetZZSTX().Desc_Cmd.Contract.To
+		if to == nil {
+			return nil
+		}
+		addr := &common.Address{}
+		copy(addr[:], to[:])
+		return addr
+	} else {
+		for _, out := range tx.data.Stxt.Desc_O.Outs {
+			if out.Addr != (keys.PKr{}) {
+				addr := common.BytesToAddress(out.Addr[:])
+				return &addr
+			}
 		}
 	}
 
@@ -272,7 +294,7 @@ func (tx *Transaction) To() *common.Address {
 }
 
 func (tx Transaction) IsOpContract() bool {
-	if len(tx.data.Stxt.Desc_O.Outs) > 0 {
+	if tx.data.Stxt.Desc_Cmd.Contract != nil {
 		return true
 	}
 	return false
@@ -318,7 +340,7 @@ func (tx *Transaction) AsMessage() (Message, error) {
 		from:     tx.From(),
 		gasPrice: new(big.Int).Set(tx.data.Price),
 		to:       tx.To(),
-		data:     tx.data.Payload,
+		data:     tx.Data(),
 		asset:    tx.Pkg(),
 		fee:      tx.Stxt().Fee,
 	}

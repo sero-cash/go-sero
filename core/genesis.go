@@ -284,7 +284,9 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 	statedb.Database().TrieDB().Commit(root, true)
 
 	block := types.NewBlock(head, nil, nil)
-	statedb.GetZState().RecordBlock(db, block.Header().Hash().HashToUint256())
+	blockhash := block.Hash()
+	statedb.GetStakeCons().Record(&blockhash, db)
+	statedb.GetZState().RecordBlock(db, blockhash.HashToUint256())
 
 	return block
 }

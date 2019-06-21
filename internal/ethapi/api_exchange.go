@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sero-cash/go-sero/common/base58"
+	"github.com/btcsuite/btcutil/base58"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
 	"github.com/sero-cash/go-sero/common/address"
 
+	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/core/types"
@@ -23,7 +26,7 @@ import (
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 
-	"github.com/sero-cash/go-sero/zero/exchange"
+	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
 	"github.com/sero-cash/go-sero/common"
 
@@ -157,29 +160,45 @@ func MixAdrressToPkr(addr MixAdrress) keys.PKr {
 	return pkr
 }
 
-func (args GenTxArgs) toTxParam() exchange.TxParam {
+func (args GenTxArgs) toTxParam() prepare.PreTxParam {
 	gasPrice := args.GasPrice.ToInt()
 
 	if gasPrice.Sign() == 0 {
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
-	receptions := []exchange.Reception{}
+	receptions := []prepare.Reception{}
 	for _, rec := range args.Receptions {
 		pkr := MixAdrressToPkr(rec.Addr)
-		receptions = append(receptions, exchange.Reception{
+		var currency keys.Uint256
+		bytes := common.LeftPadBytes([]byte(string(rec.Currency)), 32)
+		copy(currency[:], bytes)
+		receptions = append(receptions, prepare.Reception{
 			pkr,
-			string(rec.Currency),
-			(*big.Int)(rec.Value),
+			assets.Asset{Tkn: &assets.Token{
+				Currency: currency,
+				Value:    utils.U256(*rec.Value.ToInt())},
+			},
 		})
 	}
 	var refundPkr *keys.PKr
 	if args.RefundTo != nil {
 		refundPkr = args.RefundTo.ToPKr()
 	}
-	return exchange.TxParam{args.From.ToUint512(), refundPkr, receptions, args.Gas, gasPrice, args.Roots}
+	return prepare.PreTxParam{
+		args.From.ToUint512(),
+		refundPkr,
+		receptions,
+		prepare.Cmds{},
+		assets.Token{
+			utils.CurrencyToUint256("SERO"),
+			utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(args.Gas)), args.GasPrice.ToInt())),
+		},
+		gasPrice,
+		args.Roots,
+	}
 }
 
-func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*light_types.GenTxParam, error) {
+func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*txtool.GTxParam, error) {
 	if err := param.check(); err != nil {
 		return nil, err
 	}
@@ -187,7 +206,7 @@ func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*light_
 	return s.b.GenTx(param.toTxParam())
 }
 
-func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param GenTxArgs) (*light_types.GTx, error) {
+func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param GenTxArgs) (*txtool.GTx, error) {
 	if err := param.check(); err != nil {
 		return nil, err
 	}
@@ -342,7 +361,7 @@ func (args MergeArgs) Check() error {
 	return nil
 }
 
-func (s *PublicExchangeAPI) GenMergeTx(ctx context.Context, args MergeArgs) (txParam *light_types.GenTxParam, e error) {
+func (s *PublicExchangeAPI) GenMergeTx(ctx context.Context, args MergeArgs) (txParam *txtool.GTxParam, e error) {
 	if e = args.Check(); e != nil {
 		return
 	}
@@ -404,28 +423,28 @@ func validAddress(addr MixAdrress) (bool, error) {
 
 func (s *PublicExchangeAPI) ValidAddress(ctx context.Context, addr MixBase58Adrress) (bool, error) {
 	if len(addr) != 64 && len(addr) != 96 {
-		return false, errors.Errorf("invalid addr %v", base58.EncodeToString(addr[:]))
+		return false, errors.Errorf("invalid addr %v", base58.Encode(addr[:]))
 	}
 
 	if len(addr) == 64 {
 		pk := keys.Uint512{}
 		copy(pk[:], addr[:])
 		if !keys.IsPKValid(&pk) {
-			return false, errors.Errorf("invalid pk %v", base58.EncodeToString(addr[:]))
+			return false, errors.Errorf("invalid pk %v", base58.Encode(addr[:]))
 		}
 	}
 	if len(addr) == 96 {
 		pkr := keys.PKr{}
 		copy(pkr[:], addr[:])
 		if !keys.PKrValid(&pkr) {
-			return false, errors.Errorf("invalid  pkr %v", base58.EncodeToString(addr[:]))
+			return false, errors.Errorf("invalid  pkr %v", base58.Encode(addr[:]))
 		}
 	}
 	return true, nil
 
 }
 
-func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *light_types.GTx) error {
+func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *txtool.GTx) error {
 	return s.b.CommitTx(args)
 }
 

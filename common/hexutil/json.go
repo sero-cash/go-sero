@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"regexp"
 	"strconv"
 
-	"github.com/sero-cash/go-sero/common/base58"
+	"github.com/btcsuite/btcutil/base58"
 )
 
 var (
@@ -47,9 +48,7 @@ func (b Bytes) MarshalText() ([]byte, error) {
 }
 
 func (b Bytes) MarshalBase58Text() ([]byte, error) {
-	result := []byte{}
-	result = append(result, base58.Encode(b)...)
-	return result, nil
+	return []byte(base58.Encode(b)), nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -90,13 +89,6 @@ func UnmarshalFixedJSON(typ reflect.Type, input, out []byte) error {
 	return wrapTypeError(UnmarshalFixedText(typ.String(), input[1:len(input)-1], out), typ)
 }
 
-func UnmarshalFixedBase58JSON(typ reflect.Type, input, out []byte) error {
-	if !isString(input) {
-		return errNonString(typ)
-	}
-	return wrapTypeError(UnmarshalFixedBase58Text(input[1:len(input)-1], out), typ)
-}
-
 // UnmarshalFixedText decodes the input as a string with 0x prefix. The length of out
 // determines the required input length. This function is commonly used to implement the
 // UnmarshalText method for fixed-size types.
@@ -118,17 +110,6 @@ func UnmarshalFixedText(typname string, input, out []byte) error {
 	return nil
 }
 
-// UnmarshalFixedText decodes the input as a string with 0x prefix. The length of out
-// determines the required input length. This function is commonly used to implement the
-// UnmarshalText method for fixed-size types.
-func UnmarshalFixedBase58Text(input, out []byte) error {
-	raw, err := checkBase58Text(input)
-	if err != nil {
-		return err
-	}
-	return base58.DecodeString(string(raw), out)
-}
-
 // UnmarshalFixedUnprefixedText decodes the input as a string with optional 0x prefix. The
 // length of out determines the required input length. This function is commonly used to
 // implement the UnmarshalText method for fixed-size types.
@@ -148,14 +129,6 @@ func UnmarshalFixedUnprefixedText(typname string, input, out []byte) error {
 	}
 	hex.Decode(out, raw)
 	return nil
-}
-
-func UnmarshalFixedUnprefixedBase58Text(typname string, input, out []byte) error {
-	raw, err := checkBase58Text(input)
-	if err != nil {
-		return err
-	}
-	return base58.DecodeString(string(raw), out)
 }
 
 // Big marshals/unmarshals as a JSON string with 0x prefix.
@@ -326,9 +299,19 @@ func checkText(input []byte, wantPrefix bool) ([]byte, error) {
 	return input, nil
 }
 
-func checkBase58Text(input []byte) ([]byte, error) {
+func isBase58Str(s string) bool {
 
-	if base58.IsBase58Str(string(input)) {
+	pattern := "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$"
+	match, err := regexp.MatchString(pattern, s)
+	if err != nil {
+		return false
+	}
+	return match
+
+}
+
+func checkBase58Text(input []byte) ([]byte, error) {
+	if isBase58Str(string(input)) {
 		return input, nil
 	} else {
 		return nil, ErrInvalidBase58

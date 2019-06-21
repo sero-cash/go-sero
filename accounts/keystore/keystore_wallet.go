@@ -21,9 +21,9 @@ import (
 
 	"github.com/sero-cash/go-sero/common/address"
 
-	"github.com/sero-cash/go-sero/zero/lstate"
 	"github.com/sero-cash/go-sero/zero/txs"
-	"github.com/sero-cash/go-sero/zero/txs/generate"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate/generate"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero"
@@ -245,6 +245,7 @@ func (w *keystoreWallet) GetSeedWithPassphrase(passphrase string) (*address.Seed
 		return nil, err
 	}
 	return seed, nil
+
 
 }
 

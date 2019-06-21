@@ -18,6 +18,9 @@ package stx
 
 import (
 	"encoding/hex"
+	"sync/atomic"
+
+	"github.com/sero-cash/go-czero-import/cpt"
 
 	"github.com/sero-cash/go-sero/zero/utils"
 
@@ -32,6 +35,26 @@ type Out_O struct {
 	Addr  keys.PKr
 	Asset assets.Asset
 	Memo  keys.Uint512
+
+	//Cache
+	assetCC atomic.Value
+}
+
+func (self *Out_O) ToAssetCC() keys.Uint256 {
+	if cc, ok := self.assetCC.Load().(keys.Uint256); ok {
+		return cc
+	}
+	asset := self.Asset.ToFlatAsset()
+	asset_desc := cpt.AssetDesc{
+		Tkn_currency: asset.Tkn.Currency,
+		Tkn_value:    asset.Tkn.Value.ToUint256(),
+		Tkt_category: asset.Tkt.Category,
+		Tkt_value:    asset.Tkt.Value,
+	}
+	cpt.GenAssetCC(&asset_desc)
+	v := asset_desc.Asset_cc
+	self.assetCC.Store(v)
+	return v
 }
 
 func (self *Out_O) Clone() (ret Out_O) {

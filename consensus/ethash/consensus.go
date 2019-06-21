@@ -24,6 +24,9 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/zero/stake"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/crypto"
@@ -353,14 +356,14 @@ func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Head
 	var digest []byte
 	var result []byte
 	if number >= seroparam.SIP3() {
-		dataset := ethash.dataset_async(number)
-		if dataset.generated() {
-			digest, result = progpowFull(dataset.dataset, header.HashNoNonce().Bytes(), header.Nonce.Uint64(), number)
-		} else {
-			digest, result = progpowLightWithoutCDag(size, cache.cache, header.HashNoNonce().Bytes(), header.Nonce.Uint64(), number)
-		}
+		//dataset := ethash.dataset_async(number)
+		//if dataset.generated() {
+		//	digest, result = progpowFull(dataset.dataset, header.HashPow().Bytes(), header.Nonce.Uint64(), number)
+		//} else {
+		digest, result = progpowLightWithoutCDag(size, cache.cache, cache.cdag, header.HashPow().Bytes(), header.Nonce.Uint64(), number)
+		//}
 	} else {
-		digest, result = hashimotoLight(size, cache.cache, header.HashNoNonce().Bytes(), header.Nonce.Uint64(), number)
+		digest, result = hashimotoLight(size, cache.cache, header.HashPow().Bytes(), header.Nonce.Uint64(), number)
 	}
 	// Caches are unmapped in a finalizer. Ensure that the cache stays live
 	// until after the call to hashimotoLight so it's not unmapped while being used.
@@ -453,6 +456,20 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 
 	//log.Info(fmt.Sprintf("BlockNumber = %v, gasLimie = %v, gasUsed = %v, reward = %v", header.Number.Uint64(), header.GasLimit, header.GasUsed, reward))
 	reward.Add(reward, new(big.Int).SetUint64(gasReward))
+
+	//pos
+	if len(header.ParentVotes) > 0 {
+		soloReware, reward := stake.NewStakeState(statedb).StakeCurrentReward()
+		log.Info("accumulateRewards: currentReward", "soloReware", soloReware, "reward", reward, "header.ParentVotes", len(header.ParentVotes))
+		for _, vote := range header.ParentVotes {
+			if vote.IsPool {
+				reward.Add(reward, new(big.Int).Div(reward, big.NewInt(3)))
+			} else {
+				reward.Add(reward, new(big.Int).Div(soloReware, big.NewInt(3)))
+			}
+		}
+	}
+
 	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 		Value:    utils.U256(*reward),

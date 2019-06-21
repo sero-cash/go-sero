@@ -3,8 +3,8 @@ package txs
 import (
 	"errors"
 
-	"github.com/sero-cash/go-sero/zero/lstate"
-	"github.com/sero-cash/go-sero/zero/lstate/lstate_types"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate/lstate_types"
 
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 

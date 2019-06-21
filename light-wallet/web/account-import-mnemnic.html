@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Access Wallet By Mnemnic Phrase - SERO</title>
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i">
+    <link rel="stylesheet" href="assets/fonts/fontawesome-all.min.css">
+</head>
+
+<body class="bg-gradient-primary">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-9 col-lg-12 col-xl-10">
+                <div class="card shadow-lg o-hidden border-0 my-5">
+                    <div class="card-body p-0">
+                        <div class="row">
+                            <div class="col-lg-6 d-none d-lg-flex">
+                                <p class="text-break text-left" style="padding: 0px;padding-top: 90px;padding-right: 20px;padding-left: 50px;font-size: 16px;">
+                                    Mnemonic phrases, also known as ‘seed words’ or ‘recovery phrases’, are ordered lists of 24 words which bring you to specific wallet addresses.
+                                </p>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="p-5">
+                                    <div class="text-center">
+                                        <h4 class="text-dark mb-4">Access Wallet By Mnemnic Phrase</h4>
+                                    </div>
+                                    <form class="user" novalidate id="form1">
+                                        <div class="form-group">
+                                            <textarea class="form-control" id="mnemonic" rows="5" required placeholder="Please type in your mnemonic phrase."></textarea>
+                                            <div class="invalid-feedback">Please type in your mnemonic phrase..</div>
+                                        </div>
+                                        <div class="form-group">
+                                            <input class="form-control form-control-user" type="password" placeholder="Please Enter Your Password" required />
+                                            <div class="invalid-feedback">Please Enter Password.</div>
+                                            <small>This password encrypts your private key. This does not act as a seed to generate your keys.</small>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-lg-4">
+                                                <button class="btn btn-outline-primary btn-block btn-user" type="button" onclick='window.location.href="index.html"'>BACK</button>
+                                            </div>
+                                            <div class="col-lg-8">
+                                                <button class="btn btn-primary btn-block text-white btn-user"  id="sub1" type="submit">Import</button>
+                                            </div>
+                                        </div>
+                                        <hr>
+                                        <a href="account-new.html"><i class="fab fa-creative-commons-remix"></i>&nbsp; Create a New Account</a><br/>
+                                        <a href="account-import-keystore.html"><i class="fas fa-file-import"></i>&nbsp; Import Account By Keystore File</a>
+                                        <hr>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalLongTitle"></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-break"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary">Access My Wallet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="assets/js/theme.js"></script>
+
+    <script src="assets/js/bignumber.js"></script>
+    <script src="assets/js/common.js"></script>
+    <script src="assets/js/account.js"></script>
+    <script>
+
+        Common.app = Mnemnic;
+        Common.init();
+
+        $(function () {
+            $("#form1").submit(function(event){
+                const f=$(this)
+                event.preventDefault()
+                event.stopPropagation()
+                f.addClass("was-validated")
+                if(f[0].checkValidity()===true){
+                    $("#sub1").attr('disabled',true);
+                    setTimeout(function () {
+                        Mnemnic.import();
+                    },10);
+                }
+            })
+        })
+
+    </script>
+
+</body>
+
+</html>
