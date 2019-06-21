@@ -25,6 +25,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
 	"github.com/sero-cash/go-sero/zero/txs/generate"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -46,6 +48,7 @@ func init() {
 }
 
 func main() {
+	seroparam.InitExchangeValueStr(true)
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	fmt.Printf("PThread: %v \n", generate.G_p_thread_num)
 	flag.Parse()
