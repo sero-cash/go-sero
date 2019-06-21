@@ -491,7 +491,7 @@ func (self *Exchange) preGenTx(param TxParam) (utxos []Utxo, err error) {
 		if amount, ok := amounts["SERO"]; ok {
 			amount.Add(amount, new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), param.GasPrice))
 		} else {
-			amount = new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), param.GasPrice)
+			amounts["SERO"] = new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), param.GasPrice)
 		}
 		for currency, amount := range amounts {
 			list, remain := self.findUtxos(&param.From, currency, amount)
@@ -615,7 +615,7 @@ func (self *Exchange) buildTxParam(
 
 	fee := new(big.Int).Mul(new(big.Int).SetUint64(gas), gasPrice)
 	if amount, ok := amounts["SERO"]; !ok || amount.Cmp(fee) < 0 {
-		e = fmt.Errorf("SSI GenTx Error: not enough")
+		e = fmt.Errorf("Exchange Error: not enough")
 		return
 	} else {
 		amount.Sub(amount, fee)
