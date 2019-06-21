@@ -1,7 +1,7 @@
 package verify
 
 import (
-	"errors"
+	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-czero-import/keys"
 
@@ -11,7 +11,7 @@ import (
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-var verify_input_o_procs_pool = utils.NewProcsPool(func() int { return G_v_thread_num })
+var verify_input_o_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_v_thread_num })
 
 type verify_input_o_desc struct {
 	hash_z   keys.Uint256
@@ -21,7 +21,7 @@ type verify_input_o_desc struct {
 	e        error
 }
 
-func (self *verify_input_o_desc) Run() bool {
+func (self *verify_input_o_desc) Run() error {
 	g := cpt.VerifyInputSDesc{}
 	g.Ehash = self.hash_z
 	g.Nil = self.in.Nil
@@ -29,8 +29,8 @@ func (self *verify_input_o_desc) Run() bool {
 	g.Sign = self.in.Sign
 	g.Pkr = *self.src.ToPKr()
 	if err := cpt.VerifyInputS(&g); err != nil {
-		self.e = errors.New("txs.Verify: in_o verify failed!")
-		return false
+		self.e = err
+		return err
 	} else {
 		asset := self.src.Out_O.Asset.ToFlatAsset()
 		asset_desc := cpt.AssetDesc{
@@ -41,6 +41,6 @@ func (self *verify_input_o_desc) Run() bool {
 		}
 		cpt.GenAssetCC(&asset_desc)
 		self.asset_cc = asset_desc.Asset_cc
-		return true
+		return nil
 	}
 }

@@ -49,3 +49,11 @@ type ChainSideEvent struct {
 }
 
 type ChainHeadEvent struct{ Block *types.Block }
+
+type NewLotteryEvent struct {
+	Lottery *types.Lottery
+}
+
+type NewVoteEvent struct {
+	Vote *types.Vote
+}

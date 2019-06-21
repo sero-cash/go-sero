@@ -304,6 +304,10 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 	return true, nil
 }
 
+func (api *PrivateAdminAPI) Close(){
+	api.eth.Stop()
+}
+
 // PublicDebugAPI is the collection of Sero full node APIs exposed
 // over the public debugging endpoint.
 type PublicDebugAPI struct {

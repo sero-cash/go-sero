@@ -17,7 +17,16 @@
 package core
 
 import (
+	"errors"
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-sero/log"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/zero/stake"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txs/stx"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
@@ -65,6 +74,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 
 	// Iterate over and process the individual transactions
 	gasReward := uint64(0)
+
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		receipt, gas, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, usedGas, cfg)
@@ -96,8 +106,17 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 		return nil, 0, err
 	}
 
-	key := header.Coinbase.ToCaddr()
-	statedb.AddNonceAddress(key[:], header.Coinbase)
+	var poolId, shareId *common.Hash
+	if poolId, shareId, err = applyStake(msg.From(), tx.GetZZSTX().Desc_Cmd, statedb, tx.Hash(), header.Number.Uint64()); err != nil {
+		log.Info("applyStake", "error", err)
+		return nil, 0, err
+	}
+
+	to := msg.To()
+	if header.Number.Uint64() < seroparam.SIP4() || (to != nil && statedb.IsContract(*to)) {
+		key := header.Coinbase.ToCaddr()
+		statedb.AddNonceAddress(key[:], header.Coinbase)
+	}
 
 	// Create a new context to be used in the EVM environment
 	context := NewEVMContext(msg, header, bc, author)
@@ -127,5 +146,129 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+	receipt.PoolId = poolId
+	receipt.ShareId = shareId
+
 	return receipt, gas, err
+}
+
+var (
+	poolValueThreshold, _ = new(big.Int).SetString("1000000000000000000", 10)
+	lockingBlockNum       = uint64(200) //uint64(1088640)
+)
+
+func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.StateDB, txHash common.Hash, number uint64) (poolId *common.Hash, shareId *common.Hash, err error) {
+	stakeState := stake.NewStakeState(statedb)
+	pkr := *from.ToPKr()
+	flag := false
+	if stakeDesc.BuyShare != nil {
+		flag = true
+		var stakePool *stake.StakePool
+		if stakeDesc.BuyShare.Pool != nil {
+			stakePoolId := common.BytesToHash(stakeDesc.BuyShare.Pool[:])
+			stakePool = stakeState.GetStakePool(stakePoolId)
+			if stakePool == nil || stakePool.Closed {
+				//asset := assets.Asset{Tkn: &assets.Token{
+				//	Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+				//	Value:    stakeDesc.BuyShare.Value,
+				//},
+				//}
+				//statedb.GetZState().AddTxOut(from, asset)
+				err = errors.New("pool not exist or pool is closed")
+				return
+			}
+		}
+
+		value := stakeDesc.BuyShare.Value.ToInt()
+		num, avgPrice, currentPrice := stakeState.CaleAvgPrice(value)
+		log.Info("BuyShare", "num", num, "price", avgPrice, "currentPrice", currentPrice)
+		if num > 0 {
+			amount := new(big.Int).Mul(avgPrice, big.NewInt(int64(num)))
+			refund := new(big.Int).Sub(new(big.Int).Set(stakeDesc.BuyShare.Value.ToInt()), amount)
+			if refund.Sign() > 0 {
+				asset := assets.Asset{Tkn: &assets.Token{
+					Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+					Value:    utils.U256(*refund),
+				},
+				}
+				statedb.GetZState().AddTxOut(from, asset)
+			}
+
+			share := &stake.Share{PKr: pkr, VotePKr: stakeDesc.BuyShare.Vote, Value: avgPrice, TransactionHash: txHash, BlockNumber: number, InitNum: num}
+			if stakePool != nil {
+				hash := common.BytesToHash(stakePool.Id())
+				share.PoolId = &hash
+				share.Fee = stakePool.Fee
+			}
+			id := common.BytesToHash(share.Id())
+			shareId = &id
+
+			stakeState.AddShare(share)
+		} else {
+			asset := assets.Asset{Tkn: &assets.Token{
+				Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+				Value:    stakeDesc.BuyShare.Value,
+			},
+			}
+			statedb.GetZState().AddTxOut(from, asset)
+		}
+	} else if stakeDesc.RegistPool != nil {
+		flag = true
+		id := crypto.Keccak256Hash(pkr[:])
+		poolId = &id
+		stakePool := stakeState.GetStakePool(id)
+		if stakePool != nil {
+			if stakeDesc.RegistPool.Value.ToInt().Sign() > 0 {
+				asset := assets.Asset{Tkn: &assets.Token{
+					Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+					Value:    stakeDesc.RegistPool.Value,
+				},
+				}
+				statedb.GetZState().AddTxOut(from, asset)
+			}
+			stakePool.Fee = uint16(stakeDesc.RegistPool.FeeRate)
+			stakePool.VotePKr = stakeDesc.RegistPool.Vote
+			stakeState.UpdateStakePool(stakePool)
+			return
+		} else {
+			cmd := stakeDesc.RegistPool
+			if poolValueThreshold.Cmp(stakeDesc.RegistPool.Value.ToInt()) != 0 || cmd.Vote == (keys.PKr{}) {
+				//asset := assets.Asset{Tkn: &assets.Token{
+				//	Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+				//	Value:    stakeDesc.RegistPool.Value,
+				//},
+				//}
+				//statedb.GetZState().AddTxOut(from, asset)
+				err = errors.New("args error")
+				return
+			}
+
+			pool := &stake.StakePool{PKr: pkr, Amount: cmd.Value.ToInt(), VotePKr: cmd.Vote, TransactionHash: txHash, Fee: uint16(cmd.FeeRate), Profit: big.NewInt(0)}
+			stakeState.UpdateStakePool(pool)
+		}
+	} else if stakeDesc.ClosePool != nil {
+		flag = true
+		id := crypto.Keccak256Hash(pkr[:])
+		poolId = &id
+		stakePool := stakeState.GetStakePool(id)
+		if stakePool == nil {
+			err = errors.New("pool not exist")
+			return
+		}
+		if stakePool.BlockNumber+lockingBlockNum < number {
+			err = errors.New("pool locking in")
+			return
+		}
+		if stakePool.Closed {
+			err = errors.New("pool is closed")
+			return
+		}
+		stakePool.Closed = true
+		stakeState.UpdateStakePool(stakePool)
+	}
+
+	if flag && number < seroparam.SIP4() {
+		err = errors.New("stake not start")
+	}
+	return
 }

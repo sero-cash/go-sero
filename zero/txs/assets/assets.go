@@ -25,6 +25,10 @@ func NewAsset(tkn *Token, tkt *Ticket) (ret Asset) {
 	return
 }
 
+func (self Asset) ToRef() (ret *Asset) {
+	return &self
+}
+
 func (self *Asset) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	if self.Tkn != nil {

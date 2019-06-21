@@ -43,7 +43,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"github.com/sero-cash/go-sero/zero/witness/merkle"
 )
 
 type State struct {
@@ -303,10 +302,4 @@ func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
 			number = number - 1
 		}
 	}
-}
-
-type State0Trees struct {
-	Trees       map[uint64]merkle.Tree
-	Roots       []keys.Uint256
-	Start_index uint64
 }

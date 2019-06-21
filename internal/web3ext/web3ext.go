@@ -32,6 +32,8 @@ var Modules = map[string]string{
 	"txpool":     TxPool_JS,
 	"ssi":        SSI_JS,
 	"exchange":   Exchange_JS,
+	"light":      LightNode_JS,
+	"stake":      Stake_JS,
 }
 
 const Chequebook_JS = `
@@ -160,6 +162,11 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'stopWS',
 			call: 'admin_stopWS'
+		}),
+		new web3._extend.Method({
+			name: 'close',
+			call: 'admin_close',
+			params: 0
 		}),
 	],
 	properties: [
@@ -752,6 +759,95 @@ web3._extend({
 			call: 'exchange_signTxWithSk',
             params: 2
 		})
+	]
+});
+`
+const Stake_JS = `
+web3._extend({
+	property: 'stake',
+	methods: [
+		new web3._extend.Method({
+			name: 'buyShare',
+			call: 'stake_buyShare',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+        new web3._extend.Method({
+			name: 'estimateShares',
+			call: 'stake_estimateShares',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'registStakePool',
+			call: 'stake_registStakePool',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+        new web3._extend.Method({
+			name: 'poolState',
+			call: 'stake_poolState',
+			params: 1
+		}),
+        new web3._extend.Method({
+			name: 'myShare',
+			call: 'stake_myShare',
+			params:1 
+		}),
+        new web3._extend.Method({
+			name: 'getShare',
+			call: 'stake_getShare',
+			params:1 
+		}),
+       new web3._extend.Method({
+			name: 'stakePools',
+			call: 'stake_stakePools',
+			params:0 
+		}),
+       new web3._extend.Method({
+			name: 'closeStakePool',
+			call: 'stake_closeStakePool',
+			params:1 
+		}),
+        new web3._extend.Method({
+			name: 'modifyStakePoolFee',
+			call: 'stake_modifyStakePoolFee',
+			params:2 
+		}),
+        new web3._extend.Method({
+			name: 'modifyStakePoolVote',
+			call: 'stake_modifyStakePoolVote',
+			params:2 
+		})
+
+	],
+    properties: [
+       new web3._extend.Property({
+			name: 'sharePoolSize',
+			getter: 'stake_sharePoolSize'
+		}),
+       new web3._extend.Property({
+			name: 'sharePrice',
+			getter: 'stake_sharePrice'
+		})
+	]
+});
+`
+
+const LightNode_JS = `
+web3._extend({
+	property: 'light',
+	methods: [
+		new web3._extend.Method({
+			name: 'getOutsByPKr',
+			call: 'light_getOutsByPKr',
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'checkNil',
+			call: 'light_checkNil',
+			params: 2
+		}),
 	]
 });
 `

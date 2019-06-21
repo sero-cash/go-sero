@@ -55,12 +55,13 @@ func generateCDag(cDag, cache []uint32, epoch uint64) {
 func progpowLightWithoutCDag(
 	size uint64,
 	cache []uint32,
+	cDag []uint32,
 	hash []byte,
 	nonce uint64,
 	blockNumber uint64) ([]byte, []byte) {
 
-	cDag := make([]uint32, progpowCacheWords)
-	generateCDag(cDag, cache, blockNumber/epochLength)
+	//cDag := make([]uint32, progpowCacheWords)
+	//generateCDag(cDag, cache, blockNumber/epochLength)
 
 	return progpowLight(size, cache, hash, nonce, blockNumber, cDag)
 }

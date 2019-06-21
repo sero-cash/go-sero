@@ -7,6 +7,8 @@ import (
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
+const ZSTATE0_ROOT_OUT = "$ZState0$ROOT-OUT$"
+
 type Data struct {
 	Num uint64
 
@@ -23,7 +25,7 @@ func NewData(num uint64) (ret *Data) {
 	ret = &Data{}
 	ret.Num = num
 	ret.Nils = utils.NewHSet(data.ZSTATE0_INNAME)
-	ret.Roots = utils.NewHSet("$ZState0$ROOT-OUT$")
+	ret.Roots = utils.NewHSet(ZSTATE0_ROOT_OUT)
 	return
 }
 

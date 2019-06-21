@@ -137,6 +137,28 @@ type PkgDesc_Z struct {
 	Close    *PkgClose    `rlp:"nil"`
 }
 
+func (self *PkgDesc_Z) Count() int {
+	count := 0
+	if self.Create != nil {
+		count++
+	}
+	if self.Transfer != nil {
+		count++
+	}
+	if self.Close != nil {
+		count++
+	}
+	return count
+}
+
+func (self *PkgDesc_Z) Valid() bool {
+	if self.Count() <= 1 {
+		return true
+	} else {
+		return false
+	}
+}
+
 func (this PkgDesc_Z) ToRef() (ret *PkgDesc_Z) {
 	ret = &this
 	return

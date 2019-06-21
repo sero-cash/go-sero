@@ -54,3 +54,9 @@ type Batch interface {
 	// Reset resets the batch for reuse
 	Reset()
 }
+
+type Tri interface {
+	TryGet(key []byte) ([]byte, error)
+	TryUpdate(key, value []byte) error
+	TryDelete(key []byte) error
+}
