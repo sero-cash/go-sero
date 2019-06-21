@@ -199,7 +199,7 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 		if num := self.starNum(account.pk); num > 0 {
 			self.numbers.Store(*account.pk, num)
 		} else {
-			self.numbers.Store(*account.pk, w.Accounts()[0].At)
+			self.numbers.Store(*account.pk, w.Accounts()[0].At+1)
 		}
 
 		log.Info("Add PK", "address", w.Accounts()[0].Address)
@@ -477,7 +477,7 @@ func (self *Exchange) preGenTx(param TxParam) (utxos []Utxo, err error) {
 			amount = new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), param.GasPrice)
 		}
 		for currency, amount := range amounts {
-			list, remain := self.findUtxos(&param.From, currency, amount);
+			list, remain := self.findUtxos(&param.From, currency, amount)
 			if remain.Sign() > 0 {
 				return utxos, errors.New(fmt.Sprintf("not enough token, maximum available token is %s", new(big.Int).Sub(amount, remain).String()))
 			} else {

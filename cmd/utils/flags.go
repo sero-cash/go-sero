@@ -297,6 +297,11 @@ var (
 		Usage: "start exchange",
 	}
 
+	ExchangeValueStrFlag = cli.BoolFlag{
+		Name:  "exchangeValueStr",
+		Usage: "big int return value as number string",
+	}
+
 	AutoMergeFlag = cli.BoolFlag{
 		Name:  "autoMerge",
 		Usage: "autoMerge outs",
@@ -1118,6 +1123,10 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 		if ctx.GlobalIsSet(AutoMergeFlag.Name) {
 			cfg.AutoMerge = true
 		}
+	}
+
+	if ctx.GlobalIsSet(ExchangeValueStrFlag.Name) {
+		seroparam.InitExchangeVlueStr(true)
 	}
 
 	// Override any default configs for hard coded networks.

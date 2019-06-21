@@ -4,6 +4,8 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
 )
@@ -69,16 +71,32 @@ func isString(input []byte) bool {
 	return len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"'
 }
 
-//func (b U256) MarshalJSON() ([]byte, error) {
-//	i := big.Int(b)
-//
-//	return i.MarshalJSON()
-//}
-
-func (b U256) MarshalText() ([]byte, error) {
+func (b U256) MarshalJSON() ([]byte, error) {
 	i := big.Int(b)
-	return i.MarshalText()
+	by, err := i.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	if seroparam.IsExchangeVlueStr() {
+		bytes := make([]byte, len(by)+2)
+		copy(bytes[1:len(bytes)-1], by[:])
+		bytes[0] = '"'
+		bytes[len(bytes)-1] = '"'
+		return bytes, nil
+	} else {
+		return by, err
+	}
+
 }
+
+func (b *U256) ToInt() *big.Int {
+	return (*big.Int)(b)
+}
+
+//func (b U256) MarshalText() ([]byte, error) {
+//	i := big.Int(b)
+//	return i.MarshalText()
+//}
 
 func (b *U256) UnmarshalJSON(input []byte) error {
 	if isString(input) {

@@ -374,9 +374,13 @@ func (s *PrivateAccountAPI) DeriveAccount(url string, path string, pin *bool) (a
 // NewAccount will create a new account and returns the address for the new account.
 func (s *PrivateAccountAPI) NewAccount(password string) (address.AccountAddress, error) {
 	blockNum := uint64(0)
-	current := s.b.CurrentBlock()
-	if current != nil {
-		blockNum = current.NumberU64()
+	if seroparam.Is_Dev() {
+		blockNum = uint64(0)
+	} else {
+		current := s.b.CurrentBlock()
+		if current != nil {
+			blockNum = current.NumberU64()
+		}
 	}
 	acc, err := fetchKeystore(s.am).NewAccount(password, blockNum)
 	if err != nil {
@@ -396,9 +400,13 @@ func (s *PrivateAccountAPI) NewAccount(password string) (address.AccountAddress,
 // NewAccount will create a new account and returns the mnemonic 、address for the new account.
 func (s *PrivateAccountAPI) NewAccountWithMnemonic(password string) (map[string]string, error) {
 	blockNum := uint64(0)
-	current := s.b.CurrentBlock()
-	if current != nil {
-		blockNum = current.NumberU64()
+	if seroparam.Is_Dev() {
+		blockNum = uint64(0)
+	} else {
+		current := s.b.CurrentBlock()
+		if current != nil {
+			blockNum = current.NumberU64()
+		}
 	}
 	mnemonic, acc, err := fetchKeystore(s.am).NewAccountWithMnemonic(password, blockNum)
 	if err != nil {

@@ -54,23 +54,46 @@ func (s *PublicExchangeAPI) GetPkr(ctx context.Context, address *keys.Uint512, i
 	return s.b.GetPkr(address, index)
 }
 
-func (s *PublicExchangeAPI) GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int) {
-	return s.b.GetLockedBalances(address)
+func (s *PublicExchangeAPI) GetLockedBalances(address keys.Uint512) map[string]*Big {
+	result := map[string]*Big{}
+
+	balances := s.b.GetLockedBalances(address)
+	for k, v := range balances {
+		result[k] = (*Big)(v)
+	}
+	return result
 }
 
-func (s *PublicExchangeAPI) GetMaxAvailable(address keys.Uint512, currency Smbol) (amount *big.Int) {
-	return s.b.GetMaxAvailable(address, string(currency))
+func (s *PublicExchangeAPI) GetMaxAvailable(address keys.Uint512, currency Smbol) (amount *Big) {
+	return (*Big)(s.b.GetMaxAvailable(address, string(currency)))
 }
 
-func (s *PublicExchangeAPI) GetBalances(ctx context.Context, address keys.Uint512) (balances map[string]*big.Int) {
-	return s.b.GetBalances(address)
+func (s *PublicExchangeAPI) GetBalances(ctx context.Context, address keys.Uint512) map[string]*Big {
+	result := map[string]*Big{}
+	balances := s.b.GetBalances(address)
+	for k, v := range balances {
+		result[k] = (*Big)(v)
+	}
+	return result
 }
 
 type Big big.Int
 
 func (b Big) MarshalJSON() ([]byte, error) {
 	i := big.Int(b)
-	return i.MarshalText()
+	by, err := i.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	if seroparam.IsExchangeVlueStr() {
+		bytes := make([]byte, len(by)+2)
+		copy(bytes[1:len(bytes)-1], by[:])
+		bytes[0] = '"'
+		bytes[len(bytes)-1] = '"'
+		return bytes, nil
+	} else {
+		return by, err
+	}
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
