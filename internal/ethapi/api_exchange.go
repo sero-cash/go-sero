@@ -209,7 +209,7 @@ type Record struct {
 	Nil      keys.Uint256
 	Num      uint64
 	Currency string
-	Value    *big.Int
+	Value    *Big
 }
 
 func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address hexutil.Bytes, begin, end uint64) (records []Record, err error) {
