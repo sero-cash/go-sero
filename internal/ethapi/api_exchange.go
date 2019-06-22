@@ -205,7 +205,7 @@ func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param GenTxArgs) 
 	if err := param.check(); err != nil {
 		return nil, err
 	}
-	tx, e := s.b.GenTxWithSign(param.toTxParam())
+	_, tx, e := exchange.CurrentExchange().GenTxWithSign(param.toTxParam())
 	return tx, e
 }
 

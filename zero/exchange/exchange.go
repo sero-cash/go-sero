@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-sero/zero/light/light_ref"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -35,9 +37,9 @@ import (
 )
 
 type Account struct {
-	wallet accounts.Wallet
-	pk     *keys.Uint512
-	tk     *keys.Uint512
+	wallet        accounts.Wallet
+	pk            *keys.Uint512
+	tk            *keys.Uint512
 	skr           keys.PKr
 	mainPkr       keys.PKr
 	balances      map[string]*big.Int
@@ -425,27 +427,31 @@ func (self *Exchange) GenTx(param TxParam) (txParam *light_types.GenTxParam, e e
 	return
 }
 
-func (self *Exchange) GenTxWithSign(param TxParam) (*light_types.GTx, error) {
-	utxos, err := self.preGenTx(param)
-	if err != nil {
-		return nil, err
+func (self *Exchange) GenTxWithSign(param TxParam) (pretx *light_types.GenTxParam, tx *light_types.GTx, e error) {
+	if self == nil {
+		e = errors.New("exchange instance is nil")
+		return
+	}
+	var utxos []Utxo
+	if utxos, e = self.preGenTx(param); e != nil {
+		return
 	}
 
 	var account *Account
 	if value, ok := self.accounts.Load(param.From); ok {
 		account = value.(*Account)
 	} else {
-		return nil, errors.New("not found Pk")
+		e = errors.New("not found Pk")
+		return
 	}
 
-	gtx, err := self.genTx(utxos, account, param.Receptions, param.Gas, param.GasPrice)
-	if err != nil {
-		log.Error("Exchange genTx", "error", err)
-		return nil, err
+	if pretx, tx, e = self.genTx(utxos, account, param.Receptions, param.Gas, param.GasPrice); e != nil {
+		log.Error("Exchange genTx", "error", e)
+		return
 	}
-	gtx.Hash = gtx.Tx.ToHash()
+	tx.Hash = tx.Tx.ToHash()
 	log.Info("Exchange genTx success")
-	return gtx, nil
+	return
 }
 
 func (self *Exchange) getAccountByPk(pk keys.Uint512) *Account {
@@ -512,28 +518,40 @@ func (self *Exchange) preGenTx(param TxParam) (utxos []Utxo, err error) {
 	return
 }
 
-func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Reception, gas uint64, gasPrice *big.Int) (*light_types.GTx, error) {
-	txParam, err := self.buildTxParam(utxos, &account.mainPkr, receptions, gas, gasPrice)
-	if err != nil {
-		return nil, err
+func (self *Exchange) ClearTxParam(txParam *light_types.GenTxParam) (count int) {
+	if self == nil {
+		return
+	}
+	if txParam == nil {
+		return
+	}
+	for _, in := range txParam.Ins {
+		count += self.ClearUsedFlagForRoot(in.Out.Root)
+	}
+	return
+}
+
+func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Reception, gas uint64, gasPrice *big.Int) (txParam *light_types.GenTxParam, tx *light_types.GTx, e error) {
+	if txParam, e = self.buildTxParam(utxos, &account.mainPkr, receptions, gas, gasPrice); e != nil {
+		return
 	}
 
-	seed, err := account.wallet.GetSeed()
-	if err != nil {
-		for _, each := range utxos {
-			self.ClearUsedFlagForRoot(each.Root)
-		}
-		return nil, err
+	var seed *address.Seed
+	if seed, e = account.wallet.GetSeed(); e != nil {
+		self.ClearTxParam(txParam)
+		return
 	}
+
 	sk := keys.Seed2Sk(seed.SeedToUint256())
 	gtx, err := light.SignTx(&sk, txParam)
 	if err != nil {
-		for _, each := range utxos {
-			self.ClearUsedFlagForRoot(each.Root)
-		}
-		return nil, err
+		self.ClearTxParam(txParam)
+		e = err
+		return
+	} else {
+		tx = &gtx
+		return
 	}
-	return &gtx, nil
 }
 
 func (self *Exchange) buildTxParam(
@@ -1093,15 +1111,17 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string, force bool) (coun
 			amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
 		}
 		amount.Sub(amount, new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000)))
-		gtx, err := self.genTx(list, account, []Reception{{Value: amount, Currency: currency, Addr: account.mainPkr}}, 25000, big.NewInt(1000000000))
+		pretx, gtx, err := self.genTx(list, account, []Reception{{Value: amount, Currency: currency, Addr: account.mainPkr}}, 25000, big.NewInt(1000000000))
 		if err != nil {
 			account.nextMergeTime = time.Now().Add(time.Hour * 6)
+			self.ClearTxParam(pretx)
 			e = err
 			return
 		}
 		txhash = gtx.Hash
 		if err := self.commitTx(gtx); err != nil {
 			account.nextMergeTime = time.Now().Add(time.Hour * 6)
+			self.ClearTxParam(pretx)
 			e = err
 			return
 		}

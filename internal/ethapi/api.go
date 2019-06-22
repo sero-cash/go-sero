@@ -504,30 +504,34 @@ type threaded interface {
 // signTransactions sets defaults and signs the given transaction
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool
-func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (*types.Transaction, error) {
+func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (pretx *light_types.GenTxParam, tx *types.Transaction, e error) {
 	s.nonceLock.mu.Lock()
 	defer s.nonceLock.mu.Unlock()
 	// Look up the wallet containing the requested abi
 	account := accounts.Account{Address: args.From}
 	wallet, err := s.am.Find(account)
 	if err != nil {
-		return nil, err
+		e = err
+		return
 	}
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
-		return nil, err
+		e = err
+		return
 	}
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 
 	if err != nil {
-		return nil, err
+		e = err
+		return
 	}
 
 	// Assemble the transaction and sign with the wallet
 	tx, txt, err := args.toTransaction(state)
 	if err != nil {
-		return nil, err
+		e = err
+		return
 	}
 
 	if th, ok := s.b.GetEngin().(threaded); ok {
@@ -543,28 +547,34 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 		}
 	}
 	if args.To == nil || state.IsContract(*args.To) || !seroparam.IsExchange() {
-		return wallet.EncryptTxWithPassphrase(account, passwd, tx, txt, state)
+		tx, e = wallet.EncryptTxWithPassphrase(account, passwd, tx, txt, state)
+		return
 	} else {
 		if txParam, err := args.toTxParam(); err == nil {
-			genTxParam, err := s.b.GenTx(txParam)
-			if err != nil {
-				return nil, err
+			if pretx, e = s.b.GenTx(txParam); e != nil {
+				return
 			}
+			log.Info("ToTxParam", "utxos", len(pretx.Ins))
 			seed, err := wallet.GetSeedWithPassphrase(passwd)
 			if err != nil {
-				return nil, err
+				exchange.CurrentExchange().ClearTxParam(pretx)
+				e = err
+				return
 			}
 			sk := keys.Seed2Sk(seed.SeedToUint256())
-			gtx, err := light.SignTx(&sk, genTxParam)
+			gtx, err := light.SignTx(&sk, pretx)
 			if err != nil {
-				return nil, err
+				exchange.CurrentExchange().ClearTxParam(pretx)
+				e = err
+				return
 			}
 			gasPrice := big.Int(gtx.GasPrice)
 			gas := uint64(gtx.Gas)
-			signedTx := types.NewTxWithGTx(gas, &gasPrice, &gtx.Tx)
-			return signedTx, nil
+			tx = types.NewTxWithGTx(gas, &gasPrice, &gtx.Tx)
+			return
 		} else {
-			return nil, err
+			e = err
+			return
 		}
 	}
 
@@ -580,11 +590,23 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 		s.nonceLock.LockAddr(args.From)
 		defer s.nonceLock.UnlockAddr(args.From)
 	}*/
-	signed, err := s.signTransaction(ctx, args, passwd)
+	pretx, signed, err := s.signTransaction(ctx, args, passwd)
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return submitTransaction(ctx, s.b, signed, args.To)
+
+	if err := s.b.SendTx(ctx, signed); err != nil {
+		if pretx != nil {
+			exchange.CurrentExchange().ClearTxParam(pretx)
+		}
+		return common.Hash{}, err
+	}
+	if pretx != nil {
+		log.Info("Submitted transaction", "fullhash", signed.Hash().Hex(), "recipient", args.To, "utxo", len(pretx.Ins))
+	} else {
+		log.Info("Submitted transaction", "fullhash", signed.Hash().Hex(), "recipient", args.To)
+	}
+	return signed.Hash(), nil
 }
 
 // SignAndSendTransaction was renamed to SendTransaction. This method is deprecated
@@ -1941,12 +1963,13 @@ func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.H
 		return submitTransaction(ctx, b, encrypted, args.To)
 	} else {
 		if txParam, err := args.toTxParam(); err == nil {
-			gtx, err := b.GenTxWithSign(txParam)
+			pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(txParam)
 			if err != nil {
 				return common.Hash{}, err
 			}
 			err = b.CommitTx(gtx)
 			if err != nil {
+				exchange.CurrentExchange().ClearTxParam(pretx)
 				return common.Hash{}, err
 			}
 			return common.BytesToHash(gtx.Hash[:]), nil
@@ -2301,7 +2324,7 @@ func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args 
 	} else {
 
 		if txParam, err := args.toTxParam(); err == nil {
-			gtx, err := s.b.GenTxWithSign(txParam)
+			_, gtx, err := exchange.CurrentExchange().GenTxWithSign(txParam)
 			if err != nil {
 				return nil, err
 			}

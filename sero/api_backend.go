@@ -312,14 +312,6 @@ func (b *SeroAPIBackend) GenTx(param exchange.TxParam) (txParam *light_types.Gen
 	return b.sero.exchange.GenTx(param)
 }
 
-func (b *SeroAPIBackend) GenTxWithSign(param exchange.TxParam) (gtx *light_types.GTx, e error) {
-	if b.sero.exchange == nil {
-		e = errors.New("not start exchange")
-		return
-	}
-	return b.sero.exchange.GenTxWithSign(param)
-}
-
 func (b *SeroAPIBackend) GetRecords(address hexutil.Bytes, begin, end uint64) (records []exchange.Utxo, err error) {
 	if b.sero.exchange == nil {
 		err = errors.New("not start exchange")
