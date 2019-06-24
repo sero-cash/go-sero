@@ -6042,8 +6042,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var getRecords = new Method({
                 name: 'getRecords',
                 call: 'exchange_getRecords',
-                params: 3,
-                inputFormatter: [formatters.inputHexAddressFormatter,null,null]
+                params: 3
             });
             var commitTx = new Method({
                 name: 'commitTx',
