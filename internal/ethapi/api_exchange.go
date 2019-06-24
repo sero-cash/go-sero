@@ -127,7 +127,7 @@ type ReceptionArgs struct {
 
 type GenTxArgs struct {
 	From       keys.Uint512
-	RefoundTo  *keys.PKr
+	RefundTo   *keys.PKr
 	Receptions []ReceptionArgs
 	Gas        uint64
 	GasPrice   *Big
@@ -142,9 +142,9 @@ func (args GenTxArgs) check() error {
 		return fmt.Errorf("gasPrice not specified")
 	}
 
-	if args.RefoundTo != nil {
-		if !keys.PKrValid(args.RefoundTo) {
-			return errors.New("RefoundTo is not a valid pkr")
+	if args.RefundTo != nil {
+		if !keys.PKrValid(args.RefundTo) {
+			return errors.New("RefundTo is not a valid pkr")
 		}
 	}
 
@@ -191,7 +191,7 @@ func (args GenTxArgs) toTxParam() exchange.TxParam {
 			(*big.Int)(rec.Value),
 		})
 	}
-	return exchange.TxParam{args.From, args.RefoundTo, receptions, args.Gas, gasPrice, args.Roots}
+	return exchange.TxParam{args.From, args.RefundTo, receptions, args.Gas, gasPrice, args.Roots}
 }
 
 func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*light_types.GenTxParam, error) {
@@ -287,12 +287,29 @@ func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address *hexutil.Byt
 	return
 }
 
+func (s *PublicExchangeAPI) GenMergeTx(ctx context.Context, param exchange.MergeParam) (txParam *light_types.GenTxParam, e error) {
+	if param.To != nil {
+		if !keys.PKrValid(param.To) {
+			return nil, errors.New("param.to must valid pkr or nil")
+		}
+	}
+	if param.Currency == "" {
+		return nil, errors.New("cy can not be nil")
+
+	}
+	exchangeInstance := exchange.CurrentExchange()
+	if exchangeInstance == nil {
+		return nil, errors.New("exchange mode no start")
+	}
+	return exchangeInstance.GenMergeTx(&param)
+}
+
 func (s *PublicExchangeAPI) Merge(ctx context.Context, address *keys.Uint512, cy Smbol) (map[string]interface{}, error) {
 	if address == nil {
-		return nil, errors.New("pk can not bi nil")
+		return nil, errors.New("pk can not be nil")
 	}
 	if cy == "" {
-		return nil, errors.New("cy can not bi nil")
+		return nil, errors.New("cy can not be nil")
 
 	}
 	exchangeInstance := exchange.CurrentExchange()

@@ -699,6 +699,11 @@ web3._extend({
 			name: 'clearUsedFlagForRoot',
 			call: 'exchange_clearUsedFlagForRoot',
 			params: 1
+		}),
+       new web3._extend.Method({
+			name: 'genMergeTx',
+			call: 'exchange_genMergeTx',
+			params: 1
 		})
 	]
 });
