@@ -104,8 +104,8 @@ type (
 )
 
 type PkKey struct {
-	pk  keys.Uint512
-	num uint64
+	PK  keys.Uint512
+	Num uint64
 }
 
 type PkrKey struct {
@@ -399,6 +399,58 @@ func (self *Exchange) GetBalances(pk keys.Uint512) (balances map[string]*big.Int
 	return
 }
 
+type BlockInfo struct {
+	Num  uint64
+	Ins  []Utxo
+	Outs []Utxo
+}
+
+func (self *Exchange) GetBlockInfo(start, end uint64) (blockMap map[PkKey]*BlockInfo, err error) {
+	iterator := self.db.NewIteratorWithPrefix(blockPrefix)
+	blockMap = map[PkKey]*BlockInfo{}
+	for ok := iterator.Seek(blockKey(start, keys.Uint512{})); ok; ok = iterator.Next() {
+		key := iterator.Key()
+		num := decodeNumber(key[5:13])
+		if num >= end {
+			break
+		}
+		var pk keys.Uint512
+		copy(pk[:], key[13:77])
+
+		var block BlockInfo
+		if err = rlp.Decode(bytes.NewReader(iterator.Value()), &block); err != nil {
+			log.Error("Exchange Invalid block RLP", "Num", num, "err", err)
+			return
+		}
+		blockMap[PkKey{pk, num}] = &block
+
+	}
+	return
+}
+
+func (self *Exchange) GetRecordsByTxHash(txHash keys.Uint256) (records map[keys.Uint512][]Utxo, err error) {
+	records = map[keys.Uint512][]Utxo{}
+	iterator := self.db.NewIteratorWithPrefix(append(txPrefix, txHash[:]...))
+	for iterator.Next() {
+		key := iterator.Key()
+		var pk keys.Uint512
+		copy(pk[:], key[34:98])
+
+		value := iterator.Value()
+		var utxo Utxo
+		if err = rlp.Decode(bytes.NewReader(value), &utxo); err != nil {
+			log.Error("Invalid roots RLP", "PK", common.Bytes2Hex(pk[:]), "err", err)
+			return
+		}
+		if list, ok := records[pk]; ok {
+			records[pk] = append(list, utxo)
+		} else {
+			records[pk] = []Utxo{utxo}
+		}
+	}
+	return
+}
+
 func (self *Exchange) GetRecordsByPk(PK *keys.Uint512, begin, end uint64) (records map[keys.Uint512][]Utxo, err error) {
 	records = map[keys.Uint512][]Utxo{}
 	err = self.iteratorUtxo(PK, begin, end, func(utxo Utxo) {
@@ -414,7 +466,7 @@ func (self *Exchange) GetRecordsByPk(PK *keys.Uint512, begin, end uint64) (recor
 func (self *Exchange) GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records map[keys.Uint512][]Utxo, err error) {
 	account := self.getAccountByPkr(pkr)
 	if account == nil {
-		err = errors.New("not found pk by pkr")
+		err = errors.New("not found PK by pkr")
 		return
 	}
 	PK := account.pk
@@ -920,10 +972,13 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 		return
 	}
 
-	utxosMap := map[PkKey][]Utxo{}
-	nils := []keys.Uint256{}
-	num := start
+	outUtxosMap := map[uint64]map[keys.Uint512][]Utxo{}
+	inUtxosMap := map[uint64]map[keys.Uint512][]Utxo{}
+
+	utxoMap := map[keys.Uint256]Utxo{}
+
 	for _, block := range blocks {
+		num := uint64(block.Num)
 		for _, out := range block.Outs {
 			var pkr keys.PKr
 
@@ -938,31 +993,76 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 			if !ok {
 				continue
 			}
-			key := PkKey{pk: *account.pk, num: out.State.Num}
 
 			dout := DecOuts([]light_types.Out{out}, &account.skr)[0]
 			utxo := Utxo{Pkr: pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset, IsZ: out.State.OS.Out_Z != nil}
-			if list, ok := utxosMap[key]; ok {
-				utxosMap[key] = append(list, utxo)
+			utxo.pk = *account.pk
+			utxoMap[utxo.Root] = utxo
+			utxoMap[utxo.Nil] = utxo
+
+			if utxoMap, ok := outUtxosMap[num]; ok {
+				if list, ok := utxoMap[utxo.pk]; ok {
+					utxoMap[utxo.pk] = append(list, utxo)
+				} else {
+					utxoMap[utxo.pk] = []Utxo{utxo}
+				}
 			} else {
-				utxosMap[key] = []Utxo{utxo}
+				utxoMap = map[keys.Uint512][]Utxo{}
+				utxoMap[utxo.pk] = []Utxo{utxo}
+				outUtxosMap[num] = utxoMap
 			}
 		}
+
 		if len(block.Nils) > 0 {
-			nils = append(nils, block.Nils...)
+			for _, Nil := range block.Nils {
+				var utxo Utxo
+				if value, ok := utxoMap[Nil]; ok {
+					utxo = value
+				} else {
+					value, _ := self.db.Get(nilKey(Nil))
+					if value != nil {
+
+						var root keys.Uint256
+						copy(root[:], value[98:130])
+
+						if utxo, err = self.getUtxo(root); err != nil {
+							continue
+						} else {
+							var pk keys.Uint512
+							copy(pk[:], value[2:66])
+							utxo.pk = pk
+						}
+					} else {
+						continue
+					}
+				}
+
+				if utxoMap, ok := inUtxosMap[num]; ok {
+					if list, ok := utxoMap[utxo.pk]; ok {
+						utxoMap[utxo.pk] = append(list, utxo)
+					} else {
+						utxoMap[utxo.pk] = []Utxo{utxo}
+					}
+				} else {
+					utxoMap = map[keys.Uint512][]Utxo{}
+					utxoMap[utxo.pk] = []Utxo{utxo}
+					inUtxosMap[num] = utxoMap
+				}
+			}
 		}
 	}
 
 	batch := self.db.NewBatch()
-	if len(utxosMap) > 0 || len(nils) > 0 {
-		if err := self.indexBlocks(batch, utxosMap, nils); err != nil {
+	if len(outUtxosMap) > 0 || len(inUtxosMap) > 0 {
+		if err := self.indexOutxs(batch, outUtxosMap, inUtxosMap); err != nil {
 			log.Error("indexBlocks ", "error", err)
+			return
 		}
 	}
 
 	count = len(blocks)
-	num = uint64(blocks[count-1].Num) + 1
-	// "NUM"+pk  => num
+	num := uint64(blocks[count-1].Num) + 1
+	// "NUM"+PK  => Num
 	data := encodeNumber(num)
 	for _, pk := range pks {
 		batch.Put(numKey(pk), data)
@@ -978,106 +1078,223 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 	return
 }
 
-func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo, nils []keys.Uint256) (err error) {
+func (self *Exchange) indexOutxs(batch serodb.Batch, outUtxoMap, inUtxoMap map[uint64]map[keys.Uint512][]Utxo) (err error) {
 	ops := map[string]string{}
-	for key, list := range utxosMap {
-		roots := []keys.Uint256{}
-		for _, utxo := range list {
-			data, err := rlp.EncodeToBytes(utxo)
+	blockMap := map[PkKey]*BlockInfo{}
+
+	for num, utxoMap := range outUtxoMap {
+		txMap := map[keys.Uint256][]Utxo{}
+		for pk, list := range utxoMap {
+			roots := []keys.Uint256{}
+			for _, utxo := range list {
+				data, err := rlp.EncodeToBytes(utxo)
+				if err != nil {
+					return err
+				}
+
+				// "ROOT" + root
+				batch.Put(rootKey(utxo.Root), data)
+
+				var pkKey []byte
+				if utxo.Asset.Tkn != nil {
+					// "PK" + PK + currency + root
+					pkKey = utxoPkKey(pk, utxo.Asset.Tkn.Currency[:], &utxo.Root)
+
+				} else if utxo.Asset.Tkt != nil {
+					// "PK" + PK + tkt + root
+					pkKey = utxoPkKey(pk, utxo.Asset.Tkt.Value[:], &utxo.Root)
+				}
+				// "PK" + PK + currency + root => 0
+				ops[common.Bytes2Hex(pkKey)] = common.Bytes2Hex([]byte{0})
+
+				// "NIL" + PK + tkt + root => "PK" + PK + currency + root
+				nilkey := nilKey(utxo.Nil)
+				rootkey := nilKey(utxo.Root)
+
+				// "NIL" +nil/root => pkKey
+				ops[common.Bytes2Hex(nilkey)] = common.Bytes2Hex(pkKey)
+				ops[common.Bytes2Hex(rootkey)] = common.Bytes2Hex(pkKey)
+
+				roots = append(roots, utxo.Root)
+
+				key := PkKey{pk, num}
+				if block, ok := blockMap[key]; ok {
+					block.Outs = append(block.Outs, utxo)
+				} else {
+					blockMap[key] = &BlockInfo{Num: utxo.Num, Outs: []Utxo{utxo}}
+				}
+
+				if list, ok := txMap[utxo.TxHash]; ok {
+					txMap[utxo.TxHash] = append(list, utxo)
+				} else {
+					txMap[utxo.TxHash] = []Utxo{utxo}
+				}
+				//log.Info("Index add", "PK", base58.EncodeToString(PK[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "Key", common.Bytes2Hex(pkKey[:]), "Value", utxo.Asset.Tkn.Value)
+			}
+
+			data, err := rlp.EncodeToBytes(roots)
 			if err != nil {
 				return err
 			}
+			// blockNumber + PK => [roots]
+			batch.Put(utxoKey(num, pk), data)
+		}
 
-			// "ROOT" + root
-			batch.Put(rootKey(utxo.Root), data)
-
-			var pkKey []byte
-			if utxo.Asset.Tkn != nil {
-				// "PK" + pk + currency + root
-				pkKey = utxoPkKey(key.pk, utxo.Asset.Tkn.Currency[:], &utxo.Root)
-
-			} else if utxo.Asset.Tkt != nil {
-				// "PK" + pk + tkt + root
-				pkKey = utxoPkKey(key.pk, utxo.Asset.Tkt.Value[:], &utxo.Root)
+		for txHash, list := range txMap {
+			for _, utxo := range list {
+				data, err := rlp.EncodeToBytes(utxo)
+				if err != nil {
+					return err
+				}
+				batch.Put(txKey(txHash, utxo.pk), data)
 			}
-			// "PK" + pk + currency + root => 0
-			ops[common.Bytes2Hex(pkKey)] = common.Bytes2Hex([]byte{0})
-
-			// "NIL" + pk + tkt + root => "PK" + pk + currency + root
-			nilkey := nilKey(utxo.Nil)
-			rootkey := nilKey(utxo.Root)
-
-			// "NIL" +nil/root => pkKey
-			ops[common.Bytes2Hex(nilkey)] = common.Bytes2Hex(pkKey)
-			ops[common.Bytes2Hex(rootkey)] = common.Bytes2Hex(pkKey)
-
-			roots = append(roots, utxo.Root)
-			//log.Info("Index add", "PK", base58.EncodeToString(pk[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "Key", common.Bytes2Hex(pkKey[:]), "Value", utxo.Asset.Tkn.Value)
-		}
-
-		data, err := rlp.EncodeToBytes(roots)
-		if err != nil {
-			return err
-		}
-		// blockNumber + pk => [roots]
-		batch.Put(utxoKey(key.num, key.pk), data)
-
-		//for num, roots := range rootsMap {
-		//	data, err := rlp.EncodeToBytes(roots)
-		//	if err != nil {
-		//		return err
-		//	}
-		//	pkr := keys.PKr{}
-		//	copy(pkr[:], pk[:])
-		//	batch.Put(utxoKey(pk, pkr, num), data)
-		//}
-
-		if account := self.getAccountByPk(key.pk); account != nil {
-			account.isChanged = true
 		}
 	}
 
-	for _, Nil := range nils {
+	for num, utxoMap := range inUtxoMap {
+		for pk, list := range utxoMap {
+			if account := self.getAccountByPk(pk); account != nil {
+				account.isChanged = true
+			}
+			for _, utxo := range list {
+				//roots = append(roots, utxo.Root)
+				self.usedFlag.Delete(utxo.Root)
 
-		var pk keys.Uint512
-		key := nilKey(Nil)
-		hex := common.Bytes2Hex(key)
-		if value, ok := ops[hex]; ok {
-			delete(ops, hex)
-			delete(ops, value)
-			var root keys.Uint256
-			copy(root[:], value[98:130])
-			delete(ops, common.Bytes2Hex(nilKey(root)))
-			self.usedFlag.Delete(root)
+				if value, ok := ops[common.Bytes2Hex(nilKey(utxo.Nil))]; ok {
+					delete(ops, value)
+					delete(ops, common.Bytes2Hex(nilKey(utxo.Nil)))
+					delete(ops, common.Bytes2Hex(nilKey(utxo.Root)))
+				} else {
+					value, _ := self.db.Get(nilKey(utxo.Nil))
+					if value != nil {
+						batch.Delete(value)
+						batch.Delete(nilKey(utxo.Nil))
+						batch.Delete(nilKey(utxo.Root))
+					}
+				}
 
-			copy(pk[:], value[2:66])
-		} else {
-			value, _ := self.db.Get(key)
-			if value != nil {
-				batch.Delete(value)
-				batch.Delete(nilKey(Nil))
-
-				var root keys.Uint256
-				copy(root[:], value[98:130])
-				batch.Delete(nilKey(root))
-				self.usedFlag.Delete(root)
-
-				copy(pk[:], value[2:66])
+				key := PkKey{pk, num}
+				if block, ok := blockMap[key]; ok {
+					block.Ins = append(block.Ins, utxo)
+				} else {
+					blockMap[key] = &BlockInfo{Ins: []Utxo{utxo}}
+				}
 			}
 		}
+	}
 
-		if account := self.getAccountByPk(pk); account != nil {
-			account.isChanged = true
+	for key, block := range blockMap {
+		data, err := rlp.EncodeToBytes(block)
+		if err != nil {
+			return err
 		}
-
+		batch.Put(blockKey(key.Num, key.PK), data)
 	}
 
 	for key, value := range ops {
 		batch.Put(common.Hex2Bytes(key), common.Hex2Bytes(value))
 	}
-
-	return nil
+	return
 }
+
+//
+//func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo, nils []keys.Uint256) (err error) {
+//	ops := map[string]string{}
+//	blockMap := map[uint64]*BlockInfo{}
+//	for key, list := range utxosMap {
+//		roots := []keys.Uint256{}
+//		for _, utxo := range list {
+//			data, err := rlp.EncodeToBytes(utxo)
+//			if err != nil {
+//				return err
+//			}
+//
+//			// "ROOT" + root
+//			batch.Put(rootKey(utxo.Root), data)
+//
+//			var pkKey []byte
+//			if utxo.Asset.Tkn != nil {
+//				// "PK" + PK + currency + root
+//				pkKey = utxoPkKey(key.PK, utxo.Asset.Tkn.Currency[:], &utxo.Root)
+//
+//			} else if utxo.Asset.Tkt != nil {
+//				// "PK" + PK + tkt + root
+//				pkKey = utxoPkKey(key.PK, utxo.Asset.Tkt.Value[:], &utxo.Root)
+//			}
+//			// "PK" + PK + currency + root => 0
+//			ops[common.Bytes2Hex(pkKey)] = common.Bytes2Hex([]byte{0})
+//
+//			// "NIL" + PK + tkt + root => "PK" + PK + currency + root
+//			nilkey := nilKey(utxo.Nil)
+//			rootkey := nilKey(utxo.Root)
+//
+//			// "NIL" +nil/root => pkKey
+//			ops[common.Bytes2Hex(nilkey)] = common.Bytes2Hex(pkKey)
+//			ops[common.Bytes2Hex(rootkey)] = common.Bytes2Hex(pkKey)
+//
+//			roots = append(roots, utxo.Root)
+//
+//			if block, ok := blockMap[utxo.Num]; ok {
+//				block.Outs = append(block.Outs, utxo)
+//			} else {
+//				blockMap[utxo.Num] = &BlockInfo{Outs: []Utxo{utxo}}
+//			}
+//			//log.Info("Index add", "PK", base58.EncodeToString(PK[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "Key", common.Bytes2Hex(pkKey[:]), "Value", utxo.Asset.Tkn.Value)
+//		}
+//
+//		data, err := rlp.EncodeToBytes(roots)
+//		if err != nil {
+//			return err
+//		}
+//		// blockNumber + PK => [roots]
+//		batch.Put(utxoKey(key.Num, key.PK), data)
+//
+//		if account := self.getAccountByPk(key.PK); account != nil {
+//			account.isChanged = true
+//		}
+//	}
+//
+//	for _, Nil := range nils {
+//
+//		var pk keys.Uint512
+//		key := nilKey(Nil)
+//		hex := common.Bytes2Hex(key)
+//		if value, ok := ops[hex]; ok {
+//			delete(ops, hex)
+//			delete(ops, value)
+//			var root keys.Uint256
+//			copy(root[:], value[98:130])
+//			delete(ops, common.Bytes2Hex(nilKey(root)))
+//			self.usedFlag.Delete(root)
+//
+//			copy(pk[:], value[2:66])
+//		} else {
+//			value, _ := self.db.Get(key)
+//			if value != nil {
+//				batch.Delete(value)
+//				batch.Delete(nilKey(Nil))
+//
+//				var root keys.Uint256
+//				copy(root[:], value[98:130])
+//				batch.Delete(nilKey(root))
+//				self.usedFlag.Delete(root)
+//
+//				copy(pk[:], value[2:66])
+//			}
+//		}
+//
+//		if account := self.getAccountByPk(pk); account != nil {
+//			account.isChanged = true
+//		}
+//
+//	}
+//
+//	for key, value := range ops {
+//		batch.Put(common.Hex2Bytes(key), common.Hex2Bytes(value))
+//	}
+//
+//	return nil
+//}
 
 func (self *Exchange) ownPkr(pks []keys.Uint512, pkr keys.PKr) (account *Account, ok bool) {
 	for _, pk := range pks {
@@ -1179,9 +1396,9 @@ func (self *Exchange) merge() {
 	self.accounts.Range(func(key, value interface{}) bool {
 		account := value.(*Account)
 		if count, txhash, err := self.Merge(account.pk, "SERO", false); err != nil {
-			log.Error("autoMerge fail", "pk", cpt.Base58Encode(account.pk[:]), "count", count, "error", err)
+			log.Error("autoMerge fail", "PK", cpt.Base58Encode(account.pk[:]), "count", count, "error", err)
 		} else {
-			log.Info("autoMerge succ", "pk", cpt.Base58Encode(account.pk[:]), "tx", hexutil.Encode(txhash[:]), "count", count)
+			log.Info("autoMerge succ", "PK", cpt.Base58Encode(account.pk[:]), "tx", hexutil.Encode(txhash[:]), "count", count)
 		}
 		return true
 	})
@@ -1195,8 +1412,19 @@ var (
 	rootPrefix = []byte("ROOT")
 	nilPrefix  = []byte("NIL")
 
-	Prefix = []byte("Out")
+	blockPrefix   = []byte("BLOCK")
+	outUtxoPrefix = []byte("OUTUTXO")
+	txPrefix      = []byte("TX")
+	Prefix        = []byte("Out")
 )
+
+func txKey(txHash keys.Uint256, pk keys.Uint512) []byte {
+	return append(txPrefix, append(txHash[:], pk[:]...)...)
+}
+
+func blockKey(number uint64, pk keys.Uint512) []byte {
+	return append(blockPrefix, append(encodeNumber(number), pk[:]...)...)
+}
 
 func numKey(pk keys.Uint512) []byte {
 	return append(numPrefix, pk[:]...)
@@ -1210,7 +1438,11 @@ func rootKey(root keys.Uint256) []byte {
 	return append(rootPrefix, root[:]...)
 }
 
-// utxoKey = pk + currency +root
+//func outUtxoKey(number uint64, pk keys.Uint512) []byte {
+//	return append(outUtxoPrefix, append(encodeNumber(number), pk[:]...)...)
+//}
+
+// utxoKey = PK + currency +root
 func utxoPkKey(pk keys.Uint512, currency []byte, root *keys.Uint256) []byte {
 	key := append(pkPrefix, pk[:]...)
 	if len(currency) > 0 {
