@@ -254,7 +254,7 @@ func (s *PublicExchangeAPI) GetRecordsByTxHash(ctx context.Context, txHash keys.
 func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address *hexutil.Bytes, begin, end uint64) (records RecordList, err error) {
 
 	var utxoMap map[keys.Uint512][]exchange.Utxo
-	if address == nil {
+	if address == nil || len(*address) == 0 {
 		utxoMap, err = s.b.GetRecordsByPk(nil, begin, end)
 	} else {
 		addr := *address
