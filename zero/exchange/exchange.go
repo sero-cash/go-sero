@@ -1138,6 +1138,10 @@ func (self *Exchange) indexOutxs(batch serodb.Batch, outUtxoMap, inUtxoMap map[u
 			}
 			// blockNumber + PK => [roots]
 			batch.Put(utxoKey(num, pk), data)
+
+			if account := self.getAccountByPk(pk); account != nil {
+				account.isChanged = true
+			}
 		}
 
 		for txHash, list := range txMap {
