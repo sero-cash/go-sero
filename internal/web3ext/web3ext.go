@@ -717,9 +717,14 @@ web3._extend({
 		}),
        new web3._extend.Method({
 			name: 'getPkByPkr',
-			call: 'exchange_getPkByPkr",
+			call: 'exchange_getPkByPkr',
 			params: 1,
             inputFormatter: [web3._extend.formatters.inputHexPKrFormatter] 
+		}),
+        new web3._extend.Method({
+			name: 'getBlockByNumber',
+			call: 'exchange_getBlockByNumber',
+            params: 1
 		})
 	]
 });

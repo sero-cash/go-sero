@@ -3,9 +3,15 @@ package ethapi
 import (
 	"context"
 	"fmt"
+
+	"github.com/sero-cash/go-sero/core/rawdb"
+
+	"github.com/sero-cash/go-sero/rpc"
+
+	"math/big"
+
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-sero/log"
-	"math/big"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 
@@ -218,56 +224,46 @@ type Record struct {
 	Value    *Big
 }
 
-func (s *PublicExchangeAPI) GetRecordsByTxHash(ctx context.Context, txHash keys.Uint256) (records []Record, err error) {
+func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash keys.Uint256) (map[string]interface{}, error) {
+
+	tx, blockHash, blockNumber, index := rawdb.ReadTransaction(s.b.ChainDb(), common.BytesToHash(txHash[:]))
+	if tx == nil {
+		return nil, nil
+	}
+	receipts, err := s.b.GetReceipts(ctx, blockHash)
+	if err != nil {
+		return nil, err
+	}
+	if len(receipts) <= int(index) {
+		return nil, nil
+	}
+
 	utxos, err := s.b.GetRecordsByTxHash(txHash)
 	if err != nil {
 		return nil, err
 	}
-	//if len(receipts) <= int(index) {
-	//	return nil, nil
-	//}
-
-	//var abi types.Signer = types.FrontierSigner{}
-	//
-	//from, _ := types.Sender(abi, tx)
-
-	//fields := map[string]interface{}{
-	//	"blockHash":       blockHash,
-	//	"blockNumber":     blockNumber,
-	//	"transactionHash": common.BytesToHash(txHash[:]),
-	//}
-//
-//<<<<<<< HEAD
-//	utxoMap, err := s.b.GetRecordsByTxHash(txHash)
-//	if err != nil {
-//		return nil, err
-//	}
-//	records := RecordList{}
-//	for pk, utxos := range utxoMap {
-//		for _, utxo := range utxos {
-//			if utxo.Asset.Tkn != nil {
-//				records = append(records, Record{PK: pk, Pkr: utxo.Pkr, Root: utxo.Root, TxHash: utxo.TxHash, Nil: utxo.Nil, Num: utxo.Num, Currency: common.BytesToString(utxo.Asset.Tkn.Currency[:]), Value: (*Big)(utxo.Asset.Tkn.Value.ToIntRef())})
-//			}
-//		}
-//	}
-//	sort.Sort(records)
-//	outs := []map[string]interface{}{}
-//	for _, record := range records {
-//		r := map[string]interface{}{}
-//		r["PK"] = record.PK
-//		r["Pkr"] = record.Pkr
-//		r["Currency"] = record.Currency
-//		r["Value"] = record.Value
-//		outs = append(outs, r)
-//	}
-//	fields["outs"] = outs
-//	return fields, nil
+	fields := map[string]interface{}{
+		"blockNumber":     blockNumber,
+		"blockHash":       blockHash,
+		"transactionHash": common.BytesToHash(txHash[:]),
+	}
+	records := []Record{}
 	for _, utxo := range utxos {
 		if utxo.Asset.Tkn != nil {
 			records = append(records, Record{Pkr: utxo.Pkr, Root: utxo.Root, TxHash: utxo.TxHash, Nil: utxo.Nil, Num: utxo.Num, Currency: common.BytesToString(utxo.Asset.Tkn.Currency[:]), Value: (*Big)(utxo.Asset.Tkn.Value.ToIntRef())})
 		}
 	}
-	return
+	outs := []map[string]interface{}{}
+	for _, record := range records {
+		r := map[string]interface{}{}
+		r["Pkr"] = record.Pkr
+		r["Currency"] = record.Currency
+		r["Value"] = record.Value
+		outs = append(outs, r)
+	}
+	fields["outs"] = outs
+	return fields, nil
+
 }
 func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address *hexutil.Bytes, begin, end uint64) (records []Record, err error) {
 
@@ -415,7 +411,7 @@ func (s *PublicExchangeAPI) GetBlockInfo(start, end uint64) (blocks []Block, err
 	}
 	return
 }
-func (s *PublicExchangeAPI) GetPkByPkr(pkr keys.PKr) (*keys.Uint512, error) {
+func (s *PublicExchangeAPI) GetPkByPkr(ctx context.Context, pkr keys.PKr) (*keys.Uint512, error) {
 	wallets := s.b.AccountManager().Wallets()
 	if len(wallets) == 0 {
 		return nil, nil
@@ -426,4 +422,22 @@ func (s *PublicExchangeAPI) GetPkByPkr(pkr keys.PKr) (*keys.Uint512, error) {
 		}
 	}
 	return nil, nil
+}
+
+func (s *PublicExchangeAPI) GetBlockByNumber(ctx context.Context, blockNum *int64) (map[string]interface{}, error) {
+	blockNr := rpc.LatestBlockNumber
+	if blockNum != nil {
+		blockNr = rpc.BlockNumber(*blockNum)
+	}
+	block, err := s.b.BlockByNumber(ctx, blockNr)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := map[string]interface{}{
+		"number":    block.Header().Number.Uint64(),
+		"hash":      block.Hash(),
+		"timestamp": block.Header().Time.Uint64(),
+	}
+	return fields, nil
 }
