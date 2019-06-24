@@ -414,7 +414,7 @@ func (self *Exchange) GetRecordsByPk(PK *keys.Uint512, begin, end uint64) (recor
 func (self *Exchange) GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records map[keys.Uint512][]Utxo, err error) {
 	account := self.getAccountByPkr(pkr)
 	if account == nil {
-		err = errors.New("not found pkr")
+		err = errors.New("not found pk by pkr")
 		return
 	}
 	PK := account.pk
@@ -488,16 +488,16 @@ func (self *Exchange) getAccountByPk(pk keys.Uint512) *Account {
 	return nil
 }
 
-func (self *Exchange) getAccountByPkr(pkr keys.PKr) *Account {
-	var account *Account
+func (self *Exchange) getAccountByPkr(pkr keys.PKr) (a *Account) {
 	self.accounts.Range(func(pk, value interface{}) bool {
-		account = value.(*Account)
+		account := value.(*Account)
 		if keys.IsMyPKr(account.tk, &pkr) {
+			a = account
 			return false
 		}
 		return true
 	})
-	return account
+	return
 }
 
 func (self *Exchange) isPk(addr keys.PKr) bool {
