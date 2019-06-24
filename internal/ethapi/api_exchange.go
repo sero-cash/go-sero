@@ -210,6 +210,7 @@ func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param GenTxArgs) 
 }
 
 type Record struct {
+	PK       keys.Uint512
 	Pkr      keys.PKr
 	Root     keys.Uint256
 	TxHash   keys.Uint256
@@ -219,17 +220,38 @@ type Record struct {
 	Value    *Big
 }
 
-func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address hexutil.Bytes, begin, end uint64) (records []Record, err error) {
+func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address *hexutil.Bytes, begin, end uint64) (records []Record, err error) {
 
-	utxos, err := s.b.GetRecords(address, begin, end)
-	if err != nil {
-		return
-	}
-	for _, utxo := range utxos {
-		if utxo.Asset.Tkn != nil {
-			records = append(records, Record{Pkr: utxo.Pkr, Root: utxo.Root, TxHash: utxo.TxHash, Nil: utxo.Nil, Num: utxo.Num, Currency: common.BytesToString(utxo.Asset.Tkn.Currency[:]), Value: (*Big)(utxo.Asset.Tkn.Value.ToIntRef())})
+	var utxoMap map[keys.Uint512][]exchange.Utxo
+	if address == nil {
+		utxoMap, err = s.b.GetRecordsByPk(nil, begin, end)
+	} else {
+		addr := *address
+		if len(addr) == 64 {
+			var pk keys.Uint512
+			copy(pk[:], addr[:])
+			utxoMap, err = s.b.GetRecordsByPk(&pk, begin, end)
+		} else if len(addr) == 96 {
+			var pkr keys.PKr
+			copy(pkr[:], addr[:])
+			utxoMap, err = s.b.GetRecordsByPkr(pkr, begin, end)
+		} else {
+			return records, errors.New("address is error")
 		}
 	}
+
+	if err != nil || utxoMap == nil {
+		return
+	}
+
+	for pk, utxos := range utxoMap {
+		for _, utxo := range utxos {
+			if utxo.Asset.Tkn != nil {
+				records = append(records, Record{PK: pk, Pkr: utxo.Pkr, Root: utxo.Root, TxHash: utxo.TxHash, Nil: utxo.Nil, Num: utxo.Num, Currency: common.BytesToString(utxo.Asset.Tkn.Currency[:]), Value: (*Big)(utxo.Asset.Tkn.Value.ToIntRef())})
+			}
+		}
+	}
+
 	return
 }
 

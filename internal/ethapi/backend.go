@@ -21,8 +21,6 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/common/hexutil"
-
 	"github.com/sero-cash/go-sero/zero/exchange"
 
 	"github.com/sero-cash/go-sero/zero/light/light_types"
@@ -91,7 +89,8 @@ type Backend interface {
 	GetPkr(address *keys.Uint512, index *keys.Uint256) (keys.PKr, error)
 	GetBalances(address keys.Uint512) (balances map[string]*big.Int)
 	GenTx(param exchange.TxParam) (*light_types.GenTxParam, error)
-	GetRecords(address hexutil.Bytes, begin, end uint64) (records []exchange.Utxo, err error)
+	GetRecordsByPk(pk *keys.Uint512, begin, end uint64) (records map[keys.Uint512][]exchange.Utxo, err error)
+	GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records map[keys.Uint512][]exchange.Utxo, err error)
 	GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int)
 	GetMaxAvailable(pk keys.Uint512, currency string) (amount *big.Int)
 }

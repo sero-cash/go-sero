@@ -21,8 +21,6 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/common/hexutil"
-
 	"github.com/sero-cash/go-sero/zero/exchange"
 
 	"github.com/sero-cash/go-sero/log"
@@ -312,12 +310,18 @@ func (b *SeroAPIBackend) GenTx(param exchange.TxParam) (txParam *light_types.Gen
 	return b.sero.exchange.GenTx(param)
 }
 
-func (b *SeroAPIBackend) GetRecords(address hexutil.Bytes, begin, end uint64) (records []exchange.Utxo, err error) {
+func (b *SeroAPIBackend) GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records map[keys.Uint512][]exchange.Utxo, err error) {
 	if b.sero.exchange == nil {
 		err = errors.New("not start exchange")
 		return
 	}
-	pkr := keys.PKr{}
-	copy(pkr[:], address)
-	return b.sero.exchange.GetRecords(pkr, begin, end)
+	return b.sero.exchange.GetRecordsByPkr(pkr, begin, end)
+}
+
+func (b *SeroAPIBackend) GetRecordsByPk(pk *keys.Uint512, begin, end uint64) (records map[keys.Uint512][]exchange.Utxo, err error) {
+	if b.sero.exchange == nil {
+		err = errors.New("not start exchange")
+		return
+	}
+	return b.sero.exchange.GetRecordsByPk(pk, begin, end)
 }
