@@ -709,6 +709,17 @@ web3._extend({
 			name: 'getTx',
 			call: 'exchange_getTx',
 			params: 1
+		}),
+        new web3._extend.Method({
+			name: 'getBlockInfo',
+			call: 'exchange_getBlockInfo',
+			params: 2
+		}),
+       new web3._extend.Method({
+			name: 'getPkByPkr',
+			call: 'exchange_getPkByPkr",
+			params: 1,
+            inputFormatter: [web3._extend.formatters.inputHexPKrFormatter] 
 		})
 	]
 });

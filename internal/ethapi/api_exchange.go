@@ -449,3 +449,15 @@ func (s *PublicExchangeAPI) GetBlockInfo(start, end uint64) (blocks []Block, err
 	}
 	return
 }
+func (s *PublicExchangeAPI) GetPkByPkr(pkr keys.PKr) (*keys.Uint512, error) {
+	wallets := s.b.AccountManager().Wallets()
+	if len(wallets) == 0 {
+		return nil, nil
+	}
+	for _, wallet := range wallets {
+		if keys.IsMyPKr(wallet.Accounts()[0].Tk.ToUint512(), &pkr) {
+			return wallet.Accounts()[0].Address.ToUint512(), nil
+		}
+	}
+	return nil, nil
+}
