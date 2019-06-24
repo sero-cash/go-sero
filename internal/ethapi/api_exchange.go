@@ -3,14 +3,9 @@ package ethapi
 import (
 	"context"
 	"fmt"
-	"math/big"
-	"sort"
-
-	"github.com/sero-cash/go-sero/core/rawdb"
-
-	"github.com/sero-cash/go-sero/log"
-
 	"github.com/pkg/errors"
+	"github.com/sero-cash/go-sero/log"
+	"math/big"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 
@@ -223,101 +218,86 @@ type Record struct {
 	Value    *Big
 }
 
-type RecordList []Record
-
-func (list RecordList) Len() int {
-	return len(list)
-}
-
-func (list RecordList) Swap(i, j int) {
-	list[i], list[j] = list[j], list[i]
-}
-
-func (list RecordList) Less(i, j int) bool {
-	return list[i].Num < list[j].Num
-}
-
-func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash keys.Uint256) (map[string]interface{}, error) {
-
-	tx, blockHash, blockNumber, index := rawdb.ReadTransaction(s.b.ChainDb(), common.BytesToHash(txHash[:]))
-	if tx == nil {
-		return nil, nil
-	}
-	receipts, err := s.b.GetReceipts(ctx, blockHash)
+func (s *PublicExchangeAPI) GetRecordsByTxHash(ctx context.Context, txHash keys.Uint256) (records []Record, err error) {
+	utxos, err := s.b.GetRecordsByTxHash(txHash)
 	if err != nil {
 		return nil, err
 	}
-	if len(receipts) <= int(index) {
-		return nil, nil
-	}
+	//if len(receipts) <= int(index) {
+	//	return nil, nil
+	//}
 
 	//var abi types.Signer = types.FrontierSigner{}
 	//
 	//from, _ := types.Sender(abi, tx)
 
-	fields := map[string]interface{}{
-		"blockHash":       blockHash,
-		"blockNumber":     blockNumber,
-		"transactionHash": common.BytesToHash(txHash[:]),
-	}
-
-	utxoMap, err := s.b.GetRecordsByTxHash(txHash)
-	if err != nil {
-		return nil, err
-	}
-	records := RecordList{}
-	for pk, utxos := range utxoMap {
-		for _, utxo := range utxos {
-			if utxo.Asset.Tkn != nil {
-				records = append(records, Record{PK: pk, Pkr: utxo.Pkr, Root: utxo.Root, TxHash: utxo.TxHash, Nil: utxo.Nil, Num: utxo.Num, Currency: common.BytesToString(utxo.Asset.Tkn.Currency[:]), Value: (*Big)(utxo.Asset.Tkn.Value.ToIntRef())})
-			}
+	//fields := map[string]interface{}{
+	//	"blockHash":       blockHash,
+	//	"blockNumber":     blockNumber,
+	//	"transactionHash": common.BytesToHash(txHash[:]),
+	//}
+//
+//<<<<<<< HEAD
+//	utxoMap, err := s.b.GetRecordsByTxHash(txHash)
+//	if err != nil {
+//		return nil, err
+//	}
+//	records := RecordList{}
+//	for pk, utxos := range utxoMap {
+//		for _, utxo := range utxos {
+//			if utxo.Asset.Tkn != nil {
+//				records = append(records, Record{PK: pk, Pkr: utxo.Pkr, Root: utxo.Root, TxHash: utxo.TxHash, Nil: utxo.Nil, Num: utxo.Num, Currency: common.BytesToString(utxo.Asset.Tkn.Currency[:]), Value: (*Big)(utxo.Asset.Tkn.Value.ToIntRef())})
+//			}
+//		}
+//	}
+//	sort.Sort(records)
+//	outs := []map[string]interface{}{}
+//	for _, record := range records {
+//		r := map[string]interface{}{}
+//		r["PK"] = record.PK
+//		r["Pkr"] = record.Pkr
+//		r["Currency"] = record.Currency
+//		r["Value"] = record.Value
+//		outs = append(outs, r)
+//	}
+//	fields["outs"] = outs
+//	return fields, nil
+	for _, utxo := range utxos {
+		if utxo.Asset.Tkn != nil {
+			records = append(records, Record{Pkr: utxo.Pkr, Root: utxo.Root, TxHash: utxo.TxHash, Nil: utxo.Nil, Num: utxo.Num, Currency: common.BytesToString(utxo.Asset.Tkn.Currency[:]), Value: (*Big)(utxo.Asset.Tkn.Value.ToIntRef())})
 		}
 	}
-	sort.Sort(records)
-	outs := []map[string]interface{}{}
-	for _, record := range records {
-		r := map[string]interface{}{}
-		r["PK"] = record.PK
-		r["Pkr"] = record.Pkr
-		r["Currency"] = record.Currency
-		r["Value"] = record.Value
-		outs = append(outs, r)
-	}
-	fields["outs"] = outs
-	return fields, nil
+	return
 }
-func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address *hexutil.Bytes, begin, end uint64) (records RecordList, err error) {
+func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address *hexutil.Bytes, begin, end uint64) (records []Record, err error) {
 
-	var utxoMap map[keys.Uint512][]exchange.Utxo
-	if address == nil || len(*address) == 0 {
-		utxoMap, err = s.b.GetRecordsByPk(nil, begin, end)
+	var utxos []exchange.Utxo
+	if address == nil {
+		utxos, err = s.b.GetRecordsByPk(nil, begin, end)
 	} else {
 		addr := *address
 		if len(addr) == 64 {
 			var pk keys.Uint512
 			copy(pk[:], addr[:])
-			utxoMap, err = s.b.GetRecordsByPk(&pk, begin, end)
+			utxos, err = s.b.GetRecordsByPk(&pk, begin, end)
 		} else if len(addr) == 96 {
 			var pkr keys.PKr
 			copy(pkr[:], addr[:])
-			utxoMap, err = s.b.GetRecordsByPkr(pkr, begin, end)
+			utxos, err = s.b.GetRecordsByPkr(pkr, begin, end)
 		} else {
 			return records, errors.New("address is error")
 		}
 	}
 
-	if err != nil || utxoMap == nil {
+	if err != nil {
 		return
 	}
 
-	for pk, utxos := range utxoMap {
-		for _, utxo := range utxos {
-			if utxo.Asset.Tkn != nil {
-				records = append(records, Record{PK: pk, Pkr: utxo.Pkr, Root: utxo.Root, TxHash: utxo.TxHash, Nil: utxo.Nil, Num: utxo.Num, Currency: common.BytesToString(utxo.Asset.Tkn.Currency[:]), Value: (*Big)(utxo.Asset.Tkn.Value.ToIntRef())})
-			}
+	for _, utxo := range utxos {
+		if utxo.Asset.Tkn != nil {
+			records = append(records, Record{Pkr: utxo.Pkr, Root: utxo.Root, TxHash: utxo.TxHash, Nil: utxo.Nil, Num: utxo.Num, Currency: common.BytesToString(utxo.Asset.Tkn.Currency[:]), Value: (*Big)(utxo.Asset.Tkn.Value.ToIntRef())})
 		}
 	}
-	sort.Sort(records)
 
 	return
 }
@@ -412,6 +392,7 @@ func (s *PublicExchangeAPI) ClearUsedFlagForRoot(ctx context.Context, roots []ke
 
 type Block struct {
 	Num  uint64
+	Hash keys.Uint256
 	Ins  []keys.Uint256
 	Outs []Record
 }
@@ -421,31 +402,16 @@ func (s *PublicExchangeAPI) GetBlockInfo(start, end uint64) (blocks []Block, err
 	if err != nil {
 		return
 	}
-	blockMap := map[uint64]*Block{}
-	for key, block := range infos {
+	for _, block := range infos {
 
 		outs := []Record{}
 		for _, utxo := range block.Outs {
-			record := Record{PK: key.PK, Pkr: utxo.Pkr, Root: utxo.Root, TxHash: utxo.TxHash, Nil: utxo.Nil, Num: utxo.Num, Currency: common.BytesToString(utxo.Asset.Tkn.Currency[:]), Value: (*Big)(utxo.Asset.Tkn.Value.ToIntRef())}
+			record := Record{Pkr: utxo.Pkr, Root: utxo.Root, TxHash: utxo.TxHash, Nil: utxo.Nil, Num: utxo.Num, Currency: common.BytesToString(utxo.Asset.Tkn.Currency[:]), Value: (*Big)(utxo.Asset.Tkn.Value.ToIntRef())}
 			outs = append(outs, record)
 		}
-		ins := []keys.Uint256{}
-		for _, utxo := range block.Ins {
-			ins = append(ins, utxo.Root)
-		}
 
-		if block, ok := blockMap[key.Num]; ok {
-			block.Ins = append(block.Ins, ins...)
-			block.Outs = append(block.Outs, outs...)
-		} else {
-			blockMap[key.Num] = &Block{key.Num, ins, outs}
-		}
-	}
-	for start < end {
-		if block, ok := blockMap[start]; ok {
-			blocks = append(blocks, *block)
-		}
-		start++
+		blocks = append(blocks, Block{Num: block.Num, Hash: block.Hash, Ins: block.Ins, Outs: outs})
+
 	}
 	return
 }

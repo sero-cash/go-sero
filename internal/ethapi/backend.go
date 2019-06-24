@@ -89,12 +89,12 @@ type Backend interface {
 	GetPkr(address *keys.Uint512, index *keys.Uint256) (keys.PKr, error)
 	GetBalances(address keys.Uint512) (balances map[string]*big.Int)
 	GenTx(param exchange.TxParam) (*light_types.GenTxParam, error)
-	GetRecordsByPk(pk *keys.Uint512, begin, end uint64) (records map[keys.Uint512][]exchange.Utxo, err error)
-	GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records map[keys.Uint512][]exchange.Utxo, err error)
+	GetRecordsByPk(pk *keys.Uint512, begin, end uint64) (records []exchange.Utxo, err error)
+	GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records []exchange.Utxo, err error)
 	GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int)
 	GetMaxAvailable(pk keys.Uint512, currency string) (amount *big.Int)
-	GetBlockInfo(start, end uint64) (blockMap map[exchange.PkKey]*exchange.BlockInfo, err error)
-	GetRecordsByTxHash(txHash keys.Uint256) (records map[keys.Uint512][]exchange.Utxo, err error)
+	GetBlockInfo(start, end uint64) (blockMap []exchange.BlockInfo, err error)
+	GetRecordsByTxHash(txHash keys.Uint256) (records []exchange.Utxo, err error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
