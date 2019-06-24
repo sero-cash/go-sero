@@ -93,7 +93,6 @@ type Backend interface {
 	GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records []exchange.Utxo, err error)
 	GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int)
 	GetMaxAvailable(pk keys.Uint512, currency string) (amount *big.Int)
-	GetBlockInfo(start, end uint64) (blockMap []exchange.BlockInfo, err error)
 	GetRecordsByTxHash(txHash keys.Uint256) (records []exchange.Utxo, err error)
 }
 

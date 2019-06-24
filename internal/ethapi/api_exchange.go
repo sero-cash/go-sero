@@ -214,7 +214,6 @@ func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param GenTxArgs) 
 }
 
 type Record struct {
-	PK       keys.Uint512
 	Pkr      keys.PKr
 	Root     keys.Uint256
 	TxHash   keys.Uint256
@@ -265,10 +264,10 @@ func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash keys.Uint256) (map
 	return fields, nil
 
 }
-func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address *hexutil.Bytes, begin, end uint64) (records []Record, err error) {
+func (s *PublicExchangeAPI) GetRecords(ctx context.Context, begin, end uint64, address *hexutil.Bytes) (records []Record, err error) {
 
 	var utxos []exchange.Utxo
-	if address == nil {
+	if address == nil || len(*address) == 0 {
 		utxos, err = s.b.GetRecordsByPk(nil, begin, end)
 	} else {
 		addr := *address
@@ -393,8 +392,9 @@ type Block struct {
 	Outs []Record
 }
 
-func (s *PublicExchangeAPI) GetBlockInfo(start, end uint64) (blocks []Block, err error) {
-	infos, err := s.b.GetBlockInfo(start, end)
+func (s *PublicExchangeAPI) GetBlocksInfo(start, end uint64) (blocks []Block, err error) {
+
+	infos, err := exchange.CurrentExchange().GetBlocksInfo(start, end)
 	if err != nil {
 		return
 	}

@@ -326,14 +326,6 @@ func (b *SeroAPIBackend) GetRecordsByPk(pk *keys.Uint512, begin, end uint64) (re
 	return b.sero.exchange.GetRecordsByPk(pk, begin, end)
 }
 
-func (b *SeroAPIBackend) GetBlockInfo(start, end uint64) (blockMap []exchange.BlockInfo, err error) {
-	if b.sero.exchange == nil {
-		err = errors.New("not start exchange")
-		return
-	}
-	return b.sero.exchange.GetBlockInfo(start, end)
-}
-
 func (b *SeroAPIBackend) GetRecordsByTxHash(txHash keys.Uint256) (records []exchange.Utxo, err error) {
 	if b.sero.exchange == nil {
 		err = errors.New("not start exchange")

@@ -405,7 +405,7 @@ type BlockInfo struct {
 	Outs []Utxo
 }
 
-func (self *Exchange) GetBlockInfo(start, end uint64) (blocks []BlockInfo, err error) {
+func (self *Exchange) GetBlocksInfo(start, end uint64) (blocks []BlockInfo, err error) {
 	iterator := self.db.NewIteratorWithPrefix(blockPrefix)
 	for ok := iterator.Seek(blockKey(start)); ok; ok = iterator.Next() {
 		key := iterator.Key()

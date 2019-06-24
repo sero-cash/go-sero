@@ -471,18 +471,18 @@ func (b *bridge) GenTxWithSign(call otto.FunctionCall) (response otto.Value) {
 
 func (b *bridge) GetRecords(call otto.FunctionCall) (response otto.Value) {
 	var (
-		address = call.Argument(0)
-		start   = call.Argument(1)
-		end     = call.Argument(2)
+		start   = call.Argument(0)
+		end     = call.Argument(1)
+		address = call.Argument(2)
 	)
-	if !address.IsString() {
-		throwJSException("first argument must be the exchange getRecords hex address to send")
-	}
 	if !start.IsNumber() {
-		throwJSException("sencond argument must be the exchange getRecords start to send")
+		throwJSException("first argument must be the exchange getRecords start to send")
 	}
 	if !end.IsNumber() {
-		throwJSException("third argument must be the exchange getRecords end to send")
+		throwJSException("second argument must be the exchange getRecords end to send")
+	}
+	if !address.IsString() {
+		throwJSException("third argument must be the exchange getRecords hex address to send")
 	}
 
 	finish := make(chan struct{})
@@ -495,7 +495,7 @@ func (b *bridge) GetRecords(call otto.FunctionCall) (response otto.Value) {
 	progress.Start()
 	go progressBar(bar, finish)
 	// Send the request to the backend and return
-	val, err := call.Otto.Call("jeth.getRecords", nil, address, start, end)
+	val, err := call.Otto.Call("jeth.getRecords", nil, start, end, address)
 
 	if err != nil {
 		progress.Stop()

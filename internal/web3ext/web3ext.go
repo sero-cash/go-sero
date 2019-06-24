@@ -711,8 +711,8 @@ web3._extend({
 			params: 1
 		}),
         new web3._extend.Method({
-			name: 'getBlockInfo',
-			call: 'exchange_getBlockInfo',
+			name: 'getBlocksInfo',
+			call: 'exchange_getBlocksInfo',
 			params: 2
 		}),
        new web3._extend.Method({
