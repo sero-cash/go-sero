@@ -242,9 +242,9 @@ func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash keys.Uint256) (map
 		return nil, err
 	}
 	fields := map[string]interface{}{
-		"blockNumber":     blockNumber,
-		"blockHash":       blockHash,
-		"transactionHash": common.BytesToHash(txHash[:]),
+		"BlockNumber": blockNumber,
+		"BlockHash":   blockHash,
+		"TxHash":      common.BytesToHash(txHash[:]),
 	}
 	records := []Record{}
 	for _, utxo := range utxos {
@@ -386,13 +386,14 @@ func (s *PublicExchangeAPI) ClearUsedFlagForRoot(ctx context.Context, roots []ke
 }
 
 type Block struct {
-	Num  uint64
-	Hash keys.Uint256
-	Ins  []keys.Uint256
-	Outs []Record
+	BlockNumber uint64
+	BlockHash   keys.Uint256
+	Ins         []keys.Uint256
+	Outs        []Record
+	Timestamp   uint64
 }
 
-func (s *PublicExchangeAPI) GetBlocksInfo(start, end uint64) (blocks []Block, err error) {
+func (s *PublicExchangeAPI) GetBlocksInfo(ctx context.Context, start, end uint64) (blocks []Block, err error) {
 
 	infos, err := exchange.CurrentExchange().GetBlocksInfo(start, end)
 	if err != nil {
@@ -406,7 +407,12 @@ func (s *PublicExchangeAPI) GetBlocksInfo(start, end uint64) (blocks []Block, er
 			outs = append(outs, record)
 		}
 
-		blocks = append(blocks, Block{Num: block.Num, Hash: block.Hash, Ins: block.Ins, Outs: outs})
+		b, _ := s.b.BlockByNumber(ctx, rpc.BlockNumber(block.Num))
+		if b == nil {
+			err = errors.New("getBlockByNumber is nil")
+			return
+		}
+		blocks = append(blocks, Block{BlockNumber: block.Num, BlockHash: block.Hash, Ins: block.Ins, Outs: outs, Timestamp: b.Header().Time.Uint64()})
 
 	}
 	return
@@ -435,9 +441,9 @@ func (s *PublicExchangeAPI) GetBlockByNumber(ctx context.Context, blockNum *int6
 	}
 
 	fields := map[string]interface{}{
-		"number":    block.Header().Number.Uint64(),
-		"hash":      block.Hash(),
-		"timestamp": block.Header().Time.Uint64(),
+		"BlockNumber": block.Header().Number.Uint64(),
+		"BlockHash":   block.Hash(),
+		"Timestamp":   block.Header().Time.Uint64(),
 	}
 	return fields, nil
 }
