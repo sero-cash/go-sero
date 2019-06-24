@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"sort"
 
+	"github.com/sero-cash/go-sero/core/rawdb"
+
 	"github.com/sero-cash/go-sero/log"
 
 	"github.com/pkg/errors"
@@ -235,12 +237,35 @@ func (list RecordList) Less(i, j int) bool {
 	return list[i].Num < list[j].Num
 }
 
-func (s *PublicExchangeAPI) GetRecordsByTxHash(ctx context.Context, txHash keys.Uint256) (records RecordList, err error) {
-	utxoMap, err := s.b.GetRecordsByTxHash(txHash)
+func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash keys.Uint256) (map[string]interface{}, error) {
+
+	tx, blockHash, blockNumber, index := rawdb.ReadTransaction(s.b.ChainDb(), common.BytesToHash(txHash[:]))
+	if tx == nil {
+		return nil, nil
+	}
+	receipts, err := s.b.GetReceipts(ctx, blockHash)
 	if err != nil {
-		return
+		return nil, err
+	}
+	if len(receipts) <= int(index) {
+		return nil, nil
 	}
 
+	//var abi types.Signer = types.FrontierSigner{}
+	//
+	//from, _ := types.Sender(abi, tx)
+
+	fields := map[string]interface{}{
+		"blockHash":       blockHash,
+		"blockNumber":     blockNumber,
+		"transactionHash": common.BytesToHash(txHash[:]),
+	}
+
+	utxoMap, err := s.b.GetRecordsByTxHash(txHash)
+	if err != nil {
+		return nil, err
+	}
+	records := RecordList{}
 	for pk, utxos := range utxoMap {
 		for _, utxo := range utxos {
 			if utxo.Asset.Tkn != nil {
@@ -249,7 +274,17 @@ func (s *PublicExchangeAPI) GetRecordsByTxHash(ctx context.Context, txHash keys.
 		}
 	}
 	sort.Sort(records)
-	return
+	outs := []map[string]interface{}{}
+	for _, record := range records {
+		r := map[string]interface{}{}
+		r["PK"] = record.PK
+		r["Pkr"] = record.Pkr
+		r["Currency"] = record.Currency
+		r["Value"] = record.Value
+		outs = append(outs, r)
+	}
+	fields["outs"] = outs
+	return fields, nil
 }
 func (s *PublicExchangeAPI) GetRecords(ctx context.Context, address *hexutil.Bytes, begin, end uint64) (records RecordList, err error) {
 

@@ -704,6 +704,11 @@ web3._extend({
 			name: 'genMergeTx',
 			call: 'exchange_genMergeTx',
 			params: 1
+		}),
+       new web3._extend.Method({
+			name: 'getTx',
+			call: 'exchange_getTx',
+			params: 1
 		})
 	]
 });
