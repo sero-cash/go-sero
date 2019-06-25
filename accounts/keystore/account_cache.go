@@ -292,6 +292,8 @@ func (ac *accountCache) scanAccounts() error {
 		buf.Reset(fd)
 		// Parse the address.
 		key.Address = ""
+		key.Tk = ""
+		key.At = 0
 		err = json.NewDecoder(buf).Decode(&key)
 		addr := address.Base58ToAccount(key.Address)
 		tk := address.Base58ToAccount(key.Tk)
