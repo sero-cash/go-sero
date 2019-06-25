@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/utils"
+
 	"github.com/sero-cash/go-sero/core/types"
 
 	"github.com/sero-cash/go-sero/core/rawdb"
@@ -243,10 +245,23 @@ func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash keys.Uint256) (map
 	if err != nil {
 		return nil, err
 	}
+	receipt := receipts[index]
+	gasUsed := receipt.GasUsed
+	fee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(gasUsed)))
 	fields := map[string]interface{}{
 		"BlockNumber": blockNumber,
 		"BlockHash":   blockHash,
 		"TxHash":      common.BytesToHash(txHash[:]),
+		"Fee":         (*utils.U256)(fee),
+		"GasPrice":    (*utils.U256)(tx.GasPrice()),
+		"GasUsed":     gasUsed,
+	}
+
+	block, _ := s.b.BlockByNumber(ctx, rpc.BlockNumber(blockNumber))
+	if block != nil {
+		fields["Timestamp"] = block.Header().Time.Uint64()
+	} else {
+		fields["Timestamp"] = 0
 	}
 	records := []Record{}
 	for _, utxo := range utxos {
@@ -392,7 +407,7 @@ type Block struct {
 	BlockHash   keys.Uint256
 	Ins         []keys.Uint256
 	Outs        []Record
-	TxHashs     []common.Hash
+	TxHashes    []common.Hash
 	Timestamp   uint64
 }
 
@@ -474,7 +489,7 @@ func (s *PublicExchangeAPI) GetBlockByNumber(ctx context.Context, blockNum *int6
 		"BlockNumber": block.Header().Number.Uint64(),
 		"BlockHash":   block.Hash(),
 		"Timestamp":   block.Header().Time.Uint64(),
-		"TxHashs":     transactions,
+		"TxHashes":    transactions,
 	}
 	return fields, nil
 }
