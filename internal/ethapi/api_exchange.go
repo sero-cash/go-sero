@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sero-cash/go-sero/core/types"
+
 	"github.com/sero-cash/go-sero/core/rawdb"
 
 	"github.com/sero-cash/go-sero/rpc"
@@ -390,6 +392,7 @@ type Block struct {
 	BlockHash   keys.Uint256
 	Ins         []keys.Uint256
 	Outs        []Record
+	TxHashs     []common.Hash
 	Timestamp   uint64
 }
 
@@ -412,7 +415,20 @@ func (s *PublicExchangeAPI) GetBlocksInfo(ctx context.Context, start, end uint64
 			err = errors.New("getBlockByNumber is nil")
 			return
 		}
-		blocks = append(blocks, Block{BlockNumber: block.Num, BlockHash: block.Hash, Ins: block.Ins, Outs: outs, Timestamp: b.Header().Time.Uint64()})
+
+		formatTx := func(tx *types.Transaction) (common.Hash, error) {
+			return tx.Hash(), nil
+		}
+		txs := b.Transactions()
+		transactions := make([]common.Hash, len(txs))
+		var err error
+		for i, tx := range txs {
+			if transactions[i], err = formatTx(tx); err != nil {
+				return nil, err
+			}
+		}
+
+		blocks = append(blocks, Block{BlockNumber: block.Num, BlockHash: block.Hash, TxHashs: transactions, Ins: block.Ins, Outs: outs, Timestamp: b.Header().Time.Uint64()})
 
 	}
 	return
@@ -439,11 +455,26 @@ func (s *PublicExchangeAPI) GetBlockByNumber(ctx context.Context, blockNum *int6
 	if err != nil {
 		return nil, err
 	}
+	if block == nil {
+		return nil, nil
+	}
+
+	formatTx := func(tx *types.Transaction) (common.Hash, error) {
+		return tx.Hash(), nil
+	}
+	txs := block.Transactions()
+	transactions := make([]common.Hash, len(txs))
+	for i, tx := range txs {
+		if transactions[i], err = formatTx(tx); err != nil {
+			return nil, err
+		}
+	}
 
 	fields := map[string]interface{}{
 		"BlockNumber": block.Header().Number.Uint64(),
 		"BlockHash":   block.Hash(),
 		"Timestamp":   block.Header().Time.Uint64(),
+		"TxHashs":     transactions,
 	}
 	return fields, nil
 }
