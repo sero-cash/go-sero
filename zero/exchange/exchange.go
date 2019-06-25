@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/common/base58"
 	"math/big"
 	"sort"
 	"strings"
@@ -201,10 +202,10 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 		if num := self.starNum(account.pk); num > w.Accounts()[0].At {
 			self.numbers.Store(*account.pk, num)
 		} else {
-			self.numbers.Store(*account.pk, w.Accounts()[0].At+1)
+			self.numbers.Store(*account.pk, w.Accounts()[0].At)
 		}
 
-		log.Info("Add PK", "address", w.Accounts()[0].Address)
+		log.Info("Add PK", "address", w.Accounts()[0].Address, "At", self.starNum(account.pk))
 	}
 }
 
@@ -260,6 +261,9 @@ func (self *Exchange) GetCurrencyNumber(pk keys.Uint512) uint64 {
 	value, ok := self.numbers.Load(pk)
 	if !ok {
 		return 0
+	}
+	if value.(uint64) == 0 {
+		return value.(uint64)
 	}
 	return value.(uint64) - 1
 }
@@ -972,6 +976,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 			key := PkKey{PK: *account.pk, Num: out.State.Num}
 			dout := DecOuts([]light_types.Out{out}, &account.skr)[0]
 			utxo := Utxo{Pkr: pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset, IsZ: out.State.OS.Out_Z != nil}
+			log.Info("DecOuts", "PK", base58.EncodeToString(account.pk[:]), "root", common.Bytes2Hex(out.Root[:]), "currency", common.BytesToString(utxo.Asset.Tkn.Currency[:]), "value", utxo.Asset.Tkn.Value)
 			nilsMap[utxo.Root] = utxo
 			nilsMap[utxo.Nil] = utxo
 
@@ -1098,7 +1103,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 				txMap[utxo.TxHash] = []Utxo{utxo}
 			}
 
-			//log.Info("Index add", "PK", base58.EncodeToString(PK[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "Key", common.Bytes2Hex(pkKey[:]), "Value", utxo.Asset.Tkn.Value)
+			log.Info("Index add", "PK", base58.EncodeToString(key.PK[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "root", common.Bytes2Hex(utxo.Root[:]), "Value", utxo.Asset.Tkn.Value)
 		}
 
 		data, err := rlp.EncodeToBytes(roots)
