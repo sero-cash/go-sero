@@ -15,6 +15,7 @@ type BlockChain interface {
 	GetHeader(hash *common.Hash) *types.Header
 	NewState(hash *common.Hash) *zstate.ZState
 	GetTks() []keys.Uint512
+	GetTkAt(tk *keys.Uint512) uint64
 	GetBlockByNumber(num uint64) *types.Block
 	GetHeaderByNumber(num uint64) *types.Header
 	GetDB() serodb.Database

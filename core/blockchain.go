@@ -266,6 +266,15 @@ func (self *State1BlockChain) GetTks() []keys.Uint512 {
 	return tks
 }
 
+func (self *State1BlockChain) GetTkAt(tk *keys.Uint512) uint64 {
+	for _, w := range self.Bc.accountManager.Wallets() {
+		if *w.Accounts()[0].Tk.ToUint512() == *tk {
+			return w.Accounts()[0].At
+		}
+	}
+	return 0
+}
+
 // loadLastState loads the last known chain state from the database. This method
 // assumes that the chain manager mutex is held.
 func (bc *BlockChain) loadLastState() error {

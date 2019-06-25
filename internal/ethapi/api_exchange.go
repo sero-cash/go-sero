@@ -278,6 +278,18 @@ func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash keys.Uint256) (map
 		outs = append(outs, r)
 	}
 	fields["outs"] = outs
+
+	ins := []keys.Uint256{}
+	for _, in := range tx.Stxt().Desc_O.Ins {
+		ins = append(ins, in.Root)
+	}
+	for _, in := range tx.Stxt().Desc_Z.Ins {
+		if root := exchange.CurrentExchange().GetRootByNil(in.Trace); root != nil {
+			ins = append(ins, *root)
+		}
+	}
+	fields["ins"] = ins
+
 	return fields, nil
 
 }
@@ -443,7 +455,7 @@ func (s *PublicExchangeAPI) GetBlocksInfo(ctx context.Context, start, end uint64
 			}
 		}
 
-		blocks = append(blocks, Block{BlockNumber: block.Num, BlockHash: block.Hash, TxHashs: transactions, Ins: block.Ins, Outs: outs, Timestamp: b.Header().Time.Uint64()})
+		blocks = append(blocks, Block{BlockNumber: block.Num, BlockHash: block.Hash, TxHashes: transactions, Ins: block.Ins, Outs: outs, Timestamp: b.Header().Time.Uint64()})
 
 	}
 	return

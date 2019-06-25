@@ -59,6 +59,10 @@ func (self *Balance) Parse() (num uint64) {
 	amap := make(map[keys.Uint512]*accounts.Account)
 	for _, tk := range tks {
 		account := self.db.GetAccount(&tk)
+		at := light_ref.Ref_inst.Bc.GetTkAt(&tk)
+		if account.NextNum < at {
+			account.NextNum = at
+		}
 		amap[tk] = &account
 		if next_num == 0 {
 			next_num = account.NextNum
