@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/common/base58"
 	"math/big"
 	"sort"
 	"strings"
