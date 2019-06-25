@@ -205,7 +205,7 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 			self.numbers.Store(*account.pk, w.Accounts()[0].At)
 		}
 
-		log.Info("Add PK", "address", w.Accounts()[0].Address, "At", self.starNum(account.pk))
+		log.Info("Add PK", "address", w.Accounts()[0].Address, "At", self.GetCurrencyNumber(*account.pk))
 	}
 }
 
@@ -1065,7 +1065,6 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 
 	txMap := map[keys.Uint256][]Utxo{}
 	for key, list := range utxosMap {
-		log.Info("Index add", "PK", base58.EncodeToString(key.PK[:]), "Num", key.Num, "roots", len(list))
 		roots := []keys.Uint256{}
 		for _, utxo := range list {
 			data, err := rlp.EncodeToBytes(utxo)
