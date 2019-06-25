@@ -261,10 +261,8 @@ func (self *Exchange) GetRootByNil(Nil keys.Uint256) (root *keys.Uint256) {
 	if err != nil {
 		return
 	}
-	if err := rlp.Decode(bytes.NewReader(data), &root); err != nil {
-		log.Error("Exchange Invalid root RLP", "nil", common.Bytes2Hex(Nil[:]), "err", err)
-		return
-	}
+	root = &keys.Uint256{}
+	copy(root[:], data[:])
 	return
 }
 

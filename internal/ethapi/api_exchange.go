@@ -277,7 +277,7 @@ func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash keys.Uint256) (map
 		r["Value"] = record.Value
 		outs = append(outs, r)
 	}
-	fields["outs"] = outs
+	fields["Outs"] = outs
 
 	ins := []keys.Uint256{}
 	for _, in := range tx.Stxt().Desc_O.Ins {
@@ -288,7 +288,7 @@ func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash keys.Uint256) (map
 			ins = append(ins, *root)
 		}
 	}
-	fields["ins"] = ins
+	fields["Ins"] = ins
 
 	return fields, nil
 
