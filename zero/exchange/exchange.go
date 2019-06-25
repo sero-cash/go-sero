@@ -256,6 +256,18 @@ func (self *Exchange) GetUtxoNum(pk keys.Uint512) map[string]uint64 {
 	return map[string]uint64{}
 }
 
+func (self *Exchange) GetRootByNil(Nil keys.Uint256) (root *keys.Uint256) {
+	data, err := self.db.Get(nilToRootKey(Nil))
+	if err != nil {
+		return
+	}
+	if err := rlp.Decode(bytes.NewReader(data), &root); err != nil {
+		log.Error("Exchange Invalid root RLP", "nil", common.Bytes2Hex(Nil[:]), "err", err)
+		return
+	}
+	return
+}
+
 func (self *Exchange) GetCurrencyNumber(pk keys.Uint512) uint64 {
 	value, ok := self.numbers.Load(pk)
 	if !ok {
@@ -991,7 +1003,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 		}
 
 		if len(block.Nils) > 0 {
-			nils = append(nils, block.Nils...)
+
 			roots := []keys.Uint256{}
 			for _, Nil := range block.Nils {
 				var utxo Utxo
@@ -1013,6 +1025,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 						continue
 					}
 				}
+				nils = append(nils, Nil)
 				roots = append(roots, utxo.Root)
 			}
 			if len(roots) > 0 {
@@ -1073,6 +1086,8 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 
 			// "ROOT" + root
 			batch.Put(rootKey(utxo.Root), data)
+			//nil => root
+			batch.Put(nilToRootKey(utxo.Nil), utxo.Root[:])
 
 			var pkKey []byte
 			if utxo.Asset.Tkn != nil {
@@ -1330,8 +1345,12 @@ var (
 	blockPrefix   = []byte("BLOCK")
 	outUtxoPrefix = []byte("OUTUTXO")
 	txPrefix      = []byte("TX")
-	Prefix        = []byte("Out")
+	nilRootPrefix = []byte("NOILTOROOT")
 )
+
+func nilToRootKey(nil keys.Uint256) []byte {
+	return append(nilRootPrefix, nil[:]...)
+}
 
 func txKey(txHash keys.Uint256) []byte {
 	return append(txPrefix, txHash[:]...)
