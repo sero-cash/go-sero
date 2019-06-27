@@ -42,11 +42,11 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 	return hexutil.UnmarshalFixedText("BlockNonce", input, n[:])
 }
 
-//go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
+//go:generate gencodec -type Version_0 -field-override headerMarshaling -out gen_header_json.go
 
-// Header represents a block header in the Ethereum blockchain.
+// Version_0 represents a block header in the Ethereum blockchain.
 type Header struct {
-	//version0
+	//Data
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
 	Licr        keys.LICr      `json:"licr"            	gencodec:"required"`
@@ -60,10 +60,12 @@ type Header struct {
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
-	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
-	//version1
-	Test uint64
+	//POW
+	MixDigest common.Hash `json:"mixHash"          gencodec:"required"`
+	Nonce     BlockNonce  `json:"nonce"            gencodec:"required"`
+	//POS
+	CurrentVotes []typeserial.Vote
+	ParentVotes  []typeserial.Vote
 }
 
 // field type overrides for gencodec
@@ -93,7 +95,7 @@ func (h *Header) Hash() common.Hash {
 }
 
 // HashNoNonce returns the hash which is used as input for the proof-of-work search.
-func (h *Header) HashNoNonce() common.Hash {
+func (h *Header) HashPow() common.Hash {
 	return rlpHash([]interface{}{
 		h.ParentHash,
 		h.Coinbase,
@@ -108,6 +110,24 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.Time,
 		h.Extra,
 	})
+}
+
+func (h *Header) HashPos() (ret common.Hash) {
+	m := sha3.NewKeccak256()
+	m.Write(h.MixDigest[:])
+	m.Write(h.Nonce[:])
+	hp := m.Sum(nil)
+	copy(ret[:], hp)
+	return
+}
+
+func StakeHash(currentHash *common.Hash, parentHash *common.Hash) (ret common.Hash) {
+	m := sha3.NewKeccak256()
+	m.Write(currentHash[:])
+	m.Write(parentHash[:])
+	sh := m.Sum(nil)
+	copy(ret[:], sh)
+	return
 }
 
 func (h *Header) ActualDifficulty() *big.Int {
@@ -156,48 +176,71 @@ func CopyHeader(h *Header) *Header {
 	return &cpy
 }
 
+func HeaderToTypeSerial(b *Header) (hr typeserial.HeaderRLP) {
+	//Version_0
+	hr.Version_0.ParentHash = b.ParentHash
+	hr.Version_0.Coinbase = b.Coinbase
+	hr.Version_0.Licr = b.Licr
+	hr.Version_0.Root = b.Root
+	hr.Version_0.TxHash = b.TxHash
+	hr.Version_0.ReceiptHash = b.ReceiptHash
+	hr.Version_0.Bloom = b.Bloom
+	hr.Version_0.Difficulty = b.Difficulty
+	hr.Version_0.Number = b.Number
+	hr.Version_0.GasLimit = b.GasLimit
+	hr.Version_0.GasUsed = b.GasUsed
+	hr.Version_0.Time = b.Time
+	hr.Version_0.Extra = b.Extra
+	hr.Version_0.MixDigest = b.MixDigest
+	hr.Version_0.Nonce = b.Nonce
+
+	//Version_1
+	if len(b.CurrentVotes) > 0 || len(b.ParentVotes) > 0 {
+		hr.Version_1.CurrentVotes = b.CurrentVotes
+		hr.Version_1.ParentVotes = b.ParentVotes
+		//Version Number
+		hr.Version.V = typeserial.VERSION_1
+	} else {
+		hr.Version.V = typeserial.VERSION_0
+	}
+	return
+}
+
+func TypeSerialToHeader(hr *typeserial.HeaderRLP) (b Header) {
+	b.ParentHash = hr.Version_0.ParentHash
+	b.Coinbase = hr.Version_0.Coinbase
+	b.Licr = hr.Version_0.Licr
+	b.Root = hr.Version_0.Root
+	b.TxHash = hr.Version_0.TxHash
+	b.ReceiptHash = hr.Version_0.ReceiptHash
+	b.Bloom = hr.Version_0.Bloom
+	b.Difficulty = hr.Version_0.Difficulty
+	b.Number = hr.Version_0.Number
+	b.GasLimit = hr.Version_0.GasLimit
+	b.GasUsed = hr.Version_0.GasUsed
+	b.Time = hr.Version_0.Time
+	b.Extra = hr.Version_0.Extra
+	b.MixDigest = hr.Version_0.MixDigest
+	b.Nonce = hr.Version_0.Nonce
+	if hr.Version.V == typeserial.VERSION_1 {
+		b.CurrentVotes = hr.Version_1.CurrentVotes
+		b.ParentVotes = hr.Version_1.ParentVotes
+	}
+	return
+}
+
 // DecodeRLP decodes the Ethereum
 func (b *Header) DecodeRLP(s *rlp.Stream) error {
 	hr := typeserial.HeaderRLP{}
 	if e := s.Decode(&hr); e != nil {
 		return e
 	}
-	b.ParentHash = hr.Header.ParentHash
-	b.Coinbase = hr.Header.Coinbase
-	b.Licr = hr.Header.Licr
-	b.Root = hr.Header.Root
-	b.TxHash = hr.Header.TxHash
-	b.ReceiptHash = hr.Header.ReceiptHash
-	b.Bloom = hr.Header.Bloom
-	b.Difficulty = hr.Header.Difficulty
-	b.Number = hr.Header.Number
-	b.GasLimit = hr.Header.GasLimit
-	b.GasUsed = hr.Header.GasUsed
-	b.Time = hr.Header.Time
-	b.Extra = hr.Header.Extra
-	b.MixDigest = hr.Header.MixDigest
-	b.Nonce = hr.Header.Nonce
+	*b = TypeSerialToHeader(&hr)
 	return nil
 }
 
 // EncodeRLP serializes b into the Ethereum RLP block format.
 func (b *Header) EncodeRLP(w io.Writer) error {
-	hr := typeserial.HeaderRLP{}
-	hr.Header = &typeserial.Header{}
-	hr.Header.ParentHash = b.ParentHash
-	hr.Header.Coinbase = b.Coinbase
-	hr.Header.Licr = b.Licr
-	hr.Header.Root = b.Root
-	hr.Header.TxHash = b.TxHash
-	hr.Header.ReceiptHash = b.ReceiptHash
-	hr.Header.Bloom = b.Bloom
-	hr.Header.Difficulty = b.Difficulty
-	hr.Header.Number = b.Number
-	hr.Header.GasLimit = b.GasLimit
-	hr.Header.GasUsed = b.GasUsed
-	hr.Header.Time = b.Time
-	hr.Header.Extra = b.Extra
-	hr.Header.MixDigest = b.MixDigest
-	hr.Header.Nonce = b.Nonce
+	hr := HeaderToTypeSerial(b)
 	return rlp.Encode(w, &hr)
 }

@@ -355,12 +355,12 @@ func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Head
 	if number >= seroparam.SIP3() {
 		dataset := ethash.dataset_async(number)
 		if dataset.generated() {
-			digest, result = progpowFull(dataset.dataset, header.HashNoNonce().Bytes(), header.Nonce.Uint64(), number)
+			digest, result = progpowFull(dataset.dataset, header.HashPow().Bytes(), header.Nonce.Uint64(), number)
 		} else {
-			digest, result = progpowLightWithoutCDag(size, cache.cache, header.HashNoNonce().Bytes(), header.Nonce.Uint64(), number)
+			digest, result = progpowLightWithoutCDag(size, cache.cache, header.HashPow().Bytes(), header.Nonce.Uint64(), number)
 		}
 	} else {
-		digest, result = hashimotoLight(size, cache.cache, header.HashNoNonce().Bytes(), header.Nonce.Uint64(), number)
+		digest, result = hashimotoLight(size, cache.cache, header.HashPow().Bytes(), header.Nonce.Uint64(), number)
 	}
 	// Caches are unmapped in a finalizer. Ensure that the cache stays live
 	// until after the call to hashimotoLight so it's not unmapped while being used.

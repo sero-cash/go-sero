@@ -163,7 +163,7 @@ func (b *Block) Header() *Header { return CopyHeader(b.header) }
 func (b *Block) Body() *Body { return &Body{b.transactions} }
 
 func (b *Block) HashNoNonce() common.Hash {
-	return b.header.HashNoNonce()
+	return b.header.HashPow()
 }
 
 // Size returns the true RLP encoded storage size of the block, either by encoding
