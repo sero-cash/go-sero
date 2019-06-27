@@ -4606,29 +4606,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             throw new Error('invalid address');
         };
 
-        var inputHexAddressFormatter = function (address) {
-            var bytes=utils.hexToBytes(address);
-            if ( bytes.length!=64 && bytes.length!=96 ) {
-                throw new Error('invalid hex address');
-            }
-            return utils.bytesToHex(bytes)
-        };
-
-        var inputHexPKFormatter = function (address) {
-            var bytes=utils.hexToBytes(address);
-            if ( bytes.length!=64) {
-                throw new Error('invalid hex PK');
-            }
-            return utils.bytesToHex(bytes)
-        };
-
-        var inputHexPKrFormatter = function (address) {
-            var bytes=utils.hexToBytes(address);
-            if ( bytes.length!=96) {
-                throw new Error('invalid hex PKr');
-            }
-            return utils.bytesToHex(bytes)
-        };
 
         var inputParamAddressFormatter = function (address) {
             if (utils.paramAddress(address)) {
@@ -4682,9 +4659,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             inputTransactionFormatter: inputTransactionFormatter,
             inputParamAddressFormatter:inputParamAddressFormatter,
             inputAddressFormatter: inputAddressFormatter,
-            inputHexAddressFormatter: inputHexAddressFormatter,
-            inputHexPKrFormatter: inputHexPKrFormatter,
-            inputHexPKFormatter: inputHexPKFormatter,
             inputPostFormatter: inputPostFormatter,
             outputBigNumberFormatter: outputBigNumberFormatter,
             outputTransactionFormatter: outputTransactionFormatter,
@@ -6002,29 +5976,25 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var getPkr = new Method({
                 name: 'getPkr',
                 call: 'exchange_getPkr',
-                params: 2,
-                inputFormatter: [formatters.inputHexPFormatter,null]
+                params: 2
             });
 
             var getBalances = new Method({
                 name: 'getBalances',
                 call: 'exchange_getBalances',
-                params: 1,
-                inputFormatter: [formatters.inputHexPKFormatter]
+                params: 1
             });
 
             var getPkSynced = new Method({
                 name: 'getPkSynced',
                 call: 'exchange_getPkSynced',
-                params: 1,
-                inputFormatter: [formatters.inputHexPKFormatter]
+                params: 1
             });
 
             var merge = new Method({
                 name: 'merge',
                 call: 'exchange_merge',
-                params: 2,
-                inputFormatter: [formatters.inputHexPKFormatter,null]
+                params: 2
             });
 
             var genTx = new Method({

@@ -680,20 +680,17 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getLockedBalances',
 			call: 'exchange_getLockedBalances',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputHexPKFormatter]
+			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'getMaxAvailable',
 			call: 'exchange_getMaxAvailable',
-			params: 2,
-            inputFormatter: [web3._extend.formatters.inputHexPKFormatter, null]
+			params: 2
 		}),
        new web3._extend.Method({
 			name: 'clearUsedFlag',
 			call: 'exchange_clearUsedFlag',
-			params: 1,
-            inputFormatter: [web3._extend.formatters.inputHexPKFormatter]
+			params: 1
 		}),
        new web3._extend.Method({
 			name: 'clearUsedFlagForRoot',
@@ -718,8 +715,7 @@ web3._extend({
        new web3._extend.Method({
 			name: 'getPkByPkr',
 			call: 'exchange_getPkByPkr',
-			params: 1,
-            inputFormatter: [web3._extend.formatters.inputHexPKrFormatter] 
+			params: 1
 		}),
         new web3._extend.Method({
 			name: 'getBlockByNumber',
