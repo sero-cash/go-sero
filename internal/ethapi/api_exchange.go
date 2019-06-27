@@ -144,7 +144,7 @@ func (args GenTxArgs) check() error {
 
 }
 
-func byteToPkr(addr MixAdrress) keys.PKr {
+func MixAdrressToPkr(addr MixAdrress) keys.PKr {
 	pkr := keys.PKr{}
 	if len(addr) == 64 {
 		pk := keys.Uint512{}
@@ -164,7 +164,7 @@ func (args GenTxArgs) toTxParam() exchange.TxParam {
 	}
 	receptions := []exchange.Reception{}
 	for _, rec := range args.Receptions {
-		pkr := byteToPkr(rec.Addr)
+		pkr := MixAdrressToPkr(rec.Addr)
 		receptions = append(receptions, exchange.Reception{
 			pkr,
 			string(rec.Currency),
@@ -428,15 +428,24 @@ func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *light_types.GTx)
 	return s.b.CommitTx(args)
 }
 
-func (s *PublicExchangeAPI) ClearUsedFlag(ctx context.Context, address keys.Uint512) (count int, e error) {
-	count = exchange.CurrentExchange().ClearUsedFlagForPK(&address)
+func (s *PublicExchangeAPI) ClearUsedFlag(ctx context.Context, pkaddress PKAddress) (count int, e error) {
+	exchangeInstance := exchange.CurrentExchange()
+	if exchangeInstance == nil {
+		return 0, errors.New("exchange mode no start")
+	}
+	address := pkaddress.ToUint512()
+	count = exchangeInstance.ClearUsedFlagForPK(&address)
 	return
 }
 
 func (s *PublicExchangeAPI) ClearUsedFlagForRoot(ctx context.Context, roots []keys.Uint256) (count int, e error) {
+	exchangeInstance := exchange.CurrentExchange()
+	if exchangeInstance == nil {
+		return 0, errors.New("exchange mode no start")
+	}
 	if len(roots) > 0 {
 		for _, root := range roots {
-			count += exchange.CurrentExchange().ClearUsedFlagForRoot(root)
+			count += exchangeInstance.ClearUsedFlagForRoot(root)
 		}
 	}
 	return
@@ -452,8 +461,11 @@ type Block struct {
 }
 
 func (s *PublicExchangeAPI) GetBlocksInfo(ctx context.Context, start, end uint64) (blocks []Block, err error) {
-
-	infos, err := exchange.CurrentExchange().GetBlocksInfo(start, end)
+	exchangeInstance := exchange.CurrentExchange()
+	if exchangeInstance == nil {
+		return nil, errors.New("exchange mode no start")
+	}
+	infos, err := exchangeInstance.GetBlocksInfo(start, end)
 	if err != nil {
 		return
 	}
