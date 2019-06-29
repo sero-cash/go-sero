@@ -56,13 +56,5 @@ build/geropkg-*.tar.gz
 build/geropkg-*.zip
 build/gero-*.tar.gz
 build/gero-*.zip
-
-
-build/gerotxpkg/bin
-build/gerotxpkg/czero
-build/gerotxpkg_*.tar.gz
-build/gerotxpkg-*.tar.gz
-build/gerotxpkg-*.zip
 build/gerotx-*.tar.gz
 build/gerotx-*.zip
-pkg
