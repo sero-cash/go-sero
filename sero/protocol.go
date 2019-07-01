@@ -62,6 +62,9 @@ const (
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
+
+	NewVoteMsg    = 0x1e
+	NewLotteryMsg = 0x1f
 )
 
 type errCode int
@@ -106,6 +109,13 @@ type txPool interface {
 	// SubscribeNewTxsEvent should return an event subscription of
 	// NewTxsEvent and send events to the given channel.
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
+}
+
+type voter interface {
+	SubscribeNewVoteEvent(chan<- core.NewVoteEvent) event.Subscription
+	SubscribeNewLotteryEvent(chan<- core.NewLotteryEvent) event.Subscription
+	AddLottery(lottery *types.Lottery)
+	AddVote(vote *types.Vote)
 }
 
 // statusData is the network packet for the status message.

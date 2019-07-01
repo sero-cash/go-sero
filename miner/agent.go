@@ -47,6 +47,7 @@ func NewCpuAgent(chain consensus.ChainReader, engine consensus.Engine) *CpuAgent
 		workCh: make(chan *Work, 1),
 	}
 	return miner
+
 }
 
 func (self *CpuAgent) Work() chan<- *Work            { return self.workCh }

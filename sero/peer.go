@@ -37,8 +37,10 @@ var (
 )
 
 const (
-	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
-	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
+	maxKnownTxs      = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
+	maxKnownBlocks   = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
+	maxKnownVotes    = 128
+	maxKnownLotterys = 128
 
 	// maxQueuedTxs is the maximum number of transaction lists to queue up before
 	// dropping broadcasts. This is a sensitive number as a transaction list might
@@ -53,6 +55,10 @@ const (
 	// dropping broadcasts. Similarly to block propagations, there's no point to queue
 	// above some healthy, so use that.
 	maxQueuedAnns = 4
+
+	maxQueuedLotterys = 4
+
+	maxQueuedVotes = 12
 
 	handshakeTimeout = 5 * time.Second
 )
@@ -84,26 +90,34 @@ type peer struct {
 	td   *big.Int
 	lock sync.RWMutex
 
-	knownTxs    mapset.Set                // Set of transaction hashes known to be known by this peer
-	knownBlocks mapset.Set                // Set of block hashes known to be known by this peer
-	queuedTxs   chan []*types.Transaction // Queue of transactions to broadcast to the peer
-	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
-	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
-	term        chan struct{}             // Termination channel to stop the broadcaster
+	knownLotterys  mapset.Set
+	knownVotes     mapset.Set
+	knownTxs       mapset.Set                // Set of transaction hashes known to be known by this peer
+	knownBlocks    mapset.Set                // Set of block hashes known to be known by this peer
+	queuedTxs      chan []*types.Transaction // Queue of transactions to broadcast to the peer
+	queuedProps    chan *propEvent           // Queue of blocks to broadcast to the peer
+	queuedAnns     chan *types.Block         // Queue of blocks to announce to the peer
+	queuedLotterys chan *types.Lottery
+	queuedVotes    chan *types.Vote
+	term           chan struct{} // Termination channel to stop the broadcaster
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 	return &peer{
-		Peer:        p,
-		rw:          rw,
-		version:     version,
-		id:          fmt.Sprintf("%x", p.ID().Bytes()[:8]),
-		knownTxs:    mapset.NewSet(),
-		knownBlocks: mapset.NewSet(),
-		queuedTxs:   make(chan []*types.Transaction, maxQueuedTxs),
-		queuedProps: make(chan *propEvent, maxQueuedProps),
-		queuedAnns:  make(chan *types.Block, maxQueuedAnns),
-		term:        make(chan struct{}),
+		Peer:           p,
+		rw:             rw,
+		version:        version,
+		id:             fmt.Sprintf("%x", p.ID().Bytes()[:8]),
+		knownLotterys:  mapset.NewSet(),
+		knownVotes:     mapset.NewSet(),
+		knownTxs:       mapset.NewSet(),
+		knownBlocks:    mapset.NewSet(),
+		queuedTxs:      make(chan []*types.Transaction, maxQueuedTxs),
+		queuedProps:    make(chan *propEvent, maxQueuedProps),
+		queuedAnns:     make(chan *types.Block, maxQueuedAnns),
+		queuedLotterys: make(chan *types.Lottery, maxQueuedLotterys),
+		queuedVotes:    make(chan *types.Vote, maxQueuedVotes),
+		term:           make(chan struct{}),
 	}
 }
 
@@ -130,6 +144,17 @@ func (p *peer) broadcast() {
 				return
 			}
 			p.Log().Trace("Announced block", "number", block.Number(), "hash", block.Hash())
+
+		case vote := <-p.queuedVotes:
+			if err := p.SendNewVote(vote); err != nil {
+				return
+			}
+			p.Log().Trace("Announced vote", "hash", vote.Hash())
+		case lottery := <-p.queuedLotterys:
+			if err := p.SendNewLottery(lottery); err != nil {
+				return
+			}
+			p.Log().Trace("Announced lottery", "hash", lottery.PosHash)
 
 		case <-p.term:
 			return
@@ -192,6 +217,22 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 	p.knownTxs.Add(hash)
 }
 
+func (p *peer) MarkVote(hash common.Hash) {
+	// If we reached the memory allowance, drop a previously known transaction hash
+	for p.knownVotes.Cardinality() >= maxKnownVotes {
+		p.knownVotes.Pop()
+	}
+	p.knownVotes.Add(hash)
+}
+
+func (p *peer) MarkLottery(hash common.Hash) {
+	// If we reached the memory allowance, drop a previously known transaction hash
+	for p.knownLotterys.Cardinality() >= maxKnownLotterys {
+		p.knownLotterys.Pop()
+	}
+	p.knownLotterys.Add(hash)
+}
+
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
 func (p *peer) SendTransactions(txs types.Transactions) error {
@@ -244,6 +285,34 @@ func (p *peer) AsyncSendNewBlockHash(block *types.Block) {
 func (p *peer) SendNewBlock(block *types.Block, td *big.Int) error {
 	p.knownBlocks.Add(block.Hash())
 	return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td})
+}
+
+func (p *peer) AsyncSendNewVote(vote *types.Vote) {
+	select {
+	case p.queuedVotes <- vote:
+		p.knownVotes.Add(vote.Hash())
+	default:
+		p.Log().Debug("Dropping vote announcement", "hash", vote.Hash())
+	}
+}
+
+func (p *peer) SendNewVote(vote *types.Vote) error {
+	p.knownVotes.Add(vote.Hash())
+	return p2p.Send(p.rw, NewVoteMsg, []interface{}{vote})
+}
+
+func (p *peer) AsyncSendNewLottery(lottery *types.Lottery) {
+	select {
+	case p.queuedLotterys <- lottery:
+		p.knownVotes.Add(lottery.PosHash)
+	default:
+		p.Log().Debug("Dropping lottery announcement", "hash", lottery.PosHash)
+	}
+}
+
+func (p *peer) SendNewLottery(lottery *types.Lottery) error {
+	p.knownLotterys.Add(lottery.PosHash)
+	return p2p.Send(p.rw, NewLotteryMsg, []interface{}{lottery})
 }
 
 // AsyncSendNewBlock queues an entire block for propagation to a remote peer. If
@@ -485,6 +554,32 @@ func (ps *peerSet) PeersWithoutTx(hash common.Hash) []*peer {
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
 		if !p.knownTxs.Contains(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
+func (ps *peerSet) PeersWithoutVote(hash common.Hash) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if !p.knownVotes.Contains(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
+func (ps *peerSet) PeersWithoutLottery(hash common.Hash) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if !p.knownLotterys.Contains(hash) {
 			list = append(list, p)
 		}
 	}

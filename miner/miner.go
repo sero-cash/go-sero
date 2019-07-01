@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-sero/share"
+
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/accounts"
@@ -40,6 +42,7 @@ type Backend interface {
 	AccountManager() *accounts.Manager
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
+	Voter() *share.Voter
 	ChainDb() serodb.Database
 }
 

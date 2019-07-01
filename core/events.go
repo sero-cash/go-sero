@@ -19,7 +19,6 @@ package core
 import (
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/share"
 )
 
 // NewTxsEvent is posted when a batch of transactions enter the transaction pool.
@@ -52,9 +51,9 @@ type ChainSideEvent struct {
 type ChainHeadEvent struct{ Block *types.Block }
 
 type NewLotteryEvent struct {
-	Winner *share.Lottery
+	Lottery *types.Lottery
 }
 
 type NewVoteEvent struct {
-	Vote *share.Vote
+	Vote *types.Vote
 }
