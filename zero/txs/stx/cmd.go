@@ -21,7 +21,7 @@ type RegistPoolCmd struct {
 }
 
 type ContractCmd struct {
-	asset assets.Asset
+	Asset assets.Asset
 	To    keys.Uint512
 	Data  []byte
 }
