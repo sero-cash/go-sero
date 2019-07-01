@@ -156,16 +156,16 @@ func (self *Desc_Z) ToHash_for_sign() (ret keys.Uint256) {
 }
 
 type T struct {
-	Ehash      keys.Uint256
-	From       keys.PKr
-	Fee        assets.Token
-	Sign       keys.Uint512
-	Bcr        keys.Uint256
-	Bsign      keys.Uint512
-	Desc_Z     Desc_Z
-	Desc_O     Desc_O
-	Desc_Pkg   PkgDesc_Z
-	Desc_Stake StakeDesc
+	Ehash    keys.Uint256
+	From     keys.PKr
+	Fee      assets.Token
+	Sign     keys.Uint512
+	Bcr      keys.Uint256
+	Bsign    keys.Uint512
+	Desc_Z   Desc_Z
+	Desc_O   Desc_O
+	Desc_Pkg PkgDesc_Z
+	Desc_Cmd DescCmd
 }
 
 func (self *T) ToHash() (ret keys.Uint256) {

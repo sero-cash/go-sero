@@ -23,7 +23,7 @@ type ZtxVersion_0 struct {
 }
 
 type ZtxVersion_1 struct {
-	Desc_Stake StakeDesc
+	Desc_Cmd DescCmd
 }
 
 type ZtxRlp struct {
@@ -93,7 +93,7 @@ func (b *T) DecodeRLP(s *rlp.Stream) error {
 	b.Desc_Z = hr.Version_0.Desc_Z
 	b.Desc_O = hr.Version_0.Desc_O
 	b.Desc_Pkg = hr.Version_0.Desc_Pkg
-	b.Desc_Stake = hr.Version_1.Desc_Stake
+	b.Desc_Cmd = hr.Version_1.Desc_Cmd
 
 	return nil
 }
@@ -101,7 +101,7 @@ func (b *T) DecodeRLP(s *rlp.Stream) error {
 // EncodeRLP serializes b into the Ethereum RLP block format.
 func (b *T) EncodeRLP(w io.Writer) error {
 	hr := ZtxRlp{}
-	if b.Desc_Stake.RegistPool != nil || b.Desc_Stake.BuyShare != nil {
+	if b.Desc_Cmd.Valid() {
 		hr.Version.V = typeserial.VERSION_1
 	} else {
 		hr.Version.V = typeserial.VERSION_0
@@ -115,6 +115,6 @@ func (b *T) EncodeRLP(w io.Writer) error {
 	hr.Version_0.Desc_Z = b.Desc_Z
 	hr.Version_0.Desc_O = b.Desc_O
 	hr.Version_0.Desc_Pkg = b.Desc_Pkg
-	hr.Version_1.Desc_Stake = b.Desc_Stake
+	hr.Version_1.Desc_Cmd = b.Desc_Cmd
 	return rlp.Encode(w, &hr)
 }
