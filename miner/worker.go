@@ -41,7 +41,10 @@ import (
 )
 
 const (
-	resultQueueSize  = 10
+	powResultQueueSize = 10
+	posResultQueueSize = 10
+	resultQueueSize    = 10
+
 	miningLogAtDepth = 5
 
 	// txChanSize is the size of channel listening to NewTxsEvent.
@@ -90,6 +93,12 @@ type Result struct {
 	Block *types.Block
 }
 
+type Vote struct {
+	BlockHash common.Hash
+	Sign      common.Hash
+	Share     common.Hash
+}
+
 // worker is the main object which takes care of applying messages to the new state
 type worker struct {
 	config *params.ChainConfig
@@ -105,10 +114,14 @@ type worker struct {
 	chainHeadSub event.Subscription
 	chainSideCh  chan core.ChainSideEvent
 	chainSideSub event.Subscription
+	voteCh       chan core.NewTxsEvent
+	voteSub      event.Subscription
 	wg           sync.WaitGroup
 
-	agents map[Agent]struct{}
-	recv   chan *Result
+	agents  map[Agent]struct{}
+	powRecv chan *Result
+	posRecv chan *Result
+	recv    chan *Result
 
 	eth     Backend
 	chain   *core.BlockChain
@@ -120,6 +133,9 @@ type worker struct {
 
 	currentMu sync.Mutex
 	current   *Work
+
+	pendingMu   sync.RWMutex
+	pendingVote map[common.Hash][]Vote
 
 	snapshotMu    sync.RWMutex
 	snapshotBlock *types.Block
@@ -142,6 +158,8 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase add
 		chainHeadCh: make(chan core.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh: make(chan core.ChainSideEvent, chainSideChanSize),
 		chainDb:     sero.ChainDb(),
+		powRecv:     make(chan *Result, powResultQueueSize),
+		posRecv:     make(chan *Result, posResultQueueSize),
 		recv:        make(chan *Result, resultQueueSize),
 		chain:       sero.BlockChain(),
 		proc:        sero.BlockChain().Validator(),
@@ -230,7 +248,7 @@ func (self *worker) register(agent Agent) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.agents[agent] = struct{}{}
-	agent.SetReturnCh(self.recv)
+	agent.SetReturnCh(self.powRecv)
 }
 
 func (self *worker) unregister(agent Agent) {
@@ -285,9 +303,113 @@ func (self *worker) update() {
 	}
 }
 
+func (self *worker) posTaskLoop() {
+
+}
+
+func (self *worker) powTaskResultLoop() {
+	for {
+		select {
+		case result := <-self.powRecv:
+			atomic.AddInt32(&self.atWork, -1)
+
+			if result == nil {
+				continue
+			}
+			block := result.Block
+			work := result.Work
+
+			// Update the block hash in all logs since it is now available and not when the
+			// receipt/log of individual transactions were created.
+			for _, r := range work.receipts {
+				for _, l := range r.Logs {
+					l.BlockHash = block.Hash()
+				}
+			}
+			for _, log := range work.state.Logs() {
+				log.BlockHash = block.Hash()
+			}
+			self.currentMu.Lock()
+			stat, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
+			self.currentMu.Unlock()
+			if err != nil {
+				log.Error("Failed writing block to chain", "err", err)
+				continue
+			}
+			// Broadcast the block and announce chain insertion event
+			self.mux.Post(core.NewMinedBlockEvent{Block: block})
+			var (
+				events []interface{}
+				logs   = work.state.Logs()
+			)
+			events = append(events, core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
+			self.eth.TxPool().RemoveTxs(work.handledTxs)
+			if stat == core.CanonStatTy {
+				events = append(events, core.ChainHeadEvent{Block: block})
+			}
+			self.chain.PostChainEvents(events, logs)
+
+			// Insert the block into the set of pending ones to wait for confirmations
+			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
+			log.Info(fmt.Sprintf("mined new block done in %v, number = %v, txs = %v", time.Since(work.createdAt), block.NumberU64(), len(block.Body().Transactions)))
+
+		}
+	}
+}
+
+func (self *worker) resultLoop() {
+	for {
+		select {
+		case result := <-self.recv:
+			atomic.AddInt32(&self.atWork, -1)
+
+			if result == nil {
+				continue
+			}
+			block := result.Block
+			work := result.Work
+
+			// Update the block hash in all logs since it is now available and not when the
+			// receipt/log of individual transactions were created.
+			for _, r := range work.receipts {
+				for _, l := range r.Logs {
+					l.BlockHash = block.Hash()
+				}
+			}
+			for _, log := range work.state.Logs() {
+				log.BlockHash = block.Hash()
+			}
+			self.currentMu.Lock()
+			stat, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
+			self.currentMu.Unlock()
+			if err != nil {
+				log.Error("Failed writing block to chain", "err", err)
+				continue
+			}
+			// Broadcast the block and announce chain insertion event
+			self.mux.Post(core.NewMinedBlockEvent{Block: block})
+			var (
+				events []interface{}
+				logs   = work.state.Logs()
+			)
+			events = append(events, core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
+			self.eth.TxPool().RemoveTxs(work.handledTxs)
+			if stat == core.CanonStatTy {
+				events = append(events, core.ChainHeadEvent{Block: block})
+			}
+			self.chain.PostChainEvents(events, logs)
+
+			// Insert the block into the set of pending ones to wait for confirmations
+			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
+			log.Info(fmt.Sprintf("mined new block done in %v, number = %v, txs = %v", time.Since(work.createdAt), block.NumberU64(), len(block.Body().Transactions)))
+
+		}
+	}
+}
+
 func (self *worker) wait() {
 	for {
-		for result := range self.recv {
+		for result := range self.powRecv {
 			atomic.AddInt32(&self.atWork, -1)
 
 			if result == nil {
