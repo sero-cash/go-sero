@@ -933,11 +933,12 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NetRestrict = list
 	}
 
-	balanceDelay := ctx.GlobalUint64(ConfirmedBlockFlag.Name)
-	if balanceDelay > 0 {
-		seroparam.InitComfirmedBlock(balanceDelay)
+	if ctx.GlobalIsSet(ConfirmedBlockFlag.Name) {
+		balanceDelay := ctx.GlobalUint64(ConfirmedBlockFlag.Name)
+		if balanceDelay > 0 {
+			seroparam.InitComfirmedBlock(balanceDelay)
+		}
 	}
-
 	if ctx.GlobalBool(DeveloperFlag.Name) {
 		// --dev mode can't use p2p networking.
 		//cfg.MaxPeers = 0

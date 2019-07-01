@@ -116,6 +116,7 @@ var (
 		utils.ExchangeFlag,
 		utils.ExchangeValueStrFlag,
 		utils.AutoMergeFlag,
+		utils.ConfirmedBlockFlag,
 		utils.DeveloperFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
