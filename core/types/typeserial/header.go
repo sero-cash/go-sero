@@ -108,7 +108,7 @@ func (self *HeaderRLP) EncodeRLP(w io.Writer) error {
 			return e
 		}
 	}
-	if e := rlp.Encode(w, self.Version_0); e != nil {
+	if e := rlp.Encode(w, &self.Version_0); e != nil {
 		return e
 	}
 	if self.Version.V >= VERSION_1 {
