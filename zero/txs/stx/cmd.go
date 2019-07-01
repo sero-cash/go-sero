@@ -7,14 +7,14 @@ import (
 )
 
 type BuyShareCmd struct {
-	asset assets.Asset
+	Value utils.U256
 	Price utils.U256
 	Vote  keys.PKr
 	Pool  keys.Uint256
 }
 
 type RegistPoolCmd struct {
-	asset   assets.Asset
+	Value   utils.U256
 	Id      keys.Uint256
 	Vote    keys.PKr
 	FeeRate uint32
