@@ -23,7 +23,10 @@ type ZtxVersion_0 struct {
 }
 
 type ZtxVersion_1 struct {
-	Desc_Cmd DescCmd
+	BuyShare   *BuyShareCmd
+	RegistPool *RegistPoolCmd
+	ClosePool  *ClosePoolCmd
+	Contract   *ContractCmd
 }
 
 type ZtxRlp struct {
@@ -93,7 +96,10 @@ func (b *T) DecodeRLP(s *rlp.Stream) error {
 	b.Desc_Z = hr.Version_0.Desc_Z
 	b.Desc_O = hr.Version_0.Desc_O
 	b.Desc_Pkg = hr.Version_0.Desc_Pkg
-	b.Desc_Cmd = hr.Version_1.Desc_Cmd
+	b.Desc_Cmd.BuyShare = hr.Version_1.BuyShare
+	b.Desc_Cmd.RegistPool = hr.Version_1.RegistPool
+	b.Desc_Cmd.ClosePool = hr.Version_1.ClosePool
+	b.Desc_Cmd.Contract = hr.Version_1.Contract
 
 	return nil
 }
@@ -115,6 +121,9 @@ func (b *T) EncodeRLP(w io.Writer) error {
 	hr.Version_0.Desc_Z = b.Desc_Z
 	hr.Version_0.Desc_O = b.Desc_O
 	hr.Version_0.Desc_Pkg = b.Desc_Pkg
-	hr.Version_1.Desc_Cmd = b.Desc_Cmd
+	hr.Version_1.BuyShare = b.Desc_Cmd.BuyShare
+	hr.Version_1.RegistPool = b.Desc_Cmd.RegistPool
+	hr.Version_1.ClosePool = b.Desc_Cmd.ClosePool
+	hr.Version_1.Contract = b.Desc_Cmd.Contract
 	return rlp.Encode(w, &hr)
 }

@@ -15,10 +15,11 @@ type BuyShareCmd struct {
 
 type RegistPoolCmd struct {
 	Value   utils.U256
-	Id      keys.Uint256
 	Vote    keys.PKr
 	FeeRate uint32
 }
+
+type ClosePoolCmd struct{}
 
 type ContractCmd struct {
 	Asset assets.Asset
@@ -29,6 +30,7 @@ type ContractCmd struct {
 type DescCmd struct {
 	BuyShare   *BuyShareCmd
 	RegistPool *RegistPoolCmd
+	ClosePool  *ClosePoolCmd
 	Contract   *ContractCmd
 }
 
