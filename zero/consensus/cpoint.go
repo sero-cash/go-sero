@@ -2,52 +2,50 @@ package consensus
 
 import (
 	"errors"
-
-	"github.com/sero-cash/go-czero-import/keys"
 )
 
-type cpoint struct {
+type Cpoint struct {
 	objPre   string
 	statePre string
 	inCons   bool
-	cons     *cons
+	cons     *Cons
 }
 
-func (self *cpoint) ObjName(name *keys.Uint256) (ret string) {
-	return self.objPre + string(name[:])
+func (self *Cpoint) objName(name []byte) (ret string) {
+	return self.objPre + string(name)
 }
 
-func (self *cpoint) StateName(name *keys.Uint256) (ret string) {
-	return self.statePre + string(name[:])
+func (self *Cpoint) stateName(name []byte) (ret string) {
+	return self.statePre + string(name)
 }
 
-func (self *cpoint) AddObj(key *keys.Uint256, item CItem) {
+func (self *Cpoint) AddObj(item PItem) {
 	if item == nil {
 		panic(errors.New("item can not be nil"))
 	}
-	name := self.ObjName(key)
+	name := self.objName(item.Id())
 	if self.statePre != "" {
 		if state := item.State(); state != nil {
-			v := Bytes(state[:])
+			v := BytePair{item.Id(), state}
 			if self.inCons {
 				self.cons.addObj(name, &v, ITEMTYPE_CONS)
 			} else {
 				self.cons.addObj(name, &v, ITEMTYPE_CACHE)
 			}
-			stateName := self.StateName(state)
+			stateName := self.stateName(state)
 			if self.inCons {
 				self.cons.addObj(stateName, item, ITEMTYPE_DB)
 			} else {
 				self.cons.addObj(stateName, item, ITEMTYPE_CACHE)
 			}
 		} else {
-			v := Bytes([]byte{1})
+			v := BytePair{item.Id(), []byte{1}}
 			if self.inCons {
 				self.cons.addObj(name, &v, ITEMTYPE_CONS)
 			} else {
 				self.cons.addObj(name, &v, ITEMTYPE_CACHE)
 			}
-			stateName := self.StateName(key)
+			stateName := self.stateName(item.Id())
 			if self.inCons {
 				self.cons.addObj(stateName, item, ITEMTYPE_DB)
 			} else {
@@ -55,26 +53,34 @@ func (self *cpoint) AddObj(key *keys.Uint256, item CItem) {
 			}
 		}
 	} else {
-		if self.inCons {
-			self.cons.addObj(name, item, ITEMTYPE_CONS)
+		if state := item.State(); state != nil {
+			v := Bytes(state)
+			if self.inCons {
+				self.cons.addObj(name, &v, ITEMTYPE_CONS)
+			} else {
+				self.cons.addObj(name, &v, ITEMTYPE_CACHE)
+			}
 		} else {
-			self.cons.addObj(name, item, ITEMTYPE_CACHE)
+			if self.inCons {
+				self.cons.addObj(name, item, ITEMTYPE_CONS)
+			} else {
+				self.cons.addObj(name, item, ITEMTYPE_CACHE)
+			}
 		}
 	}
 	return
 }
 
-func (self *cpoint) GetObj(key *keys.Uint256, item CItem) (ret CItem) {
-	name := self.ObjName(key)
+func (self *Cpoint) GetObj(key []byte, item PItem) (ret CItem) {
+	name := self.objName(key)
 	if self.statePre != "" {
 		if state := item.State(); state != nil {
 			it := ITEMTYPE_CACHE
 			if self.inCons {
 				it = ITEMTYPE_CONS
 			}
-			if v := self.cons.getObj(name, &Bytes{}, it); v != nil {
-				copy(state[:], (*v.(*Bytes)))
-				stateName := self.StateName(state)
+			if v := self.cons.getObj(name, &BytePair{}, it); v != nil {
+				stateName := self.stateName(v.(*BytePair).Value)
 				if self.inCons {
 					return self.cons.getObj(stateName, item, ITEMTYPE_DB)
 				} else {
@@ -84,7 +90,7 @@ func (self *cpoint) GetObj(key *keys.Uint256, item CItem) (ret CItem) {
 				return nil
 			}
 		} else {
-			stateName := self.StateName(state)
+			stateName := self.stateName(key)
 			if self.inCons {
 				return self.cons.getObj(stateName, item, ITEMTYPE_DB)
 			} else {
@@ -92,23 +98,37 @@ func (self *cpoint) GetObj(key *keys.Uint256, item CItem) (ret CItem) {
 			}
 		}
 	} else {
-		if self.inCons {
-			return self.cons.getObj(name, item, ITEMTYPE_CONS)
+		if state := item.State(); state != nil {
+			var v CItem
+			if self.inCons {
+				v = self.cons.getObj(name, &Bytes{}, ITEMTYPE_CONS)
+			} else {
+				v = self.cons.getObj(name, &Bytes{}, ITEMTYPE_CACHE)
+			}
+			if v != nil {
+				return &BytePair{key, []byte(*v.(*Bytes))}
+			} else {
+				return nil
+			}
 		} else {
-			return self.cons.getObj(name, item, ITEMTYPE_CACHE)
+			if self.inCons {
+				return self.cons.getObj(name, item, ITEMTYPE_CONS)
+			} else {
+				return self.cons.getObj(name, item, ITEMTYPE_CACHE)
+			}
 		}
 	}
 }
 
-func (self *cpoint) SetValue(key *keys.Uint256, value *keys.Uint256) {
-	v := Bytes(value[:])
-	self.AddObj(key, &v)
+func (self *Cpoint) SetValue(key []byte, value []byte) {
+	v := BytePair{key, value}
+	self.AddObj(&v)
 }
 
-func (self *cpoint) GetValue(key *keys.Uint256) (ret *keys.Uint256) {
-	if v := self.GetObj(key, &Bytes{}); v != nil {
-		ret = &keys.Uint256{}
-		copy(ret[:], (*v.(*Bytes))[:])
+func (self *Cpoint) GetValue(key []byte) (ret []byte) {
+	if v := self.GetObj(key, &BytePair{}); v != nil {
+		ret = v.(*BytePair).Value
+		return
 	}
 	return
 }

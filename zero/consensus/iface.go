@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/serodb"
 )
 
@@ -20,5 +19,10 @@ type DB interface {
 type CItem interface {
 	CopyTo() (ret CItem)
 	CopyFrom(CItem)
-	State() (ret *keys.Uint256)
+	Id() (ret []byte)
+}
+
+type PItem interface {
+	CItem
+	State() (ret []byte)
 }

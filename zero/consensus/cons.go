@@ -21,32 +21,32 @@ const (
 	ITEMTYPE_DB    = ItemType(2)
 )
 
-type consItem struct {
+type ConsItem struct {
 	item     CItem
 	index    int
 	dirty    bool
 	itemType ItemType
 }
 
-type cons struct {
+type Cons struct {
 	db      DB
-	content map[string]consItem
+	content map[string]ConsItem
 	cls     []changelog
 	ver     int
 }
 
-func NewCons(db DB) (ret cons) {
-	ret.content = make(map[string]consItem)
+func NewCons(db DB) (ret Cons) {
+	ret.content = make(map[string]ConsItem)
 	ret.db = db
 	ret.ver = -1
 	return
 }
 
-func (self *cons) CreateSnapshot(ver int) {
+func (self *Cons) CreateSnapshot(ver int) {
 	self.ver = ver
 }
 
-func (self *cons) RevertToSnapshot(ver int) {
+func (self *Cons) RevertToSnapshot(ver int) {
 	l := len(self.cls)
 	for ; l > 0; l-- {
 		cl := self.cls[l-1]
@@ -70,7 +70,7 @@ func (self *cons) RevertToSnapshot(ver int) {
 	}
 }
 
-func (self *cons) CreatePoint(objPre string, statePre string, inCons bool) (ret cpoint) {
+func (self *Cons) CreatePoint(objPre string, statePre string, inCons bool) (ret Cpoint) {
 	ret.objPre = objPre
 	ret.statePre = statePre
 	ret.inCons = inCons
@@ -78,7 +78,7 @@ func (self *cons) CreatePoint(objPre string, statePre string, inCons bool) (ret 
 	return
 }
 
-func (self *cons) DeleteObj(name string, item CItem, it ItemType) {
+func (self *Cons) DeleteObj(name string, item CItem, it ItemType) {
 	if item == nil {
 		panic(errors.New("item can not be nil"))
 	}
@@ -88,12 +88,12 @@ func (self *cons) DeleteObj(name string, item CItem, it ItemType) {
 		old,
 		self.ver,
 	}
-	self.content[name] = consItem{nil, len(self.cls), true, it}
+	self.content[name] = ConsItem{nil, len(self.cls), true, it}
 	self.cls = append(self.cls, cl)
 	return
 }
 
-func (self *cons) addObj(name string, item CItem, it ItemType) {
+func (self *Cons) addObj(name string, item CItem, it ItemType) {
 	if item == nil {
 		panic(errors.New("item can not be nil"))
 	}
@@ -103,12 +103,12 @@ func (self *cons) addObj(name string, item CItem, it ItemType) {
 		old,
 		self.ver,
 	}
-	self.content[name] = consItem{item, len(self.cls), true, it}
+	self.content[name] = ConsItem{item, len(self.cls), true, it}
 	self.cls = append(self.cls, cl)
 	return
 }
 
-func (self *cons) getData(k []byte, it ItemType) (ret []byte) {
+func (self *Cons) getData(k []byte, it ItemType) (ret []byte) {
 	switch it {
 	case ITEMTYPE_CACHE:
 		return
@@ -129,7 +129,7 @@ func (self *cons) getData(k []byte, it ItemType) (ret []byte) {
 	}
 }
 
-func (self *cons) getObj(name string, item CItem, it ItemType) (ret CItem) {
+func (self *Cons) getObj(name string, item CItem, it ItemType) (ret CItem) {
 	if i, ok := self.content[name]; !ok {
 		if v := self.getData([]byte(name), it); v == nil {
 			return nil
@@ -137,7 +137,7 @@ func (self *cons) getObj(name string, item CItem, it ItemType) (ret CItem) {
 			if e := rlp.DecodeBytes(v, item); e != nil {
 				return nil
 			}
-			self.content[name] = consItem{item, -1, false, it}
+			self.content[name] = ConsItem{item, -1, false, it}
 			return item
 		}
 	} else {
@@ -150,11 +150,14 @@ func (self *cons) getObj(name string, item CItem, it ItemType) (ret CItem) {
 	}
 }
 
-func (self *cons) SaveCons() {
+func (self *Cons) GetConsPairs() {
+}
+
+func (self *Cons) SaveCons() {
 	//get cons
 }
 
-func (self *cons) SaveDB(batch serodb.Batch) {
+func (self *Cons) SaveDB(batch serodb.Batch) {
 	//get blocks
 	//get dbs
 }

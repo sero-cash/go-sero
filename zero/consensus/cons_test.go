@@ -1,21 +1,13 @@
 package consensus
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
-
-	"github.com/sero-cash/go-czero-import/keys"
 )
 
-func s2u(str string) (ret *keys.Uint256) {
-	ret = &keys.Uint256{}
-	copy(ret[:], str[:])
-	return
-}
-
-func u2s(u *keys.Uint256) (ret string) {
-	ret = string(u[:])
-	return
+func s2u(str string) (ret []byte) {
+	return []byte(str)
 }
 
 func TestConsSetValue(t *testing.T) {
@@ -27,7 +19,7 @@ func TestConsSetValue(t *testing.T) {
 
 	tree.SetValue(s2u("k0"), s2u("v0"))
 	v := tree.GetValue(s2u("k0"))
-	if v == nil || *v != *s2u("v0") {
+	if v == nil || bytes.Compare(v, s2u("v0")) != 0 {
 		t.FailNow()
 	}
 	fmt.Println(v)
@@ -42,7 +34,7 @@ func TestConsSnapshot(t *testing.T) {
 
 	tree.SetValue(s2u("k0"), s2u("v0"))
 	v := tree.GetValue(s2u("k0"))
-	if v == nil || *v != *s2u("v0") {
+	if v == nil || bytes.Compare(v, s2u("v0")) != 0 {
 		t.FailNow()
 	}
 
@@ -50,14 +42,14 @@ func TestConsSnapshot(t *testing.T) {
 
 	tree.SetValue(s2u("k0"), s2u("v1"))
 	v = tree.GetValue(s2u("k0"))
-	if v == nil || *v != *s2u("v1") {
+	if v == nil || bytes.Compare(v, s2u("v1")) != 0 {
 		t.FailNow()
 	}
 
 	cmap.RevertToSnapshot(1)
 
 	v = tree.GetValue(s2u("k0"))
-	if v == nil || *v != *s2u("v0") {
+	if v == nil || bytes.Compare(v, s2u("v0")) != 0 {
 		t.FailNow()
 	}
 
@@ -70,32 +62,35 @@ func TestConsSnapshot(t *testing.T) {
 }
 
 type TestObj struct {
-	Id string
-	St string
+	I string
+	S string
 }
 
 func (self *TestObj) CopyTo() CItem {
 	r := &TestObj{}
-	r.Id = self.Id
-	r.St = self.St
+	r.I = self.I
+	r.S = self.S
 	return r
 }
 func (self *TestObj) CopyFrom(item CItem) {
 	i := item.(*TestObj)
-	self.Id = i.Id
-	self.St = i.St
+	self.I = i.I
+	self.S = i.S
 	return
 }
-func (self *TestObj) State() (ret *keys.Uint256) {
-	ret = &keys.Uint256{}
-	copy(ret[:], self.St[:])
-	return
+
+func (self *TestObj) Id() (ret []byte) {
+	return append([]byte{}, []byte(self.I)...)
+}
+
+func (self *TestObj) State() (ret []byte) {
+	return append([]byte{}, []byte(self.S)...)
 }
 
 func NewTestObj(name string) (ret *TestObj) {
 	ret = &TestObj{}
-	ret.Id = name
-	ret.St = "S:" + name
+	ret.I = "obj0"
+	ret.S = name
 	return
 }
 
@@ -106,33 +101,33 @@ func TestConsSetObj(t *testing.T) {
 
 	cmap.CreateSnapshot(0)
 
-	tree.AddObj(s2u("k0"), NewTestObj("obj0"))
-	v := tree.GetObj(s2u("k0"), &TestObj{})
-	if v.(*TestObj).Id != "obj0" {
+	tree.AddObj(NewTestObj("0"))
+	v := tree.GetObj(s2u("obj0"), &TestObj{})
+	if v.(*TestObj).S != "0" {
 		t.FailNow()
 	}
 	fmt.Println(v)
 
 	cmap.CreateSnapshot(1)
 
-	tree.AddObj(s2u("k0"), NewTestObj("obj1"))
-	v = tree.GetObj(s2u("k0"), &TestObj{})
-	if v.(*TestObj).Id != "obj1" {
+	tree.AddObj(NewTestObj("1"))
+	v = tree.GetObj(s2u("obj0"), &TestObj{})
+	if v.(*TestObj).S != "1" {
 		t.FailNow()
 	}
 	fmt.Println(v)
 
 	cmap.RevertToSnapshot(1)
 
-	v = tree.GetObj(s2u("k0"), &TestObj{})
-	if v.(*TestObj).Id != "obj0" {
+	v = tree.GetObj(s2u("obj0"), &TestObj{})
+	if v.(*TestObj).S != "0" {
 		t.FailNow()
 	}
 	fmt.Println(v)
 
 	cmap.RevertToSnapshot(0)
 
-	v = tree.GetObj(s2u("k0"), &TestObj{})
+	v = tree.GetObj(s2u("obj0"), &TestObj{})
 	if v != nil {
 		t.FailNow()
 	}
