@@ -298,13 +298,13 @@ func (p *peer) AsyncSendNewVote(vote *types.Vote) {
 
 func (p *peer) SendNewVote(vote *types.Vote) error {
 	p.knownVotes.Add(vote.Hash())
-	return p2p.Send(p.rw, NewVoteMsg, []interface{}{vote})
+	return p2p.Send(p.rw, NewVoteMsg, vote)
 }
 
 func (p *peer) AsyncSendNewLottery(lottery *types.Lottery) {
 	select {
 	case p.queuedLotterys <- lottery:
-		p.knownVotes.Add(lottery.PosHash)
+		p.knownLotterys.Add(lottery.PosHash)
 	default:
 		p.Log().Debug("Dropping lottery announcement", "hash", lottery.PosHash)
 	}
@@ -312,7 +312,7 @@ func (p *peer) AsyncSendNewLottery(lottery *types.Lottery) {
 
 func (p *peer) SendNewLottery(lottery *types.Lottery) error {
 	p.knownLotterys.Add(lottery.PosHash)
-	return p2p.Send(p.rw, NewLotteryMsg, []interface{}{lottery})
+	return p2p.Send(p.rw, NewLotteryMsg, lottery)
 }
 
 // AsyncSendNewBlock queues an entire block for propagation to a remote peer. If

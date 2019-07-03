@@ -61,6 +61,10 @@ const (
 	chainVoteSize = 30
 
 	delayBlock = 1
+
+	evictionInterval = time.Minute
+
+	lifeTime = 30 * time.Minute
 )
 
 // Agent can register themself with the worker
@@ -260,7 +264,7 @@ func (self *worker) register(agent Agent) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.agents[agent] = struct{}{}
-	agent.SetReturnCh(self.recv)
+	agent.SetReturnCh(self.powRecv)
 }
 
 func (self *worker) unregister(agent Agent) {
@@ -271,6 +275,7 @@ func (self *worker) unregister(agent Agent) {
 }
 
 func (self *worker) update() {
+
 	defer self.txsSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
 	defer self.chainSideSub.Unsubscribe()
@@ -424,16 +429,19 @@ func (self *worker) contains(parent common.Hash, sign keys.Uint512) bool {
 }
 
 func (self *worker) voteLoop() {
+	evict := time.NewTicker(evictionInterval)
+	defer evict.Stop()
 	defer self.voteSub.Unsubscribe()
 	for {
 		select {
 		case vote := <-self.voteCh:
 			self.pendingPosMu.RUnlock()
 			_, ok := self.pendingPos[vote.Vote.PosHash]
-			self.pendingVoteMu.Lock()
+			self.pendingPosMu.RUnlock()
 			if !ok {
 				self.voter.SendVoteEvent(vote.Vote)
 			}
+			self.pendingVoteMu.Lock()
 			votes, ok := self.pendingVote[vote.Vote.PosHash]
 			if ok {
 				votes.Add(vote)
@@ -442,7 +450,23 @@ func (self *worker) voteLoop() {
 				self.pendingVote[vote.Vote.PosHash] = vs
 			}
 			self.pendingVoteMu.Unlock()
-
+		case <-evict.C:
+			deletes := []common.Hash{}
+			self.pendingPosMu.Lock()
+			for k, v := range self.pendingPos {
+				if time.Since(v) > lifeTime {
+					deletes = append(deletes, k)
+				}
+			}
+			for _, h := range deletes {
+				delete(self.pendingPos, h)
+			}
+			self.pendingPosMu.Unlock()
+			self.pendingVoteMu.Lock()
+			for _, h := range deletes {
+				delete(self.pendingVote, h)
+			}
+			self.pendingVoteMu.Unlock()
 		case <-self.voteSub.Err():
 			return
 
@@ -452,8 +476,6 @@ func (self *worker) voteLoop() {
 
 func (self *worker) resultLoop() {
 	for {
-
-		println("entray")
 		select {
 		case result := <-self.recv:
 			atomic.AddInt32(&self.atWork, -1)

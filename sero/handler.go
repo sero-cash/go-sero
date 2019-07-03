@@ -214,7 +214,6 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.voteCh = make(chan core.NewVoteEvent, voteChainSize)
 	pm.voteSub = pm.voter.SubscribeNewVoteEvent(pm.voteCh)
 	go pm.voteBroadLoop()
-
 	pm.lotteryCh = make(chan core.NewLotteryEvent, lotteryChainSize)
 	pm.lotterySub = pm.voter.SubscribeNewLotteryEvent(pm.lotteryCh)
 	go pm.lotteryBroadLoop()
@@ -639,23 +638,23 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == NewVoteMsg:
-		var vote *types.Vote
+		var vote types.Vote
 
-		if err := msg.Decode(vote); err != nil {
+		if err := msg.Decode(&vote); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		p.MarkVote(vote.Hash())
-		pm.voter.AddVote(vote)
+		pm.voter.AddVote(&vote)
 
 	case msg.Code == NewLotteryMsg:
 
-		var lottery *types.Lottery
+		var lottery types.Lottery
 
-		if err := msg.Decode(lottery); err != nil {
+		if err := msg.Decode(&lottery); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		p.MarkLottery(lottery.PosHash)
-		pm.voter.AddLottery(lottery)
+		pm.voter.AddLottery(&lottery)
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
@@ -725,7 +724,7 @@ func (pm *ProtocolManager) BroadcastVote(vote *types.Vote) {
 
 func (pm *ProtocolManager) BroadcastLottery(lottery *types.Lottery) {
 
-	peers := pm.peers.PeersWithoutVote(lottery.PosHash)
+	peers := pm.peers.PeersWithoutLottery(lottery.PosHash)
 	for _, peer := range peers {
 		peer.AsyncSendNewLottery(lottery)
 	}
@@ -762,7 +761,7 @@ func (pm *ProtocolManager) voteBroadLoop() {
 			pm.BroadcastVote(event.Vote)
 
 			// Err() channel will be closed when unsubscribing.
-		case <-pm.txsSub.Err():
+		case <-pm.voteSub.Err():
 			return
 		}
 	}
@@ -775,7 +774,7 @@ func (pm *ProtocolManager) lotteryBroadLoop() {
 			pm.BroadcastLottery(event.Lottery)
 
 			// Err() channel will be closed when unsubscribing.
-		case <-pm.txsSub.Err():
+		case <-pm.lotterySub.Err():
 			return
 		}
 	}

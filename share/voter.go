@@ -48,8 +48,6 @@ type Voter struct {
 	voteWorkFeed event.Feed
 	lotteryFeed  event.Feed
 	scope        event.SubscriptionScope
-	chainHeadCh  chan core.ChainHeadEvent
-	chainHeadSub event.Subscription
 	//abi       types.Signer
 	voteMu    sync.RWMutex
 	lotteryMu sync.RWMutex
@@ -71,15 +69,15 @@ func NewVoter(chainconfig *params.ChainConfig, chain blockChain, sero Backend) *
 		chainconfig: chainconfig,
 		sero:        sero,
 		chain:       chain,
-		chainHeadCh: make(chan core.ChainHeadEvent, chainHeadChanSize),
 		lotteryCh:   make(chan *types.Lottery, chainLotterySize),
 	}
 
 	// Subscribe events from blockchain
-	voter.chainHeadSub = voter.chain.SubscribeChainHeadEvent(voter.chainHeadCh)
+	//voter.chainHeadSub = voter.chain.SubscribeChainHeadEvent(voter.chainHeadCh)
 
 	// Start the event loop and return
 	go voter.loop()
+	go voter.voteLoop()
 
 	return voter
 }
@@ -167,7 +165,7 @@ func (self *Voter) SendVoteEvent(vote *types.Vote) {
 func (self *Voter) AddLottery(lottery *types.Lottery) {
 	log.Info("AddLottery", "block", lottery.ParentNum)
 	self.lotteryMu.Lock()
-	defer self.lotteryMu.RUnlock()
+	defer self.lotteryMu.Unlock()
 	_, exits := self.lotterys[lottery.PosHash]
 	if exits {
 
@@ -182,7 +180,7 @@ func (self *Voter) AddLottery(lottery *types.Lottery) {
 func (self *Voter) AddVote(vote *types.Vote) {
 	log.Info("AddVote", "hashpos", vote.PosHash)
 	self.voteMu.Lock()
-	defer self.voteMu.RUnlock()
+	defer self.voteMu.Unlock()
 	_, exits := self.votes[vote.Hash()]
 	if exits {
 
