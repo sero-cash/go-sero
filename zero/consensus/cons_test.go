@@ -69,6 +69,72 @@ func TestConsSnapshot(t *testing.T) {
 	}
 }
 
-func TestConsSetObj(t *testing.T) {
+type TestObj struct {
+	Id string
+	St string
+}
 
+func (self *TestObj) CopyTo() CItem {
+	r := &TestObj{}
+	r.Id = self.Id
+	r.St = self.St
+	return r
+}
+func (self *TestObj) CopyFrom(item CItem) {
+	i := item.(*TestObj)
+	self.Id = i.Id
+	self.St = i.St
+	return
+}
+func (self *TestObj) State() (ret *keys.Uint256) {
+	ret = &keys.Uint256{}
+	copy(ret[:], self.St[:])
+	return
+}
+
+func NewTestObj(name string) (ret *TestObj) {
+	ret = &TestObj{}
+	ret.Id = name
+	ret.St = "S:" + name
+	return
+}
+
+func TestConsSetObj(t *testing.T) {
+	db := NewFakeDB()
+	cmap := NewCons(&db)
+	tree := cmap.CreatePoint("tree$", "treestate$", true)
+
+	cmap.CreateSnapshot(0)
+
+	tree.AddObj(s2u("k0"), NewTestObj("obj0"))
+	v := tree.GetObj(s2u("k0"), &TestObj{})
+	if v.(*TestObj).Id != "obj0" {
+		t.FailNow()
+	}
+	fmt.Println(v)
+
+	cmap.CreateSnapshot(1)
+
+	tree.AddObj(s2u("k0"), NewTestObj("obj1"))
+	v = tree.GetObj(s2u("k0"), &TestObj{})
+	if v.(*TestObj).Id != "obj1" {
+		t.FailNow()
+	}
+	fmt.Println(v)
+
+	cmap.RevertToSnapshot(1)
+
+	v = tree.GetObj(s2u("k0"), &TestObj{})
+	if v.(*TestObj).Id != "obj0" {
+		t.FailNow()
+	}
+	fmt.Println(v)
+
+	cmap.RevertToSnapshot(0)
+
+	v = tree.GetObj(s2u("k0"), &TestObj{})
+	if v != nil {
+		t.FailNow()
+	}
+	fmt.Println(v)
 }

@@ -38,7 +38,7 @@ type cons struct {
 func NewCons(db DB) (ret cons) {
 	ret.content = make(map[string]consItem)
 	ret.db = db
-	ret.ver = 0
+	ret.ver = -1
 	return
 }
 
