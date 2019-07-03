@@ -13,19 +13,23 @@ type changelog struct {
 	ver int
 }
 
-type ItemType int
+type key struct {
+	pre string
+	id  []byte
+}
 
-const (
-	ITEMTYPE_CACHE = ItemType(0)
-	ITEMTYPE_CONS  = ItemType(1)
-	ITEMTYPE_DB    = ItemType(2)
-)
+func (self *key) k() string {
+	return self.pre + string(self.id)
+}
 
 type ConsItem struct {
-	item     CItem
-	index    int
-	dirty    bool
-	itemType ItemType
+	key     key
+	item    CItem
+	index   int
+	dirty   bool
+	inCons  bool
+	inBlock bool
+	inDB    bool
 }
 
 type Cons struct {
@@ -70,74 +74,63 @@ func (self *Cons) RevertToSnapshot(ver int) {
 	}
 }
 
-func (self *Cons) CreatePoint(objPre string, statePre string, inCons bool) (ret Cpoint) {
-	ret.objPre = objPre
-	ret.statePre = statePre
-	ret.inCons = inCons
-	ret.cons = self
-	return
-}
-
-func (self *Cons) DeleteObj(name string, item CItem, it ItemType) {
+func (self *Cons) DeleteObj(k *key, item CItem, inCons bool, inBlock bool, inDB bool) {
 	if item == nil {
 		panic(errors.New("item can not be nil"))
 	}
-	old := self.getObj(name, item.CopyTo(), it)
+	old := self.getObj(k, item.CopyTo(), inCons, inBlock, inDB)
 	cl := changelog{
-		name,
+		k.k(),
 		old,
 		self.ver,
 	}
-	self.content[name] = ConsItem{nil, len(self.cls), true, it}
+	self.content[k.k()] = ConsItem{*k, nil, len(self.cls), true, inCons, inBlock, inDB}
 	self.cls = append(self.cls, cl)
 	return
 }
 
-func (self *Cons) addObj(name string, item CItem, it ItemType) {
+func (self *Cons) addObj(k *key, item CItem, inCons bool, inBlock bool, inDB bool) {
 	if item == nil {
 		panic(errors.New("item can not be nil"))
 	}
-	old := self.getObj(name, item.CopyTo(), it)
+	old := self.getObj(k, item.CopyTo(), inCons, inBlock, inDB)
 	cl := changelog{
-		name,
+		k.k(),
 		old,
 		self.ver,
 	}
-	self.content[name] = ConsItem{item, len(self.cls), true, it}
+	self.content[k.k()] = ConsItem{*k, item, len(self.cls), true, inCons, inBlock, inDB}
 	self.cls = append(self.cls, cl)
 	return
 }
 
-func (self *Cons) getData(k []byte, it ItemType) (ret []byte) {
-	switch it {
-	case ITEMTYPE_CACHE:
-		return
-	case ITEMTYPE_CONS:
-		if v, err := self.db.CurrentTri().TryGet(k); err != nil {
-			return
-		} else {
-			return v
-		}
-	case ITEMTYPE_DB:
+func (self *Cons) getData(k []byte, inCons bool, inDB bool) (ret []byte) {
+	if inDB {
 		if v, err := self.db.GlobalGetter().Get(k); err != nil {
 			return
 		} else {
 			return v
 		}
-	default:
-		panic(errors.New("Unknow item type"))
 	}
+	if inCons {
+		if v, err := self.db.CurrentTri().TryGet(k); err != nil {
+			return
+		} else {
+			return v
+		}
+	}
+	return nil
 }
 
-func (self *Cons) getObj(name string, item CItem, it ItemType) (ret CItem) {
-	if i, ok := self.content[name]; !ok {
-		if v := self.getData([]byte(name), it); v == nil {
+func (self *Cons) getObj(k *key, item CItem, inCons bool, inBlock bool, inDB bool) (ret CItem) {
+	if i, ok := self.content[k.k()]; !ok {
+		if v := self.getData([]byte(k.k()), inCons, inDB); v == nil {
 			return nil
 		} else {
 			if e := rlp.DecodeBytes(v, item); e != nil {
 				return nil
 			}
-			self.content[name] = ConsItem{item, -1, false, it}
+			self.content[k.k()] = ConsItem{*k, item, -1, false, inCons, inBlock, inDB}
 			return item
 		}
 	} else {

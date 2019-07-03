@@ -23,7 +23,7 @@ type ClosePoolCmd struct{}
 
 type ContractCmd struct {
 	Asset assets.Asset
-	To    keys.Uint512
+	To    keys.PKr
 	Data  []byte
 }
 

@@ -15,7 +15,7 @@ func TestConsSetValue(t *testing.T) {
 
 	cmap := NewCons(&db)
 
-	tree := cmap.CreatePoint("tree", "", true)
+	tree := NewKVPt(&cmap, "tree")
 
 	tree.SetValue(s2u("k0"), s2u("v0"))
 	v := tree.GetValue(s2u("k0"))
@@ -28,7 +28,7 @@ func TestConsSetValue(t *testing.T) {
 func TestConsSnapshot(t *testing.T) {
 	db := NewFakeDB()
 	cmap := NewCons(&db)
-	tree := cmap.CreatePoint("tree", "", true)
+	tree := NewKVPt(&cmap, "tree")
 
 	cmap.CreateSnapshot(0)
 
@@ -97,7 +97,7 @@ func NewTestObj(name string) (ret *TestObj) {
 func TestConsSetObj(t *testing.T) {
 	db := NewFakeDB()
 	cmap := NewCons(&db)
-	tree := cmap.CreatePoint("tree$", "treestate$", true)
+	tree := NewObjPt(&cmap, "tree$", "treestate$")
 
 	cmap.CreateSnapshot(0)
 

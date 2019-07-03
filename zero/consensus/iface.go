@@ -19,10 +19,10 @@ type DB interface {
 type CItem interface {
 	CopyTo() (ret CItem)
 	CopyFrom(CItem)
-	Id() (ret []byte)
 }
 
 type PItem interface {
 	CItem
+	Id() (ret []byte)
 	State() (ret []byte)
 }
