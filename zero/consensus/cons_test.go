@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/sero-cash/go-czero-import/keys"
 )
 
 func s2u(str string) (ret []byte) {
@@ -15,7 +18,7 @@ func TestConsSetValue(t *testing.T) {
 
 	cmap := NewCons(&db)
 
-	tree := NewKVPt(&cmap, "tree")
+	tree := NewKVPt(&cmap, "tree", "test")
 
 	tree.SetValue(s2u("k0"), s2u("v0"))
 	v := tree.GetValue(s2u("k0"))
@@ -28,7 +31,7 @@ func TestConsSetValue(t *testing.T) {
 func TestConsSnapshot(t *testing.T) {
 	db := NewFakeDB()
 	cmap := NewCons(&db)
-	tree := NewKVPt(&cmap, "tree")
+	tree := NewKVPt(&cmap, "tree", "test")
 
 	cmap.CreateSnapshot(0)
 
@@ -97,7 +100,7 @@ func NewTestObj(name string) (ret *TestObj) {
 func TestConsSetObj(t *testing.T) {
 	db := NewFakeDB()
 	cmap := NewCons(&db)
-	tree := NewObjPt(&cmap, "tree$", "treestate$")
+	tree := NewObjPt(&cmap, "tree$", "treestate$", "test")
 
 	cmap.CreateSnapshot(0)
 
@@ -132,4 +135,136 @@ func TestConsSetObj(t *testing.T) {
 		t.FailNow()
 	}
 	fmt.Println(v)
+
+	conslist := cmap.FetchConsPairs(true)
+	blocklist := cmap.FetchConsPairs(true)
+	dblist := cmap.FetchConsPairs(true)
+	fmt.Println(conslist)
+	fmt.Println(blocklist)
+	fmt.Println(dblist)
+}
+
+func TestConsFetch(t *testing.T) {
+	db := NewFakeDB()
+	cmap := NewCons(&db)
+	dbobj := DBObj{"treestate$"}
+	tree := NewObjPt(&cmap, "tree$", dbobj.Pre, "test")
+
+	cmap.CreateSnapshot(0)
+
+	tree.AddObj(NewTestObj("0"))
+	v := tree.GetObj(s2u("obj0"), &TestObj{})
+	if v.(*TestObj).S != "0" {
+		t.FailNow()
+	}
+	fmt.Println(v)
+
+	cmap.CreateSnapshot(1)
+
+	tree.AddObj(NewTestObj("1"))
+	v = tree.GetObj(s2u("obj0"), &TestObj{})
+	if v.(*TestObj).S != "1" {
+		t.FailNow()
+	}
+	fmt.Println(v)
+
+	conslist := cmap.FetchConsPairs(false)
+	if len(conslist) != 1 {
+		t.FailNow()
+	}
+	blocklist := cmap.FetchBlockRecords(false)
+	if len(blocklist) != 1 && len(blocklist[0].Hashes) != 2 {
+		t.FailNow()
+	}
+	dblist := cmap.FetchDBPairs(false)
+	if len(dblist) != 2 {
+		t.FailNow()
+	}
+
+	conslist = cmap.FetchConsPairs(true)
+	if len(conslist) != 0 {
+		t.FailNow()
+	}
+	blocklist = cmap.FetchBlockRecords(true)
+	if len(blocklist) != 0 {
+		t.FailNow()
+	}
+	dblist = cmap.FetchDBPairs(true)
+	if len(dblist) != 0 {
+		t.FailNow()
+	}
+
+	testObj := TestObj{}
+	v = dbobj.GetObject(db.GlobalGetter(), []byte("1"), &testObj)
+	if v == nil {
+		t.FailNow()
+	}
+	if testObj.S != "1" {
+		t.FailNow()
+	}
+}
+
+func TestConsRecord(t *testing.T) {
+	db := NewFakeDB()
+	cmap := NewCons(&db)
+	dbobj := DBObj{"treestate$"}
+	tree := NewObjPt(&cmap, "tree$", dbobj.Pre, "test")
+
+	cmap.CreateSnapshot(0)
+
+	tree.AddObj(NewTestObj("0"))
+	v := tree.GetObj(s2u("obj0"), &TestObj{})
+	if v.(*TestObj).S != "0" {
+		t.FailNow()
+	}
+	fmt.Println(v)
+
+	cmap.CreateSnapshot(1)
+
+	tree.AddObj(NewTestObj("1"))
+	v = tree.GetObj(s2u("obj0"), &TestObj{})
+	if v.(*TestObj).S != "1" {
+		t.FailNow()
+	}
+	fmt.Println(v)
+
+	blockhash := common.Hash(keys.RandUint256())
+	cmap.Record(&blockhash, &db.db)
+
+	testObj := TestObj{}
+	v = dbobj.GetObject(db.GlobalGetter(), []byte("1"), &testObj)
+	if v == nil {
+		t.FailNow()
+	}
+	if testObj.S != "1" {
+		t.FailNow()
+	}
+	v = dbobj.GetObject(db.GlobalGetter(), []byte("0"), &testObj)
+	if v == nil {
+		t.FailNow()
+	}
+	if testObj.S != "0" {
+		t.FailNow()
+	}
+	v = dbobj.GetObject(db.GlobalGetter(), []byte("2"), &testObj)
+	if v != nil {
+		t.FailNow()
+	}
+
+	records := GetBlockRecords(db.GlobalGetter(), 0, &blockhash)
+	if len(records) != 1 && len(records[0].Hashes) != 2 {
+		t.FailNow()
+	}
+	fmt.Println(records)
+
+	cmap.Update()
+
+	cmap1 := NewCons(&db)
+	tree1 := NewObjPt(&cmap1, "tree$", dbobj.Pre, "test")
+	v = tree1.GetObj(s2u("obj0"), &TestObj{})
+	if v.(*TestObj).S != "1" {
+		t.FailNow()
+	}
+	fmt.Println(v)
+
 }

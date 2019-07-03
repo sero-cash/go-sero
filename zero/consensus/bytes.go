@@ -13,9 +13,14 @@ func (self *BytePair) CopyTo() CItem {
 }
 
 func (self *BytePair) CopyFrom(from CItem) {
-	f := from.(*BytePair)
-	self.Key = append([]byte{}, f.Key...)
-	self.Value = append([]byte{}, f.Value...)
+	if from != nil {
+		f := from.(*BytePair)
+		self.Key = append([]byte{}, f.Key...)
+		self.Value = append([]byte{}, f.Value...)
+	} else {
+		self.Key = []byte{}
+		self.Value = []byte{}
+	}
 	return
 }
 
@@ -37,7 +42,11 @@ func (self *Bytes) CopyTo() CItem {
 }
 
 func (self *Bytes) CopyFrom(from CItem) {
-	(*self) = append(Bytes{}, (*from.(*Bytes))...)
+	if from != nil {
+		(*self) = append(Bytes{}, (*from.(*Bytes))...)
+	} else {
+		(*self) = []byte{}
+	}
 	return
 }
 

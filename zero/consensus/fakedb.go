@@ -3,6 +3,7 @@ package consensus
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/serodb"
 )
 
@@ -64,6 +65,7 @@ type FakeDB struct {
 
 func NewFakeDB() (ret FakeDB) {
 	ret.tri = NewFakeTri()
+	ret.db = NewFakeTri()
 	return
 }
 
@@ -71,7 +73,7 @@ func (self *FakeDB) Num() uint64 {
 	return 0
 }
 
-func (self *FakeDB) CurrentTri() Tri {
+func (self *FakeDB) CurrentTri() state.Tri {
 	return &self.tri
 }
 
