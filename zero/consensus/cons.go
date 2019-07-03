@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"math/big"
 	"sort"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -27,7 +26,7 @@ func (self *key) k() string {
 	return self.pre + string(self.id)
 }
 
-type ConsItem struct {
+type consItem struct {
 	key     key
 	item    CItem
 	index   int
@@ -38,13 +37,15 @@ type ConsItem struct {
 
 type Cons struct {
 	db      DB
-	content map[string]*ConsItem
+	pre     string
+	content map[string]*consItem
 	cls     []changelog
 	ver     int
 }
 
-func NewCons(db DB) (ret Cons) {
-	ret.content = make(map[string]*ConsItem)
+func NewCons(db DB, pre string) (ret Cons) {
+	ret.content = make(map[string]*consItem)
+	ret.pre = pre
 	ret.db = db
 	ret.ver = -1
 	return
@@ -78,7 +79,7 @@ func (self *Cons) RevertToSnapshot(ver int) {
 	}
 }
 
-func (self *Cons) DeleteObj(k *key, item CItem, inCons bool, inBlock string, inDB bool) {
+func (self *Cons) deleteObj(k *key, item CItem, inCons bool, inBlock string, inDB bool) {
 	if item == nil {
 		panic(errors.New("item can not be nil"))
 	}
@@ -93,7 +94,7 @@ func (self *Cons) DeleteObj(k *key, item CItem, inCons bool, inBlock string, inD
 		cl.index = -1
 	}
 	cl.ver = self.ver
-	self.content[k.k()] = &ConsItem{*k, nil, len(self.cls), inCons, inBlock, inDB}
+	self.content[k.k()] = &consItem{*k, nil, len(self.cls), inCons, inBlock, inDB}
 	self.cls = append(self.cls, cl)
 	return
 }
@@ -113,7 +114,7 @@ func (self *Cons) addObj(k *key, item CItem, inCons bool, inBlock string, inDB b
 		cl.index = -1
 	}
 	cl.ver = self.ver
-	self.content[k.k()] = &ConsItem{*k, item, len(self.cls), inCons, inBlock, inDB}
+	self.content[k.k()] = &consItem{*k, item, len(self.cls), inCons, inBlock, inDB}
 	self.cls = append(self.cls, cl)
 	return
 }
@@ -136,7 +137,7 @@ func (self *Cons) getData(k []byte, inCons bool, inDB bool) (ret []byte) {
 	return nil
 }
 
-func (self *Cons) getObj(k *key, item CItem, inCons bool, inBlock string, inDB bool) (ret *ConsItem) {
+func (self *Cons) getObj(k *key, item CItem, inCons bool, inBlock string, inDB bool) (ret *consItem) {
 	if i, ok := self.content[k.k()]; !ok {
 		if v := self.getData([]byte(k.k()), inCons, inDB); v == nil {
 			return nil
@@ -144,7 +145,7 @@ func (self *Cons) getObj(k *key, item CItem, inCons bool, inBlock string, inDB b
 			if e := rlp.DecodeBytes(v, item); e != nil {
 				return nil
 			}
-			ret = &ConsItem{*k, item, -1, false, "", false}
+			ret = &consItem{*k, item, -1, false, "", false}
 			self.content[k.k()] = ret
 			return ret
 		}
@@ -154,19 +155,19 @@ func (self *Cons) getObj(k *key, item CItem, inCons bool, inBlock string, inDB b
 	}
 }
 
-type ConsItems []*ConsItem
+type consItems []*consItem
 
-func (self ConsItems) Len() int {
+func (self consItems) Len() int {
 	return len(self)
 }
-func (self ConsItems) Less(i, j int) bool {
+func (self consItems) Less(i, j int) bool {
 	return self[i].index < self[j].index
 }
-func (self ConsItems) Swap(i, j int) {
+func (self consItems) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
 }
 
-func (self *Cons) FetchConsPairs(onlyget bool) (ret ConsItems) {
+func (self *Cons) fetchConsPairs(onlyget bool) (ret consItems) {
 	for _, v := range self.content {
 		if v.inCons {
 			ret = append(ret, v)
@@ -179,7 +180,7 @@ func (self *Cons) FetchConsPairs(onlyget bool) (ret ConsItems) {
 	return
 }
 
-func (self *Cons) FetchDBPairs(onlyget bool) (ret ConsItems) {
+func (self *Cons) fetchDBPairs(onlyget bool) (ret consItems) {
 	for _, v := range self.content {
 		if v.inDB {
 			ret = append(ret, v)
@@ -197,8 +198,8 @@ type Record struct {
 	Hashes [][]byte
 }
 
-func (self *Cons) FetchBlockRecords(onlyget bool) (ret []*Record) {
-	cis := ConsItems{}
+func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
+	cis := consItems{}
 	for _, v := range self.content {
 		if len(v.inBlock) > 0 {
 			cis = append(cis, v)
@@ -227,7 +228,7 @@ func (self *Cons) FetchBlockRecords(onlyget bool) (ret []*Record) {
 }
 
 func (self *Cons) Update() {
-	conslist := self.FetchConsPairs(false)
+	conslist := self.fetchConsPairs(false)
 	for _, v := range conslist {
 		if b, err := rlp.EncodeToBytes(v.item); err != nil {
 			panic(err)
@@ -242,10 +243,11 @@ func (self *Cons) Update() {
 }
 
 func (self *Cons) Record(hash *common.Hash, batch serodb.Putter) {
-	recordlist := self.FetchBlockRecords(false)
-	SetBlockRecords(batch, self.db.Num(), hash, recordlist)
+	recordlist := self.fetchBlockRecords(false)
 
-	dblist := self.FetchDBPairs(false)
+	DBObj{self.pre}.setBlockRecords(batch, self.db.Num(), hash, recordlist)
+
+	dblist := self.fetchDBPairs(false)
 	for _, v := range dblist {
 		if b, err := rlp.EncodeToBytes(v.item); err != nil {
 			panic(err)
@@ -254,57 +256,5 @@ func (self *Cons) Record(hash *common.Hash, batch serodb.Putter) {
 				panic(err)
 			}
 		}
-	}
-}
-
-const (
-	BLOCK_RECORDS_NAME = "ZERO$CONS$BLOCK$RECORDS$"
-)
-
-func makeBlockName(num uint64, hash *common.Hash) (ret []byte) {
-	ret = []byte(BLOCK_RECORDS_NAME)
-	ret = append(ret, big.NewInt(int64(num)).Bytes()...)
-	ret = append(ret, hash[:]...)
-	return
-}
-
-func SetBlockRecords(batch serodb.Putter, num uint64, hash *common.Hash, records []*Record) {
-	if b, err := rlp.EncodeToBytes(&records); err != nil {
-		panic(err)
-	} else {
-		name := makeBlockName(num, hash)
-		if err := batch.Put(name, b); err != nil {
-			panic(err)
-		} else {
-			return
-		}
-	}
-}
-
-func GetBlockRecords(getter serodb.Getter, num uint64, hash *common.Hash) (records []*Record) {
-	if b, err := getter.Get(makeBlockName(num, hash)); err != nil {
-		return
-	} else {
-		if err := rlp.DecodeBytes(b, &records); err != nil {
-			panic(err)
-		} else {
-			return
-		}
-	}
-}
-
-type DBObj struct {
-	Pre string
-}
-
-func (self *DBObj) GetObject(getter serodb.Getter, id []byte, item CItem) (ret CItem) {
-	k := key{self.Pre, id}
-	if v, err := getter.Get([]byte(k.k())); err != nil {
-		return
-	} else {
-		if e := rlp.DecodeBytes(v, item); e != nil {
-			return nil
-		}
-		return item
 	}
 }

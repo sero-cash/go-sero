@@ -16,7 +16,7 @@ func s2u(str string) (ret []byte) {
 func TestConsSetValue(t *testing.T) {
 	db := NewFakeDB()
 
-	cmap := NewCons(&db)
+	cmap := NewCons(&db, "block")
 
 	tree := NewKVPt(&cmap, "tree", "test")
 
@@ -30,7 +30,7 @@ func TestConsSetValue(t *testing.T) {
 
 func TestConsSnapshot(t *testing.T) {
 	db := NewFakeDB()
-	cmap := NewCons(&db)
+	cmap := NewCons(&db, "block")
 	tree := NewKVPt(&cmap, "tree", "test")
 
 	cmap.CreateSnapshot(0)
@@ -99,7 +99,7 @@ func NewTestObj(name string) (ret *TestObj) {
 
 func TestConsSetObj(t *testing.T) {
 	db := NewFakeDB()
-	cmap := NewCons(&db)
+	cmap := NewCons(&db, "block")
 	tree := NewObjPt(&cmap, "tree$", "treestate$", "test")
 
 	cmap.CreateSnapshot(0)
@@ -136,9 +136,9 @@ func TestConsSetObj(t *testing.T) {
 	}
 	fmt.Println(v)
 
-	conslist := cmap.FetchConsPairs(true)
-	blocklist := cmap.FetchConsPairs(true)
-	dblist := cmap.FetchConsPairs(true)
+	conslist := cmap.fetchConsPairs(true)
+	blocklist := cmap.fetchConsPairs(true)
+	dblist := cmap.fetchConsPairs(true)
 	fmt.Println(conslist)
 	fmt.Println(blocklist)
 	fmt.Println(dblist)
@@ -146,7 +146,7 @@ func TestConsSetObj(t *testing.T) {
 
 func TestConsFetch(t *testing.T) {
 	db := NewFakeDB()
-	cmap := NewCons(&db)
+	cmap := NewCons(&db, "block")
 	dbobj := DBObj{"treestate$"}
 	tree := NewObjPt(&cmap, "tree$", dbobj.Pre, "test")
 
@@ -168,45 +168,38 @@ func TestConsFetch(t *testing.T) {
 	}
 	fmt.Println(v)
 
-	conslist := cmap.FetchConsPairs(false)
+	conslist := cmap.fetchConsPairs(false)
 	if len(conslist) != 1 {
 		t.FailNow()
 	}
-	blocklist := cmap.FetchBlockRecords(false)
+	blocklist := cmap.fetchBlockRecords(false)
 	if len(blocklist) != 1 && len(blocklist[0].Hashes) != 2 {
 		t.FailNow()
 	}
-	dblist := cmap.FetchDBPairs(false)
+	dblist := cmap.fetchDBPairs(false)
 	if len(dblist) != 2 {
 		t.FailNow()
 	}
 
-	conslist = cmap.FetchConsPairs(true)
+	conslist = cmap.fetchConsPairs(true)
 	if len(conslist) != 0 {
 		t.FailNow()
 	}
-	blocklist = cmap.FetchBlockRecords(true)
+	blocklist = cmap.fetchBlockRecords(true)
 	if len(blocklist) != 0 {
 		t.FailNow()
 	}
-	dblist = cmap.FetchDBPairs(true)
+	dblist = cmap.fetchDBPairs(true)
 	if len(dblist) != 0 {
 		t.FailNow()
 	}
 
-	testObj := TestObj{}
-	v = dbobj.GetObject(db.GlobalGetter(), []byte("1"), &testObj)
-	if v == nil {
-		t.FailNow()
-	}
-	if testObj.S != "1" {
-		t.FailNow()
-	}
 }
 
 func TestConsRecord(t *testing.T) {
 	db := NewFakeDB()
-	cmap := NewCons(&db)
+	dbcons := DBObj{"BLOCK$CONS$INDEX$"}
+	cmap := NewCons(&db, dbcons.Pre)
 	dbobj := DBObj{"treestate$"}
 	tree := NewObjPt(&cmap, "tree$", dbobj.Pre, "test")
 
@@ -251,7 +244,7 @@ func TestConsRecord(t *testing.T) {
 		t.FailNow()
 	}
 
-	records := GetBlockRecords(db.GlobalGetter(), 0, &blockhash)
+	records := dbcons.GetBlockRecords(db.GlobalGetter(), 0, &blockhash)
 	if len(records) != 1 && len(records[0].Hashes) != 2 {
 		t.FailNow()
 	}
@@ -259,7 +252,7 @@ func TestConsRecord(t *testing.T) {
 
 	cmap.Update()
 
-	cmap1 := NewCons(&db)
+	cmap1 := NewCons(&db, dbcons.Pre)
 	tree1 := NewObjPt(&cmap1, "tree$", dbobj.Pre, "test")
 	v = tree1.GetObj(s2u("obj0"), &TestObj{})
 	if v.(*TestObj).S != "1" {
