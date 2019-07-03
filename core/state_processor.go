@@ -17,6 +17,12 @@
 package core
 
 import (
+	"errors"
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/stake"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txs/stx"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/common"
@@ -65,6 +71,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 
 	// Iterate over and process the individual transactions
 	gasReward := uint64(0)
+
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		receipt, gas, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, usedGas, cfg)
@@ -112,6 +119,10 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 		return nil, 0, err
 	}
 
+	if err = applyStake(msg.From(), tx.GetZZSTX().Desc_Cmd, statedb, tx.Hash(), header.Number.Uint64()); err != nil {
+		return nil, 0, err
+	}
+
 	root := statedb.IntermediateRoot(true).Bytes()
 	*usedGas += gas
 
@@ -127,5 +138,82 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+
 	return receipt, gas, err
+}
+
+func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.StateDB, txHash common.Hash, number uint64) error {
+	stakeState := stake.NewStakeState(statedb.GetZeroDB())
+	pkr := *from.ToPKr()
+	if stakeDesc.BuyShare != nil {
+		var stakePool *stake.StakePool
+		if stakeDesc.BuyShare.Pool != (keys.Uint256{}) {
+			poolId := common.BytesToHash(stakeDesc.BuyShare.Pool[:])
+			stakePool = stakeState.GetStakePool(poolId)
+			if stakePool == nil {
+				return errors.New("not exist pool,id" + poolId.String())
+			}
+		}
+
+		value := new(big.Int).Set(stakeDesc.BuyShare.Value.ToInt())
+		size := stakeState.ShareSize()
+		price := stakeState.SharePrice(size)
+		num := uint32(0)
+		amount := new(big.Int)
+		for value.Cmp(price) >= 0 {
+			value.Sub(value, price)
+			size++
+			num++;
+			amount.Add(amount, price)
+			price = stakeState.SharePrice(size)
+		}
+		if num > 0 {
+			avgPrice := new(big.Int).Div(amount, big.NewInt(int64(num)))
+			amount = new(big.Int).Mul(avgPrice, big.NewInt(int64(num)))
+			refund := new(big.Int).Sub(new(big.Int).Set(stakeDesc.BuyShare.Value.ToInt()), amount)
+			if refund.Sign() > 0 {
+				asset := assets.Asset{Tkn: &assets.Token{
+					Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+					Value:    utils.U256(*refund),
+				},
+				}
+				statedb.GetZState().AddTxOut(from, asset)
+			}
+
+			share := &stake.Share{PKr: pkr, Value: avgPrice, TransactionHash: txHash, BlockNumber: number, InitNum: num}
+			if stakePool != nil {
+				hash := common.BytesToHash(stakePool.Id())
+				share.PoolId = &hash
+				share.Fee = stakePool.Fee
+			} else {
+				if stakeDesc.BuyShare.Vote != (keys.PKr{}) {
+					share.VoteKr = &stakeDesc.BuyShare.Vote
+				} else {
+					return errors.New("not votepkr")
+				}
+			}
+			stakeState.UpdateShare(share)
+		} else {
+			asset := assets.Asset{Tkn: &assets.Token{
+				Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+				Value:    stakeDesc.BuyShare.Value,
+			},
+			}
+			statedb.GetZState().AddTxOut(from, asset)
+		}
+
+	} else if stakeDesc.RegistPool != nil {
+		cmd := stakeDesc.RegistPool
+		pool := &stake.StakePool{PKr: pkr, Amount: cmd.Value.ToInt(), VotePKr: cmd.Vote, TransactionHash: txHash, Fee: uint16(cmd.FeeRate)}
+		stakeState.UpdateStakePool(pool)
+	} else if stakeDesc.ClosePool != nil {
+		poolId := crypto.Keccak256Hash(pkr[:])
+		stakePool := stakeState.GetStakePool(poolId)
+		if stakePool == nil {
+			return errors.New("not exist pool,id" + poolId.String())
+		}
+		stakePool.Closed = true
+		stakeState.UpdateStakePool(stakePool)
+	}
+	return nil
 }

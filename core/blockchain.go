@@ -274,7 +274,9 @@ func (self *State1BlockChain) GetTkAt(tk *keys.Uint512) uint64 {
 	}
 	return 0
 }
-
+func (bc *BlockChain) GetDB() serodb.Database {
+	return bc.db
+}
 // loadLastState loads the last known chain state from the database. This method
 // assumes that the chain manager mutex is held.
 func (bc *BlockChain) loadLastState() error {

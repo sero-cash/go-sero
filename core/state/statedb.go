@@ -97,6 +97,21 @@ type StateDB struct {
 	lock   sync.Mutex
 }
 
+func (self *StateDB) SetStakeState(key common.Hash, value common.Hash) {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		stateObject.SetState(self.db, key, value)
+	}
+}
+
+func (self *StateDB) GetStakeState(key common.Hash) common.Hash {
+	stateObject := self.GetOrNewStateObject(EmptyAddress)
+	if stateObject != nil {
+		return stateObject.GetState(self.db, key)
+	}
+	return common.Hash{}
+}
+
 func (self *StateDB) IsContract(addr common.Address) bool {
 	return self.getStateObject(addr) != nil
 }

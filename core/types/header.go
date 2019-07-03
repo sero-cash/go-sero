@@ -90,7 +90,6 @@ func (h *Header) Valid() bool {
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
-	//test
 	return rlpHash(h)
 }
 
