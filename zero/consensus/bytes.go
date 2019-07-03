@@ -10,7 +10,7 @@ func (self *Bytes) CopyTo() CItem {
 }
 
 func (self *Bytes) CopyFrom(from CItem) {
-	*self = append(*self, *from.(*Bytes)...)
+	*self = append(Bytes{}, *from.(*Bytes)...)
 	return
 }
 

@@ -114,14 +114,12 @@ func (self *cons) getData(k []byte, it ItemType) (ret []byte) {
 		return
 	case ITEMTYPE_CONS:
 		if v, err := self.db.CurrentTri().TryGet(k); err != nil {
-			panic(err)
 			return
 		} else {
 			return v
 		}
 	case ITEMTYPE_DB:
 		if v, err := self.db.GlobalGetter().Get(k); err != nil {
-			panic(err)
 			return
 		} else {
 			return v
