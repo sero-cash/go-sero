@@ -18,6 +18,7 @@ package miner
 
 import (
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/stake"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -436,6 +437,9 @@ func (self *worker) commitNewWork() {
 		return
 	}
 	txs := types.NewTransactionsByPrice(pending)
+
+	stakeState := stake.NewStakeState(work.state)
+	stakeState.ProcessBeforeApply(self.chain, header)
 
 	work.commitTransactions(self.mux, txs, self.chain, header.Coinbase)
 

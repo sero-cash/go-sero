@@ -167,28 +167,6 @@ func New(root common.Hash, db Database, number uint64) (*StateDB, error) {
 	}, nil
 }
 
-func (self *StateDB) GetAvgUsedGas(number uint64) *big.Int {
-	stateObject := self.GetOrNewStateObject(EmptyAddress)
-	if stateObject != nil {
-		value := stateObject.GetState(self.db, self.usedGasKey(number))
-		return big.NewInt(0).SetBytes(value.Bytes())
-	}
-	return new(big.Int)
-}
-
-func (self *StateDB) SetAvgUsedGas(number uint64, avgGsedGas *big.Int) {
-	stateObject := self.GetOrNewStateObject(EmptyAddress)
-	if stateObject != nil {
-		stateObject.SetState(self.db, self.usedGasKey(number), common.BigToHash(avgGsedGas))
-	}
-}
-
-func (self *StateDB) usedGasKey(number uint64) common.Hash {
-	bytes, _ := rlp.EncodeToBytes([]interface{}{"usedGas", number})
-	key := crypto.Keccak256Hash(bytes)
-	return key
-}
-
 func (self *StateDB) registerAddressByState(name string, contractAddr common.Address, key string) bool {
 	key0, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{0}})
 	key1, _ := rlp.EncodeToBytes([]interface{}{name, key, []byte{1}})

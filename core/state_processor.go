@@ -144,7 +144,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 }
 
 func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.StateDB, txHash common.Hash, number uint64) error {
-	stakeState := stake.NewStakeState(nil /*statedb.GetZeroDB()*/)
+	stakeState := stake.NewStakeState(statedb)
 	pkr := *from.ToPKr()
 	if stakeDesc.BuyShare != nil {
 		var stakePool *stake.StakePool
@@ -154,23 +154,16 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			if stakePool == nil {
 				return errors.New("not exist pool,id" + poolId.String())
 			}
+			if stakePool.Closed {
+				return errors.New("pool is closed,id" + poolId.String())
+			}
 		}
 
-		value := new(big.Int).Set(stakeDesc.BuyShare.Value.ToInt())
-		size := stakeState.ShareSize()
-		price := stakeState.SharePrice(size)
-		num := uint32(0)
-		amount := new(big.Int)
-		for value.Cmp(price) >= 0 {
-			value.Sub(value, price)
-			size++
-			num++
-			amount.Add(amount, price)
-			price = stakeState.SharePrice(size)
-		}
+		value := stakeDesc.BuyShare.Value.ToInt()
+		num, avgPrice := stakeState.CaleAvgPrice(value)
+
 		if num > 0 {
-			avgPrice := new(big.Int).Div(amount, big.NewInt(int64(num)))
-			amount = new(big.Int).Mul(avgPrice, big.NewInt(int64(num)))
+			amount := new(big.Int).Mul(avgPrice, big.NewInt(int64(num)))
 			refund := new(big.Int).Sub(new(big.Int).Set(stakeDesc.BuyShare.Value.ToInt()), amount)
 			if refund.Sign() > 0 {
 				asset := assets.Asset{Tkn: &assets.Token{
@@ -181,7 +174,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 				statedb.GetZState().AddTxOut(from, asset)
 			}
 
-			share := &stake.Share{PKr: pkr, Value: avgPrice, TransactionHash: txHash, BlockNumber: number, InitNum: num}
+			share := &stake.Share{PKr: pkr, Value: avgPrice, TransactionHash: txHash, BlockNumber: number, InitNum: num, Num: num}
 			if stakePool != nil {
 				hash := common.BytesToHash(stakePool.Id())
 				share.PoolId = &hash
@@ -202,7 +195,6 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			}
 			statedb.GetZState().AddTxOut(from, asset)
 		}
-
 	} else if stakeDesc.RegistPool != nil {
 		cmd := stakeDesc.RegistPool
 		pool := &stake.StakePool{PKr: pkr, Amount: cmd.Value.ToInt(), VotePKr: cmd.Vote, TransactionHash: txHash, Fee: uint16(cmd.FeeRate)}

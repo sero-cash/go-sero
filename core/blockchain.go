@@ -20,6 +20,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/stake"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -1237,6 +1238,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 				return i, events, coalescedLogs, err
 			}
 		}
+
+		stakeState := stake.NewStakeState(state)
+		stakeState.ProcessBeforeApply(bc, block.Header())
 
 		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)

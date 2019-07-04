@@ -3,8 +3,6 @@ package stake
 import (
 	"fmt"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/zero/consensus"
-
 	"github.com/sero-cash/go-sero/crypto"
 	"math/rand"
 	"testing"
@@ -37,15 +35,21 @@ func (node *SNode) MiddleOrder(state State) {
 	}
 }
 
-func newState() State {
-	//db := serodb.NewMemDatabase()
-	//state, _ := state.New(common.Hash{}, state.NewDatabase(db), 0)
-	//return state
-	db := consensus.NewFakeDB()
-	return NewStakeState(&db)
-}
+//func newState() (State, *state.StateDB) {
+//	db := serodb.NewMemDatabase()
+//	state, _ := state.New(common.Hash{}, state.NewDatabase(db), 0)
+//	//state.GetZState()
+//	//return state
+//	//db := consensus.NewFakeDB()
+//	return NewStakeState(state), state
+//}
 func TestTree(t *testing.T) {
-	tree, _ := initTree(newState())
+	db, stateDB := newState()
+	root := stateDB.IntermediateRoot(true)
+	fmt.Println("root:", root.String())
+	tree, _ := initTree(db)
+	root = stateDB.IntermediateRoot(true)
+	fmt.Println("root:", root.String())
 	fmt.Println(tree.size())
 }
 
@@ -95,7 +99,7 @@ func initTree(state State) (*STree, map[common.Hash]uint32) {
 //}
 
 func TestDelByIndex2(t *testing.T) {
-	state := newState()
+	state, _ := newState()
 	tree, _ := initTree(state)
 	tree.deletNodeByIndex(7)
 
@@ -106,7 +110,7 @@ func TestDelByIndex2(t *testing.T) {
 }
 func TestDelByIndex(t *testing.T) {
 
-	state := newState()
+	state, stateDB := newState()
 	tree, _ := initTree(state)
 
 	fmt.Println()
@@ -122,22 +126,24 @@ func TestDelByIndex(t *testing.T) {
 		node := tree.deletNodeByIndex(index)
 		node.println()
 
-		root := &SNode{key: state.GetStakeState(rootKey)}
+		rootNode := &SNode{key: state.GetStakeState(rootKey)}
+		rootNode.MiddleOrder(state)
 
-		root.MiddleOrder(state)
+		root := stateDB.IntermediateRoot(true)
+		fmt.Println("root:", root.String())
 		fmt.Println()
 	}
 
 	hash := state.GetStakeState(rootKey)
-	root := &SNode{key: hash}
-	fmt.Println("root", common.Bytes2Hex(hash[:]))
+	rootNode := &SNode{key: hash}
+	rootNode.MiddleOrder(state)
 
-	root.MiddleOrder(state)
-	fmt.Println()
+	root := stateDB.IntermediateRoot(true)
+	fmt.Println("root:", root.String())
 }
 
 func TestDelByHash(t *testing.T) {
-	state := newState()
+	state, _ := newState()
 	tree, all := initTree(state)
 
 	fmt.Println()
