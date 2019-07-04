@@ -21,13 +21,11 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/zero/exchange"
+	"github.com/sero-cash/go-sero/zero/txtool"
+
+	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
 	"github.com/sero-cash/go-sero/log"
-
-	"github.com/sero-cash/go-sero/zero/light"
-
-	"github.com/sero-cash/go-sero/zero/light/light_types"
 
 	"github.com/sero-cash/go-czero-import/keys"
 
@@ -249,15 +247,15 @@ func (b *SeroAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.M
 	}
 }
 
-func (b *SeroAPIBackend) GetBlocksInfo(start uint64, count uint64) ([]light_types.Block, error) {
-	return light.SRI_Inst.GetBlocksInfo(start, count)
+func (b *SeroAPIBackend) GetBlocksInfo(start uint64, count uint64) ([]txtool.Block, error) {
+	return txtool.SRI_Inst.GetBlocksInfo(start, count)
 
 }
-func (b *SeroAPIBackend) GetAnchor(roots []keys.Uint256) ([]light_types.Witness, error) {
-	return light.SRI_Inst.GetAnchor(roots)
+func (b *SeroAPIBackend) GetAnchor(roots []keys.Uint256) ([]txtool.Witness, error) {
+	return txtool.SRI_Inst.GetAnchor(roots)
 
 }
-func (b *SeroAPIBackend) CommitTx(tx *light_types.GTx) error {
+func (b *SeroAPIBackend) CommitTx(tx *txtool.GTx) error {
 	gasPrice := big.Int(tx.GasPrice)
 	gas := uint64(tx.Gas)
 	signedTx := types.NewTxWithGTx(gas, &gasPrice, &tx.Tx)
@@ -302,7 +300,7 @@ func (b *SeroAPIBackend) GetBalances(address keys.Uint512) (balances map[string]
 	return b.sero.exchange.GetBalances(address)
 }
 
-func (b *SeroAPIBackend) GenTx(param exchange.TxParam) (txParam *light_types.GenTxParam, e error) {
+func (b *SeroAPIBackend) GenTx(param exchange.TxParam) (txParam *txtool.GenTxParam, e error) {
 	if b.sero.exchange == nil {
 		e = errors.New("not start exchange")
 		return

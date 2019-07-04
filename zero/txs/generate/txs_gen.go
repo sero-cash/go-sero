@@ -3,9 +3,9 @@ package generate
 import (
 	"errors"
 
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
+	"github.com/sero-cash/go-sero/zero/txtool"
 
-	"github.com/sero-cash/go-sero/zero/lstate/lstate_types"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate/lstate_types"
 
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
@@ -209,7 +209,7 @@ func Gen_lstate(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
 			return
 		}
 		for _, used_out := range ctx.p.uouts {
-			lstate_types.UpdateOutStat(light_ref.Ref_inst.Bc.GetDB(), &used_out)
+			lstate_types.UpdateOutStat(txtool.Ref_inst.Bc.GetDB(), &used_out)
 		}
 		s = ctx.s
 		return

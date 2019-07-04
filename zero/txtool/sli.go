@@ -1,4 +1,4 @@
-package light
+package txtool
 
 import (
 	"encoding/json"
@@ -7,8 +7,6 @@ import (
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/hexutil"
-	"github.com/sero-cash/go-sero/zero/light/light_generate"
-	"github.com/sero-cash/go-sero/zero/light/light_types"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -19,33 +17,11 @@ type SLI struct {
 
 var SLI_Inst = SLI{}
 
-func (self *SLI) CreateKr() (kr light_types.Kr) {
-	rnd := keys.RandUint256()
-	zsk := keys.RandUint256()
-	vsk := keys.RandUint256()
-	zsk = cpt.Force_Fr(&zsk)
-	vsk = cpt.Force_Fr(&vsk)
-
-	skr := keys.PKr{}
-	copy(skr[:], zsk[:])
-	copy(skr[32:], vsk[:])
-	copy(skr[64:], rnd[:])
-
-	sk := keys.Uint512{}
-	copy(sk[:], skr[:])
-	pk := keys.Sk2PK(&sk)
-
-	pkr := keys.Addr2PKr(&pk, &rnd)
-	kr.PKr = pkr
-	kr.SKr = skr
-	return
-}
-
-func (self *SLI) DecOuts(outs []light_types.Out, skr *keys.PKr) (douts []light_types.DOut) {
+func (self *SLI) DecOuts(outs []Out, skr *keys.PKr) (douts []DOut) {
 	sk := keys.Uint512{}
 	copy(sk[:], skr[:])
 	for _, out := range outs {
-		dout := light_types.DOut{}
+		dout := DOut{}
 
 		data, _ := json.Marshal(out)
 		log.Printf("DecOuts out : %s", string(data))
@@ -91,9 +67,9 @@ func (self *SLI) DecOuts(outs []light_types.Out, skr *keys.PKr) (douts []light_t
 	return
 }
 
-func (self *SLI) GenTx(param *light_types.GenTxParam) (gtx light_types.GTx, e error) {
+func (self *SLI) GenTx(param *GenTxParam) (gtx GTx, e error) {
 
-	if tx, err := light_generate.Generate(param); err != nil {
+	if tx, err := genTx(param); err != nil {
 		e = err
 		return
 	} else {
@@ -105,7 +81,7 @@ func (self *SLI) GenTx(param *light_types.GenTxParam) (gtx light_types.GTx, e er
 	}
 }
 
-func SignTx(sk *keys.Uint512, paramTx *light_types.GenTxParam) (tx light_types.GTx, err error) {
+func SignTx(sk *keys.Uint512, paramTx *GenTxParam) (tx GTx, err error) {
 	copy(paramTx.From.SKr[:], sk[:])
 	for i := range paramTx.Ins {
 		copy(paramTx.Ins[i].SKr[:], sk[:])

@@ -4,11 +4,13 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/wallet/lstate/lstate_types"
+
+	"github.com/sero-cash/go-sero/zero/txtool"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate/balance/accounts"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
-	"github.com/sero-cash/go-sero/zero/lstate/balance/accounts"
-	lstate "github.com/sero-cash/go-sero/zero/lstate/lstate_types"
 )
 
 type Balance struct {
@@ -24,7 +26,7 @@ func NewBalance() (ret *Balance) {
 func (self *Balance) parseEntry() uint64 {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error("parse block chain error : ", "number", light_ref.Ref_inst.Bc.GetCurrenHeader().Number, "recover", r)
+			log.Error("parse block chain error : ", "number", txtool.Ref_inst.Bc.GetCurrenHeader().Number, "recover", r)
 			debug.PrintStack()
 		}
 	}()
@@ -43,22 +45,22 @@ func (self *Balance) run() {
 	}
 }
 
-func (self *Balance) GetOut(root *keys.Uint256) (src *lstate.OutState, e error) {
+func (self *Balance) GetOut(root *keys.Uint256) (src *lstate_types.OutState, e error) {
 	s, err := self.db.GetOut(root)
 	return &s, err
 }
 
-func (self *Balance) GetPkgs(tk *keys.Uint512, is_from bool) (ret []*lstate.Pkg) {
+func (self *Balance) GetPkgs(tk *keys.Uint512, is_from bool) (ret []*lstate_types.Pkg) {
 	return
 }
-func (self *Balance) GetOuts(tk *keys.Uint512) (outs []*lstate.OutState, e error) {
+func (self *Balance) GetOuts(tk *keys.Uint512) (outs []*lstate_types.OutState, e error) {
 	outs, e = self.db.GetOuts(tk)
-	lstate.SortOutStats(light_ref.Ref_inst.Bc.GetDB(), outs)
+	lstate_types.SortOutStats(txtool.Ref_inst.Bc.GetDB(), outs)
 	return
 }
 
 func (self *Balance) AddAccount(tk *keys.Uint512) (ret bool) {
-	top_num := light_ref.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()
+	top_num := txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()
 	return self.db.AddAccount(tk, top_num)
 }
 

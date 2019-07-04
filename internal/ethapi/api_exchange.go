@@ -8,6 +8,7 @@ import (
 
 	"github.com/sero-cash/go-sero/common/address"
 
+	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/core/types"
@@ -23,13 +24,12 @@ import (
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 
-	"github.com/sero-cash/go-sero/zero/exchange"
+	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
 	"github.com/sero-cash/go-sero/common"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/hexutil"
-	"github.com/sero-cash/go-sero/zero/light/light_types"
 )
 
 type PublicExchangeAPI struct {
@@ -178,7 +178,7 @@ func (args GenTxArgs) toTxParam() exchange.TxParam {
 	return exchange.TxParam{args.From.ToUint512(), refundPkr, receptions, args.Gas, gasPrice, args.Roots}
 }
 
-func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*light_types.GenTxParam, error) {
+func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*txtool.GenTxParam, error) {
 	if err := param.check(); err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*light_
 	return s.b.GenTx(param.toTxParam())
 }
 
-func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param GenTxArgs) (*light_types.GTx, error) {
+func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param GenTxArgs) (*txtool.GTx, error) {
 	if err := param.check(); err != nil {
 		return nil, err
 	}
@@ -341,7 +341,7 @@ func (args MergeArgs) Check() error {
 	return nil
 }
 
-func (s *PublicExchangeAPI) GenMergeTx(ctx context.Context, args MergeArgs) (txParam *light_types.GenTxParam, e error) {
+func (s *PublicExchangeAPI) GenMergeTx(ctx context.Context, args MergeArgs) (txParam *txtool.GenTxParam, e error) {
 	if e = args.Check(); e != nil {
 		return
 	}
@@ -424,7 +424,7 @@ func (s *PublicExchangeAPI) ValidAddress(ctx context.Context, addr MixBase58Adrr
 
 }
 
-func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *light_types.GTx) error {
+func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *txtool.GTx) error {
 	return s.b.CommitTx(args)
 }
 

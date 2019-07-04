@@ -3,11 +3,11 @@ package lstate
 import (
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
-	"github.com/sero-cash/go-sero/zero/lstate/balance"
-	"github.com/sero-cash/go-sero/zero/lstate/lstate_types"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
+	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/utils"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate/balance"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate/lstate_types"
 )
 
 var current_lstate LState
@@ -17,7 +17,7 @@ type LState struct {
 }
 
 func (self *LState) ZState() *zstate.ZState {
-	return light_ref.Ref_inst.GetState()
+	return txtool.Ref_inst.GetState()
 }
 
 func (self *LState) GetOut(root *keys.Uint256) (src *lstate_types.OutState, e error) {

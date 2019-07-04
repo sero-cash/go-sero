@@ -1,4 +1,4 @@
-package light_types
+package txtool
 
 import (
 	"math/big"
@@ -21,12 +21,6 @@ type GOut struct {
 	Asset assets.Asset
 	Memo  keys.Uint512
 }
-
-//type GTx struct {
-//	Gas      hexutil.Uint64
-//	GasPrice hexutil.Big
-//	Tx       stx.T
-//}
 
 type GTx struct {
 	Gas      hexutil.Uint64

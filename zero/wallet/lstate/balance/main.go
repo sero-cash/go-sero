@@ -3,12 +3,13 @@ package balance
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/txtool"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate/balance/accounts"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
 	"github.com/sero-cash/go-sero/zero/localdb"
-	"github.com/sero-cash/go-sero/zero/lstate/balance/accounts"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -29,10 +30,10 @@ func (self *Balance) MakesureEnv() {
 }
 
 func GetOut(root *keys.Uint256) (src *localdb.OutState) {
-	db := light_ref.Ref_inst.Bc.GetDB()
+	db := txtool.Ref_inst.Bc.GetDB()
 	rt := localdb.GetRoot(db, root)
 	if rt == nil {
-		zst := light_ref.Ref_inst.GetState()
+		zst := txtool.Ref_inst.GetState()
 		os := zst.State.GetOut(root)
 		return os
 	} else {
@@ -43,13 +44,13 @@ func GetOut(root *keys.Uint256) (src *localdb.OutState) {
 
 func (self *Balance) Parse() (num uint64) {
 
-	if light_ref.Ref_inst.Bc == nil || !light_ref.Ref_inst.Bc.IsValid() {
+	if txtool.Ref_inst.Bc == nil || !txtool.Ref_inst.Bc.IsValid() {
 		return 0
 	}
 
 	self.MakesureEnv()
 
-	tks := light_ref.Ref_inst.Bc.GetTks()
+	tks := txtool.Ref_inst.Bc.GetTks()
 
 	if len(tks) == 0 {
 		return uint64(0)
@@ -59,7 +60,7 @@ func (self *Balance) Parse() (num uint64) {
 	amap := make(map[keys.Uint512]*accounts.Account)
 	for _, tk := range tks {
 		account := self.db.GetAccount(&tk)
-		at := light_ref.Ref_inst.Bc.GetTkAt(&tk)
+		at := txtool.Ref_inst.Bc.GetTkAt(&tk)
 		if account.NextNum < at {
 			account.NextNum = at
 		}
@@ -73,17 +74,17 @@ func (self *Balance) Parse() (num uint64) {
 		}
 	}
 
-	target_num := light_ref.Ref_inst.GetDelayedNum(seroparam.DefaultConfirmedBlock())
+	target_num := txtool.Ref_inst.GetDelayedNum(seroparam.DefaultConfirmedBlock())
 
 	i := 0
 	for ; (next_num <= target_num) && (i < 2000); i++ {
 		batch := leveldb.Batch{}
 
-		next_header := light_ref.Ref_inst.Bc.GetHeaderByNumber(next_num)
+		next_header := txtool.Ref_inst.Bc.GetHeaderByNumber(next_num)
 		next_hash := next_header.Hash()
-		block := localdb.GetBlock(light_ref.Ref_inst.Bc.GetDB(), next_num, next_hash.HashToUint256())
+		block := localdb.GetBlock(txtool.Ref_inst.Bc.GetDB(), next_num, next_hash.HashToUint256())
 		if block == nil {
-			temp_state := light_ref.Ref_inst.Bc.NewState(&next_hash)
+			temp_state := txtool.Ref_inst.Bc.NewState(&next_hash)
 			if temp_state == nil {
 				panic(fmt.Sprintf("new zstate error: %v:%v !", next_num, next_hash))
 			} else {
@@ -125,7 +126,7 @@ func (self *Balance) Parse() (num uint64) {
 			}
 		}
 		for _, hash := range block.Pkgs {
-			pg := localdb.GetPkg(light_ref.Ref_inst.Bc.GetDB(), &hash)
+			pg := localdb.GetPkg(txtool.Ref_inst.Bc.GetDB(), &hash)
 			if pg == nil {
 				panic("BALANCE parse but can not find hash -> pkg")
 			} else {

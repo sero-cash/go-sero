@@ -21,9 +21,9 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/zero/exchange"
+	"github.com/sero-cash/go-sero/zero/txtool"
 
-	"github.com/sero-cash/go-sero/zero/light/light_types"
+	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
 	"github.com/sero-cash/go-czero-import/keys"
 
@@ -81,14 +81,14 @@ type Backend interface {
 	GetEngin() consensus.Engine
 	GetMiner() *miner.Miner
 
-	GetBlocksInfo(start uint64, count uint64) ([]light_types.Block, error)
-	GetAnchor(roots []keys.Uint256) ([]light_types.Witness, error)
-	CommitTx(tx *light_types.GTx) error
+	GetBlocksInfo(start uint64, count uint64) ([]txtool.Block, error)
+	GetAnchor(roots []keys.Uint256) ([]txtool.Witness, error)
+	CommitTx(tx *txtool.GTx) error
 
 	GetPkNumber(pk keys.Uint512) (number uint64, e error)
 	GetPkr(address *keys.Uint512, index *keys.Uint256) (keys.PKr, error)
 	GetBalances(address keys.Uint512) (balances map[string]*big.Int)
-	GenTx(param exchange.TxParam) (*light_types.GenTxParam, error)
+	GenTx(param exchange.TxParam) (*txtool.GenTxParam, error)
 	GetRecordsByPk(pk *keys.Uint512, begin, end uint64) (records []exchange.Utxo, err error)
 	GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records []exchange.Utxo, err error)
 	GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int)

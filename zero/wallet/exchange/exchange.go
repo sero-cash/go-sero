@@ -14,7 +14,7 @@ import (
 
 	"github.com/sero-cash/go-sero/common/address"
 
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
+	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
 
@@ -29,8 +29,6 @@ import (
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
-	"github.com/sero-cash/go-sero/zero/light"
-	"github.com/sero-cash/go-sero/zero/light/light_types"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -125,9 +123,6 @@ type Exchange struct {
 	accounts    sync.Map
 	pkrAccounts sync.Map
 
-	sri light.SRI
-	sli light.SLI
-
 	usedFlag sync.Map
 	numbers  sync.Map
 
@@ -152,8 +147,6 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 	exchange = &Exchange{
 		txPool:         txPool,
 		accountManager: accountManager,
-		sri:            light.SRI_Inst,
-		sli:            light.SLI_Inst,
 		update:         update,
 		updater:        updater,
 	}
@@ -473,7 +466,7 @@ func (self *Exchange) GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records 
 	return
 }
 
-func (self *Exchange) GenTx(param TxParam) (txParam *light_types.GenTxParam, e error) {
+func (self *Exchange) GenTx(param TxParam) (txParam *txtool.GenTxParam, e error) {
 	utxos, err := self.preGenTx(param)
 	if err != nil {
 		return nil, err
@@ -495,7 +488,7 @@ func (self *Exchange) GenTx(param TxParam) (txParam *light_types.GenTxParam, e e
 	return
 }
 
-func (self *Exchange) GenTxWithSign(param TxParam) (pretx *light_types.GenTxParam, tx *light_types.GTx, e error) {
+func (self *Exchange) GenTxWithSign(param TxParam) (pretx *txtool.GenTxParam, tx *txtool.GTx, e error) {
 	if self == nil {
 		e = errors.New("exchange instance is nil")
 		return
@@ -598,7 +591,7 @@ func (self *Exchange) preGenTx(param TxParam) (utxos []Utxo, err error) {
 	return
 }
 
-func (self *Exchange) ClearTxParam(txParam *light_types.GenTxParam) (count int) {
+func (self *Exchange) ClearTxParam(txParam *txtool.GenTxParam) (count int) {
 	if self == nil {
 		return
 	}
@@ -611,7 +604,7 @@ func (self *Exchange) ClearTxParam(txParam *light_types.GenTxParam) (count int) 
 	return
 }
 
-func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Reception, gas uint64, gasPrice *big.Int) (txParam *light_types.GenTxParam, tx *light_types.GTx, e error) {
+func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Reception, gas uint64, gasPrice *big.Int) (txParam *txtool.GenTxParam, tx *txtool.GTx, e error) {
 	if txParam, e = self.buildTxParam(utxos, &account.mainPkr, receptions, gas, gasPrice); e != nil {
 		return
 	}
@@ -623,7 +616,7 @@ func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Recepti
 	}
 
 	sk := keys.Seed2Sk(seed.SeedToUint256())
-	gtx, err := light.SignTx(&sk, txParam)
+	gtx, err := txtool.SignTx(&sk, txParam)
 	if err != nil {
 		self.ClearTxParam(txParam)
 		e = err
@@ -639,20 +632,20 @@ func (self *Exchange) buildTxParam(
 	refundTo *keys.PKr,
 	receptions []Reception,
 	gas uint64,
-	gasPrice *big.Int) (txParam *light_types.GenTxParam, e error) {
+	gasPrice *big.Int) (txParam *txtool.GenTxParam, e error) {
 
-	txParam = new(light_types.GenTxParam)
+	txParam = new(txtool.GenTxParam)
 	txParam.Gas = gas
 	txParam.GasPrice = *gasPrice
 
-	txParam.From = light_types.Kr{PKr: *refundTo}
+	txParam.From = txtool.Kr{PKr: *refundTo}
 
 	roots := []keys.Uint256{}
 	for _, utxo := range utxos {
 		roots = append(roots, utxo.Root)
 	}
-	Ins := []light_types.GIn{}
-	wits, err := self.sri.GetAnchor(roots)
+	Ins := []txtool.GIn{}
+	wits, err := txtool.SRI_Inst.GetAnchor(roots)
 	if err != nil {
 		e = err
 		return
@@ -661,8 +654,8 @@ func (self *Exchange) buildTxParam(
 	amounts := make(map[string]*big.Int)
 	ticekts := make(map[keys.Uint256]keys.Uint256)
 	for index, utxo := range utxos {
-		if out := light.GetOut(&utxo.Root, 0); out != nil {
-			Ins = append(Ins, light_types.GIn{Out: light_types.Out{Root: utxo.Root, State: *out}, Witness: wits[index]})
+		if out := txtool.GetOut(&utxo.Root, 0); out != nil {
+			Ins = append(Ins, txtool.GIn{Out: txtool.Out{Root: utxo.Root, State: *out}, Witness: wits[index]})
 
 			if utxo.Asset.Tkn != nil {
 				currency := strings.Trim(string(utxo.Asset.Tkn.Currency[:]), string([]byte{0}))
@@ -679,7 +672,7 @@ func (self *Exchange) buildTxParam(
 		}
 	}
 
-	Outs := []light_types.GOut{}
+	Outs := []txtool.GOut{}
 	for _, reception := range receptions {
 		currency := strings.ToUpper(reception.Currency)
 		if amount, ok := amounts[currency]; ok && amount.Cmp(reception.Value) >= 0 {
@@ -687,12 +680,12 @@ func (self *Exchange) buildTxParam(
 			if self.isPk(reception.Addr) {
 				pk := reception.Addr.ToUint512()
 				pkr := self.createPkr(&pk, 1)
-				Outs = append(Outs, light_types.GOut{PKr: pkr, Asset: assets.Asset{Tkn: &assets.Token{
+				Outs = append(Outs, txtool.GOut{PKr: pkr, Asset: assets.Asset{Tkn: &assets.Token{
 					Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
 					Value:    utils.U256(*reception.Value),
 				}}})
 			} else {
-				Outs = append(Outs, light_types.GOut{PKr: reception.Addr, Asset: assets.Asset{Tkn: &assets.Token{
+				Outs = append(Outs, txtool.GOut{PKr: reception.Addr, Asset: assets.Asset{Tkn: &assets.Token{
 					Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
 					Value:    utils.U256(*reception.Value),
 				}}})
@@ -719,7 +712,7 @@ func (self *Exchange) buildTxParam(
 
 	if len(amounts) > 0 {
 		for currency, value := range amounts {
-			Outs = append(Outs, light_types.GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkn: &assets.Token{
+			Outs = append(Outs, txtool.GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkn: &assets.Token{
 				Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
 				Value:    utils.U256(*value),
 			}}})
@@ -727,7 +720,7 @@ func (self *Exchange) buildTxParam(
 	}
 	if len(ticekts) > 0 {
 		for value, category := range ticekts {
-			Outs = append(Outs, light_types.GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkt: &assets.Ticket{
+			Outs = append(Outs, txtool.GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkt: &assets.Ticket{
 				Category: category,
 				Value:    value,
 			}}})
@@ -744,7 +737,7 @@ func (self *Exchange) buildTxParam(
 	return
 }
 
-func (self *Exchange) commitTx(tx *light_types.GTx) (err error) {
+func (self *Exchange) commitTx(tx *txtool.GTx) (err error) {
 	gasPrice := big.Int(tx.GasPrice)
 	gas := uint64(tx.Gas)
 	signedTx := types.NewTxWithGTx(gas, &gasPrice, &tx.Tx)
@@ -849,11 +842,11 @@ func (self *Exchange) findUtxos(pk *keys.Uint512, currency string, amount *big.I
 	return
 }
 
-func DecOuts(outs []light_types.Out, skr *keys.PKr) (douts []light_types.DOut) {
+func DecOuts(outs []txtool.Out, skr *keys.PKr) (douts []txtool.DOut) {
 	sk := keys.Uint512{}
 	copy(sk[:], skr[:])
 	for _, out := range outs {
-		dout := light_types.DOut{}
+		dout := txtool.DOut{}
 
 		if out.State.OS.Out_O != nil {
 			dout.Asset = out.State.OS.Out_O.Asset.Clone()
@@ -903,7 +896,7 @@ func (c uint64Slice) Less(i, j int) bool {
 var fetchCount = uint64(5000)
 
 func (self *Exchange) fetchBlockInfo() {
-	if light_ref.Ref_inst.Bc == nil || !light_ref.Ref_inst.Bc.IsValid() {
+	if txtool.Ref_inst.Bc == nil || !txtool.Ref_inst.Bc.IsValid() {
 		return
 	}
 	for {
@@ -950,7 +943,7 @@ func (self *Exchange) fetchBlockInfo() {
 
 func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uint512) (count int) {
 
-	blocks, err := self.sri.GetBlocksInfo(start, countBlock)
+	blocks, err := txtool.SRI_Inst.GetBlocksInfo(start, countBlock)
 	if err != nil {
 		log.Info("Exchange GetBlocksInfo", "error", err)
 		return
@@ -983,7 +976,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 			}
 
 			key := PkKey{PK: *account.pk, Num: out.State.Num}
-			dout := DecOuts([]light_types.Out{out}, &account.skr)[0]
+			dout := DecOuts([]txtool.Out{out}, &account.skr)[0]
 			utxo := Utxo{Pkr: pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset, IsZ: out.State.OS.Out_Z != nil}
 			//log.Info("DecOuts", "PK", base58.EncodeToString(account.pk[:]), "root", common.Bytes2Hex(out.Root[:]), "currency", common.BytesToString(utxo.Asset.Tkn.Currency[:]), "value", utxo.Asset.Tkn.Value)
 			nilsMap[utxo.Root] = utxo
@@ -1255,7 +1248,7 @@ type MergeParam struct {
 	Left     uint64
 }
 
-func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *light_types.GenTxParam, e error) {
+func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GenTxParam, e error) {
 	account := self.getAccountByPk(mp.From)
 	if account == nil {
 		e = errors.New("account is nil")
@@ -1318,7 +1311,7 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string, force bool) (coun
 }
 
 func (self *Exchange) merge() {
-	if light_ref.Ref_inst.Bc == nil || !light_ref.Ref_inst.Bc.IsValid() {
+	if txtool.Ref_inst.Bc == nil || !txtool.Ref_inst.Bc.IsValid() {
 		return
 	}
 	self.accounts.Range(func(key, value interface{}) bool {

@@ -14,19 +14,19 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-sero library. If not, see <http://www.gnu.org/licenses/>.
 
-package light_generate
+package txtool
 
 import (
 	"errors"
 
-	"github.com/sero-cash/go-sero/zero/txs/generate"
+	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-var gen_input_procs_pool = utils.NewProcsPool(func() int { return generate.G_p_thread_num })
+var gen_input_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_p_thread_num })
 
 type gen_input_desc struct {
 	desc  cpt.InputDesc
@@ -43,7 +43,7 @@ func (self *gen_input_desc) Run() bool {
 	}
 }
 
-var gen_output_procs_pool = utils.NewProcsPool(func() int { return generate.G_p_thread_num })
+var gen_output_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_p_thread_num })
 
 type gen_output_desc struct {
 	desc  cpt.OutputDesc

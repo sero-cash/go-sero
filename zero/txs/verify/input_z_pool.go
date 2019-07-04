@@ -3,9 +3,10 @@ package verify
 import (
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-sero/zero/utils"
+	"github.com/sero-cash/go-sero/zero/zconfig"
 )
 
-var verify_input_procs_pool = utils.NewProcsPool(func() int { return G_v_thread_num })
+var verify_input_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_v_thread_num })
 
 type verify_input_desc struct {
 	desc cpt.InputVerifyDesc

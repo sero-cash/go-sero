@@ -1,4 +1,4 @@
-package light_generate
+package txtool
 
 import (
 	"errors"
@@ -7,21 +7,20 @@ import (
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/zero/light/light_types"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type gen_ctx struct {
-	param        light_types.GenTxParam
-	O_Ins        []light_types.GIn
-	Z_Ins        []light_types.GIn
+	param        GenTxParam
+	O_Ins        []GIn
+	Z_Ins        []GIn
 	balance_desc cpt.BalanceDesc
 	s            stx.T
 }
 
-func Generate(param *light_types.GenTxParam) (ret stx.T, e error) {
+func genTx(param *GenTxParam) (ret stx.T, e error) {
 	ctx := gen_ctx{}
 	ctx.param = *param
 	ctx.prepare()

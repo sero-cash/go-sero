@@ -1,4 +1,4 @@
-package light
+package ssi
 
 import (
 	"fmt"
@@ -7,10 +7,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sero-cash/go-czero-import/cpt"
+
+	"github.com/sero-cash/go-sero/zero/txtool"
+
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/zero/light/light_issi"
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
-	"github.com/sero-cash/go-sero/zero/light/light_types"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
 
@@ -23,21 +24,43 @@ type SSI struct {
 
 var SSI_Inst = SSI{}
 
-func (self *SSI) GetBlocksInfo(start uint64, count uint64) (blocks []light_issi.Block, e error) {
+func (self *SSI) CreateKr() (kr txtool.Kr) {
+	rnd := keys.RandUint256()
+	zsk := keys.RandUint256()
+	vsk := keys.RandUint256()
+	zsk = cpt.Force_Fr(&zsk)
+	vsk = cpt.Force_Fr(&vsk)
 
-	if bs, err := SRI_Inst.GetBlocksInfo(start, count); err != nil {
+	skr := keys.PKr{}
+	copy(skr[:], zsk[:])
+	copy(skr[32:], vsk[:])
+	copy(skr[64:], rnd[:])
+
+	sk := keys.Uint512{}
+	copy(sk[:], skr[:])
+	pk := keys.Sk2PK(&sk)
+
+	pkr := keys.Addr2PKr(&pk, &rnd)
+	kr.PKr = pkr
+	kr.SKr = skr
+	return
+}
+
+func (self *SSI) GetBlocksInfo(start uint64, count uint64) (blocks []Block, e error) {
+
+	if bs, err := txtool.SRI_Inst.GetBlocksInfo(start, count); err != nil {
 		e = err
 		return
 	} else {
 		for _, b := range bs {
-			block := light_issi.Block{}
+			block := Block{}
 			block.Num = b.Num
 			block.Hash = b.Hash
 			block.Nils = b.Nils
 			for _, o := range b.Outs {
 				block.Outs = append(
 					block.Outs,
-					light_issi.Out{
+					Out{
 						o.Root,
 						o.State.TxHash,
 						*o.State.OS.ToPKr(),
@@ -51,45 +74,45 @@ func (self *SSI) GetBlocksInfo(start uint64, count uint64) (blocks []light_issi.
 	return
 }
 
-func (self *SSI) Detail(roots []keys.Uint256, skr *keys.PKr) (douts []light_types.DOut, e error) {
+func (self *SSI) Detail(roots []keys.Uint256, skr *keys.PKr) (douts []txtool.DOut, e error) {
 
-	outs := []light_types.Out{}
+	outs := []txtool.Out{}
 	for _, r := range roots {
-		if root := localdb.GetRoot(light_ref.Ref_inst.Bc.GetDB(), &r); root == nil {
+		if root := localdb.GetRoot(txtool.Ref_inst.Bc.GetDB(), &r); root == nil {
 			e = fmt.Errorf("SSI Detail Error for root %v", r)
 			return
 		} else {
-			outs = append(outs, light_types.Out{r, *root})
+			outs = append(outs, txtool.Out{r, *root})
 		}
 	}
-	douts = SLI_Inst.DecOuts(outs, skr)
+	douts = txtool.SLI_Inst.DecOuts(outs, skr)
 
 	return
 }
 
 var txMap sync.Map
 
-func (self *SSI) GenTx(param *light_issi.GenTxParam) (hash keys.Uint256, e error) {
+func (self *SSI) GenTx(param *GenTxParam) (hash keys.Uint256, e error) {
 	log.Printf("genTx start")
-	p := light_types.GenTxParam{}
+	p := txtool.GenTxParam{}
 	p.Gas = param.Gas
 	p.GasPrice = *big.NewInt(0).SetUint64(param.GasPrice)
 	p.From = param.From
 	p.Outs = param.Outs
 
 	roots := []keys.Uint256{}
-	outs := []light_types.Out{}
+	outs := []txtool.Out{}
 
 	amounts := make(map[string]*big.Int)
 	ticekts := make(map[keys.Uint256]keys.Uint256)
 	for _, in := range param.Ins {
 		roots = append(roots, in.Root)
-		if root := localdb.GetRoot(light_ref.Ref_inst.Bc.GetDB(), &in.Root); root == nil {
+		if root := localdb.GetRoot(txtool.Ref_inst.Bc.GetDB(), &in.Root); root == nil {
 			e = fmt.Errorf("SSI GenTx Error for root %v", in.Root)
 			return
 		} else {
-			out := light_types.Out{in.Root, *root}
-			dOuts := SLI_Inst.DecOuts([]light_types.Out{out}, &in.SKr)
+			out := txtool.Out{in.Root, *root}
+			dOuts := txtool.SLI_Inst.DecOuts([]txtool.Out{out}, &in.SKr)
 			if len(dOuts) == 0 {
 				e = fmt.Errorf("SSI GenTx Error for root %v", in.Root)
 				return
@@ -107,7 +130,7 @@ func (self *SSI) GenTx(param *light_issi.GenTxParam) (hash keys.Uint256, e error
 			if oOut.Asset.Tkt != nil {
 				ticekts[oOut.Asset.Tkt.Value] = oOut.Asset.Tkt.Category
 			}
-			outs = append(outs, light_types.Out{in.Root, *root})
+			outs = append(outs, txtool.Out{in.Root, *root})
 		}
 	}
 
@@ -148,27 +171,27 @@ func (self *SSI) GenTx(param *light_issi.GenTxParam) (hash keys.Uint256, e error
 
 	if len(amounts) > 0 || len(ticekts) > 0 {
 		for currency, value := range amounts {
-			p.Outs = append(p.Outs, light_types.GOut{PKr: p.From.PKr, Asset: assets.Asset{Tkn: &assets.Token{
+			p.Outs = append(p.Outs, txtool.GOut{PKr: p.From.PKr, Asset: assets.Asset{Tkn: &assets.Token{
 				Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
 				Value:    utils.U256(*value),
 			}}})
 		}
 		for value, category := range ticekts {
-			p.Outs = append(p.Outs, light_types.GOut{PKr: p.From.PKr, Asset: assets.Asset{Tkt: &assets.Ticket{
+			p.Outs = append(p.Outs, txtool.GOut{PKr: p.From.PKr, Asset: assets.Asset{Tkt: &assets.Ticket{
 				Category: category,
 				Value:    value,
 			}}})
 		}
 	}
 
-	wits := []light_types.Witness{}
+	wits := []txtool.Witness{}
 
-	if wits, e = SRI_Inst.GetAnchor(roots); e != nil {
+	if wits, e = txtool.SRI_Inst.GetAnchor(roots); e != nil {
 		return
 	}
 
 	for i := 0; i < len(wits); i++ {
-		in := light_types.GIn{}
+		in := txtool.GIn{}
 		in.SKr = param.Ins[i].SKr
 		in.Out = outs[i]
 		in.Witness = wits[i]
@@ -176,7 +199,7 @@ func (self *SSI) GenTx(param *light_issi.GenTxParam) (hash keys.Uint256, e error
 	}
 
 	log.Printf("genTx ins : %v, outs : %v", len(p.Ins), len(p.Outs))
-	if gtx, err := SLI_Inst.GenTx(&p); err != nil {
+	if gtx, err := txtool.SLI_Inst.GenTx(&p); err != nil {
 		e = err
 		log.Printf("genTx error : %v", err)
 		return
@@ -189,14 +212,14 @@ func (self *SSI) GenTx(param *light_issi.GenTxParam) (hash keys.Uint256, e error
 	return
 }
 
-func (self *SSI) GetTx(txhash keys.Uint256) (tx *light_types.GTx, e error) {
+func (self *SSI) GetTx(txhash keys.Uint256) (tx *txtool.GTx, e error) {
 	if ld, ok := txMap.Load(txhash); !ok {
 		e = fmt.Errorf("SSI GetTx Failed : %v", txhash)
 	} else {
 		if ld == nil {
 			e = fmt.Errorf("SSI GetTx Nil : %v", txhash)
 		} else {
-			tx = ld.(*light_types.GTx)
+			tx = ld.(*txtool.GTx)
 		}
 	}
 	return

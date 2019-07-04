@@ -20,9 +20,9 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/sero-cash/go-sero/zero/lstate"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate"
 
-	"github.com/sero-cash/go-sero/zero/lstate/lstate_types"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate/lstate_types"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 

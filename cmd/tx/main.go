@@ -33,8 +33,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/keys"
 
-	"github.com/sero-cash/go-sero/zero/light"
-
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-sero/zero/light/light_types"
 )
@@ -93,7 +91,7 @@ func main() {
 			if e := json.Unmarshal([]byte(txParam), &gtp); e != nil {
 				fmt.Println("[OUTPUT-BEGIN] ERROR: Unmarshal-", e)
 			} else {
-				if gtx, e := light.SignTx(&sk_bytes, &gtp); e != nil {
+				if gtx, e := ssi.SignTx(&sk_bytes, &gtp); e != nil {
 					fmt.Println("[OUTPUT-BEGIN] ERROR: SignTx-", e)
 				} else {
 					if jtx, e := json.Marshal(&gtx); e != nil {

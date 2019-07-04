@@ -19,7 +19,9 @@ package generate
 import (
 	"errors"
 
-	"github.com/sero-cash/go-sero/zero/lstate"
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
+	"github.com/sero-cash/go-sero/zero/wallet/lstate"
 
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
@@ -29,7 +31,7 @@ import (
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-var gen_pkg_procs_pool = utils.NewProcsPool(func() int { return G_p_thread_num })
+var gen_pkg_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_p_thread_num })
 
 type gen_pkg_desc struct {
 	desc cpt.PkgDesc
@@ -45,7 +47,7 @@ func (self *gen_pkg_desc) Run() bool {
 	}
 }
 
-var gen_input_procs_pool = utils.NewProcsPool(func() int { return G_p_thread_num })
+var gen_input_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_p_thread_num })
 
 type gen_input_desc struct {
 	desc  cpt.InputDesc
@@ -62,7 +64,7 @@ func (self *gen_input_desc) Run() bool {
 	}
 }
 
-var gen_output_procs_pool = utils.NewProcsPool(func() int { return G_p_thread_num })
+var gen_output_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_p_thread_num })
 
 type gen_output_desc struct {
 	desc  cpt.OutputDesc

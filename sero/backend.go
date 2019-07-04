@@ -26,14 +26,14 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-sero/zero/txtool"
+
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
-	"github.com/sero-cash/go-sero/zero/lstate"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate"
 
 	"github.com/sero-cash/go-sero/internal/ethapi"
-	"github.com/sero-cash/go-sero/zero/exchange"
-
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
+	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
 	"github.com/sero-cash/go-czero-import/keys"
 
@@ -160,7 +160,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	)
 	sero.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, sero.chainConfig, sero.engine, vmConfig, sero.accountManager)
 
-	light_ref.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain})
+	txtool.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain})
 	if !config.MineMode {
 		lstate.InitLState()
 	}

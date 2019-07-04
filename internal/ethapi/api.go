@@ -25,16 +25,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sero-cash/go-sero/zero/light"
+	"github.com/sero-cash/go-sero/zero/txtool"
 
-	"github.com/sero-cash/go-sero/zero/exchange"
+	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
 	"github.com/tyler-smith/go-bip39"
 
 	"github.com/sero-cash/go-sero/common/address"
 
-	"github.com/sero-cash/go-sero/zero/light/light_types"
-	"github.com/sero-cash/go-sero/zero/lstate"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate"
 
 	"github.com/sero-cash/go-sero/zero/txs"
 
@@ -504,7 +503,7 @@ type threaded interface {
 // signTransactions sets defaults and signs the given transaction
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool
-func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (pretx *light_types.GenTxParam, tx *types.Transaction, e error) {
+func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (pretx *txtool.GenTxParam, tx *types.Transaction, e error) {
 	s.nonceLock.mu.Lock()
 	defer s.nonceLock.mu.Unlock()
 	// Look up the wallet containing the requested abi
@@ -562,7 +561,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 				return
 			}
 			sk := keys.Seed2Sk(seed.SeedToUint256())
-			gtx, err := light.SignTx(&sk, pretx)
+			gtx, err := txtool.SignTx(&sk, pretx)
 			if err != nil {
 				exchange.CurrentExchange().ClearTxParam(pretx)
 				e = err
@@ -966,7 +965,7 @@ func (s *PublicBlockChainAPI) WatchPkg(ctx context.Context, id keys.Uint256, key
 	return pkg, nil
 }
 
-func (s *PublicBlockChainAPI) GetBlockInfo(ctx context.Context, start hexutil.Uint64, count hexutil.Uint64) ([]light_types.Block, error) {
+func (s *PublicBlockChainAPI) GetBlockInfo(ctx context.Context, start hexutil.Uint64, count hexutil.Uint64) ([]txtool.Block, error) {
 	block, err := s.b.GetBlocksInfo(uint64(start), uint64(count))
 	if err != nil {
 		return nil, err
@@ -974,7 +973,7 @@ func (s *PublicBlockChainAPI) GetBlockInfo(ctx context.Context, start hexutil.Ui
 	return block, err
 }
 
-func (s *PublicBlockChainAPI) GetAnchor(ctx context.Context, roots []keys.Uint256) ([]light_types.Witness, error) {
+func (s *PublicBlockChainAPI) GetAnchor(ctx context.Context, roots []keys.Uint256) ([]txtool.Witness, error) {
 	witness, err := s.b.GetAnchor(roots)
 	if err != nil {
 		return nil, err
@@ -1979,7 +1978,7 @@ func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.H
 	}
 }
 
-func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args *light_types.GTx) error {
+func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args *txtool.GTx) error {
 	return s.b.CommitTx(args)
 }
 

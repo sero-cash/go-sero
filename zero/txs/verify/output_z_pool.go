@@ -3,12 +3,14 @@ package verify
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-var verify_output_procs_pool = utils.NewProcsPool(func() int { return G_v_thread_num })
+var verify_output_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_v_thread_num })
 
 type verify_output_desc struct {
 	desc cpt.OutputVerifyDesc

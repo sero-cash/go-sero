@@ -1,4 +1,4 @@
-package light_types
+package txtool
 
 import (
 	"github.com/sero-cash/go-czero-import/cpt"
