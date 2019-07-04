@@ -277,6 +277,7 @@ func (self *State1BlockChain) GetTkAt(tk *keys.Uint512) uint64 {
 func (bc *BlockChain) GetDB() serodb.Database {
 	return bc.db
 }
+
 // loadLastState loads the last known chain state from the database. This method
 // assumes that the chain manager mutex is held.
 func (bc *BlockChain) loadLastState() error {
@@ -962,7 +963,9 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Write other block data using a batch.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
-	state.GetZState().RecordBlock(batch, block.Header().Hash().HashToUint256())
+	blockhash := block.Hash()
+	state.GetStakeCons().Record(&blockhash, batch)
+	state.GetZState().RecordBlock(batch, blockhash.HashToUint256())
 	//rawdb.WriteHash(bc.db, block.Number().Uint64(), block.Hash())
 
 	root, err := state.Commit(true)

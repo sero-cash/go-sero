@@ -1,13 +1,12 @@
 package consensus
 
 import (
-	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/serodb"
 )
 
 type DB interface {
 	Num() uint64
-	CurrentTri() state.Tri
+	CurrentTri() serodb.Tri
 	GlobalGetter() serodb.Getter
 }
 

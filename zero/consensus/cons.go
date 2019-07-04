@@ -250,7 +250,9 @@ func (self *Cons) Update() {
 func (self *Cons) Record(hash *common.Hash, batch serodb.Putter) {
 	recordlist := self.fetchBlockRecords(false)
 
-	DBObj{self.pre}.setBlockRecords(batch, self.db.Num(), hash, recordlist)
+	if len(recordlist) > 0 {
+		DBObj{self.pre}.setBlockRecords(batch, self.db.Num(), hash, recordlist)
+	}
 
 	dblist := self.fetchDBPairs(false)
 	for _, v := range dblist {

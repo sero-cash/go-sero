@@ -4,6 +4,7 @@ import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/zero/consensus"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
 )
@@ -64,22 +65,28 @@ func (self *StateDB) GetPkgState() *pkgstate.PkgState {
 	return &self.GetZState().Pkgs
 }
 
-type ZeroDB struct {
+type zeroDB struct {
 	db *StateDB
 }
 
-func (self *ZeroDB) Num() uint64 {
+func (self *zeroDB) Num() uint64 {
 	return self.db.number
 }
 
-func (self *ZeroDB) CurrentTri() Tri {
+func (self *zeroDB) CurrentTri() serodb.Tri {
 	return self.db.trie
 }
 
-func (self *ZeroDB) GlobalGetter() serodb.Getter {
+func (self *zeroDB) GlobalGetter() serodb.Getter {
 	return self.db.db.TrieDB().DiskDB()
 }
 
-func (self *StateDB) GetZeroDB() *ZeroDB {
-	return &ZeroDB{self}
+var StakeDB = consensus.DBObj{"STAKE$BLOCK$INDEX"}
+
+func (self *StateDB) GetStakeCons() *consensus.Cons {
+	if self.stakeState == nil {
+		cons := consensus.NewCons(&zeroDB{self}, StakeDB.Pre)
+		self.stakeState = &cons
+	}
+	return self.stakeState
 }

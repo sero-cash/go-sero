@@ -24,6 +24,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sero-cash/go-sero/zero/consensus"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
@@ -67,6 +69,7 @@ type StateDB struct {
 	// This map holds 'live' objects, which will get modified while processing a state transition.
 	stateObjects      map[common.Address]*stateObject
 	stateObjectsDirty map[common.Address]struct{}
+	stakeState        *consensus.Cons
 	zstate            *zstate.ZState
 
 	// DB error.
@@ -777,6 +780,7 @@ func (self *StateDB) Snapshot() int {
 	id := self.nextRevisionId
 	self.nextRevisionId++
 	self.validRevisions = append(self.validRevisions, revision{id, self.journal.length()})
+	self.GetStakeCons().CreateSnapshot(id)
 	self.GetZState().Snapshot(id)
 	return id
 }
@@ -796,6 +800,7 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 	self.journal.revert(self, snapshot)
 	self.validRevisions = self.validRevisions[:idx]
 
+	self.GetStakeCons().RevertToSnapshot(revid)
 	self.GetZState().Revert(revid)
 }
 
@@ -836,6 +841,7 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 // goes into transaction receipts.
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	s.GetZState().Update()
+	s.GetStakeCons().Update()
 	s.Finalise(deleteEmptyObjects)
 	return s.trie.Hash()
 }

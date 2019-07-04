@@ -18,12 +18,13 @@ package core
 
 import (
 	"errors"
+	"math/big"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/stake"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"math/big"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
@@ -143,7 +144,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 }
 
 func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.StateDB, txHash common.Hash, number uint64) error {
-	stakeState := stake.NewStakeState(statedb.GetZeroDB())
+	stakeState := stake.NewStakeState(nil /*statedb.GetZeroDB()*/)
 	pkr := *from.ToPKr()
 	if stakeDesc.BuyShare != nil {
 		var stakePool *stake.StakePool
@@ -163,7 +164,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		for value.Cmp(price) >= 0 {
 			value.Sub(value, price)
 			size++
-			num++;
+			num++
 			amount.Add(amount, price)
 			price = stakeState.SharePrice(size)
 		}
