@@ -45,6 +45,15 @@ func (self DBObj) GetBlockRecords(getter serodb.Getter, num uint64, hash *common
 	}
 }
 
+func (self DBObj) GetBlockRecordsMap(getter serodb.Getter, num uint64, hash *common.Hash) (records map[string][]Bytes) {
+	records = make(map[string][]Bytes)
+	rds := self.GetBlockRecords(getter, num, hash)
+	for _, v := range rds {
+		records[v.Name] = v.Hashes
+	}
+	return
+}
+
 func (self DBObj) GetObject(getter serodb.Getter, id []byte, item CItem) (ret CItem) {
 	k := key{self.Pre, id}
 	if v, err := getter.Get([]byte(k.k())); err != nil {

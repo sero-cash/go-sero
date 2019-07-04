@@ -200,7 +200,7 @@ func (self *Cons) fetchDBPairs(onlyget bool) (ret consItems) {
 
 type Record struct {
 	Name   string
-	Hashes [][]byte
+	Hashes []Bytes
 }
 
 func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
