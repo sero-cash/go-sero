@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/common"
 )
 
 func s2u(str string) (ret []byte) {

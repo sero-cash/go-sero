@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -35,11 +36,12 @@ type consItem struct {
 }
 
 type Cons struct {
-	db      DB
-	pre     string
-	content map[string]*consItem
-	cls     []changelog
-	ver     int
+	db        DB
+	pre       string
+	content   map[string]*consItem
+	cls       []changelog
+	ver       int
+	updateVer int
 }
 
 func NewCons(db DB, pre string) (ret Cons) {
@@ -47,6 +49,7 @@ func NewCons(db DB, pre string) (ret Cons) {
 	ret.pre = pre
 	ret.db = db
 	ret.ver = -1
+	ret.updateVer = -1
 	return
 }
 
@@ -55,6 +58,9 @@ func (self *Cons) CreateSnapshot(ver int) {
 }
 
 func (self *Cons) RevertToSnapshot(ver int) {
+	if ver <= self.updateVer {
+		panic(fmt.Errorf("revert snapshot version(%v) < update version(%v)", ver, self.updateVer))
+	}
 	l := len(self.cls)
 	for ; l > 0; l-- {
 		cl := self.cls[l-1]
