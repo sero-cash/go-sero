@@ -22,12 +22,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/pkg/errors"
-
 	"github.com/sero-cash/go-sero/common/addrutil"
 
+	"github.com/btcsuite/btcutil/base58"
+
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/common/hexutil"
 )
 
@@ -57,28 +56,8 @@ func BigToAccount(b *big.Int) AccountAddress { return BytesToAccount(b.Bytes()) 
 //func HexToAccount(s string) Data { return BytesToAccount(FromHex(s)) }
 
 func Base58ToAccount(s string) AccountAddress {
-	out := [AccountAddressLength]byte{}
-	addrutil.FromBase58(s, out[:])
+	out := base58.Decode(s)
 	return BytesToAccount(out[:])
-}
-
-// IsBase58Account verifies whether a string can represent a valid hex-encoded
-// Ethereum Data or not.
-func IsBase58AccountButNotContract(s string) bool {
-	if base58.IsBase58Str(s) {
-		account := Base58ToAccount(s)
-		if keys.IsPKValid(account.ToUint512()) {
-			temp := Base58ToAccount(s).Base58()
-			if temp == s {
-				return true
-			}
-		} else {
-			return false
-		}
-
-		return false
-	}
-	return false
 }
 
 // Bytes gets the string representation of the underlying Data.
@@ -95,7 +74,7 @@ func (a AccountAddress) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
 
 // Base58 returns base58 string representation of the Data.
 func (a AccountAddress) Base58() string {
-	return base58.EncodeToString(a[:])
+	return base58.Encode(a[:])
 }
 
 // String implements fmt.Stringer.
@@ -132,15 +111,12 @@ func isZeroSuffix(base58bytes [96]byte) bool {
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *AccountAddress) UnmarshalText(input []byte) error {
-	input_s := string(input)
-	account := Base58ToAccount(input_s)
-	r_input_s := account.Base58()
-	if r_input_s == input_s {
-		copy(a[:], account[:])
-		return nil
-	} else {
-		return errors.New(fmt.Sprintf("invalud base58 accountAddress %v", string(input)))
+	out, err := addrutil.IsValidBase58AcccountAddress(input)
+	if err != nil {
+		return err
 	}
+	copy(a[:], out)
+	return nil
 }
 
 // Scan implements Scanner for database/sql.

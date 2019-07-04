@@ -37,10 +37,11 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/btcsuite/btcutil/base58"
+
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/pborman/uuid"
-	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/crypto"
 	"golang.org/x/crypto/pbkdf2"
@@ -168,8 +169,8 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 		}
 	}
 	encryptedKeyJSONV1 := encryptedKeyJSONV1{
-		base58.EncodeToString(key.Address.Bytes()),
-		base58.EncodeToString(key.Tk.Bytes()),
+		base58.Encode(key.Address.Bytes()),
+		base58.Encode(key.Tk.Bytes()),
 		cryptoStruct,
 		key.Id.String(),
 		version,

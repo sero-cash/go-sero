@@ -224,19 +224,18 @@ func (s *PublicAccountAPI) Accounts() []address.AccountAddress {
 }
 
 func (s *PublicAccountAPI) GetTk(addr common.Address) address.AccountAddress {
-	flag, err := common.IsPkr(&addr)
-	if err != nil {
-		return address.AccountAddress{}
-	}
 	var pk address.AccountAddress
 	wallets := s.am.Wallets()
-	if flag {
+
+	if addr.IsAccountAddress() {
+		pk = common.AddrToAccountAddr(addr)
+	} else {
 		pkAddrr := getLocalAccountAddressByPkr(wallets, addr)
 		if pkAddrr != nil {
 			pk = *pkAddrr
+		} else {
+			return address.AccountAddress{}
 		}
-	} else {
-		pk = common.AddrToAccountAddr(addr)
 	}
 	for _, wallet := range wallets {
 		account := accounts.Account{Address: pk}
@@ -245,20 +244,14 @@ func (s *PublicAccountAPI) GetTk(addr common.Address) address.AccountAddress {
 		}
 	}
 	return address.AccountAddress{}
+
 }
 
-func (s *PublicAccountAPI) IsMinePKr(PKr common.Address) *address.AccountAddress {
-	flag, err := common.IsPkr(&PKr)
-	if err != nil {
-		return nil
-	}
-	if flag {
-		wallets := s.am.Wallets()
-		return getLocalAccountAddressByPkr(wallets, PKr)
-	} else {
-		log.Info("IsMinePKr invalid pkr", "pkr", PKr.String())
-		return nil
-	}
+func (s *PublicAccountAPI) IsMinePKr(PKr PKrAddress) *address.AccountAddress {
+	wallets := s.am.Wallets()
+	var address common.Address
+	copy(address[:], PKr[:])
+	return getLocalAccountAddressByPkr(wallets, address)
 
 }
 
@@ -526,12 +519,9 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 		return
 	}
 
+	var txt *ztx.T
 	// Assemble the transaction and sign with the wallet
-	tx, txt, err := args.toTransaction(state)
-	if err != nil {
-		e = err
-		return
-	}
+	tx, txt = args.toTransaction(state)
 
 	if th, ok := s.b.GetEngin().(threaded); ok {
 		miner := s.b.GetMiner()
@@ -722,12 +712,8 @@ func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses
 
 }
 
-func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk address.AccountAddress) (common.Address, error) {
-
-	if !(keys.IsPKValid(Pk.ToUint512())) {
-		return common.Address{}, errors.New("invalid address")
-	}
-	PKr := keys.Addr2PKr(Pk.ToUint512(), nil)
+func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk PKAddress) (common.Address, error) {
+	PKr := keys.Addr2PKr(Pk.ToUint512().NewRef(), nil)
 	result := common.Address{}
 	copy(result[:], PKr[:])
 	return result, nil
@@ -798,21 +784,11 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 	if state == nil || err != nil {
 		return Balance{}, err
 	}
-	wallets := s.b.AccountManager().Wallets()
-	var address address.AccountAddress
-	flag, err := common.IsPkr(&addr)
-	if err != nil {
-		return Balance{}, err
-	}
-	if flag {
-		keystoreAccount := getLocalAccountAddressByPkr(wallets, addr)
-		if keystoreAccount == nil {
-			return Balance{}, nil
-		} else {
-			address = *keystoreAccount
-		}
-	} else {
-		address = common.AddrToAccountAddr(addr)
+	var address *address.AccountAddress
+
+	address = getAccountAddress(addr, s.b)
+	if address == nil {
+		return Balance{}, nil
 	}
 
 	tkn := map[string]*hexutil.Big{}
@@ -833,7 +809,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 			return GetBalanceFromExchange(exchangBalance), nil
 		} else {
 			// Look up the wallet containing the requested abi
-			account := accounts.Account{Address: address}
+			account := accounts.Account{Address: *address}
 
 			wallet, err := s.b.AccountManager().Find(account)
 			if err != nil {
@@ -849,6 +825,20 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 
 }
 
+func getAccountAddress(addr common.Address, b Backend) (accountAddr *address.AccountAddress) {
+	if addr.IsAccountAddress() {
+		*accountAddr = common.AddrToAccountAddr(addr)
+	} else {
+		wallets := b.AccountManager().Wallets()
+		keystoreAccount := getLocalAccountAddressByPkr(wallets, addr)
+		if keystoreAccount == nil {
+			return
+		}
+		accountAddr = keystoreAccount
+	}
+	return
+}
+
 func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, addr common.Address, packed bool, id *keys.Uint256) (interface{}, error) {
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
@@ -856,26 +846,16 @@ func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, addr common.Address, p
 		return nil, err
 	}
 	wallets := s.b.AccountManager().Wallets()
-	var accountAddress address.AccountAddress
-	flag, err := common.IsPkr(&addr)
-	if err != nil {
-		return nil, err
+	accountAddress := getAccountAddress(addr, s.b)
+	if accountAddress == nil {
+		return nil, nil
 	}
-	if flag {
-		keystoreAccount := getLocalAccountAddressByPkr(wallets, addr)
-		if keystoreAccount == nil {
-			return nil, nil
-		}
-		accountAddress = *keystoreAccount
-	} else {
-		accountAddress = common.AddrToAccountAddr(addr)
-	}
+
 	if state.IsContract(common.BytesToAddress(accountAddress[:])) {
 		return nil, errors.New("does not support contract address!")
 	}
-
 	// Look up the wallet containing the requested abi
-	account := accounts.Account{Address: accountAddress}
+	account := accounts.Account{Address: *accountAddress}
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
 		return nil, err
@@ -1146,17 +1126,18 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		copy(rand[:], args.To[:16])
 	}
 	if args.To != nil {
-		var toAddress common.Address
+
 		if state.IsContract(common.BytesToAddress(args.To[:])) {
-			toAddress = common.BytesToAddress(args.To[:])
+			*to = common.BytesToAddress(args.To[:])
 		} else {
-			toPkr, err := common.AddressToPkr(*args.To)
-			if err != nil {
-				return nil, 0, false, err
+			if args.To.IsAccountAddress() {
+				pk := common.AddrToAccountAddr(*args.To)
+				pkr := (keys.Addr2PKr(pk.ToUint512(), nil))
+				*to = common.BytesToAddress(pkr[:])
+			} else {
+				to = args.To
 			}
-			toAddress = common.BytesToAddress(toPkr[:])
 		}
-		to = &toAddress
 	}
 
 	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
@@ -1736,11 +1717,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		if len(input) > 0 {
 			return errors.New(`not create or call contract data must be nil`)
 		}
-		flag, err := common.IsPkr(args.To)
-		if err != nil {
-			return err
-		}
-		if !flag {
+		if args.To.IsAccountAddress() {
 			if !keys.IsPKValid(args.To.ToUint512()) {
 				return errors.New("invalid to address")
 			}
@@ -1804,18 +1781,19 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 
 func (args *SendTxArgs) toTxParam() (txParam txtool.PreTxParam, e error) {
 
-	flag, err := common.IsPkr(args.To)
-	if err != nil {
-		e = err
+	if args.To == nil {
+		e = errors.New("to can not be nil")
 		return
 	}
 	var topkr keys.PKr
-
-	if flag {
-		topkr = *args.To.ToPKr()
-	} else {
+	if args.To.IsAccountAddress() {
+		if !keys.IsPKValid(args.To.ToUint512()) {
+			e = errors.New("invalid to address")
+			return
+		}
 		topkr = keys.Addr2PKr(args.To.ToUint512(), nil)
-
+	} else {
+		topkr = *args.To.ToPKr()
 	}
 	receptions := []txtool.Reception{{Addr: topkr, Currency: string(args.Currency), Value: (*big.Int)(args.Value)}}
 
@@ -1828,10 +1806,9 @@ func (args *SendTxArgs) toTxParam() (txParam txtool.PreTxParam, e error) {
 
 }
 
-func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T) {
 	var input []byte
 	var Pkr keys.PKr
-	var err error
 	var isZ bool
 	to := args.To
 	fromRand := keys.Uint256{}
@@ -1851,10 +1828,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 			feevalue = new(big.Int).Div(feevalue.Mul(feevalue, m), d)
 		}
 	} else {
-		Pkr, err = common.AddressToPkr(*args.To)
-		if err != nil {
-			return nil, nil, err
-		}
+		Pkr = common.AddrToPKr(*args.To)
 		fromRand = keys.RandUint256()
 		isZ = true
 	}
@@ -1869,19 +1843,15 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	}
 	outData := types.NewTxtOut(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, args.Memo, isZ)
 	txt := types.NewTxt(fromRand.NewRef(), ehash, fee, outData, nil, nil, nil)
-	return tx, txt, nil
+	return tx, txt
 }
 
-func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T) {
 	var Pkr keys.PKr
-	var err error
 	if state.IsContract(common.BytesToAddress(args.To[:])) {
 		Pkr = *(args.To.ToPKr())
 	} else {
-		Pkr, err = common.AddressToPkr(*args.To)
-		if err != nil {
-			return nil, nil, err
-		}
+		Pkr = common.AddrToPKr(*args.To)
 	}
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), nil)
 	fromRand := keys.RandUint256().NewRef()
@@ -1893,7 +1863,7 @@ func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T,
 	pkgCreate := types.NewCreatePkg(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, args.Memo)
 	txt := types.NewTxt(fromRand, ehash, fee, nil, pkgCreate, nil, nil)
 	txt.FromRnd = keys.RandUint256().NewRef()
-	return tx, txt, nil
+	return tx, txt
 }
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
@@ -1951,10 +1921,7 @@ func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.H
 		}
 
 		// Assemble the transaction and sign with the wallet
-		tx, txt, err := args.toTransaction(state)
-		if err != nil {
-			return common.Hash{}, err
-		}
+		tx, txt := args.toTransaction(state)
 		encrypted, err := wallet.EncryptTx(account, tx, txt, state)
 		if err != nil {
 			return common.Hash{}, err
@@ -2032,10 +1999,8 @@ func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArg
 	}
 
 	// Assemble the transaction and sign with the wallet
-	tx, txt, err := args.toPkg(state)
-	if err != nil {
-		return common.Hash{}, err
-	}
+	tx, txt := args.toPkg(state)
+
 	if th, ok := s.b.GetEngin().(threaded); ok {
 		miner := s.b.GetMiner()
 		if miner.CanStart() {
@@ -2195,14 +2160,10 @@ func (args *TransferPkgArgs) toTransaction(state *state.StateDB) (*types.Transac
 	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	ehash := tx.Ehash()
 	var Pkr keys.PKr
-	var err error
 	if state.IsContract(common.BytesToAddress(args.To[:])) {
 		Pkr = *(args.To.ToPKr())
 	} else {
-		Pkr, err = common.AddressToPkr(*args.To)
-		if err != nil {
-			return nil, nil, err
-		}
+		Pkr = common.AddrToPKr(*args.To)
 	}
 	txt := &ztx.T{
 		Fee: assets.Token{
@@ -2304,11 +2265,7 @@ func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args 
 	var signed *types.Transaction
 	if args.To == nil || state.IsContract(*args.To) || !seroparam.IsExchange() {
 		// Assemble the transaction and sign with the wallet
-		tx, txt, err := args.toTransaction(state)
-
-		if err != nil {
-			return nil, err
-		}
+		tx, txt := args.toTransaction(state)
 
 		account := accounts.Account{Address: args.From}
 

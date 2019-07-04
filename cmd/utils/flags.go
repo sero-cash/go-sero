@@ -28,6 +28,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-sero/common/addrutil"
+
 	"github.com/sero-cash/go-sero/rpc"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
@@ -814,7 +816,8 @@ func makeDatabaseHandles() int {
 // a key index in the key store to an internal account representation.
 func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
 	// If the specified account is a valid address, return it
-	if address.IsBase58AccountButNotContract(account) {
+	_, err := addrutil.IsValidAccountAddress([]byte(account))
+	if err == nil {
 		return accounts.Account{Address: address.Base58ToAccount(account)}, nil
 	}
 	// Otherwise try to interpret the account as a keystore index

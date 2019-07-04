@@ -8,9 +8,8 @@ import (
 
 type BuyShareCmd struct {
 	Value utils.U256
-	Price utils.U256
 	Vote  keys.PKr
-	Pool  keys.Uint256
+	Pool  *keys.Uint256
 }
 
 func (self *BuyShareCmd) Asset() (ret assets.Asset) {

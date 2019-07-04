@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sero-cash/go-sero/common/base58"
+	"github.com/btcsuite/btcutil/base58"
 
 	"github.com/sero-cash/go-sero/common/address"
 
@@ -403,21 +403,21 @@ func validAddress(addr MixAdrress) (bool, error) {
 
 func (s *PublicExchangeAPI) ValidAddress(ctx context.Context, addr MixBase58Adrress) (bool, error) {
 	if len(addr) != 64 && len(addr) != 96 {
-		return false, errors.Errorf("invalid addr %v", base58.EncodeToString(addr[:]))
+		return false, errors.Errorf("invalid addr %v", base58.Encode(addr[:]))
 	}
 
 	if len(addr) == 64 {
 		pk := keys.Uint512{}
 		copy(pk[:], addr[:])
 		if !keys.IsPKValid(&pk) {
-			return false, errors.Errorf("invalid pk %v", base58.EncodeToString(addr[:]))
+			return false, errors.Errorf("invalid pk %v", base58.Encode(addr[:]))
 		}
 	}
 	if len(addr) == 96 {
 		pkr := keys.PKr{}
 		copy(pkr[:], addr[:])
 		if !keys.PKrValid(&pkr) {
-			return false, errors.Errorf("invalid  pkr %v", base58.EncodeToString(addr[:]))
+			return false, errors.Errorf("invalid  pkr %v", base58.Encode(addr[:]))
 		}
 	}
 	return true, nil

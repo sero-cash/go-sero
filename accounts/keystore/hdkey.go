@@ -12,6 +12,8 @@ import (
 	"hash"
 	"math/big"
 
+	"github.com/btcsuite/btcutil/base58"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/address"
 
@@ -24,8 +26,6 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 
 	"golang.org/x/crypto/ripemd160"
-
-	"github.com/sero-cash/go-sero/common/base58"
 )
 
 const (
@@ -393,7 +393,7 @@ func (k *HDKey) PrivateHDkey() string {
 
 	checkSum := DoubleHashB(serializedBytes)[:4]
 	serializedBytes = append(serializedBytes, checkSum...)
-	return base58.EncodeToString(serializedBytes)
+	return base58.Encode(serializedBytes)
 }
 
 func (k *HDKey) PublicHDkey() string {
@@ -418,7 +418,7 @@ func (k *HDKey) PublicHDkey() string {
 
 	checkSum := DoubleHashB(serializedBytes)[:4]
 	serializedBytes = append(serializedBytes, checkSum...)
-	return base58.EncodeToString(serializedBytes)
+	return base58.Encode(serializedBytes)
 }
 
 // zero sets all bytes in the passed slice to zero.  This is used to
@@ -606,9 +606,8 @@ func (k *HDKey) DriverChildKey(index uint32) (*Key, error) {
 func NewKeyFromString(key string) (*HDKey, error) {
 	// The base58-decoded extended key must consist of a serialized payload
 	// plus an additional 4 bytes for the checksum.
-	decoded := [82]byte{}
-	err := base58.DecodeString(key, decoded[:])
-	if err != nil {
+	decoded := base58.Decode(key)
+	if len(decoded) != 82 {
 		return nil, ErrInvalidKeyLen
 	}
 	if len(decoded) != serializedKeyLen+4 {
