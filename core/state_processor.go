@@ -148,7 +148,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 	pkr := *from.ToPKr()
 	if stakeDesc.BuyShare != nil {
 		var stakePool *stake.StakePool
-		if stakeDesc.BuyShare.Pool != (keys.Uint256{}) {
+		if stakeDesc.BuyShare.Pool != nil {
 			poolId := common.BytesToHash(stakeDesc.BuyShare.Pool[:])
 			stakePool = stakeState.GetStakePool(poolId)
 			if stakePool == nil {
