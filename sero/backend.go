@@ -28,7 +28,6 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/share"
-
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-sero/zero/wallet/lstate"
@@ -185,7 +184,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	if sero.protocolManager, err = NewProtocolManager(sero.chainConfig, config.SyncMode, config.NetworkId, sero.eventMux, sero.voter, sero.txPool, sero.engine, sero.blockchain, chainDb); err != nil {
 		return nil, err
 	}
-	sero.miner = miner.New(sero, sero.chainConfig, sero.EventMux(), sero.engine)
+	sero.miner = miner.New(sero, sero.chainConfig, sero.EventMux(), sero.voter, sero.engine)
 	sero.miner.SetExtra(makeExtraData(config.ExtraData))
 
 	sero.APIBackend = &SeroAPIBackend{sero, nil}

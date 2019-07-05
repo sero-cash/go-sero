@@ -13,9 +13,10 @@ type Lottery struct {
 }
 
 type Vote struct {
-	Index   uint8
-	PosHash common.Hash
-	Sign    keys.Uint512
+	TicketHash common.Hash
+	PosHash    common.Hash
+	IsPool     bool
+	Sign       keys.Uint512
 }
 
 func (vote Vote) Hash() common.Hash {

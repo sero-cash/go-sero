@@ -18,17 +18,16 @@ package miner
 
 import (
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/stake"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/stake"
+
 	"github.com/sero-cash/go-sero/core/types/typeserial"
 
 	"github.com/deckarep/golang-set"
-
-	"github.com/sero-cash/go-sero/share"
 
 	"github.com/sero-cash/go-sero/common/address"
 
@@ -123,7 +122,7 @@ type worker struct {
 	chainSideSub event.Subscription
 	wg           sync.WaitGroup
 
-	voter *share.Voter
+	voter voter
 
 	agents    map[Agent]struct{}
 	recv      chan *Result
@@ -157,7 +156,7 @@ type worker struct {
 	pendingVote   map[common.Hash]mapset.Set
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase address.AccountAddress, sero Backend, mux *event.TypeMux) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase address.AccountAddress, voter voter, sero Backend, mux *event.TypeMux) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
@@ -176,13 +175,13 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase add
 		coinbase:    coinbase,
 		agents:      make(map[Agent]struct{}),
 		unconfirmed: newUnconfirmedBlocks(sero.BlockChain(), miningLogAtDepth),
-		voter:       sero.Voter(),
+		voter:       voter,
 		pendingPos:  make(map[common.Hash]time.Time),
 		pendingVote: make(map[common.Hash]mapset.Set),
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = sero.TxPool().SubscribeNewTxsEvent(worker.txsCh)
-	worker.voteSub = sero.Voter().SubscribeWorkerVoteEvent(worker.voteCh)
+	worker.voteSub = worker.voter.SubscribeWorkerVoteEvent(worker.voteCh)
 	// Subscribe events for blockchain
 	worker.chainHeadSub = sero.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = sero.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
@@ -368,7 +367,8 @@ func (self *worker) posTaskLoop() {
 							task.Block.Header().CurrentVotes = nil
 							for _, v := range votes.ToSlice() {
 								CurrentVotes = append(CurrentVotes, typeserial.Vote{
-									v.(types.Vote).Index,
+									v.(types.Vote).TicketHash,
+									v.(types.Vote).IsPool,
 									v.(types.Vote).Sign})
 							}
 							parentVotes, exists := self.pendingVote[*parentHashPos]
@@ -378,7 +378,8 @@ func (self *worker) posTaskLoop() {
 										continue
 									} else {
 										ParentVotes = append(ParentVotes, typeserial.Vote{
-											v.(types.Vote).Index,
+											v.(types.Vote).TicketHash,
+											v.(types.Vote).IsPool,
 											v.(types.Vote).Sign})
 									}
 									parentVotes.Remove(v)

@@ -6,7 +6,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/keys"
 
-	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/log"
 
 	"github.com/sero-cash/go-sero/core"
@@ -19,13 +18,11 @@ import (
 )
 
 const (
-	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
-	chainHeadChanSize = 10
-	chainLotterySize  = 10
-
 	evictionInterval = time.Minute
+	chainLotterySize = 10
 	lifeTime         = 30 * time.Minute
-	delayNum         = 2
+
+	delayNum = 2
 )
 
 type blockChain interface {
@@ -33,10 +30,6 @@ type blockChain interface {
 	GetHeaderByHash(hash common.Hash) *types.Header
 
 	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
-}
-
-type Backend interface {
-	AccountManager() *accounts.Manager
 }
 
 type Voter struct {
@@ -135,7 +128,7 @@ func (self *Voter) voteLoop() {
 }
 
 func (self *Voter) sign(lottery *types.Lottery, parentHeader *types.Header) {
-	vote := &types.Vote{1, lottery.PosHash, keys.Uint512{}}
+	vote := &types.Vote{common.Hash{}, lottery.PosHash, false, keys.Uint512{}}
 	go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
 	self.SendVoteEvent(vote)
 }
