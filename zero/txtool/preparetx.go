@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/sero-cash/go-sero/common/hexutil"
+
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
@@ -29,8 +31,23 @@ type PreTxParam struct {
 	Roots      []keys.Uint256
 }
 
+type Utxo struct {
+	Root  keys.Uint256
+	Asset assets.Asset
+}
+
+type Utxos []Utxo
+
+func (self *Utxos) Roots() (roots []keys.Uint256) {
+	for _, utxo := range *self {
+		roots = append(roots, utxo.Root)
+	}
+	return
+}
+
 type TxParamGenerator interface {
-	FindRoots(pk *keys.Uint512, currency string, amount *big.Int) (roots []keys.Uint256, remain big.Int)
+	FindRoots(pk *keys.Uint512, currency string, amount *big.Int) (utxos Utxos, remain big.Int)
+	GetRoot(root *keys.Uint256) (utxos *Utxo)
 	DefaultRefundTo(from *keys.Uint512) (ret *keys.PKr)
 }
 
@@ -52,9 +69,15 @@ func GenTxParam(param *PreTxParam, gen TxParamGenerator) (txParam *GTxParam, e e
 	return
 }
 
-func PreGenTx(param *PreTxParam, gen TxParamGenerator) (roots []keys.Uint256, err error) {
+func PreGenTx(param *PreTxParam, gen TxParamGenerator) (utxos Utxos, err error) {
 	if len(param.Roots) > 0 {
-		roots = param.Roots
+		for _, root := range param.Roots {
+			if utxo := gen.GetRoot(&root); utxo == nil {
+				return utxos, fmt.Errorf("can not find the utxo for root : %v", hexutil.Encode(root[:]))
+			} else {
+				utxos = append(utxos, *utxo)
+			}
+		}
 	} else {
 		amounts := map[string]*big.Int{}
 		for _, each := range param.Receptions {
@@ -72,9 +95,9 @@ func PreGenTx(param *PreTxParam, gen TxParamGenerator) (roots []keys.Uint256, er
 		for currency, amount := range amounts {
 			list, remain := gen.FindRoots(&param.From, currency, amount)
 			if remain.Sign() > 0 {
-				return roots, errors.New(fmt.Sprintf("not enough token, maximum available token is %s", new(big.Int).Sub(amount, &remain).String()))
+				return list, errors.New(fmt.Sprintf("not enough token, maximum available token is %s", new(big.Int).Sub(amount, &remain).String()))
 			} else {
-				roots = append(roots, list...)
+				utxos = append(utxos, list...)
 			}
 		}
 	}
@@ -82,7 +105,7 @@ func PreGenTx(param *PreTxParam, gen TxParamGenerator) (roots []keys.Uint256, er
 }
 
 func BuildTxParam(
-	roots []keys.Uint256,
+	utxos Utxos,
 	refundTo *keys.PKr,
 	receptions []Reception,
 	gas uint64,
@@ -94,40 +117,40 @@ func BuildTxParam(
 
 	txParam.From = Kr{PKr: *refundTo}
 
-	Ins := []GIn{}
-	wits, err := SRI_Inst.GetAnchor(roots)
+	wits, err := SRI_Inst.GetAnchor(utxos.Roots())
 	if err != nil {
 		e = err
 		return
 	}
 
+	Ins := []GIn{}
 	amounts := make(map[string]*big.Int)
 	ticekts := make(map[keys.Uint256]keys.Uint256)
 	oins_count := 0
-	for index, utxo := range roots {
-		if out := GetOut(&utxo, 0); out != nil {
+	for index, utxo := range utxos {
+		if out := GetOut(&utxo.Root, 0); out != nil {
 			need_add := false
-			if out.OS.Out_O.Asset.Tkn != nil {
-				if out.OS.Out_O.Asset.Tkn.Value.Cmp(&utils.U256_0) != 0 {
-					currency := strings.Trim(string(out.OS.Out_O.Asset.Tkn.Currency[:]), string([]byte{0}))
+			if utxo.Asset.Tkn != nil {
+				if utxo.Asset.Tkn.Value.Cmp(&utils.U256_0) != 0 {
+					currency := strings.Trim(string(utxo.Asset.Tkn.Currency[:]), string([]byte{0}))
 					if amount, ok := amounts[currency]; ok {
-						amount.Add(amount, out.OS.Out_O.Asset.Tkn.Value.ToIntRef())
+						amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
 					} else {
-						amounts[currency] = new(big.Int).Set(out.OS.Out_O.Asset.Tkn.Value.ToIntRef())
+						amounts[currency] = new(big.Int).Set(utxo.Asset.Tkn.Value.ToIntRef())
 					}
 					need_add = true
 				}
 			}
-			if out.OS.Out_O.Asset.Tkt != nil {
-				if out.OS.Out_O.Asset.Tkt.Value != keys.Empty_Uint256 {
-					ticekts[out.OS.Out_O.Asset.Tkt.Value] = out.OS.Out_O.Asset.Tkt.Category
+			if utxo.Asset.Tkt != nil {
+				if utxo.Asset.Tkt.Value != keys.Empty_Uint256 {
+					ticekts[utxo.Asset.Tkt.Value] = utxo.Asset.Tkt.Category
 					need_add = true
 				}
 			}
 
 			if need_add {
-				Ins = append(Ins, GIn{Out: Out{Root: utxo, State: *out}, Witness: wits[index]})
-				if out.OS.Out_Z == nil {
+				Ins = append(Ins, GIn{Out: Out{Root: utxo.Root, State: *out}, Witness: wits[index]})
+				if out.OS.Out_O != nil {
 					oins_count++
 				}
 			}

@@ -80,9 +80,9 @@ func (list UtxoList) Less(i, j int) bool {
 	}
 }
 
-func (list UtxoList) Roots() (roots []keys.Uint256) {
+func (list UtxoList) Roots() (roots txtool.Utxos) {
 	for _, utxo := range list {
-		roots = append(roots, utxo.Root)
+		roots = append(roots, txtool.Utxo{utxo.Root, utxo.Asset})
 	}
 	return
 }
@@ -462,7 +462,7 @@ func (self *Exchange) GenTxWithSign(param txtool.PreTxParam) (pretx *txtool.GTxP
 		e = errors.New("exchange instance is nil")
 		return
 	}
-	var roots []keys.Uint256
+	var roots txtool.Utxos
 	if roots, e = txtool.PreGenTx(&param, self); e != nil {
 		return
 	}
@@ -516,8 +516,8 @@ func (self *Exchange) ClearTxParam(txParam *txtool.GTxParam) (count int) {
 	return
 }
 
-func (self *Exchange) genTx(roots []keys.Uint256, account *Account, receptions []txtool.Reception, gas uint64, gasPrice *big.Int) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
-	if txParam, e = txtool.BuildTxParam(roots, &account.mainPkr, receptions, gas, gasPrice); e != nil {
+func (self *Exchange) genTx(utxos txtool.Utxos, account *Account, receptions []txtool.Reception, gas uint64, gasPrice *big.Int) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
+	if txParam, e = txtool.BuildTxParam(utxos, &account.mainPkr, receptions, gas, gasPrice); e != nil {
 		return
 	}
 

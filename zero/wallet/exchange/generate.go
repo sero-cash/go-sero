@@ -191,10 +191,10 @@ func (self *Exchange) buildTxParam(
 }
 */
 
-func (self *Exchange) FindRoots(pk *keys.Uint512, currency string, amount *big.Int) (roots []keys.Uint256, remain big.Int) {
+func (self *Exchange) FindRoots(pk *keys.Uint512, currency string, amount *big.Int) (roots txtool.Utxos, remain big.Int) {
 	utxos, r := self.findUtxos(pk, currency, amount)
 	for _, utxo := range utxos {
-		roots = append(roots, utxo.Root)
+		roots = append(roots, txtool.Utxo{utxo.Root, utxo.Asset})
 	}
 	remain = *r
 	return
@@ -207,4 +207,12 @@ func (self *Exchange) DefaultRefundTo(from *keys.Uint512) (ret *keys.PKr) {
 		return nil
 	}
 
+}
+
+func (self *Exchange) GetRoot(root *keys.Uint256) (utxos *txtool.Utxo) {
+	if u, e := self.getUtxo(*root); e != nil {
+		return nil
+	} else {
+		return &txtool.Utxo{u.Root, u.Asset}
+	}
 }
