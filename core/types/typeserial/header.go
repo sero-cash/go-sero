@@ -36,8 +36,9 @@ type Version_0 struct {
 
 //version 1
 type Vote struct {
-	Hash common.Hash
-	Sign keys.Uint512
+	Hash   common.Hash
+	IsPool bool
+	Sign   keys.Uint512
 }
 
 type Version_1 struct {
