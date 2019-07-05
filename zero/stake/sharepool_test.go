@@ -24,7 +24,7 @@ func TestCaleAvePrice(t *testing.T) {
 	state, stateDB := newState()
 	var pkr keys.PKr
 	copy(pkr[:], crypto.Keccak512([]byte("123")))
-	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 19999, Num: 19999}
+	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 10, Num: 10}
 	state.UpdateShare(share)
 	root := stateDB.IntermediateRoot(true)
 	fmt.Println("root:", root.String())
@@ -32,7 +32,8 @@ func TestCaleAvePrice(t *testing.T) {
 
 	amount, _ := big.NewInt(0).SetString("9377458754660837845", 10)
 	n, price := state.CaleAvgPrice(amount)
-	fmt.Println(n, price)
+	sum := sum(basePrice, addition, int64(n))
+	fmt.Println(n, price, sum)
 	fmt.Println(new(big.Int).Mul(big.NewInt(int64(n)), price))
 }
 
