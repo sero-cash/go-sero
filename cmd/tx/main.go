@@ -27,7 +27,7 @@ import (
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 
-	"github.com/sero-cash/go-sero/zero/txs/generate"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate/generate"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
 

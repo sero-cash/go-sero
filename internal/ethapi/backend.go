@@ -88,7 +88,7 @@ type Backend interface {
 	GetPkNumber(pk keys.Uint512) (number uint64, e error)
 	GetPkr(address *keys.Uint512, index *keys.Uint256) (keys.PKr, error)
 	GetBalances(address keys.Uint512) (balances map[string]*big.Int)
-	GenTx(param exchange.TxParam) (*txtool.GenTxParam, error)
+	GenTx(param exchange.TxParam) (*txtool.GTxParam, error)
 	GetRecordsByPk(pk *keys.Uint512, begin, end uint64) (records []exchange.Utxo, err error)
 	GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records []exchange.Utxo, err error)
 	GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int)

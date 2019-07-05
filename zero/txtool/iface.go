@@ -29,7 +29,7 @@ type GTx struct {
 	Hash     keys.Uint256
 }
 
-type GenTxParam struct {
+type GTxParam struct {
 	Gas      uint64
 	GasPrice big.Int
 	From     Kr
@@ -40,7 +40,7 @@ type GenTxParam struct {
 type ISLI interface {
 	CreateKr() Kr
 	DecOuts(outs []Out, skr *keys.PKr) ([]DOut, error)
-	GenTx(param *GenTxParam) (GTx, error)
+	GenTx(param *GTxParam) (GTx, error)
 }
 
 type ISRI interface {

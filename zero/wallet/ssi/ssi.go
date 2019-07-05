@@ -94,7 +94,7 @@ var txMap sync.Map
 
 func (self *SSI) GenTx(param *GenTxParam) (hash keys.Uint256, e error) {
 	log.Printf("genTx start")
-	p := txtool.GenTxParam{}
+	p := txtool.GTxParam{}
 	p.Gas = param.Gas
 	p.GasPrice = *big.NewInt(0).SetUint64(param.GasPrice)
 	p.From = param.From

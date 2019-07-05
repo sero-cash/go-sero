@@ -300,7 +300,7 @@ func (b *SeroAPIBackend) GetBalances(address keys.Uint512) (balances map[string]
 	return b.sero.exchange.GetBalances(address)
 }
 
-func (b *SeroAPIBackend) GenTx(param exchange.TxParam) (txParam *txtool.GenTxParam, e error) {
+func (b *SeroAPIBackend) GenTx(param exchange.TxParam) (txParam *txtool.GTxParam, e error) {
 	if b.sero.exchange == nil {
 		e = errors.New("not start exchange")
 		return

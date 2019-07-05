@@ -178,7 +178,7 @@ func (args GenTxArgs) toTxParam() exchange.TxParam {
 	return exchange.TxParam{args.From.ToUint512(), refundPkr, receptions, args.Gas, gasPrice, args.Roots}
 }
 
-func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*txtool.GenTxParam, error) {
+func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*txtool.GTxParam, error) {
 	if err := param.check(); err != nil {
 		return nil, err
 	}
@@ -341,7 +341,7 @@ func (args MergeArgs) Check() error {
 	return nil
 }
 
-func (s *PublicExchangeAPI) GenMergeTx(ctx context.Context, args MergeArgs) (txParam *txtool.GenTxParam, e error) {
+func (s *PublicExchangeAPI) GenMergeTx(ctx context.Context, args MergeArgs) (txParam *txtool.GTxParam, e error) {
 	if e = args.Check(); e != nil {
 		return
 	}

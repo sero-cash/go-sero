@@ -67,7 +67,7 @@ func (self *SLI) DecOuts(outs []Out, skr *keys.PKr) (douts []DOut) {
 	return
 }
 
-func (self *SLI) GenTx(param *GenTxParam) (gtx GTx, e error) {
+func (self *SLI) GenTx(param *GTxParam) (gtx GTx, e error) {
 
 	if tx, err := genTx(param); err != nil {
 		e = err
@@ -81,7 +81,7 @@ func (self *SLI) GenTx(param *GenTxParam) (gtx GTx, e error) {
 	}
 }
 
-func SignTx(sk *keys.Uint512, paramTx *GenTxParam) (tx GTx, err error) {
+func SignTx(sk *keys.Uint512, paramTx *GTxParam) (tx GTx, err error) {
 	copy(paramTx.From.SKr[:], sk[:])
 	for i := range paramTx.Ins {
 		copy(paramTx.Ins[i].SKr[:], sk[:])

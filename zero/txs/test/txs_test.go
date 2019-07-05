@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/sero-cash/go-sero/zero/txs/generate"
 	"github.com/sero-cash/go-sero/zero/txs/verify"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate/generate"
 
 	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
 

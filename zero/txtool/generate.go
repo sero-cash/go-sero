@@ -13,14 +13,14 @@ import (
 )
 
 type gen_ctx struct {
-	param        GenTxParam
+	param        GTxParam
 	O_Ins        []GIn
 	Z_Ins        []GIn
 	balance_desc cpt.BalanceDesc
 	s            stx.T
 }
 
-func genTx(param *GenTxParam) (ret stx.T, e error) {
+func genTx(param *GTxParam) (ret stx.T, e error) {
 	ctx := gen_ctx{}
 	ctx.param = *param
 	ctx.prepare()
