@@ -26,12 +26,17 @@ func (self *key) k() string {
 	return self.pre + string(self.id)
 }
 
+type inBlock struct {
+	name string
+	ref  []byte
+}
+
 type consItem struct {
 	key     key
 	item    CItem
 	index   int
 	inCons  bool
-	inBlock string
+	inBlock *inBlock
 	inDB    bool
 }
 
@@ -84,11 +89,11 @@ func (self *Cons) RevertToSnapshot(ver int) {
 	}
 }
 
-func (self *Cons) deleteObj(k *key, item CItem, inCons bool, inBlock string, inDB bool) {
+func (self *Cons) deleteObj(k *key, item CItem, inCons bool, inblock *inBlock, inDB bool) {
 	if item == nil {
 		panic(errors.New("item can not be nil"))
 	}
-	old := self.getObj(k, item.CopyTo(), inCons, inBlock, inDB)
+	old := self.getObj(k, item.CopyTo(), inCons, inDB)
 	cl := changelog{}
 	cl.key = k.k()
 	if old != nil {
@@ -99,16 +104,16 @@ func (self *Cons) deleteObj(k *key, item CItem, inCons bool, inBlock string, inD
 		cl.index = -1
 	}
 	cl.ver = self.ver
-	self.content[k.k()] = &consItem{*k, nil, len(self.cls), inCons, inBlock, inDB}
+	self.content[k.k()] = &consItem{*k, nil, len(self.cls), inCons, inblock, inDB}
 	self.cls = append(self.cls, cl)
 	return
 }
 
-func (self *Cons) addObj(k *key, item CItem, inCons bool, inBlock string, inDB bool) {
+func (self *Cons) addObj(k *key, item CItem, inCons bool, inblock *inBlock, inDB bool) {
 	if item == nil {
 		panic(errors.New("item can not be nil"))
 	}
-	old := self.getObj(k, item.CopyTo(), inCons, inBlock, inDB)
+	old := self.getObj(k, item.CopyTo(), inCons, inDB)
 	cl := changelog{}
 	cl.key = k.k()
 	if old != nil {
@@ -119,7 +124,7 @@ func (self *Cons) addObj(k *key, item CItem, inCons bool, inBlock string, inDB b
 		cl.index = -1
 	}
 	cl.ver = self.ver
-	self.content[k.k()] = &consItem{*k, item, len(self.cls), inCons, inBlock, inDB}
+	self.content[k.k()] = &consItem{*k, item, len(self.cls), inCons, inblock, inDB}
 	self.cls = append(self.cls, cl)
 	return
 }
@@ -142,7 +147,7 @@ func (self *Cons) getData(k []byte, inCons bool, inDB bool) (ret []byte) {
 	return nil
 }
 
-func (self *Cons) getObj(k *key, item CItem, inCons bool, inBlock string, inDB bool) (ret *consItem) {
+func (self *Cons) getObj(k *key, item CItem, inCons bool, inDB bool) (ret *consItem) {
 	if i, ok := self.content[k.k()]; !ok {
 		if v := self.getData([]byte(k.k()), inCons, inDB); v == nil {
 			return nil
@@ -150,7 +155,7 @@ func (self *Cons) getObj(k *key, item CItem, inCons bool, inBlock string, inDB b
 			if e := rlp.DecodeBytes(v, item); e != nil {
 				return nil
 			}
-			ret = &consItem{*k, item, -1, false, "", false}
+			ret = &consItem{*k, item, -1, false, nil, false}
 			self.content[k.k()] = ret
 			return ret
 		}
@@ -198,15 +203,19 @@ func (self *Cons) fetchDBPairs(onlyget bool) (ret consItems) {
 	return
 }
 
+type RecordPair struct {
+	Ref  []byte
+	Hash []byte
+}
 type Record struct {
-	Name   string
-	Hashes []Bytes
+	Name  string
+	Pairs []RecordPair
 }
 
 func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
 	cis := consItems{}
 	for _, v := range self.content {
-		if len(v.inBlock) > 0 {
+		if v.inBlock != nil {
 			cis = append(cis, v)
 		}
 	}
@@ -216,23 +225,24 @@ func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
 
 	for _, v := range cis {
 		var r *Record
-		if record, ok := m[v.inBlock]; ok {
+		if record, ok := m[v.inBlock.name]; ok {
 			r = record
 		} else {
-			r = &Record{Name: v.inBlock}
-			m[v.inBlock] = r
+			r = &Record{Name: v.inBlock.name}
+			m[v.inBlock.name] = r
 			ret = append(ret, r)
 		}
-		r.Hashes = append(r.Hashes, v.key.id)
+		r.Pairs = append(r.Pairs, RecordPair{v.inBlock.ref, v.key.id})
 	}
 
 	for _, v := range cis {
-		v.inBlock = ""
+		v.inBlock = nil
 	}
 	return
 }
 
 func (self *Cons) Update() {
+	self.updateVer = self.ver
 	conslist := self.fetchConsPairs(false)
 	for _, v := range conslist {
 		if b, err := rlp.EncodeToBytes(v.item); err != nil {

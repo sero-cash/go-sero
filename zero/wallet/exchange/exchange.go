@@ -2,7 +2,6 @@ package exchange
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
@@ -81,19 +80,11 @@ func (list UtxoList) Less(i, j int) bool {
 	}
 }
 
-type Reception struct {
-	Addr     keys.PKr
-	Currency string
-	Value    *big.Int
-}
-
-type TxParam struct {
-	From       keys.Uint512
-	RefundTo   *keys.PKr
-	Receptions []Reception
-	Gas        uint64
-	GasPrice   *big.Int
-	Roots      []keys.Uint256
+func (list UtxoList) Roots() (roots []keys.Uint256) {
+	for _, utxo := range list {
+		roots = append(roots, utxo.Root)
+	}
+	return
 }
 
 type (
@@ -186,7 +177,7 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 		account.pk = w.Accounts()[0].Address.ToUint512()
 		account.tk = w.Accounts()[0].Tk.ToUint512()
 		copy(account.skr[:], account.tk[:])
-		account.mainPkr = self.createPkr(account.pk, 1)
+		account.mainPkr = txtool.CreatePkr(account.pk, 1)
 		account.isChanged = true
 		account.nextMergeTime = time.Now()
 		self.accounts.Store(*account.pk, &account)
@@ -206,7 +197,7 @@ func (self *Exchange) starNum(pk *keys.Uint512) uint64 {
 	if err != nil {
 		return 0
 	}
-	return decodeNumber(value)
+	return txtool.DecodeNumber(value)
 }
 
 func (self *Exchange) updateAccount() {
@@ -415,7 +406,7 @@ func (self *Exchange) GetBlocksInfo(start, end uint64) (blocks []BlockInfo, err 
 	iterator := self.db.NewIteratorWithPrefix(blockPrefix)
 	for ok := iterator.Seek(blockKey(start)); ok; ok = iterator.Next() {
 		key := iterator.Key()
-		num := decodeNumber(key[5:13])
+		num := txtool.DecodeNumber(key[5:13])
 		if num >= end {
 			break
 		}
@@ -466,13 +457,13 @@ func (self *Exchange) GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records 
 	return
 }
 
-func (self *Exchange) GenTxWithSign(param TxParam) (pretx *txtool.GTxParam, tx *txtool.GTx, e error) {
+func (self *Exchange) GenTxWithSign(param txtool.PreTxParam) (pretx *txtool.GTxParam, tx *txtool.GTx, e error) {
 	if self == nil {
 		e = errors.New("exchange instance is nil")
 		return
 	}
-	var utxos []Utxo
-	if utxos, e = self.preGenTx(param); e != nil {
+	var roots []keys.Uint256
+	if roots, e = txtool.PreGenTx(&param, self); e != nil {
 		return
 	}
 
@@ -484,7 +475,7 @@ func (self *Exchange) GenTxWithSign(param TxParam) (pretx *txtool.GTxParam, tx *
 		return
 	}
 
-	if pretx, tx, e = self.genTx(utxos, account, param.Receptions, param.Gas, param.GasPrice); e != nil {
+	if pretx, tx, e = self.genTx(roots, account, param.Receptions, param.Gas, param.GasPrice); e != nil {
 		log.Error("Exchange genTx", "error", e)
 		return
 	}
@@ -512,17 +503,6 @@ func (self *Exchange) getAccountByPkr(pkr keys.PKr) (a *Account) {
 	return
 }
 
-func (self *Exchange) isPk(addr keys.PKr) bool {
-	byte32 := common.Hash{}
-	return bytes.Equal(byte32[:], addr[64:96])
-}
-
-func (self *Exchange) createPkr(pk *keys.Uint512, index uint64) keys.PKr {
-	r := keys.Uint256{}
-	copy(r[:], common.LeftPadBytes(encodeNumber(index), 32))
-	return keys.Addr2PKr(pk, &r)
-}
-
 func (self *Exchange) ClearTxParam(txParam *txtool.GTxParam) (count int) {
 	if self == nil {
 		return
@@ -536,8 +516,8 @@ func (self *Exchange) ClearTxParam(txParam *txtool.GTxParam) (count int) {
 	return
 }
 
-func (self *Exchange) genTx(utxos []Utxo, account *Account, receptions []Reception, gas uint64, gasPrice *big.Int) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
-	if txParam, e = self.buildTxParam(utxos, &account.mainPkr, receptions, gas, gasPrice); e != nil {
+func (self *Exchange) genTx(roots []keys.Uint256, account *Account, receptions []txtool.Reception, gas uint64, gasPrice *big.Int) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
+	if txParam, e = txtool.BuildTxParam(roots, &account.mainPkr, receptions, gas, gasPrice); e != nil {
 		return
 	}
 
@@ -576,7 +556,7 @@ func (self *Exchange) iteratorUtxo(PK *keys.Uint512, begin, end uint64, handler 
 	iterator := self.db.NewIteratorWithPrefix(utxoPrefix)
 	for ok := iterator.Seek(utxoKey(begin, pk)); ok; ok = iterator.Next() {
 		key := iterator.Key()
-		num := decodeNumber(key[4:12])
+		num := txtool.DecodeNumber(key[4:12])
 		if num >= end {
 			break
 		}
@@ -862,7 +842,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 	count = len(blocks)
 	num := uint64(blocks[count-1].Num) + 1
 	// "NUM"+PK  => Num
-	data := encodeNumber(num)
+	data := txtool.EncodeNumber(num)
 	for _, pk := range pks {
 		batch.Put(numKey(pk), data)
 	}
@@ -1083,7 +1063,7 @@ func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e er
 	if mu, e = self.getMergeUtxos(&mp.From, mp.Currency, int(mp.Zcount), int(mp.Left)); e != nil {
 		return
 	}
-	txParam, e = self.buildTxParam(mu.list, mp.To, []Reception{{Value: &mu.amount, Currency: mp.Currency, Addr: *mp.To}}, 25000, big.NewInt(1000000000))
+	txParam, e = txtool.BuildTxParam(mu.list.Roots(), mp.To, []txtool.Reception{{Value: &mu.amount, Currency: mp.Currency, Addr: *mp.To}}, 25000, big.NewInt(1000000000))
 	if e != nil {
 		return
 	}
@@ -1109,7 +1089,7 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string, force bool) (coun
 	}
 
 	if mu.zcount >= 100 || mu.ocount >= 2400 || time.Now().After(account.nextMergeTime) || force {
-		pretx, gtx, err := self.genTx(mu.list, account, []Reception{{Value: &mu.amount, Currency: currency, Addr: account.mainPkr}}, 25000, big.NewInt(1000000000))
+		pretx, gtx, err := self.genTx(mu.list.Roots(), account, []txtool.Reception{{Value: &mu.amount, Currency: currency, Addr: account.mainPkr}}, 25000, big.NewInt(1000000000))
 		if err != nil {
 			account.nextMergeTime = time.Now().Add(time.Hour * 6)
 			e = err
@@ -1170,7 +1150,7 @@ func txKey(txHash keys.Uint256) []byte {
 }
 
 func blockKey(number uint64) []byte {
-	return append(blockPrefix, encodeNumber(number)...)
+	return append(blockPrefix, txtool.EncodeNumber(number)...)
 }
 
 func numKey(pk keys.Uint512) []byte {
@@ -1202,17 +1182,7 @@ func utxoPkKey(pk keys.Uint512, currency []byte, root *keys.Uint256) []byte {
 }
 
 func utxoKey(number uint64, pk keys.Uint512) []byte {
-	return append(utxoPrefix, append(encodeNumber(number), pk[:]...)...)
-}
-
-func encodeNumber(number uint64) []byte {
-	enc := make([]byte, 8)
-	binary.BigEndian.PutUint64(enc, number)
-	return enc
-}
-
-func decodeNumber(data []byte) uint64 {
-	return binary.BigEndian.Uint64(data)
+	return append(utxoPrefix, append(txtool.EncodeNumber(number), pk[:]...)...)
 }
 
 func AddJob(spec string, run RunFunc) *cron.Cron {

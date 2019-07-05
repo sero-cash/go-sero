@@ -1802,7 +1802,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
-func (args *SendTxArgs) toTxParam() (txParam exchange.TxParam, e error) {
+func (args *SendTxArgs) toTxParam() (txParam txtool.PreTxParam, e error) {
 
 	flag, err := common.IsPkr(args.To)
 	if err != nil {
@@ -1817,9 +1817,9 @@ func (args *SendTxArgs) toTxParam() (txParam exchange.TxParam, e error) {
 		topkr = keys.Addr2PKr(args.To.ToUint512(), nil)
 
 	}
-	receptions := []exchange.Reception{{Addr: topkr, Currency: string(args.Currency), Value: (*big.Int)(args.Value)}}
+	receptions := []txtool.Reception{{Addr: topkr, Currency: string(args.Currency), Value: (*big.Int)(args.Value)}}
 
-	txParam = exchange.TxParam{From: *args.From.ToUint512(),
+	txParam = txtool.PreTxParam{From: *args.From.ToUint512(),
 		Receptions: receptions,
 		Gas:        uint64(*args.Gas),
 		GasPrice:   (*big.Int)(args.GasPrice),

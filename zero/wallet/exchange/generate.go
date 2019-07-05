@@ -1,18 +1,17 @@
 package exchange
 
 import (
-	"errors"
-	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txtool"
-	"github.com/sero-cash/go-sero/zero/utils"
 )
 
+func (self *Exchange) GenTx(param txtool.PreTxParam) (txParam *txtool.GTxParam, e error) {
+	return txtool.GenTxParam(&param, self)
+}
+
+/*
 func (self *Exchange) GenTx(param TxParam) (txParam *txtool.GTxParam, e error) {
 	utxos, err := self.preGenTx(param)
 	if err != nil {
@@ -131,9 +130,9 @@ func (self *Exchange) buildTxParam(
 		currency := strings.ToUpper(reception.Currency)
 		if amount, ok := amounts[currency]; ok && amount.Cmp(reception.Value) >= 0 {
 
-			if self.isPk(reception.Addr) {
+			if txtool.IsPk(reception.Addr) {
 				pk := reception.Addr.ToUint512()
-				pkr := self.createPkr(&pk, 1)
+				pkr := txtool.CreatePkr(&pk, 1)
 				Outs = append(Outs, txtool.GOut{PKr: pkr, Asset: assets.Asset{Tkn: &assets.Token{
 					Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
 					Value:    utils.U256(*reception.Value),
@@ -189,4 +188,23 @@ func (self *Exchange) buildTxParam(
 	}
 
 	return
+}
+*/
+
+func (self *Exchange) FindRoots(pk *keys.Uint512, currency string, amount *big.Int) (roots []keys.Uint256, remain big.Int) {
+	utxos, r := self.findUtxos(pk, currency, amount)
+	for _, utxo := range utxos {
+		roots = append(roots, utxo.Root)
+	}
+	remain = *r
+	return
+}
+func (self *Exchange) DefaultRefundTo(from *keys.Uint512) (ret *keys.PKr) {
+	if value, ok := self.accounts.Load(from); ok {
+		account := value.(*Account)
+		return &account.mainPkr
+	} else {
+		return nil
+	}
+
 }

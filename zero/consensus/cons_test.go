@@ -173,7 +173,7 @@ func TestConsFetch(t *testing.T) {
 		t.FailNow()
 	}
 	blocklist := cmap.fetchBlockRecords(false)
-	if len(blocklist) != 1 && len(blocklist[0].Hashes) != 2 {
+	if len(blocklist) != 1 && len(blocklist[0].Pairs) != 2 {
 		t.FailNow()
 	}
 	dblist := cmap.fetchDBPairs(false)
@@ -245,7 +245,7 @@ func TestConsRecord(t *testing.T) {
 	}
 
 	records := dbcons.GetBlockRecords(db.GlobalGetter(), 0, &blockhash)
-	if len(records) != 1 && len(records[0].Hashes) != 2 {
+	if len(records) != 1 && len(records[0].Pairs) != 2 {
 		t.FailNow()
 	}
 	fmt.Println(records)

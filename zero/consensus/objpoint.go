@@ -22,16 +22,16 @@ func (self *ObjPoint) AddObj(item PItem) {
 		panic(errors.New("item can not be nil"))
 	}
 	stateHash := Bytes(item.State())
-	self.cons.addObj(&key{self.objPre, item.Id()}, &stateHash, true, "", false)
-	self.cons.addObj(&key{self.statePre, stateHash}, item, false, self.inblock, true)
+	self.cons.addObj(&key{self.objPre, item.Id()}, &stateHash, true, nil, false)
+	self.cons.addObj(&key{self.statePre, stateHash}, item, false, &inBlock{self.inblock, item.Id()}, true)
 	return
 }
 
 func (self *ObjPoint) GetObj(id []byte, item PItem) (ret CItem) {
 
-	if v := self.cons.getObj(&key{self.objPre, id}, &Bytes{}, true, "", false); v != nil && v.item != nil {
+	if v := self.cons.getObj(&key{self.objPre, id}, &Bytes{}, true, false); v != nil && v.item != nil {
 		stateHash := *v.item.(*Bytes)
-		if v := self.cons.getObj(&key{self.statePre, stateHash}, item, false, self.inblock, true); v != nil && v.item != nil {
+		if v := self.cons.getObj(&key{self.statePre, stateHash}, item, false, true); v != nil && v.item != nil {
 			return v.item.(CItem)
 		}
 	}

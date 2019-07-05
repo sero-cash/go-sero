@@ -45,17 +45,17 @@ func (self DBObj) GetBlockRecords(getter serodb.Getter, num uint64, hash *common
 	}
 }
 
-func (self DBObj) GetBlockRecordsMap(getter serodb.Getter, num uint64, hash *common.Hash) (records map[string][]Bytes) {
-	records = make(map[string][]Bytes)
+func (self DBObj) GetBlockRecordsMap(getter serodb.Getter, num uint64, hash *common.Hash) (records map[string][]RecordPair) {
+	records = make(map[string][]RecordPair)
 	rds := self.GetBlockRecords(getter, num, hash)
 	for _, v := range rds {
-		records[v.Name] = v.Hashes
+		records[v.Name] = v.Pairs
 	}
 	return
 }
 
-func (self DBObj) GetObject(getter serodb.Getter, id []byte, item CItem) (ret CItem) {
-	k := key{self.Pre, id}
+func (self DBObj) GetObject(getter serodb.Getter, hash []byte, item CItem) (ret CItem) {
+	k := key{self.Pre, hash}
 	if v, err := getter.Get([]byte(k.k())); err != nil {
 		return
 	} else {

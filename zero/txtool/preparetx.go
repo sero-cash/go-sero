@@ -1,13 +1,17 @@
 package txtool
 
-/*
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 	"strings"
+
+	"github.com/pkg/errors"
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type Reception struct {
@@ -25,31 +29,32 @@ type PreTxParam struct {
 	Roots      []keys.Uint256
 }
 
-func GenTxParam(param PreTxParam) (txParam *txtool.GTxParam, e error) {
-	utxos, err := preGenTx(param)
+type TxParamGenerator interface {
+	FindRoots(pk *keys.Uint512, currency string, amount *big.Int) (roots []keys.Uint256, remain big.Int)
+	DefaultRefundTo(from *keys.Uint512) (ret *keys.PKr)
+}
+
+func GenTxParam(param *PreTxParam, gen TxParamGenerator) (txParam *GTxParam, e error) {
+	if len(param.Receptions) > 500 {
+		return nil, errors.New("receptions count must <= 500")
+	}
+	utxos, err := PreGenTx(param, gen)
 	if err != nil {
 		return nil, err
 	}
 
-	if value, ok := self.accounts.Load(param.From); ok {
-		var refundTo keys.PKr
-		if param.RefundTo == nil {
-			account := value.(*Account)
-			refundTo = account.mainPkr
-		} else {
-			refundTo = *param.RefundTo
+	if param.RefundTo == nil {
+		if param.RefundTo = gen.DefaultRefundTo(&param.From); param.RefundTo == nil {
+			return nil, errors.New("can not find default refund to")
 		}
-		txParam, e = buildTxParam(utxos, &refundTo, param.Receptions, param.Gas, param.GasPrice)
-	} else {
-		return nil, errors.New("not found Pk")
 	}
-
+	txParam, e = BuildTxParam(utxos, param.RefundTo, param.Receptions, param.Gas, param.GasPrice)
 	return
 }
 
-func preGenTx(param PreTxParam) (utxos []keys.Uint256, err error) {
+func PreGenTx(param *PreTxParam, gen TxParamGenerator) (roots []keys.Uint256, err error) {
 	if len(param.Roots) > 0 {
-		utxos = param.Roots
+		roots = param.Roots
 	} else {
 		amounts := map[string]*big.Int{}
 		for _, each := range param.Receptions {
@@ -65,41 +70,32 @@ func preGenTx(param PreTxParam) (utxos []keys.Uint256, err error) {
 			amounts["SERO"] = new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), param.GasPrice)
 		}
 		for currency, amount := range amounts {
-			list, remain := self.findUtxos(&param.From, currency, amount)
+			list, remain := gen.FindRoots(&param.From, currency, amount)
 			if remain.Sign() > 0 {
-				return utxos, errors.New(fmt.Sprintf("not enough token, maximum available token is %s", new(big.Int).Sub(amount, remain).String()))
+				return roots, errors.New(fmt.Sprintf("not enough token, maximum available token is %s", new(big.Int).Sub(amount, &remain).String()))
 			} else {
-				utxos = append(utxos, list...)
+				roots = append(roots, list...)
 			}
 		}
-	}
-	count := 0
-	for _, each := range utxos {
-		if !each.IsZ {
-			count++
-		}
-	}
-	if count > 2500 {
-		err = errors.New("ins.len > 2500")
 	}
 	return
 }
 
-func buildTxParam(
-	utxos []keys.Uint256,
+func BuildTxParam(
+	roots []keys.Uint256,
 	refundTo *keys.PKr,
 	receptions []Reception,
 	gas uint64,
-	gasPrice *big.Int) (txParam *txtool.GTxParam, e error) {
+	gasPrice *big.Int) (txParam *GTxParam, e error) {
 
-	txParam = new(txtool.GTxParam)
+	txParam = new(GTxParam)
 	txParam.Gas = gas
 	txParam.GasPrice = *gasPrice
 
-	txParam.From = txtool.Kr{PKr: *refundTo}
+	txParam.From = Kr{PKr: *refundTo}
 
-	Ins := []txtool.GIn{}
-	wits, err := txtool.SRI_Inst.GetAnchor(utxos)
+	Ins := []GIn{}
+	wits, err := SRI_Inst.GetAnchor(roots)
 	if err != nil {
 		e = err
 		return
@@ -107,39 +103,56 @@ func buildTxParam(
 
 	amounts := make(map[string]*big.Int)
 	ticekts := make(map[keys.Uint256]keys.Uint256)
-	for index, utxo := range utxos {
-		if out := txtool.GetOut(&utxo, 0); out != nil {
-			Ins = append(Ins, txtool.GIn{Out: txtool.Out{Root: utxo, State: *out}, Witness: wits[index]})
-
+	oins_count := 0
+	for index, utxo := range roots {
+		if out := GetOut(&utxo, 0); out != nil {
+			need_add := false
 			if out.OS.Out_O.Asset.Tkn != nil {
-				currency := strings.Trim(string(out.OS.Out_O.Asset.Tkn.Currency[:]), string([]byte{0}))
-				if amount, ok := amounts[currency]; ok {
-					amount.Add(amount, out.OS.Out_O.Asset.Tkn.Value.ToIntRef())
-				} else {
-					amounts[currency] = new(big.Int).Set(out.OS.Out_O.Asset.Tkn.Value.ToIntRef())
+				if out.OS.Out_O.Asset.Tkn.Value.Cmp(&utils.U256_0) != 0 {
+					currency := strings.Trim(string(out.OS.Out_O.Asset.Tkn.Currency[:]), string([]byte{0}))
+					if amount, ok := amounts[currency]; ok {
+						amount.Add(amount, out.OS.Out_O.Asset.Tkn.Value.ToIntRef())
+					} else {
+						amounts[currency] = new(big.Int).Set(out.OS.Out_O.Asset.Tkn.Value.ToIntRef())
+					}
+					need_add = true
 				}
-
 			}
 			if out.OS.Out_O.Asset.Tkt != nil {
-				ticekts[out.OS.Out_O.Asset.Tkt.Value] = out.OS.Out_O.Asset.Tkt.Category
+				if out.OS.Out_O.Asset.Tkt.Value != keys.Empty_Uint256 {
+					ticekts[out.OS.Out_O.Asset.Tkt.Value] = out.OS.Out_O.Asset.Tkt.Category
+					need_add = true
+				}
+			}
+
+			if need_add {
+				Ins = append(Ins, GIn{Out: Out{Root: utxo, State: *out}, Witness: wits[index]})
+				if out.OS.Out_Z == nil {
+					oins_count++
+				}
 			}
 		}
 	}
 
-	Outs := []txtool.GOut{}
+	if oins_count > 2500 {
+		e = fmt.Errorf("o_ins count > 2500")
+		return
+	}
+
+	Outs := []GOut{}
 	for _, reception := range receptions {
 		currency := strings.ToUpper(reception.Currency)
 		if amount, ok := amounts[currency]; ok && amount.Cmp(reception.Value) >= 0 {
 
-			if self.isPk(reception.Addr) {
+			if IsPk(reception.Addr) {
 				pk := reception.Addr.ToUint512()
-				pkr := self.createPkr(&pk, 1)
-				Outs = append(Outs, txtool.GOut{PKr: pkr, Asset: assets.Asset{Tkn: &assets.Token{
+				pkr := CreatePkr(&pk, 1)
+				Outs = append(Outs, GOut{PKr: pkr, Asset: assets.Asset{Tkn: &assets.Token{
 					Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
 					Value:    utils.U256(*reception.Value),
 				}}})
 			} else {
-				Outs = append(Outs, txtool.GOut{PKr: reception.Addr, Asset: assets.Asset{Tkn: &assets.Token{
+				Outs = append(Outs, GOut{PKr: reception.Addr, Asset: assets.Asset{Tkn: &assets.Token{
 					Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
 					Value:    utils.U256(*reception.Value),
 				}}})
@@ -166,7 +179,7 @@ func buildTxParam(
 
 	if len(amounts) > 0 {
 		for currency, value := range amounts {
-			Outs = append(Outs, txtool.GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkn: &assets.Token{
+			Outs = append(Outs, GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkn: &assets.Token{
 				Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
 				Value:    utils.U256(*value),
 			}}})
@@ -174,7 +187,7 @@ func buildTxParam(
 	}
 	if len(ticekts) > 0 {
 		for value, category := range ticekts {
-			Outs = append(Outs, txtool.GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkt: &assets.Ticket{
+			Outs = append(Outs, GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkt: &assets.Ticket{
 				Category: category,
 				Value:    value,
 			}}})
@@ -184,10 +197,26 @@ func buildTxParam(
 	txParam.Ins = Ins
 	txParam.Outs = Outs
 
-	for _, utxo := range utxos {
-		self.usedFlag.Store(utxo.Root, 1)
-	}
-
 	return
 }
-*/
+
+func IsPk(addr keys.PKr) bool {
+	byte32 := common.Hash{}
+	return bytes.Equal(byte32[:], addr[64:96])
+}
+
+func CreatePkr(pk *keys.Uint512, index uint64) keys.PKr {
+	r := keys.Uint256{}
+	copy(r[:], common.LeftPadBytes(EncodeNumber(index), 32))
+	return keys.Addr2PKr(pk, &r)
+}
+
+func EncodeNumber(number uint64) []byte {
+	enc := make([]byte, 8)
+	binary.BigEndian.PutUint64(enc, number)
+	return enc
+}
+
+func DecodeNumber(data []byte) uint64 {
+	return binary.BigEndian.Uint64(data)
+}

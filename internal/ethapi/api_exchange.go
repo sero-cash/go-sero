@@ -156,16 +156,16 @@ func MixAdrressToPkr(addr MixAdrress) keys.PKr {
 	return pkr
 }
 
-func (args GenTxArgs) toTxParam() exchange.TxParam {
+func (args GenTxArgs) toTxParam() txtool.PreTxParam {
 	gasPrice := args.GasPrice.ToInt()
 
 	if gasPrice.Sign() == 0 {
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
-	receptions := []exchange.Reception{}
+	receptions := []txtool.Reception{}
 	for _, rec := range args.Receptions {
 		pkr := MixAdrressToPkr(rec.Addr)
-		receptions = append(receptions, exchange.Reception{
+		receptions = append(receptions, txtool.Reception{
 			pkr,
 			string(rec.Currency),
 			(*big.Int)(rec.Value),
@@ -175,7 +175,7 @@ func (args GenTxArgs) toTxParam() exchange.TxParam {
 	if args.RefundTo != nil {
 		refundPkr = args.RefundTo.ToPKr()
 	}
-	return exchange.TxParam{args.From.ToUint512(), refundPkr, receptions, args.Gas, gasPrice, args.Roots}
+	return txtool.PreTxParam{args.From.ToUint512(), refundPkr, receptions, args.Gas, gasPrice, args.Roots}
 }
 
 func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*txtool.GTxParam, error) {
