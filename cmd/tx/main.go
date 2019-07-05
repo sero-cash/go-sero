@@ -25,16 +25,16 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-sero/zero/txtool"
+	"github.com/sero-cash/go-sero/zero/zconfig"
 
-	"github.com/sero-cash/go-sero/zero/wallet/lstate/generate"
+	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-czero-import/cpt"
-	"github.com/sero-cash/go-sero/zero/light/light_types"
 )
 
 var txParam = ""
@@ -48,7 +48,7 @@ func init() {
 func main() {
 	seroparam.InitExchangeValueStr(true)
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	fmt.Printf("PThread: %v \n", generate.G_p_thread_num)
+	fmt.Printf("PThread: %v \n", zconfig.G_p_thread_num)
 	flag.Parse()
 	cpt.ZeroInit_OnlyInOuts()
 
@@ -87,11 +87,11 @@ func main() {
 	} else {
 		copy(sk_bytes[:], bs)
 		if len(txParam) > 0 && len(sk) > 0 {
-			var gtp light_types.GenTxParam
+			var gtp txtool.GTxParam
 			if e := json.Unmarshal([]byte(txParam), &gtp); e != nil {
 				fmt.Println("[OUTPUT-BEGIN] ERROR: Unmarshal-", e)
 			} else {
-				if gtx, e := ssi.SignTx(&sk_bytes, &gtp); e != nil {
+				if gtx, e := txtool.SignTx(&sk_bytes, &gtp); e != nil {
 					fmt.Println("[OUTPUT-BEGIN] ERROR: SignTx-", e)
 				} else {
 					if jtx, e := json.Marshal(&gtx); e != nil {
