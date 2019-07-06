@@ -518,7 +518,7 @@ func (self *Exchange) ClearTxParam(txParam *txtool.GTxParam) (count int) {
 }
 
 func (self *Exchange) genTx(utxos prepare.Utxos, account *Account, receptions []prepare.Reception, cmds *prepare.Cmds, gas uint64, gasPrice *big.Int) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
-	if txParam, e = prepare.BuildTxParam(utxos, &account.mainPkr, receptions, cmds, gas, gasPrice); e != nil {
+	if txParam, e = self.buildTxParam(utxos, &account.mainPkr, receptions, cmds, gas, gasPrice); e != nil {
 		return
 	}
 
@@ -1118,7 +1118,7 @@ func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e er
 			receptions = append(receptions, prepare.Reception{Addr: *mp.To, Asset: assets.Asset{Tkt: &assets.Ticket{category, value}}})
 		}
 	}
-	txParam, e = prepare.BuildTxParam(
+	txParam, e = self.buildTxParam(
 		mu.list.Roots(),
 		mp.To,
 		receptions,

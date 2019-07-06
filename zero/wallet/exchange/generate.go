@@ -193,6 +193,22 @@ func (self *Exchange) buildTxParam(
 }
 */
 
+func (self *Exchange) buildTxParam(
+	utxos prepare.Utxos,
+	refundTo *keys.PKr,
+	receptions []prepare.Reception,
+	cmds *prepare.Cmds,
+	gas uint64,
+	gasPrice *big.Int) (txParam *txtool.GTxParam, e error) {
+
+	txParam, e = prepare.BuildTxParam(utxos, refundTo, receptions, cmds, gas, gasPrice)
+
+	for _, in := range txParam.Ins {
+		self.usedFlag.Store(in.Out.Root, 1)
+	}
+	return
+}
+
 func (self *Exchange) FindRoots(pk *keys.Uint512, currency string, amount *big.Int) (roots prepare.Utxos, remain big.Int) {
 	utxos, r := self.findUtxos(pk, currency, amount)
 	for _, utxo := range utxos {
