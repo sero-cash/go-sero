@@ -4,6 +4,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sero-cash/go-sero/common/address"
+
+	"github.com/sero-cash/go-sero/zero/stake"
+
 	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/log"
@@ -28,7 +32,7 @@ const (
 type blockChain interface {
 	CurrentBlock() *types.Block
 	GetHeaderByHash(hash common.Hash) *types.Header
-
+	StateAt(root common.Hash, number uint64) (*state.StateDB, error)
 	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
 }
 
@@ -117,7 +121,15 @@ func (self *Voter) voteLoop() {
 			} else {
 				parentHeader := self.chain.GetHeaderByHash(lottery.PosHash)
 				if parentHeader != nil {
-					go self.sign(lottery, parentHeader)
+					selfShares, err := self.SelfShares(lottery.PosHash, parentHeader.Hash(), parentHeader.Number.Uint64())
+					if err != nil {
+						log.Info("voteLoop", "selfShare error ", err)
+					} else {
+						for _, s := range selfShares {
+							go self.sign(s)
+						}
+					}
+
 				} else {
 
 				}
@@ -127,8 +139,83 @@ func (self *Voter) voteLoop() {
 	}
 }
 
-func (self *Voter) sign(lottery *types.Lottery, parentHeader *types.Header) {
-	vote := &types.Vote{common.Hash{}, lottery.PosHash, false, keys.Uint512{}}
+type voteInfo struct {
+	poshash common.Hash
+	parent  common.Hash
+	votePKr keys.PKr
+	isPool  bool
+	seed    address.Seed
+}
+
+func cotainsSeed(voteInfos []voteInfo, seed address.Seed) bool {
+	for _, v := range voteInfos {
+		if v.seed == seed {
+			return true
+		}
+	}
+	return false
+}
+
+func pkrToAddress(pkr keys.PKr) common.Address {
+	var addr common.Address
+	copy(addr[:], pkr[:])
+	return addr
+}
+
+func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNumber uint64) ([]voteInfo, error) {
+	state, err := self.chain.StateAt(parent, parentNumber)
+	if err != nil {
+		log.Info("voteLoop", "stateAt", poshash, "err", err)
+		return nil, err
+	} else {
+		stakeState := stake.NewStakeState(state)
+		shares, err := stakeState.SeleteShare(poshash)
+		if err != nil {
+			return nil, err
+		}
+		log.Info("voteLoop", "SeleteShare", poshash, "err", err)
+		var voteInfos []voteInfo
+		for _, share := range shares {
+			wallets := self.sero.AccountManager().Wallets()
+			if share.PoolId != nil {
+				pool := stakeState.GetStakePool(*share.PoolId)
+				if pool == nil {
+					log.Info("voteLoop", "GetStakePool", share.PoolId, "note exist")
+				} else {
+					for _, w := range wallets {
+						if w.IsMine(pkrToAddress(*share.VoteKr)) {
+							seed, err := w.GetSeed()
+							if err != nil {
+								return nil, err
+							}
+							voteInfos = append(voteInfos, voteInfo{poshash, parent, *share.VoteKr, true, *seed})
+						}
+					}
+				}
+			}
+			for _, w := range wallets {
+				if w.IsMine(pkrToAddress(*share.VoteKr)) {
+					seed, err := w.GetSeed()
+
+					if err != nil {
+						return nil, err
+					}
+					if cotainsSeed(voteInfos, *seed) {
+						continue
+					} else {
+						voteInfos = append(voteInfos, voteInfo{poshash, parent, *share.VoteKr, false, *seed})
+					}
+				}
+			}
+
+		}
+		return voteInfos, nil
+	}
+
+}
+
+func (self *Voter) sign(info voteInfo) {
+	vote := &types.Vote{common.Hash{}, info.poshash, info.isPool, keys.Uint512{}}
 	go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
 	self.SendVoteEvent(vote)
 }
