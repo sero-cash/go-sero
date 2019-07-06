@@ -1169,7 +1169,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		fee = new(big.Int).Div(fee.Mul(fee, m), d)
 	}
 	feeToken := assets.Token{
-		utils.StringToUint256(string(args.GasCurrency)),
+		utils.CurrencyToUint256(string(args.GasCurrency)),
 		utils.U256(*fee),
 	}
 	pkr := keys.Addr2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
@@ -1864,7 +1864,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), input)
 	ehash := tx.Ehash()
 	fee := assets.Token{
-		utils.StringToUint256(string(args.GasCurrency)),
+		utils.CurrencyToUint256(string(args.GasCurrency)),
 		utils.U256(*feevalue),
 	}
 	outData := types.NewTxtOut(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, args.Memo, isZ)
@@ -1887,7 +1887,7 @@ func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T,
 	fromRand := keys.RandUint256().NewRef()
 	ehash := tx.Ehash()
 	fee := assets.Token{
-		utils.StringToUint256(string(args.GasCurrency)),
+		utils.CurrencyToUint256(string(args.GasCurrency)),
 		utils.U256(*new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))),
 	}
 	pkgCreate := types.NewCreatePkg(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, args.Memo)
@@ -2098,7 +2098,7 @@ func (args *ClosePkgArgs) toTransaction(state *state.StateDB) (*types.Transactio
 	ehash := tx.Ehash()
 	txt := &ztx.T{
 		Fee: assets.Token{
-			utils.StringToUint256(params.DefaultCurrency),
+			utils.CurrencyToUint256(params.DefaultCurrency),
 			utils.U256(*fee),
 		},
 		PkgClose: &ztx.PkgClose{*args.PkgId, *args.Key},
@@ -2206,7 +2206,7 @@ func (args *TransferPkgArgs) toTransaction(state *state.StateDB) (*types.Transac
 	}
 	txt := &ztx.T{
 		Fee: assets.Token{
-			utils.StringToUint256(params.DefaultCurrency),
+			utils.CurrencyToUint256(params.DefaultCurrency),
 			utils.U256(*fee),
 		},
 		PkgTransfer: &ztx.PkgTransfer{*args.PkgId, Pkr},

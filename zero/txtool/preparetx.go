@@ -7,6 +7,9 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/sero-cash/go-sero/zero/txs/stx"
+	"github.com/sero-cash/go-sero/zero/txs/tx"
+
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/pkg/errors"
@@ -17,15 +20,77 @@ import (
 )
 
 type Reception struct {
-	Addr     keys.PKr
-	Currency string
-	Value    *big.Int
+	Addr  keys.PKr
+	Asset assets.Asset
+}
+
+type Cmds struct {
+	//Package
+	PkgCreate   *tx.PkgCreate
+	PkgTransfer *tx.PkgTransfer
+	PkgClose    *tx.PkgClose
+	//Share
+	BuyShare *stx.BuyShareCmd
+	//Pool
+	RegistPool *stx.RegistPoolCmd
+	ClosePool  *stx.ClosePoolCmd
+	//Contract
+	Contract *stx.ContractCmd
+}
+
+func (self *Cmds) Asset() *assets.Asset {
+	if self.PkgCreate != nil {
+		return &self.PkgCreate.Pkg.Asset
+	}
+	if self.BuyShare != nil {
+		asset := self.BuyShare.Asset()
+		return &asset
+	}
+	if self.RegistPool != nil {
+		asset := self.RegistPool.Asset()
+		return &asset
+	}
+	if self.Contract != nil {
+		return &self.Contract.Asset
+	}
+	return nil
+}
+
+func (self *Cmds) Valid() bool {
+	count := 0
+	if self.PkgCreate != nil {
+		count++
+	}
+	if self.PkgTransfer != nil {
+		count++
+	}
+	if self.PkgClose != nil {
+		count++
+	}
+	if self.BuyShare != nil {
+		count++
+	}
+	if self.RegistPool != nil {
+		count++
+	}
+	if self.ClosePool != nil {
+		count++
+	}
+	if self.Contract != nil {
+		count++
+	}
+	if count <= 1 {
+		return true
+	} else {
+		return false
+	}
 }
 
 type PreTxParam struct {
 	From       keys.Uint512
 	RefundTo   *keys.PKr
 	Receptions []Reception
+	Cmds       Cmds
 	Gas        uint64
 	GasPrice   *big.Int
 	Roots      []keys.Uint256

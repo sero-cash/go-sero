@@ -23,6 +23,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/sero-cash/go-sero/common"
+
 	"github.com/sero-cash/go-czero-import/keys"
 )
 
@@ -55,15 +57,22 @@ func (self Uint256s) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
 }
 
-func StringToUint256(str string) keys.Uint256 {
-	var ret keys.Uint256
-	b := []byte(strings.ToUpper(str))
-	if len(b) > len(ret) {
-		b = b[len(b)-len(ret):]
-	}
-	copy(ret[len(ret)-len(b):], b)
-	return ret
+func CurrencyToUint256(str string) (ret keys.Uint256) {
+	bs := CurrencyToBytes(str)
+	copy(ret[:], bs)
+	return
+}
 
+func Uint256ToCurrency(u *keys.Uint256) (ret string) {
+	return BytesToCurrency(u[:])
+}
+
+func CurrencyToBytes(currency string) []byte {
+	return common.LeftPadBytes([]byte(strings.ToUpper(currency)), 32)
+}
+
+func BytesToCurrency(bs []byte) string {
+	return common.BytesToString(bs)
 }
 
 func ShowStack() {

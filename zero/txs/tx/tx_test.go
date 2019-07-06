@@ -9,9 +9,9 @@ import (
 )
 
 func TestT_TokenCost(t *testing.T) {
-	seroCy := utils.StringToUint256("SERO")
+	seroCy := utils.CurrencyToUint256("SERO")
 	fmt.Printf("%t\n", seroCy)
-	cy := utils.StringToUint256("d")
+	cy := utils.CurrencyToUint256("d")
 	ret := make(map[keys.Uint256]utils.U256)
 	ret[seroCy] = utils.NewU256(24)
 	if cost, ok := ret[seroCy]; ok {

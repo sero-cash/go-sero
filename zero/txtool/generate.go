@@ -47,13 +47,10 @@ func (self *gen_ctx) prepare() {
 	}
 }
 
-func (self *gen_ctx) setData() {
-
-	self.s.Ehash = types.Ehash(self.param.GasPrice, self.param.Gas, []byte{})
-
+func (self *gen_ctx) setFeeData() {
 	{
 		self.s.Fee = assets.Token{
-			utils.StringToUint256("SERO"),
+			utils.CurrencyToUint256("SERO"),
 			utils.U256(*big.NewInt(0).Mul(&self.param.GasPrice, big.NewInt(int64(self.param.Gas)))),
 		}
 		asset_desc := cpt.AssetDesc{
@@ -65,6 +62,9 @@ func (self *gen_ctx) setData() {
 		cpt.GenAssetCC(&asset_desc)
 		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
 	}
+}
+
+func (self *gen_ctx) setInsData() {
 	{
 		for _, in := range self.param.Ins {
 			if in.Out.State.OS.Out_O != nil {
@@ -88,6 +88,9 @@ func (self *gen_ctx) setData() {
 			}
 		}
 	}
+}
+
+func (self *gen_ctx) setOutsData() {
 	{
 		for _, out_z := range self.param.Outs {
 			out := stx.Out_Z{}
@@ -95,29 +98,62 @@ func (self *gen_ctx) setData() {
 			self.s.Desc_Z.Outs = append(self.s.Desc_Z.Outs, out)
 		}
 	}
+}
+
+func (self *gen_ctx) setCmdsData() {
+	var a *assets.Asset
+	if self.param.Cmds.BuyShare != nil {
+		self.s.Desc_Cmd.BuyShare = self.param.Cmds.BuyShare
+		asset := self.param.Cmds.BuyShare.Asset()
+		a = &asset
+	}
+	if self.param.Cmds.RegistPool != nil {
+		self.s.Desc_Cmd.RegistPool = self.param.Cmds.RegistPool
+		asset := self.param.Cmds.RegistPool.Asset()
+		a = &asset
+	}
+	if self.param.Cmds.ClosePool != nil {
+		self.s.Desc_Cmd.ClosePool = self.param.Cmds.ClosePool
+	}
+	if a != nil {
+		asset := a.ToFlatAsset()
+		asset_desc := cpt.AssetDesc{
+			Tkn_currency: asset.Tkn.Currency,
+			Tkn_value:    asset.Tkn.Value.ToUint256(),
+			Tkt_category: asset.Tkt.Category,
+			Tkt_value:    asset.Tkt.Value,
+		}
+		cpt.GenAssetCC(&asset_desc)
+		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+	}
+}
+
+func (self *gen_ctx) setData() {
+	self.s.Ehash = types.Ehash(self.param.GasPrice, self.param.Gas, []byte{})
+	self.setFeeData()
+	self.setInsData()
+	self.setOutsData()
 	self.s.From = self.param.From.PKr
 }
 
-func (self *gen_ctx) signTx() (e error) {
-	hash_z := self.s.ToHash_for_sign()
-	self.balance_desc.Hash = hash_z
-
-	if sign, err := keys.SignPKrBySk(self.param.From.SKr.ToUint512().NewRef(), &hash_z, &self.s.From); err != nil {
-		e = err
-		return
+func (self *gen_ctx) signTxFrom() error {
+	if sign, err := keys.SignPKrBySk(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.s.From); err != nil {
+		return err
 	} else {
 		self.s.Sign = sign
+		return nil
 	}
+}
 
+func (self *gen_ctx) signTxIns() error {
 	for i, s_in_o := range self.O_Ins {
 		g := cpt.InputSDesc{}
-		g.Ehash = hash_z
+		g.Ehash = self.balance_desc.Hash
 		g.Sk = s_in_o.SKr.ToUint512()
 		g.Pkr = s_in_o.Out.State.OS.Out_O.Addr
 		g.RootCM = *s_in_o.Out.State.OS.RootCM
 		if err := cpt.GenInputSProofBySk(&g); err != nil {
-			e = err
-			return
+			return err
 		} else {
 			in := stx.In_S{}
 			in.Sign = g.Sign_ret
@@ -126,16 +162,34 @@ func (self *gen_ctx) signTx() (e error) {
 			self.s.Desc_O.Ins[i] = in
 		}
 	}
+	return nil
+}
 
+func (self *gen_ctx) signTxBalance() error {
 	{
 		cpt.SignBalance(&self.balance_desc)
 		if self.balance_desc.Bcr == keys.Empty_Uint256 {
-			e = errors.New("sign balance failed!!!")
-			return
+			return errors.New("sign balance failed!!!")
 		} else {
 			self.s.Bcr = self.balance_desc.Bcr
 			self.s.Bsign = self.balance_desc.Bsign
+			return nil
 		}
 	}
+}
+
+func (self *gen_ctx) signTx() (e error) {
+	self.balance_desc.Hash = self.s.ToHash_for_sign()
+
+	if e = self.signTxFrom(); e != nil {
+		return
+	}
+	if e = self.signTxIns(); e != nil {
+		return
+	}
+	if e = self.signTxBalance(); e != nil {
+		return
+	}
+
 	return
 }

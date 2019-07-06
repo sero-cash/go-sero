@@ -35,6 +35,7 @@ type GTxParam struct {
 	From     Kr
 	Ins      []GIn
 	Outs     []GOut
+	Cmds     Cmds
 }
 
 type ISLI interface {

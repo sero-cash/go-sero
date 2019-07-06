@@ -110,7 +110,7 @@ func (self *user) addOut(v int) {
 	out.Addr = self.getAR()
 	out.Asset = assets.NewAsset(
 		&assets.Token{
-			utils.StringToUint256("SERO"),
+			utils.CurrencyToUint256("SERO"),
 			utils.NewU256(uint64(v)),
 		},
 		nil,
@@ -125,11 +125,11 @@ func (self *user) addTkt(v int) {
 	out.Addr = self.getAR()
 	out.Asset = assets.Asset{
 		&assets.Token{
-			utils.StringToUint256("SERO"),
+			utils.CurrencyToUint256("SERO"),
 			utils.NewU256(uint64(v)),
 		},
 		&assets.Ticket{
-			utils.StringToUint256("SERO_TICKET"),
+			utils.CurrencyToUint256("SERO_TICKET"),
 			cpt.Random(),
 		},
 	}
@@ -181,7 +181,7 @@ func (self *user) Close(id *keys.Uint256, v int, key *keys.Uint256) {
 	fmt.Printf("user(%v) close pkg %v\n", self.i, id)
 	t := tx.T{}
 	t.Fee = assets.Token{
-		utils.StringToUint256("SERO"),
+		utils.CurrencyToUint256("SERO"),
 		utils.NewU256(uint64(0)),
 	}
 	t.PkgClose = &tx.PkgClose{}
@@ -191,7 +191,7 @@ func (self *user) Close(id *keys.Uint256, v int, key *keys.Uint256) {
 	out1 := tx.Out{}
 	out1.Asset = assets.Asset{
 		&assets.Token{
-			utils.StringToUint256("SERO"),
+			utils.CurrencyToUint256("SERO"),
 			utils.NewU256(uint64(v)),
 		},
 		nil,
@@ -225,7 +225,7 @@ func (self *user) Package(v int, fee int, u user) (ret keys.PKr) {
 	ret = out0.PKr
 	out0.Pkg.Asset = assets.Asset{
 		&assets.Token{
-			utils.StringToUint256("SERO"),
+			utils.CurrencyToUint256("SERO"),
 			utils.NewU256(uint64(v)),
 		},
 		nil,
@@ -241,7 +241,7 @@ func (self *user) Package(v int, fee int, u user) (ret keys.PKr) {
 
 	t := tx.T{}
 	t.Fee = assets.Token{
-		utils.StringToUint256("SERO"),
+		utils.CurrencyToUint256("SERO"),
 		utils.NewU256(uint64(fee)),
 	}
 	t.Ins = append(t.Ins, in)
@@ -272,7 +272,7 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 	out0.Addr = u.getAR()
 	out0.Asset = assets.Asset{
 		&assets.Token{
-			utils.StringToUint256("SERO"),
+			utils.CurrencyToUint256("SERO"),
 			utils.NewU256(uint64(v)),
 		},
 		nil,
@@ -289,7 +289,7 @@ func (self *user) Send(v int, fee int, u user, z bool) {
 
 	t := tx.T{}
 	t.Fee = assets.Token{
-		utils.StringToUint256("SERO"),
+		utils.CurrencyToUint256("SERO"),
 		utils.NewU256(uint64(fee)),
 	}
 	t.Ins = append(t.Ins, in)

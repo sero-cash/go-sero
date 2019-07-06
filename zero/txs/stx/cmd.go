@@ -13,10 +13,26 @@ type BuyShareCmd struct {
 	Pool  keys.Uint256
 }
 
+func (self *BuyShareCmd) Asset() (ret assets.Asset) {
+	ret.Tkn = &assets.Token{
+		utils.CurrencyToUint256("SERO"),
+		self.Value,
+	}
+	return
+}
+
 type RegistPoolCmd struct {
 	Value   utils.U256
 	Vote    keys.PKr
 	FeeRate uint32
+}
+
+func (self *RegistPoolCmd) Asset() (ret assets.Asset) {
+	ret.Tkn = &assets.Token{
+		utils.CurrencyToUint256("SERO"),
+		self.Value,
+	}
+	return
 }
 
 type ClosePoolCmd struct{}
@@ -35,8 +51,22 @@ type DescCmd struct {
 }
 
 func (self *DescCmd) Valid() bool {
-	if self.BuyShare == nil && self.RegistPool == nil && self.Contract == nil {
+	count := 0
+	if self.BuyShare != nil {
+		count++
+	}
+	if self.RegistPool != nil {
+		count++
+	}
+	if self.ClosePool != nil {
+		count++
+	}
+	if self.Contract != nil {
+		count++
+	}
+	if count <= 1 {
+		return true
+	} else {
 		return false
 	}
-	return true
 }

@@ -171,6 +171,11 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		}
 	}
 
+	if !s.Desc_Pkg.Valid() {
+		e = errors.New("pkg desc is invalid")
+		return
+	}
+
 	t.Renter("Miner-Verify-----pkgs")
 	if s.Desc_Pkg.Create != nil {
 		if pg := state.Pkgs.GetPkgById(&s.Desc_Pkg.Create.Id); pg != nil {
@@ -206,6 +211,47 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 				return
 			}
 		}
+	}
+
+	if !s.Desc_Cmd.Valid() {
+		e = errors.New("cmd desc is invalid")
+		return
+	}
+
+	if s.Desc_Cmd.BuyShare != nil {
+		asset := s.Desc_Cmd.BuyShare.Asset().ToFlatAsset()
+		asset_desc := cpt.AssetDesc{
+			Tkn_currency: asset.Tkn.Currency,
+			Tkn_value:    asset.Tkn.Value.ToUint256(),
+			Tkt_category: asset.Tkt.Category,
+			Tkt_value:    asset.Tkt.Value,
+		}
+		cpt.GenAssetCC(&asset_desc)
+		balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+	}
+
+	if s.Desc_Cmd.RegistPool != nil {
+		asset := s.Desc_Cmd.RegistPool.Asset().ToFlatAsset()
+		asset_desc := cpt.AssetDesc{
+			Tkn_currency: asset.Tkn.Currency,
+			Tkn_value:    asset.Tkn.Value.ToUint256(),
+			Tkt_category: asset.Tkt.Category,
+			Tkt_value:    asset.Tkt.Value,
+		}
+		cpt.GenAssetCC(&asset_desc)
+		balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+	}
+
+	if s.Desc_Cmd.Contract != nil {
+		asset := s.Desc_Cmd.Contract.Asset.ToFlatAsset()
+		asset_desc := cpt.AssetDesc{
+			Tkn_currency: asset.Tkn.Currency,
+			Tkn_value:    asset.Tkn.Value.ToUint256(),
+			Tkt_category: asset.Tkt.Category,
+			Tkt_value:    asset.Tkt.Value,
+		}
+		cpt.GenAssetCC(&asset_desc)
+		balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
 	}
 
 	t.Renter("Miner-Verify-----z_ins")
