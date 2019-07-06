@@ -180,7 +180,15 @@ func (args GenTxArgs) toTxParam() txtool.PreTxParam {
 	if args.RefundTo != nil {
 		refundPkr = args.RefundTo.ToPKr()
 	}
-	return txtool.PreTxParam{args.From.ToUint512(), refundPkr, receptions, txtool.Cmds{}, args.Gas, gasPrice, args.Roots}
+	return txtool.PreTxParam{
+		args.From.ToUint512(),
+		refundPkr,
+		receptions,
+		txtool.Cmds{},
+		args.Gas,
+		gasPrice,
+		args.Roots,
+	}
 }
 
 func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*txtool.GTxParam, error) {
