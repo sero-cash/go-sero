@@ -107,7 +107,7 @@ func (b *T) DecodeRLP(s *rlp.Stream) error {
 // EncodeRLP serializes b into the Ethereum RLP block format.
 func (b *T) EncodeRLP(w io.Writer) error {
 	hr := ZtxRlp{}
-	if b.Desc_Cmd.Valid() {
+	if b.Desc_Cmd.Count() > 0 {
 		hr.Version.V = typeserial.VERSION_1
 	} else {
 		hr.Version.V = typeserial.VERSION_0

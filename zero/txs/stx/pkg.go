@@ -137,7 +137,7 @@ type PkgDesc_Z struct {
 	Close    *PkgClose    `rlp:"nil"`
 }
 
-func (self *PkgDesc_Z) Valid() bool {
+func (self *PkgDesc_Z) Count() int {
 	count := 0
 	if self.Create != nil {
 		count++
@@ -148,7 +148,11 @@ func (self *PkgDesc_Z) Valid() bool {
 	if self.Close != nil {
 		count++
 	}
-	if count <= 1 {
+	return count
+}
+
+func (self *PkgDesc_Z) Valid() bool {
+	if self.Count() <= 1 {
 		return true
 	} else {
 		return false

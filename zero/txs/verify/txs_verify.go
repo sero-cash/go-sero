@@ -171,6 +171,11 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		}
 	}
 
+	if s.Desc_Cmd.Count() > 0 && s.Desc_Pkg.Count() > 0 {
+		e = errors.New("pkg and cmd desc only exists one")
+		return
+	}
+
 	if !s.Desc_Pkg.Valid() {
 		e = errors.New("pkg desc is invalid")
 		return

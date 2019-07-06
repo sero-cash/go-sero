@@ -104,7 +104,7 @@ func (self *DescCmd) ToHash() (ret keys.Uint256) {
 	return
 }
 
-func (self *DescCmd) Valid() bool {
+func (self *DescCmd) Count() int {
 	count := 0
 	if self.BuyShare != nil {
 		count++
@@ -118,7 +118,11 @@ func (self *DescCmd) Valid() bool {
 	if self.Contract != nil {
 		count++
 	}
-	if count <= 1 {
+	return count
+}
+
+func (self *DescCmd) Valid() bool {
+	if self.Count() <= 1 {
 		return true
 	} else {
 		return false
