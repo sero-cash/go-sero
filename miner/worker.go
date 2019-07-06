@@ -342,6 +342,9 @@ func (self *worker) powResultLoop() {
 	for {
 		select {
 		case result := <-self.powRecv:
+			if result == nil {
+				continue
+			}
 			header := result.Block.Header()
 			hashPos := header.HashPos()
 			self.pendingVoteMu.Lock()
