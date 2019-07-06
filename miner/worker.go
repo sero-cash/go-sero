@@ -367,7 +367,7 @@ func (self *worker) posTaskLoop() {
 							task.Block.Header().CurrentVotes = nil
 							for _, v := range votes.ToSlice() {
 								CurrentVotes = append(CurrentVotes, typeserial.Vote{
-									v.(types.Vote).TicketHash,
+									v.(types.Vote).ShareHash,
 									v.(types.Vote).IsPool,
 									v.(types.Vote).Sign})
 							}
@@ -378,7 +378,7 @@ func (self *worker) posTaskLoop() {
 										continue
 									} else {
 										ParentVotes = append(ParentVotes, typeserial.Vote{
-											v.(types.Vote).TicketHash,
+											v.(types.Vote).ShareHash,
 											v.(types.Vote).IsPool,
 											v.(types.Vote).Sign})
 									}
