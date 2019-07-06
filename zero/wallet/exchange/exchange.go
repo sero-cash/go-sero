@@ -602,6 +602,30 @@ func (self *Exchange) getUtxo(root keys.Uint256) (utxo Utxo, e error) {
 	return
 }
 
+func (self *Exchange) findUtxosByTicket(pk *keys.Uint512, tickets map[keys.Uint256]keys.Uint256) (utxos []Utxo, remain map[keys.Uint256]keys.Uint256) {
+	remain = map[keys.Uint256]keys.Uint256{}
+	for value, category := range tickets {
+		remain[value] = category
+		prefix := append(pkPrefix, append(pk[:], value[:]...)...)
+		iterator := self.db.NewIteratorWithPrefix(prefix)
+		if iterator.Next() {
+			key := iterator.Key()
+			var root keys.Uint256
+			copy(root[:], key[98:130])
+
+			if utxo, err := self.getUtxo(root); err == nil {
+				if utxo.Asset.Tkt != nil && utxo.Asset.Tkt.Category == category {
+					if _, ok := self.usedFlag.Load(utxo.Root); !ok {
+						utxos = append(utxos, utxo)
+						delete(remain, value)
+					}
+				}
+			}
+		}
+	}
+	return
+}
+
 func (self *Exchange) findUtxos(pk *keys.Uint512, currency string, amount *big.Int) (utxos []Utxo, remain *big.Int) {
 	remain = new(big.Int).Set(amount)
 
@@ -882,25 +906,29 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 			//nil => root
 			batch.Put(nilToRootKey(utxo.Nil), utxo.Root[:])
 
-			var pkKey []byte
+			var pkKeys []byte
 			if utxo.Asset.Tkn != nil {
 				// "PK" + PK + currency + root
-				pkKey = utxoPkKey(key.PK, utxo.Asset.Tkn.Currency[:], &utxo.Root)
+				pkKey := utxoPkKey(key.PK, utxo.Asset.Tkn.Currency[:], &utxo.Root)
+				ops[common.Bytes2Hex(pkKey)] = common.Bytes2Hex([]byte{0})
+				pkKeys = append(pkKeys, pkKey...)
+			}
 
-			} else if utxo.Asset.Tkt != nil {
+			if utxo.Asset.Tkt != nil {
 				// "PK" + PK + tkt + root
-				pkKey = utxoPkKey(key.PK, utxo.Asset.Tkt.Value[:], &utxo.Root)
+				pkKey := utxoPkKey(key.PK, utxo.Asset.Tkt.Value[:], &utxo.Root)
+				ops[common.Bytes2Hex(pkKey)] = common.Bytes2Hex([]byte{0})
+				pkKeys = append(pkKeys, pkKey...)
 			}
 			// "PK" + PK + currency + root => 0
-			ops[common.Bytes2Hex(pkKey)] = common.Bytes2Hex([]byte{0})
 
 			// "NIL" + PK + tkt + root => "PK" + PK + currency + root
 			nilkey := nilKey(utxo.Nil)
 			rootkey := nilKey(utxo.Root)
 
 			// "NIL" +nil/root => pkKey
-			ops[common.Bytes2Hex(nilkey)] = common.Bytes2Hex(pkKey)
-			ops[common.Bytes2Hex(rootkey)] = common.Bytes2Hex(pkKey)
+			ops[common.Bytes2Hex(nilkey)] = common.Bytes2Hex(pkKeys)
+			ops[common.Bytes2Hex(rootkey)] = common.Bytes2Hex(pkKeys)
 
 			roots = append(roots, utxo.Root)
 
@@ -940,7 +968,13 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 		hex := common.Bytes2Hex(key)
 		if value, ok := ops[hex]; ok {
 			delete(ops, hex)
-			delete(ops, value)
+			if len(value) == 130 {
+				delete(ops, value)
+			} else {
+				delete(ops, value[0:130])
+				delete(ops, value[130:260])
+			}
+
 			var root keys.Uint256
 			copy(root[:], value[98:130])
 			delete(ops, common.Bytes2Hex(nilKey(root)))
@@ -950,7 +984,12 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 		} else {
 			value, _ := self.db.Get(key)
 			if value != nil {
-				batch.Delete(value)
+				if len(value) == 130 {
+					batch.Delete(value)
+				} else {
+					batch.Delete(value[0:130])
+					batch.Delete(value[130:260])
+				}
 				batch.Delete(nilKey(Nil))
 
 				var root keys.Uint256
@@ -990,10 +1029,11 @@ func (self *Exchange) ownPkr(pks []keys.Uint512, pkr keys.PKr) (account *Account
 }
 
 type MergeUtxos struct {
-	list   UtxoList
-	amount big.Int
-	zcount int
-	ocount int
+	list    UtxoList
+	amount  big.Int
+	zcount  int
+	ocount  int
+	tickets map[keys.Uint256]keys.Uint256
 }
 
 func (self *Exchange) getMergeUtxos(from *keys.Uint512, currency string, zcount int, left int) (mu MergeUtxos, e error) {
@@ -1037,6 +1077,9 @@ func (self *Exchange) getMergeUtxos(from *keys.Uint512, currency string, zcount 
 	mu.list = utxos[0 : utxos.Len()-(left-1)]
 	for _, utxo := range mu.list {
 		mu.amount.Add(&mu.amount, utxo.Asset.Tkn.Value.ToIntRef())
+		if utxo.Asset.Tkt != nil {
+			mu.tickets[utxo.Asset.Tkt.Value] = utxo.Asset.Tkt.Category
+		}
 	}
 	mu.amount.Sub(&mu.amount, new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000)))
 	return
@@ -1063,7 +1106,19 @@ func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e er
 	if mu, e = self.getMergeUtxos(&mp.From, mp.Currency, int(mp.Zcount), int(mp.Left)); e != nil {
 		return
 	}
-	txParam, e = txtool.BuildTxParam(mu.list.Roots(), mp.To, []txtool.Reception{{Value: &mu.amount, Currency: mp.Currency, Addr: *mp.To}}, 25000, big.NewInt(1000000000))
+	bytes := common.LeftPadBytes([]byte(mp.Currency), 32)
+	var Currency keys.Uint256
+	copy(Currency[:], bytes[:])
+
+	receptions := []txtool.Reception{{Addr: *mp.To, Asset: assets.Asset{Tkn: &assets.Token{Currency: Currency, Value: utils.U256(mu.amount)}}}}
+
+	if len(mu.tickets) > 0 {
+		for value, category := range mu.tickets {
+			receptions = append(receptions, txtool.Reception{Addr: *mp.To, Asset: assets.Asset{Tkt: &assets.Ticket{category, value}}})
+		}
+	}
+	txParam, e = txtool.BuildTxParam(mu.list.Roots(), mp.To, receptions,
+		25000, big.NewInt(1000000000))
 	if e != nil {
 		return
 	}
@@ -1089,7 +1144,20 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string, force bool) (coun
 	}
 
 	if mu.zcount >= 100 || mu.ocount >= 2400 || time.Now().After(account.nextMergeTime) || force {
-		pretx, gtx, err := self.genTx(mu.list.Roots(), account, []txtool.Reception{{Value: &mu.amount, Currency: currency, Addr: account.mainPkr}}, 25000, big.NewInt(1000000000))
+
+		bytes := common.LeftPadBytes([]byte(currency), 32)
+		var Currency keys.Uint256
+		copy(Currency[:], bytes[:])
+
+		receptions := []txtool.Reception{{Addr: account.mainPkr, Asset: assets.Asset{Tkn: &assets.Token{Currency: Currency, Value: utils.U256(mu.amount)}}}}
+
+		if len(mu.tickets) > 0 {
+			for value, category := range mu.tickets {
+				receptions = append(receptions, txtool.Reception{Addr: account.mainPkr, Asset: assets.Asset{Tkt: &assets.Ticket{category, value}}})
+			}
+		}
+
+		pretx, gtx, err := self.genTx(mu.list.Roots(), account, receptions, 25000, big.NewInt(1000000000))
 		if err != nil {
 			account.nextMergeTime = time.Now().Add(time.Hour * 6)
 			e = err

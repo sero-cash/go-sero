@@ -132,6 +132,7 @@ func (self *Utxos) Roots() (roots []keys.Uint256) {
 
 type TxParamGenerator interface {
 	FindRoots(pk *keys.Uint512, currency string, amount *big.Int) (utxos Utxos, remain big.Int)
+	FindRootsByTicket(pk *keys.Uint512, tickets map[keys.Uint256]keys.Uint256) (roots Utxos, remain map[keys.Uint256]keys.Uint256)
 	GetRoot(root *keys.Uint256) (utxos *Utxo)
 	DefaultRefundTo(from *keys.Uint512) (ret *keys.PKr)
 }
@@ -165,26 +166,57 @@ func PreGenTx(param *PreTxParam, gen TxParamGenerator) (utxos Utxos, err error) 
 		}
 	} else {
 		amounts := map[string]*big.Int{}
-		for _, each := range param.Receptions {
-			if amount, ok := amounts[each.Currency]; ok {
-				amount.Add(amount, each.Value)
-			} else {
-				amounts[each.Currency] = new(big.Int).Set(each.Value)
+		tickets := map[keys.Uint256]keys.Uint256{}
+		if len(param.Receptions) > 0 {
+			for _, each := range param.Receptions {
+				if each.Asset.Tkn != nil {
+					currency := common.BytesToString(each.Asset.Tkn.Currency[:])
+					if amount, ok := amounts[currency]; ok {
+						amount.Add(amount, each.Asset.Tkn.Value.ToInt())
+					} else {
+						amounts[currency] = new(big.Int).Set(each.Asset.Tkn.Value.ToInt())
+					}
+				}
+				if each.Asset.Tkt != nil {
+					if _, ok := tickets[each.Asset.Tkt.Value]; ok {
+						return utxos, errors.New("duplicate ticket")
+					} else {
+						tickets[each.Asset.Tkt.Value] = each.Asset.Tkt.Category
+					}
+				}
 			}
 		}
+
 		if amount, ok := amounts["SERO"]; ok {
 			amount.Add(amount, new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), param.GasPrice))
 		} else {
 			amounts["SERO"] = new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), param.GasPrice)
 		}
+
 		for currency, amount := range amounts {
 			list, remain := gen.FindRoots(&param.From, currency, amount)
 			if remain.Sign() > 0 {
 				return list, errors.New(fmt.Sprintf("not enough token, maximum available token is %s", new(big.Int).Sub(amount, &remain).String()))
 			} else {
 				utxos = append(utxos, list...)
+				for _, utxo := range list {
+					if utxo.Asset.Tkt != nil {
+						if category, ok := tickets[utxo.Asset.Tkt.Value]; ok {
+							if category != utxo.Asset.Tkt.Category {
+								return list, errors.New("ticket error")
+							}
+							delete(tickets, utxo.Asset.Tkt.Value)
+						}
+					}
+				}
 			}
 		}
+
+		list, remainTicket := gen.FindRootsByTicket(&param.From, tickets)
+		if len(remainTicket) > 0 {
+			return list, errors.New("not enough ticket")
+		}
+		utxos = append(utxos, list...)
 	}
 	return
 }
@@ -249,29 +281,36 @@ func BuildTxParam(
 
 	Outs := []GOut{}
 	for _, reception := range receptions {
-		currency := strings.ToUpper(reception.Currency)
-		if amount, ok := amounts[currency]; ok && amount.Cmp(reception.Value) >= 0 {
-
-			if IsPk(reception.Addr) {
-				pk := reception.Addr.ToUint512()
-				pkr := CreatePkr(&pk, 1)
-				Outs = append(Outs, GOut{PKr: pkr, Asset: assets.Asset{Tkn: &assets.Token{
-					Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
-					Value:    utils.U256(*reception.Value),
-				}}})
-			} else {
-				Outs = append(Outs, GOut{PKr: reception.Addr, Asset: assets.Asset{Tkn: &assets.Token{
-					Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
-					Value:    utils.U256(*reception.Value),
-				}}})
-			}
-
-			amount.Sub(amount, reception.Value)
-			if amount.Sign() == 0 {
-				delete(amounts, currency)
-			}
+		asset := &assets.Asset{}
+		pkr := reception.Addr
+		if IsPk(reception.Addr) {
+			pk := reception.Addr.ToUint512()
+			pkr = CreatePkr(&pk, 1)
 		}
+		if reception.Asset.Tkn != nil && reception.Asset.Tkt != nil {
+			e = buildTokenAsset(asset, reception.Asset.Tkn, amounts)
+			if e != nil {
+				return
+			}
+			e = buildTicketAsset(asset, reception.Asset.Tkt, ticekts)
+			if e != nil {
+				return
+			}
 
+		} else if reception.Asset.Tkn != nil {
+			e = buildTokenAsset(asset, reception.Asset.Tkn, amounts)
+			if e != nil {
+				return
+			}
+		} else if reception.Asset.Tkt != nil {
+			e = buildTicketAsset(asset, reception.Asset.Tkt, ticekts)
+			if e != nil {
+				return
+			}
+		} else {
+			continue
+		}
+		Outs = append(Outs, GOut{PKr: pkr, Asset: *asset})
 	}
 
 	fee := new(big.Int).Mul(new(big.Int).SetUint64(gas), gasPrice)
@@ -305,6 +344,36 @@ func BuildTxParam(
 	txParam.Ins = Ins
 	txParam.Outs = Outs
 
+	return
+}
+
+func buildTokenAsset(asset *assets.Asset, token *assets.Token, amounts map[string]*big.Int) (e error) {
+	currency := common.BytesToString(token.Currency[:])
+	if amount, ok := amounts[currency]; ok && amount.Cmp(token.Value.ToInt()) >= 0 {
+		asset.Tkn = &assets.Token{
+			Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
+			Value:    token.Value,
+		}
+
+		amount.Sub(amount, token.Value.ToInt())
+		if amount.Sign() == 0 {
+			delete(amounts, currency)
+		}
+	} else {
+		e = errors.New("")
+		return
+	}
+	return
+}
+
+func buildTicketAsset(asset *assets.Asset, ticket *assets.Ticket, tickets map[keys.Uint256]keys.Uint256) (e error) {
+	if category, ok := tickets[ticket.Value]; ok && category == ticket.Category {
+		asset.Tkt = &assets.Ticket{Category: category, Value: ticket.Value,}
+		delete(tickets, ticket.Value)
+	} else {
+		e = errors.New("ticket error")
+		return
+	}
 	return
 }
 

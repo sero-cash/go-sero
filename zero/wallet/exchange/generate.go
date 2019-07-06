@@ -199,6 +199,16 @@ func (self *Exchange) FindRoots(pk *keys.Uint512, currency string, amount *big.I
 	remain = *r
 	return
 }
+
+// tickets map[keys.Uint256]keys.Uint256) (utxos []Utxo, remain map[keys.Uint256]keys.Uint256)
+func (self *Exchange) FindRootsByTicket(pk *keys.Uint512, tickets map[keys.Uint256]keys.Uint256) (roots txtool.Utxos, remain map[keys.Uint256]keys.Uint256) {
+	utxos, remain := self.findUtxosByTicket(pk, tickets, )
+	for _, utxo := range utxos {
+		roots = append(roots, txtool.Utxo{utxo.Root, utxo.Asset})
+	}
+	return
+}
+
 func (self *Exchange) DefaultRefundTo(from *keys.Uint512) (ret *keys.PKr) {
 	if value, ok := self.accounts.Load(from); ok {
 		account := value.(*Account)
@@ -206,7 +216,6 @@ func (self *Exchange) DefaultRefundTo(from *keys.Uint512) (ret *keys.PKr) {
 	} else {
 		return nil
 	}
-
 }
 
 func (self *Exchange) GetRoot(root *keys.Uint256) (utxos *txtool.Utxo) {
