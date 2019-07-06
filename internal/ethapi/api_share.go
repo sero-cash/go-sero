@@ -2,6 +2,14 @@ package ethapi
 
 import (
 	"context"
+	"math/big"
+
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/txs/stx"
+	"github.com/sero-cash/go-sero/zero/utils"
+	"github.com/sero-cash/go-sero/zero/wallet/exchange"
+
+	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-sero/common"
@@ -34,7 +42,7 @@ type BuyShareTxArg struct {
 func (args *BuyShareTxArg) setDefaults(ctx context.Context, b Backend) error {
 	if args.Gas == nil {
 		args.Gas = new(hexutil.Uint64)
-		*(*uint64)(args.Gas) = 90000
+		*(*uint64)(args.Gas) = 25000
 	}
 
 	if args.Vote == nil {
@@ -76,8 +84,41 @@ func (args *BuyShareTxArg) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
+func (args *BuyShareTxArg) toPreTxParam() txtool.PreTxParam {
+	preTx := txtool.PreTxParam{}
+	preTx.From = *args.From.ToUint512()
+	preTx.Gas = uint64(*args.Gas)
+	preTx.GasPrice = (*big.Int)(args.GasPrice)
+	preTx.Cmds = txtool.Cmds{}
+
+	buyShareCmd := stx.BuyShareCmd{}
+	buyShareCmd.Value = utils.U256(*args.Value.ToInt())
+	buyShareCmd.Vote = common.AddrToPKr(*args.Vote)
+	if args.Pool != nil {
+		var pool keys.Uint256
+		copy(pool[:], args.Pool[:])
+		buyShareCmd.Pool = &pool
+	}
+	preTx.Cmds.BuyShare = &buyShareCmd
+	return preTx
+
+}
+
 func (s *PublicShareApi) BuyShare(ctx context.Context, args BuyShareTxArg) (common.Hash, error) {
-	return common.Hash{}, nil
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+	preTx := args.toPreTxParam()
+	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(preTx)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	err = s.b.CommitTx(gtx)
+	if err != nil {
+		exchange.CurrentExchange().ClearTxParam(pretx)
+		return common.Hash{}, err
+	}
+	return common.BytesToHash(gtx.Hash[:]), nil
 }
 
 type RegistStakePoolTxArg struct {
@@ -92,7 +133,7 @@ type RegistStakePoolTxArg struct {
 func (args *RegistStakePoolTxArg) setDefaults(ctx context.Context, b Backend) error {
 	if args.Gas == nil {
 		args.Gas = new(hexutil.Uint64)
-		*(*uint64)(args.Gas) = 90000
+		*(*uint64)(args.Gas) = 25000
 	}
 
 	if args.Vote == nil {
@@ -113,6 +154,9 @@ func (args *RegistStakePoolTxArg) setDefaults(ctx context.Context, b Backend) er
 			return errors.New(`gasPrice can not be zero`)
 		}
 	}
+	if uint32(*args.Fee) > 10000 {
+		return errors.New("fee rate can not large then %100")
+	}
 
 	if args.Value == nil {
 		args.Value = new(hexutil.Big)
@@ -120,8 +164,36 @@ func (args *RegistStakePoolTxArg) setDefaults(ctx context.Context, b Backend) er
 	return nil
 }
 
+func (args *RegistStakePoolTxArg) toPreTxParam() txtool.PreTxParam {
+	preTx := txtool.PreTxParam{}
+	preTx.From = *args.From.ToUint512()
+	preTx.Gas = uint64(*args.Gas)
+	preTx.GasPrice = (*big.Int)(args.GasPrice)
+	preTx.Cmds = txtool.Cmds{}
+	registPoolCmd := stx.RegistPoolCmd{}
+	registPoolCmd.Value = utils.U256(*args.Value.ToInt())
+	registPoolCmd.Vote = common.AddrToPKr(*args.Vote)
+	registPoolCmd.FeeRate = uint32(*args.Fee) * 2 / 3
+	preTx.Cmds.RegistPool = &registPoolCmd
+	return preTx
+
+}
+
 func (s *PublicShareApi) RegistStakePool(ctx context.Context, args RegistStakePoolTxArg) (common.Hash, error) {
-	return common.Hash{}, nil
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return common.Hash{}, err
+	}
+	preTx := args.toPreTxParam()
+	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(preTx)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	err = s.b.CommitTx(gtx)
+	if err != nil {
+		exchange.CurrentExchange().ClearTxParam(pretx)
+		return common.Hash{}, err
+	}
+	return common.BytesToHash(gtx.Hash[:]), nil
 }
 
 func (s *PublicShareApi) PoolState(ctx context.Context, pool common.Hash) (map[string]interface{}, error) {

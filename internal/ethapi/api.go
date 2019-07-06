@@ -1795,7 +1795,26 @@ func (args *SendTxArgs) toTxParam() (txParam txtool.PreTxParam, e error) {
 	} else {
 		topkr = *args.To.ToPKr()
 	}
-	receptions := []txtool.Reception{{Addr: topkr, Currency: string(args.Currency), Value: (*big.Int)(args.Value)}}
+	var token *assets.Token
+	var ticket *assets.Ticket
+	if args.Value.ToInt() != nil {
+		token = &assets.Token{
+			Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(args.Currency), 32)).HashToUint256()),
+			Value:    *utils.U256(*args.Value.ToInt()).ToRef(),
+		}
+	}
+	if args.Tkt != nil {
+		ticket = &assets.Ticket{
+			Category: *(common.BytesToHash(common.LeftPadBytes([]byte(args.Category), 32)).HashToUint256()),
+			Value:    *args.Tkt.HashToUint256(),
+		}
+	}
+	asset := assets.Asset{
+		Tkn: token,
+		Tkt: ticket,
+	}
+
+	receptions := []txtool.Reception{{Addr: topkr, Asset: asset}}
 
 	txParam = txtool.PreTxParam{From: *args.From.ToUint512(),
 		Receptions: receptions,
