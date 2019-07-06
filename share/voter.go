@@ -26,7 +26,8 @@ const (
 	chainLotterySize = 10
 	lifeTime         = 30 * time.Minute
 
-	delayNum = 2
+	delayNum         = 2
+	lotteryQueueSize = 12
 )
 
 type blockChain interface {
@@ -49,13 +50,10 @@ type Voter struct {
 	voteMu    sync.RWMutex
 	lotteryMu sync.RWMutex
 
-	currentState  *state.StateDB      // Current state in the blockchain head
-	pendingState  *state.ManagedState // Pending state tracking virtual nonces
-	currentMaxGas uint64              // Current gas limit for transaction caps
-
-	wg       sync.WaitGroup // for shutdown sync
 	votes    map[common.Hash]time.Time
 	lotterys map[common.Hash]time.Time
+
+	lotteryQueue *PriorityQueue
 }
 
 func NewVoter(chainconfig *params.ChainConfig, chain blockChain, sero Backend) *Voter {
@@ -63,18 +61,20 @@ func NewVoter(chainconfig *params.ChainConfig, chain blockChain, sero Backend) *
 
 	// Create the transaction pool with its initial settings
 	voter := &Voter{
-		chainconfig: chainconfig,
-		sero:        sero,
-		chain:       chain,
-		lotteryCh:   make(chan *types.Lottery, chainLotterySize),
+		chainconfig:  chainconfig,
+		sero:         sero,
+		chain:        chain,
+		lotteryCh:    make(chan *types.Lottery, chainLotterySize),
+		lotteryQueue: &PriorityQueue{},
 	}
+	voter.lotteryQueue.Init(lotteryQueueSize)
 
 	// Subscribe events from blockchain
 	//voter.chainHeadSub = voter.chain.SubscribeChainHeadEvent(voter.chainHeadCh)
 
 	// Start the event loop and return
 	go voter.loop()
-	go voter.voteLoop()
+	go voter.lotteryTaskLoop()
 
 	return voter
 }
@@ -112,26 +112,39 @@ func (self *Voter) loop() {
 	}
 }
 
-func (self *Voter) voteLoop() {
+func (self *Voter) lotteryTaskLoop() {
 	for {
 		select {
 		case lottery := <-self.lotteryCh:
-			if self.chain.CurrentBlock().NumberU64() > lottery.ParentNum+uint64(delayNum) {
+			self.lotteryQueue.PushItem(lottery.PosHash, &lotteryItem{lottery: lottery, attempts: uint8(0)}, time.Now())
 
+		}
+	}
+}
+
+const lotteryLifeTime = 28 * time.Second
+
+func (self *Voter) voteLoop() {
+	for {
+		for _, item := range self.lotteryQueue.GetQueueItems() {
+			if time.Since(item.Time) > lotteryLifeTime {
+				continue
+			}
+			lItem := item.Value.(lotteryItem)
+			parentHeader := self.chain.GetHeaderByHash(lItem.lottery.ParentHash)
+			if parentHeader == nil {
+				continue
+			}
+			currentNum := self.chain.CurrentBlock().NumberU64()
+			if currentNum > parentHeader.Number.Uint64()+uint64(delayNum) {
+				continue
+			}
+			selfShares, err := self.SelfShares(lItem.lottery.PosHash, parentHeader.Hash(), parentHeader.Number.Uint64())
+			if err != nil {
+				log.Info("lotteryTaskLoop", "selfShare error ", err)
 			} else {
-				parentHeader := self.chain.GetHeaderByHash(lottery.PosHash)
-				if parentHeader != nil {
-					selfShares, err := self.SelfShares(lottery.PosHash, parentHeader.Hash(), parentHeader.Number.Uint64())
-					if err != nil {
-						log.Info("voteLoop", "selfShare error ", err)
-					} else {
-						for _, s := range selfShares {
-							go self.sign(s)
-						}
-					}
-
-				} else {
-
+				for _, s := range selfShares {
+					go self.sign(s)
 				}
 			}
 
@@ -165,7 +178,7 @@ func pkrToAddress(pkr keys.PKr) common.Address {
 func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNumber uint64) ([]voteInfo, error) {
 	state, err := self.chain.StateAt(parent, parentNumber)
 	if err != nil {
-		log.Info("voteLoop", "stateAt", poshash, "err", err)
+		log.Info("lotteryTaskLoop", "stateAt", poshash, "err", err)
 		return nil, err
 	} else {
 		stakeState := stake.NewStakeState(state)
@@ -173,14 +186,14 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 		if err != nil {
 			return nil, err
 		}
-		log.Info("voteLoop", "SeleteShare", poshash, "err", err)
+		log.Info("lotteryTaskLoop", "SeleteShare", poshash, "err", err)
 		var voteInfos []voteInfo
 		for _, share := range shares {
 			wallets := self.sero.AccountManager().Wallets()
 			if share.PoolId != nil {
 				pool := stakeState.GetStakePool(*share.PoolId)
 				if pool == nil {
-					log.Info("voteLoop", "GetStakePool", share.PoolId, "note exist")
+					log.Info("lotteryTaskLoop", "GetStakePool", share.PoolId, "note exist")
 				} else {
 					for _, w := range wallets {
 						if w.IsMine(pkrToAddress(*share.VoteKr)) {
@@ -243,7 +256,7 @@ func (self *Voter) SendVoteEvent(vote *types.Vote) {
 }
 
 func (self *Voter) AddLottery(lottery *types.Lottery) {
-	log.Info("AddLottery", "block", lottery.ParentNum)
+	log.Info("AddLottery", "block", lottery.ParentHash)
 	self.lotteryMu.Lock()
 	defer self.lotteryMu.Unlock()
 	_, exits := self.lotterys[lottery.PosHash]

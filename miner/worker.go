@@ -18,12 +18,13 @@ package miner
 
 import (
 	"fmt"
-	"github.com/deckarep/golang-set"
-	"github.com/sero-cash/go-sero/core/types/typeserial"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/deckarep/golang-set"
+	"github.com/sero-cash/go-sero/core/types/typeserial"
 
 	"github.com/sero-cash/go-sero/zero/stake"
 
@@ -347,7 +348,7 @@ func (self *worker) powResultLoop() {
 			self.pendingVote[hashPos] = mapset.NewSet()
 			self.pendingVoteMu.Unlock()
 			self.pendingVoteTime.Store(hashPos, header.Number.Uint64())
-			self.voter.SendLotteryEvent(&types.Lottery{header.ParentHash, header.Number.Uint64() - 1, hashPos})
+			self.voter.SendLotteryEvent(&types.Lottery{header.ParentHash, hashPos})
 
 			stakeState := stake.NewStakeState(self.snapshotState)
 			if stakeState.ShareSize() < 1000 {
@@ -448,7 +449,7 @@ func (self *worker) voteLoop() {
 			}
 			self.pendingVoteMu.Unlock()
 		case <-evict.C:
-			
+
 		case <-self.voteSub.Err():
 			return
 

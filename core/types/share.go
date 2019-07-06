@@ -8,7 +8,6 @@ import (
 
 type Lottery struct {
 	ParentHash common.Hash
-	ParentNum  uint64
 	PosHash    common.Hash
 }
 
