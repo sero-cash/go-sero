@@ -260,7 +260,7 @@ func (state *StakeState) ShareSize() uint32 {
 func (state *StakeState) SeleteShare(seed common.Hash) (shares []*Share, err error) {
 	tree := NewTree(state)
 
-	ints, err := FindShareIdxs(int(tree.size()), 3, NewHash256PRNG(seed[:]))
+	ints, err := FindShareIdxs(tree.size(), 3, NewHash256PRNG(seed[:]))
 	if err != nil {
 		return nil, err
 	}
@@ -472,7 +472,7 @@ func (state *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header)
 	shareCacheMap := map[common.Hash]*Share{}
 	poolCacheMap := map[common.Hash]*StakePool{}
 
-	state.processVotedShare(bc.GetHeader(header.ParentHash, header.Number.Uint64()-1), shareCacheMap, poolCacheMap)
+	state.processVotedShare(header, bc, shareCacheMap, poolCacheMap)
 	state.processOutDate(header, bc, shareCacheMap, poolCacheMap)
 	state.processMissVoted(header, bc, shareCacheMap, poolCacheMap)
 	//state.processNowShares(bc.GetHeader(header.ParentHash, header.Number.Uint64()-1), poolCacheMap, bc.GetDB())
@@ -486,44 +486,51 @@ func (state *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header)
 	}
 }
 
-func (state *StakeState) processVotedShare(header *types.Header, shareCashMap map[common.Hash]*Share, poolCashMap map[common.Hash]*StakePool) {
+func (state *StakeState) processVotedShare(header *types.Header, bc blockChain, shareCashMap map[common.Hash]*Share, poolCashMap map[common.Hash]*StakePool) {
+	if header.Number.Uint64() == 0 {
+		return
+	}
+
+	preHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	tree := NewTree(state)
-
-	indexs := randomIndexs(header.Hash(), tree.size(), 3)
-	for _, index := range indexs {
-		sndoe := tree.deletNodeByIndex(index)
-		if sndoe == nil {
-			log.Crit("ProcessBeforeApply: selete share error", "blockHash", header.Hash().String(), "blockNumber", header.Number, "index", index, "poolSize", tree.size())
-		} else {
-			share := state.getShare(sndoe.key, shareCashMap)
-			if share.Num != sndoe.num {
-				log.Crit("ProcessBeforeApply: deletNodeByIndex err", "share.num", share.Num, "snode.num", sndoe.num)
-			}
-			share.WishVotNum += 1
-
-			if share.Num > 0 {
-				share.Num -= 1
+	hash := preHeader.Hash()
+	indexs, err := FindShareIdxs(tree.size(), 3, NewHash256PRNG(hash[:]))
+	if err == nil {
+		for _, index := range indexs {
+			sndoe := tree.deletNodeByIndex(index)
+			if sndoe == nil {
+				log.Crit("ProcessBeforeApply: selete share error", "blockHash", hash.String(), "blockNumber", preHeader.Number, "index", index, "poolSize", tree.size())
 			} else {
-				log.Crit("ProcessBeforeApply: process vote err", "shareId", common.Bytes2Hex(share.Id()), "error", "share.Num=0")
-			}
-
-			if share.PoolId != nil {
-				pool := state.getStakePool(*share.PoolId, poolCashMap)
-				pool.ChoicedNum += 1
-				pool.MissedNum += 1
-
-				if pool.ShareNum > 0 {
-					pool.ShareNum -= 1
-				} else {
-					log.Crit("ProcessBeforeApply: process vote err", "poolId", share.PoolId, "error", "pool.ShareNum=0")
+				share := state.getShare(sndoe.key, shareCashMap)
+				if share.Num != sndoe.num {
+					log.Crit("ProcessBeforeApply: deletNodeByIndex err", "share.num", share.Num, "snode.num", sndoe.num)
 				}
-				pool.WishVotNum += 1
+				share.WishVotNum += 1
+
+				if share.Num > 0 {
+					share.Num -= 1
+				} else {
+					log.Crit("ProcessBeforeApply: process vote err", "shareId", common.Bytes2Hex(share.Id()), "error", "share.Num=0")
+				}
+
+				if share.PoolId != nil {
+					pool := state.getStakePool(*share.PoolId, poolCashMap)
+					pool.ChoicedNum += 1
+					pool.MissedNum += 1
+
+					if pool.ShareNum > 0 {
+						pool.ShareNum -= 1
+					} else {
+						log.Crit("ProcessBeforeApply: process vote err", "poolId", share.PoolId, "error", "pool.ShareNum=0")
+					}
+					pool.WishVotNum += 1
+				}
 			}
 		}
 	}
 
 	soloReware, reward := state.stakeReward()
-	for _, vote := range append(header.CurrentVotes, header.ParentVotes...) {
+	for _, vote := range append(preHeader.CurrentVotes, preHeader.ParentVotes...) {
 		share := state.getShare(vote.Hash, shareCashMap)
 
 		if share.WishVotNum > 0 {
@@ -560,10 +567,13 @@ func (state *StakeState) processVotedShare(header *types.Header, shareCashMap ma
 	}
 }
 
-func (state *StakeState) processOutDate(header *types.Header, bc blockChain, shareCashMap map[common.Hash]*Share, poolCashMap map[common.Hash]*StakePool) []*Share {
+func (state *StakeState) processOutDate(header *types.Header, bc blockChain, shareCashMap map[common.Hash]*Share, poolCashMap map[common.Hash]*StakePool) (shares []*Share) {
+	if header.Number.Uint64() < outOfDatePeriod {
+		return
+	}
 	tree := NewTree(state)
 	preHeader := bc.GetHeaderByNumber(header.Number.Uint64() - outOfDatePeriod)
-	shares := state.getShares(bc.GetDB(), header.Hash(), header.Number.Uint64(), shareCashMap)
+	shares = state.getShares(bc.GetDB(), header.Hash(), header.Number.Uint64(), shareCashMap)
 	if len(shares) > 0 {
 		for _, share := range shares {
 			if share.BlockNumber == preHeader.Number.Uint64() {
@@ -595,10 +605,13 @@ func (state *StakeState) processOutDate(header *types.Header, bc blockChain, sha
 			}
 		}
 	}
-	return shares
+	return
 }
 
 func (state *StakeState) processMissVoted(header *types.Header, bc blockChain, shareCashMap map[common.Hash]*Share, poolCashMap map[common.Hash]*StakePool) {
+	if header.Number.Uint64() < missVotedPeriod {
+		return
+	}
 	preHeader := bc.GetHeaderByNumber(header.Number.Uint64() - missVotedPeriod)
 	shares := state.getShares(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64(), shareCashMap)
 	if len(shares) > 0 {
@@ -647,7 +660,10 @@ func (state *StakeState) processNowShares(header *types.Header, shareCashMap map
 }
 
 func (state *StakeState) payProfit(bc blockChain, header *types.Header, shareCashMap map[common.Hash]*Share, poolCashMap map[common.Hash]*StakePool) {
-	preHeader := bc.GetHeaderByNumber(header.Number.Uint64() - outOfDatePeriod)
+	if header.Number.Uint64() < payPeriod {
+		return
+	}
+	preHeader := bc.GetHeaderByNumber(header.Number.Uint64() - payPeriod)
 	shares, pools := state.getBlockRecords(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64(), shareCashMap, poolCashMap)
 
 	for _, share := range shares {
@@ -697,15 +713,6 @@ func (state *StakeState) deleteShare(tree *STree, share *Share, poolCashMap map[
 	share.Num = 0
 	share.AddProfit(new(big.Int).Mul(share.Value, big.NewInt(int64(share.Num))))
 
-}
-
-func randomIndexs(hash common.Hash, seiz uint32, n int) (indexs []uint32) {
-	return
-}
-
-func SharePrice(state StakeState) *big.Int {
-	//2+(0.000011022927689594*n)
-	return big.NewInt(0)
 }
 
 func decodeNumber32(data []byte) uint32 {

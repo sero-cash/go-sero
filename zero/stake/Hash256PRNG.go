@@ -133,7 +133,7 @@ func (hp *Hash256PRNG) uniformRandom(upperBound uint32) uint32 {
 }
 
 // intInSlice returns true if an integer is in the passed slice, false otherwise.
-func intInSlice(i int, sl []int) bool {
+func intInSlice(i uint32, sl []uint32) bool {
 	for _, e := range sl {
 		if i == e {
 			return true
@@ -144,23 +144,21 @@ func intInSlice(i int, sl []int) bool {
 }
 
 // findShareIdxs finds n many unique index numbers for a list length size.
-func findShareIdxs(size int, n uint16, prng *Hash256PRNG) ([]int, error) {
-	if size < int(n) {
-		return nil, fmt.Errorf("list size too small: %v < %v",
-			size, n)
+func findShareIdxs(size uint32, n uint16, prng *Hash256PRNG) ([]uint32, error) {
+	if size < uint32(n) {
+		return nil, fmt.Errorf("list size too small: %v < %v", size, n)
 	}
 
 	max := int64(0xFFFFFFFF)
 	if int64(size) > max {
-		return nil, fmt.Errorf("list size too big: %v > %v",
-			size, max)
+		return nil, fmt.Errorf("list size too big: %v > %v", size, max)
 	}
 	sz := uint32(size)
 
-	var list []int
+	var list []uint32
 	var listLen uint16
 	for listLen < n {
-		r := int(prng.uniformRandom(sz))
+		r := prng.uniformRandom(sz)
 		if !intInSlice(r, list) {
 			list = append(list, r)
 			listLen++
@@ -171,6 +169,6 @@ func findShareIdxs(size int, n uint16, prng *Hash256PRNG) ([]int, error) {
 }
 
 // FindShareIdxs is the exported version of findShareIdxs used for testing.
-func FindShareIdxs(size int, n uint16, prng *Hash256PRNG) ([]int, error) {
+func FindShareIdxs(size uint32, n uint16, prng *Hash256PRNG) ([]uint32, error) {
 	return findShareIdxs(size, n, prng)
 }

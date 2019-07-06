@@ -46,7 +46,7 @@ func TestSeleteShare(t *testing.T) {
 	seed := crypto.Keccak256Hash([]byte("abc"))
 	prng := NewHash256PRNG(seed[:])
 
-	ints, err := FindShareIdxs(int(tree.size()), 3, prng)
+	ints, err := FindShareIdxs(tree.size(), 3, prng)
 	fmt.Println(ints, err)
 
 	for _, i := range ints {
