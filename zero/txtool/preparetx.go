@@ -325,19 +325,21 @@ func BuildTxParam(
 		Outs = append(Outs, GOut{PKr: pkr, Asset: *asset})
 	}
 
-	if asset := cmds.Asset(); asset != nil {
-		if asset.Tkn == nil && asset.Tkt == nil {
-		} else {
-			if asset.Tkn != nil {
-				e = checkTokenAsset(asset.Tkn, amounts)
-				if e != nil {
-					return
+	if cmds != nil {
+		if asset := cmds.Asset(); asset != nil {
+			if asset.Tkn == nil && asset.Tkt == nil {
+			} else {
+				if asset.Tkn != nil {
+					e = checkTokenAsset(asset.Tkn, amounts)
+					if e != nil {
+						return
+					}
 				}
-			}
-			if asset.Tkt != nil {
-				e = checkTicketAsset(asset.Tkt, ticekts)
-				if e != nil {
-					return
+				if asset.Tkt != nil {
+					e = checkTicketAsset(asset.Tkt, ticekts)
+					if e != nil {
+						return
+					}
 				}
 			}
 		}

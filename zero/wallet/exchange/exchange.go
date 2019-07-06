@@ -475,7 +475,7 @@ func (self *Exchange) GenTxWithSign(param txtool.PreTxParam) (pretx *txtool.GTxP
 		return
 	}
 
-	if pretx, tx, e = self.genTx(roots, account, param.Receptions, param.Gas, param.GasPrice); e != nil {
+	if pretx, tx, e = self.genTx(roots, account, param.Receptions, &param.Cmds, param.Gas, param.GasPrice); e != nil {
 		log.Error("Exchange genTx", "error", e)
 		return
 	}
@@ -516,8 +516,8 @@ func (self *Exchange) ClearTxParam(txParam *txtool.GTxParam) (count int) {
 	return
 }
 
-func (self *Exchange) genTx(utxos txtool.Utxos, account *Account, receptions []txtool.Reception, gas uint64, gasPrice *big.Int) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
-	if txParam, e = txtool.BuildTxParam(utxos, &account.mainPkr, receptions, gas, gasPrice); e != nil {
+func (self *Exchange) genTx(utxos txtool.Utxos, account *Account, receptions []txtool.Reception, cmds *txtool.Cmds, gas uint64, gasPrice *big.Int) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
+	if txParam, e = txtool.BuildTxParam(utxos, &account.mainPkr, receptions, cmds, gas, gasPrice); e != nil {
 		return
 	}
 
@@ -1117,8 +1117,14 @@ func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e er
 			receptions = append(receptions, txtool.Reception{Addr: *mp.To, Asset: assets.Asset{Tkt: &assets.Ticket{category, value}}})
 		}
 	}
-	txParam, e = txtool.BuildTxParam(mu.list.Roots(), mp.To, receptions,
-		25000, big.NewInt(1000000000))
+	txParam, e = txtool.BuildTxParam(
+		mu.list.Roots(),
+		mp.To,
+		receptions,
+		nil,
+		25000,
+		big.NewInt(1000000000),
+	)
 	if e != nil {
 		return
 	}
@@ -1157,7 +1163,7 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string, force bool) (coun
 			}
 		}
 
-		pretx, gtx, err := self.genTx(mu.list.Roots(), account, receptions, 25000, big.NewInt(1000000000))
+		pretx, gtx, err := self.genTx(mu.list.Roots(), account, receptions, nil, 25000, big.NewInt(1000000000))
 		if err != nil {
 			account.nextMergeTime = time.Now().Add(time.Hour * 6)
 			e = err
