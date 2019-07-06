@@ -32,7 +32,7 @@ func NewPublicShareApI(b Backend, nonceLock *AddrLocker) *PublicShareApI {
 
 type BuyShareTxArg struct {
 	From     address.AccountAddress `json:"from"`
-	Vote     *common.Address        `json:"to"`
+	Vote     *common.Address        `json:"vote"`
 	Pool     *common.Hash           `json:"pool"`
 	Gas      *hexutil.Uint64        `json:"gas"`
 	GasPrice *hexutil.Big           `json:"gasPrice"`
@@ -87,6 +87,7 @@ func (args *BuyShareTxArg) setDefaults(ctx context.Context, b Backend) error {
 func (args *BuyShareTxArg) toPreTxParam() txtool.PreTxParam {
 	preTx := txtool.PreTxParam{}
 	preTx.From = *args.From.ToUint512()
+	preTx.RefundTo = keys.Addr2PKr(args.From.ToUint512(), &shareFromRand).NewRef()
 	preTx.Gas = uint64(*args.Gas)
 	preTx.GasPrice = (*big.Int)(args.GasPrice)
 	preTx.Cmds = txtool.Cmds{}
@@ -103,6 +104,8 @@ func (args *BuyShareTxArg) toPreTxParam() txtool.PreTxParam {
 	return preTx
 
 }
+
+var shareFromRand = keys.RandUint256()
 
 func (s *PublicShareApI) BuyShare(ctx context.Context, args BuyShareTxArg) (common.Hash, error) {
 	if err := args.setDefaults(ctx, s.b); err != nil {
@@ -123,7 +126,7 @@ func (s *PublicShareApI) BuyShare(ctx context.Context, args BuyShareTxArg) (comm
 
 type RegistStakePoolTxArg struct {
 	From     address.AccountAddress `json:"from"`
-	Vote     *common.Address        `json:"to"`
+	Vote     *common.Address        `json:"vote"`
 	Gas      *hexutil.Uint64        `json:"gas"`
 	GasPrice *hexutil.Big           `json:"gasPrice"`
 	Value    *hexutil.Big           `json:"value"`
@@ -167,6 +170,7 @@ func (args *RegistStakePoolTxArg) setDefaults(ctx context.Context, b Backend) er
 func (args *RegistStakePoolTxArg) toPreTxParam() txtool.PreTxParam {
 	preTx := txtool.PreTxParam{}
 	preTx.From = *args.From.ToUint512()
+	preTx.RefundTo = keys.Addr2PKr(args.From.ToUint512(), &shareFromRand).NewRef()
 	preTx.Gas = uint64(*args.Gas)
 	preTx.GasPrice = (*big.Int)(args.GasPrice)
 	preTx.Cmds = txtool.Cmds{}

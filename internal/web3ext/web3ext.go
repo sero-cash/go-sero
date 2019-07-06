@@ -728,17 +728,19 @@ web3._extend({
 `
 const SHARE_JS = `
 web3._extend({
-	property: 'exchange',
+	property: 'share',
 	methods: [
 		new web3._extend.Method({
 			name: 'buyShare',
 			call: 'share_buyShare',
-			params: 1
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'registStakePool',
 			call: 'share_registStakePool',
-			params: 1
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		})
 	]
 });
