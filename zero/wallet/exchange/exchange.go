@@ -969,11 +969,11 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 		hex := common.Bytes2Hex(key)
 		if value, ok := ops[hex]; ok {
 			delete(ops, hex)
-			if len(value) == 130 {
+			if len(value) == 260 {
 				delete(ops, value)
 			} else {
-				delete(ops, value[0:130])
-				delete(ops, value[130:260])
+				delete(ops, value[0:260])
+				delete(ops, value[260:])
 			}
 
 			var root keys.Uint256
