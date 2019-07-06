@@ -219,7 +219,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	}
 
 	if s.Desc_Cmd.BuyShare != nil {
-		asset := s.Desc_Cmd.BuyShare.Asset().ToFlatAsset()
+		asset := s.Desc_Cmd.BuyShare.Asset().ToRef().ToFlatAsset()
 		asset_desc := cpt.AssetDesc{
 			Tkn_currency: asset.Tkn.Currency,
 			Tkn_value:    asset.Tkn.Value.ToUint256(),
@@ -231,7 +231,7 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 	}
 
 	if s.Desc_Cmd.RegistPool != nil {
-		asset := s.Desc_Cmd.RegistPool.Asset().ToFlatAsset()
+		asset := s.Desc_Cmd.RegistPool.Asset().ToRef().ToFlatAsset()
 		asset_desc := cpt.AssetDesc{
 			Tkn_currency: asset.Tkn.Currency,
 			Tkn_value:    asset.Tkn.Value.ToUint256(),

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/txs/tx"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
 
@@ -24,11 +23,28 @@ type Reception struct {
 	Asset assets.Asset
 }
 
+type PkgCloseCmd struct {
+	Id      keys.Uint256
+	Owner   keys.PKr
+	AssetCM keys.Uint256
+	Ar      keys.Uint256
+}
+
+type PkgTransferCmd struct {
+	Id    keys.Uint256
+	Owner keys.PKr
+	PKr   keys.PKr
+}
+
+type PkgCreateCmd struct {
+	Id    keys.Uint256
+	PKr   keys.PKr
+	Asset assets.Asset
+	Memo  keys.Uint512
+	Ar    keys.Uint256
+}
+
 type Cmds struct {
-	//Package
-	PkgCreate   *tx.PkgCreate
-	PkgTransfer *tx.PkgTransfer
-	PkgClose    *tx.PkgClose
 	//Share
 	BuyShare *stx.BuyShareCmd
 	//Pool
@@ -36,11 +52,15 @@ type Cmds struct {
 	ClosePool  *stx.ClosePoolCmd
 	//Contract
 	Contract *stx.ContractCmd
+	//Package
+	PkgCreate   *PkgCreateCmd
+	PkgTransfer *PkgTransferCmd
+	PkgClose    *PkgCloseCmd
 }
 
 func (self *Cmds) Asset() *assets.Asset {
 	if self.PkgCreate != nil {
-		return &self.PkgCreate.Pkg.Asset
+		return &self.PkgCreate.Asset
 	}
 	if self.BuyShare != nil {
 		asset := self.BuyShare.Asset()

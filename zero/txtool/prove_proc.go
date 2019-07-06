@@ -19,12 +19,31 @@ package txtool
 import (
 	"errors"
 
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
+
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
+
+var gen_pkg_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_p_thread_num })
+
+type gen_pkg_desc struct {
+	desc cpt.PkgDesc
+	e    error
+}
+
+func (self *gen_pkg_desc) Run() bool {
+	if err := cpt.GenPkgProof(&self.desc); err != nil {
+		self.e = err
+		return false
+	} else {
+		return true
+	}
+}
 
 var gen_input_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_p_thread_num })
 
@@ -61,6 +80,23 @@ func (self *gen_output_desc) Run() bool {
 }
 
 func (self *gen_ctx) genDesc_Zs() (e error) {
+	var gen_pkg_procs = gen_pkg_procs_pool.GetProcs()
+	defer gen_pkg_procs_pool.PutProcs(gen_pkg_procs)
+	if self.param.Cmds.PkgCreate != nil {
+		asset := self.param.Cmds.PkgCreate.Asset.ToFlatAsset()
+
+		g := gen_pkg_desc{}
+		g.desc.Tkn_currency = asset.Tkn.Currency
+		g.desc.Tkn_value = asset.Tkn.Value.ToUint256()
+		g.desc.Tkt_category = asset.Tkt.Category
+		g.desc.Tkt_value = asset.Tkt.Value
+		g.desc.Memo = self.param.Cmds.PkgCreate.Memo
+		g.desc.Key = pkg.GetKey(&self.param.From.PKr, keys.Sk2Tk(self.param.From.SKr.ToUint512().NewRef()).NewRef())
+
+		gen_pkg_procs.StartProc(&g)
+
+	}
+
 	var gen_input_procs = gen_input_procs_pool.GetProcs()
 	defer gen_input_procs_pool.PutProcs(gen_input_procs)
 
@@ -99,6 +135,26 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 		g.index = i
 
 		gen_output_procs.StartProc(&g)
+	}
+
+	if gen_pkg_procs.HasProc() {
+		if pkg_runs := gen_pkg_procs.Wait(); pkg_runs != nil {
+			for _, g := range pkg_runs {
+				desc := g.(*gen_pkg_desc).desc
+
+				self.s.Desc_Pkg.Create.Proof = desc.Proof_ret
+				self.s.Desc_Pkg.Create.Pkg.EInfo = desc.Einfo_ret
+				self.s.Desc_Pkg.Create.Pkg.AssetCM = desc.Asset_cm_ret
+				self.s.Desc_Pkg.Create.Pkg.PkgCM = desc.Pkg_cm_ret
+
+				self.balance_desc.Zout_acms = append(self.balance_desc.Zout_acms, desc.Asset_cm_ret[:]...)
+				self.balance_desc.Zout_ars = append(self.balance_desc.Zout_ars, desc.Ar_ret[:]...)
+				break
+			}
+		} else {
+			e = errors.New("gen output desc_z failed!!!")
+			return
+		}
 	}
 
 	if gen_output_procs.HasProc() {

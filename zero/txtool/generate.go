@@ -115,6 +115,29 @@ func (self *gen_ctx) setCmdsData() {
 	if self.param.Cmds.ClosePool != nil {
 		self.s.Desc_Cmd.ClosePool = self.param.Cmds.ClosePool
 	}
+	if self.param.Cmds.Contract != nil {
+		self.s.Desc_Cmd.Contract = self.param.Cmds.Contract
+		a = &self.param.Cmds.Contract.Asset
+	}
+	if self.param.Cmds.PkgCreate != nil {
+		create := self.param.Cmds.PkgCreate
+		self.s.Desc_Pkg.Create = &stx.PkgCreate{}
+		self.s.Desc_Pkg.Create.PKr = create.PKr
+		self.s.Desc_Pkg.Create.Id = create.Id
+	}
+	if self.param.Cmds.PkgTransfer != nil {
+		change := self.param.Cmds.PkgTransfer
+		self.s.Desc_Pkg.Transfer = &stx.PkgTransfer{}
+		self.s.Desc_Pkg.Transfer.Id = change.Id
+		self.s.Desc_Pkg.Transfer.PKr = change.PKr
+	}
+	if self.param.Cmds.PkgClose != nil {
+		close := self.param.Cmds.PkgClose
+		self.s.Desc_Pkg.Close = &stx.PkgClose{}
+		self.s.Desc_Pkg.Close.Id = close.Id
+		self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, close.AssetCM[:]...)
+		self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, close.Ar[:]...)
+	}
 	if a != nil {
 		asset := a.ToFlatAsset()
 		asset_desc := cpt.AssetDesc{
@@ -178,6 +201,24 @@ func (self *gen_ctx) signTxBalance() error {
 	}
 }
 
+func (self *gen_ctx) signTxCmds() error {
+	if self.param.Cmds.PkgTransfer != nil {
+		if sign, err := keys.SignPKrBySk(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.param.Cmds.PkgTransfer.Owner); err != nil {
+			return err
+		} else {
+			self.s.Desc_Pkg.Transfer.Sign = sign
+		}
+	}
+	if self.param.Cmds.PkgClose != nil {
+		if sign, err := keys.SignPKrBySk(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.param.Cmds.PkgClose.Owner); err != nil {
+			return err
+		} else {
+			self.s.Desc_Pkg.Transfer.Sign = sign
+		}
+	}
+	return nil
+}
+
 func (self *gen_ctx) signTx() (e error) {
 	self.balance_desc.Hash = self.s.ToHash_for_sign()
 
@@ -185,6 +226,9 @@ func (self *gen_ctx) signTx() (e error) {
 		return
 	}
 	if e = self.signTxIns(); e != nil {
+		return
+	}
+	if e = self.signTxCmds(); e != nil {
 		return
 	}
 	if e = self.signTxBalance(); e != nil {
