@@ -179,6 +179,9 @@ func (self *T) ToHash() (ret keys.Uint256) {
 	d.Write(self.Sign[:])
 	d.Write(self.Bcr[:])
 	d.Write(self.Bsign[:])
+	if self.Desc_Cmd.Valid() {
+		d.Write(self.Desc_Cmd.ToHash().NewRef()[:])
+	}
 	copy(ret[:], d.Sum(nil))
 	return
 }
@@ -191,6 +194,9 @@ func (self *T) ToHash_for_gen() (ret keys.Uint256) {
 	d.Write(self.Desc_Z.ToHash_for_gen().NewRef()[:])
 	d.Write(self.Desc_O.ToHash_for_gen().NewRef()[:])
 	d.Write(self.Desc_Pkg.ToHash_for_gen().NewRef()[:])
+	if self.Desc_Cmd.Valid() {
+		d.Write(self.Desc_Cmd.ToHash().NewRef()[:])
+	}
 	copy(ret[:], d.Sum(nil))
 	return
 }
@@ -203,6 +209,9 @@ func (self *T) ToHash_for_sign() (ret keys.Uint256) {
 	d.Write(self.Desc_Z.ToHash_for_sign().NewRef()[:])
 	d.Write(self.Desc_O.ToHash_for_sign().NewRef()[:])
 	d.Write(self.Desc_Pkg.ToHash_for_sign().NewRef()[:])
+	if self.Desc_Cmd.Valid() {
+		d.Write(self.Desc_Cmd.ToHash().NewRef()[:])
+	}
 	copy(ret[:], d.Sum(nil))
 	return
 }

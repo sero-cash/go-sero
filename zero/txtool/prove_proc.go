@@ -152,7 +152,7 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 				break
 			}
 		} else {
-			e = errors.New("gen output desc_z failed!!!")
+			e = errors.New("gen create pkg prf failed!!!")
 			return
 		}
 	}

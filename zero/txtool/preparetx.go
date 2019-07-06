@@ -151,7 +151,7 @@ func GenTxParam(param *PreTxParam, gen TxParamGenerator) (txParam *GTxParam, e e
 			return nil, errors.New("can not find default refund to")
 		}
 	}
-	txParam, e = BuildTxParam(utxos, param.RefundTo, param.Receptions, param.Gas, param.GasPrice)
+	txParam, e = BuildTxParam(utxos, param.RefundTo, param.Receptions, &param.Cmds, param.Gas, param.GasPrice)
 	return
 }
 
@@ -183,6 +183,24 @@ func PreGenTx(param *PreTxParam, gen TxParamGenerator) (utxos Utxos, err error) 
 					} else {
 						tickets[each.Asset.Tkt.Value] = each.Asset.Tkt.Category
 					}
+				}
+			}
+		}
+
+		if asset := param.Cmds.Asset(); asset != nil {
+			if asset.Tkn != nil {
+				currency := common.BytesToString(asset.Tkn.Currency[:])
+				if amount, ok := amounts[currency]; ok {
+					amount.Add(amount, asset.Tkn.Value.ToInt())
+				} else {
+					amounts[currency] = new(big.Int).Set(asset.Tkn.Value.ToInt())
+				}
+			}
+			if asset.Tkt != nil {
+				if _, ok := tickets[asset.Tkt.Value]; ok {
+					return utxos, errors.New("duplicate ticket")
+				} else {
+					tickets[asset.Tkt.Value] = asset.Tkt.Category
 				}
 			}
 		}
@@ -225,6 +243,7 @@ func BuildTxParam(
 	utxos Utxos,
 	refundTo *keys.PKr,
 	receptions []Reception,
+	cmds *Cmds,
 	gas uint64,
 	gasPrice *big.Int) (txParam *GTxParam, e error) {
 
@@ -287,30 +306,41 @@ func BuildTxParam(
 			pk := reception.Addr.ToUint512()
 			pkr = CreatePkr(&pk, 1)
 		}
-		if reception.Asset.Tkn != nil && reception.Asset.Tkt != nil {
-			e = buildTokenAsset(asset, reception.Asset.Tkn, amounts)
-			if e != nil {
-				return
-			}
-			e = buildTicketAsset(asset, reception.Asset.Tkt, ticekts)
-			if e != nil {
-				return
-			}
-
-		} else if reception.Asset.Tkn != nil {
-			e = buildTokenAsset(asset, reception.Asset.Tkn, amounts)
-			if e != nil {
-				return
-			}
-		} else if reception.Asset.Tkt != nil {
-			e = buildTicketAsset(asset, reception.Asset.Tkt, ticekts)
-			if e != nil {
-				return
-			}
-		} else {
+		if reception.Asset.Tkn == nil && reception.Asset.Tkt == nil {
 			continue
+		} else {
+			if reception.Asset.Tkn != nil {
+				e = checkTokenAsset(reception.Asset.Tkn, amounts)
+				if e != nil {
+					return
+				}
+			}
+			if reception.Asset.Tkt != nil {
+				e = checkTicketAsset(reception.Asset.Tkt, ticekts)
+				if e != nil {
+					return
+				}
+			}
 		}
 		Outs = append(Outs, GOut{PKr: pkr, Asset: *asset})
+	}
+
+	if asset := cmds.Asset(); asset != nil {
+		if asset.Tkn == nil && asset.Tkt == nil {
+		} else {
+			if asset.Tkn != nil {
+				e = checkTokenAsset(asset.Tkn, amounts)
+				if e != nil {
+					return
+				}
+			}
+			if asset.Tkt != nil {
+				e = checkTicketAsset(asset.Tkt, ticekts)
+				if e != nil {
+					return
+				}
+			}
+		}
 	}
 
 	fee := new(big.Int).Mul(new(big.Int).SetUint64(gas), gasPrice)
@@ -343,35 +373,30 @@ func BuildTxParam(
 
 	txParam.Ins = Ins
 	txParam.Outs = Outs
+	txParam.Cmds = *cmds
 
 	return
 }
 
-func buildTokenAsset(asset *assets.Asset, token *assets.Token, amounts map[string]*big.Int) (e error) {
+func checkTokenAsset(token *assets.Token, amounts map[string]*big.Int) (e error) {
 	currency := common.BytesToString(token.Currency[:])
 	if amount, ok := amounts[currency]; ok && amount.Cmp(token.Value.ToInt()) >= 0 {
-		asset.Tkn = &assets.Token{
-			Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
-			Value:    token.Value,
-		}
-
 		amount.Sub(amount, token.Value.ToInt())
 		if amount.Sign() == 0 {
 			delete(amounts, currency)
 		}
 	} else {
-		e = errors.New("")
+		e = errors.New("build token error")
 		return
 	}
 	return
 }
 
-func buildTicketAsset(asset *assets.Asset, ticket *assets.Ticket, tickets map[keys.Uint256]keys.Uint256) (e error) {
+func checkTicketAsset(ticket *assets.Ticket, tickets map[keys.Uint256]keys.Uint256) (e error) {
 	if category, ok := tickets[ticket.Value]; ok && category == ticket.Category {
-		asset.Tkt = &assets.Ticket{Category: category, Value: ticket.Value,}
 		delete(tickets, ticket.Value)
 	} else {
-		e = errors.New("ticket error")
+		e = errors.New("build ticket error")
 		return
 	}
 	return
