@@ -3,8 +3,8 @@ package ethapi
 import (
 	"context"
 	"fmt"
-
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"github.com/sero-cash/go-sero/common/address"
 
@@ -165,17 +165,22 @@ func (args GenTxArgs) toTxParam() txtool.PreTxParam {
 	receptions := []txtool.Reception{}
 	for _, rec := range args.Receptions {
 		pkr := MixAdrressToPkr(rec.Addr)
+		var currency keys.Uint256
+		bytes := common.LeftPadBytes([]byte(string(rec.Currency)), 32)
+		copy(currency[:], bytes)
 		receptions = append(receptions, txtool.Reception{
 			pkr,
-			string(rec.Currency),
-			(*big.Int)(rec.Value),
+			assets.Asset{Tkn: &assets.Token{
+				Currency: currency,
+				Value:    utils.U256(*rec.Value.ToInt())},
+			},
 		})
 	}
 	var refundPkr *keys.PKr
 	if args.RefundTo != nil {
 		refundPkr = args.RefundTo.ToPKr()
 	}
-	return txtool.PreTxParam{args.From.ToUint512(), refundPkr, receptions, args.Gas, gasPrice, args.Roots}
+	return txtool.PreTxParam{args.From.ToUint512(), refundPkr, receptions, txtool.Cmds{}, args.Gas, gasPrice, args.Roots}
 }
 
 func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*txtool.GTxParam, error) {
