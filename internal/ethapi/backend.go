@@ -100,6 +100,12 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 	nonceLock := new(AddrLocker)
 	return []rpc.API{
 		{
+			Namespace: "share",
+			Version:   "1.0",
+			Service:   NewPublicShareApI(apiBackend, nonceLock),
+			Public:    true,
+		},
+		{
 			Namespace: "ssi",
 			Version:   "1.0",
 			Service:   &PublicSSIAPI{apiBackend},

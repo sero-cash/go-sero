@@ -18,13 +18,13 @@ import (
 	"github.com/sero-cash/go-sero/zero/stake"
 )
 
-type PublicShareApi struct {
+type PublicShareApI struct {
 	b         Backend
 	nonceLock *AddrLocker
 }
 
-func NewPublicShareAPI(b Backend, nonceLock *AddrLocker) *PublicShareApi {
-	return &PublicShareApi{
+func NewPublicShareApI(b Backend, nonceLock *AddrLocker) *PublicShareApI {
+	return &PublicShareApI{
 		nonceLock: nonceLock,
 		b:         b,
 	}
@@ -104,7 +104,7 @@ func (args *BuyShareTxArg) toPreTxParam() txtool.PreTxParam {
 
 }
 
-func (s *PublicShareApi) BuyShare(ctx context.Context, args BuyShareTxArg) (common.Hash, error) {
+func (s *PublicShareApI) BuyShare(ctx context.Context, args BuyShareTxArg) (common.Hash, error) {
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
@@ -179,7 +179,7 @@ func (args *RegistStakePoolTxArg) toPreTxParam() txtool.PreTxParam {
 
 }
 
-func (s *PublicShareApi) RegistStakePool(ctx context.Context, args RegistStakePoolTxArg) (common.Hash, error) {
+func (s *PublicShareApI) RegistStakePool(ctx context.Context, args RegistStakePoolTxArg) (common.Hash, error) {
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
@@ -196,7 +196,7 @@ func (s *PublicShareApi) RegistStakePool(ctx context.Context, args RegistStakePo
 	return common.BytesToHash(gtx.Hash[:]), nil
 }
 
-func (s *PublicShareApi) PoolState(ctx context.Context, pool common.Hash) (map[string]interface{}, error) {
+func (s *PublicShareApI) PoolState(ctx context.Context, pool common.Hash) (map[string]interface{}, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
 		return nil, err

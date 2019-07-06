@@ -32,6 +32,7 @@ var Modules = map[string]string{
 	"txpool":     TxPool_JS,
 	"ssi":        SSI_JS,
 	"exchange":   Exchange_JS,
+	"share":      SHARE_JS,
 }
 
 const Chequebook_JS = `
@@ -721,6 +722,23 @@ web3._extend({
 			name: 'getBlockByNumber',
 			call: 'exchange_getBlockByNumber',
             params: 1
+		})
+	]
+});
+`
+const SHARE_JS = `
+web3._extend({
+	property: 'exchange',
+	methods: [
+		new web3._extend.Method({
+			name: 'buyShare',
+			call: 'share_buyShare',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'registStakePool',
+			call: 'share_registStakePool',
+			params: 1
 		})
 	]
 });
