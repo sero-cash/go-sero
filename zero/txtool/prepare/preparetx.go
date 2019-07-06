@@ -1,4 +1,4 @@
-package txtool
+package prepare
 
 import (
 	"bytes"
@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+
+	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 
@@ -24,16 +26,12 @@ type Reception struct {
 }
 
 type PkgCloseCmd struct {
-	Id      keys.Uint256
-	Owner   keys.PKr
-	AssetCM keys.Uint256
-	Ar      keys.Uint256
+	Id keys.Uint256
 }
 
 type PkgTransferCmd struct {
-	Id    keys.Uint256
-	Owner keys.PKr
-	PKr   keys.PKr
+	Id  keys.Uint256
+	PKr keys.PKr
 }
 
 type PkgCreateCmd struct {
@@ -41,7 +39,6 @@ type PkgCreateCmd struct {
 	PKr   keys.PKr
 	Asset assets.Asset
 	Memo  keys.Uint512
-	Ar    keys.Uint256
 }
 
 type Cmds struct {
@@ -137,7 +134,7 @@ type TxParamGenerator interface {
 	DefaultRefundTo(from *keys.Uint512) (ret *keys.PKr)
 }
 
-func GenTxParam(param *PreTxParam, gen TxParamGenerator) (txParam *GTxParam, e error) {
+func GenTxParam(param *PreTxParam, gen TxParamGenerator) (txParam *txtool.GTxParam, e error) {
 	if len(param.Receptions) > 500 {
 		return nil, errors.New("receptions count must <= 500")
 	}
@@ -245,26 +242,26 @@ func BuildTxParam(
 	receptions []Reception,
 	cmds *Cmds,
 	gas uint64,
-	gasPrice *big.Int) (txParam *GTxParam, e error) {
+	gasPrice *big.Int) (txParam *txtool.GTxParam, e error) {
 
-	txParam = new(GTxParam)
+	txParam = new(txtool.GTxParam)
 	txParam.Gas = gas
 	txParam.GasPrice = *gasPrice
 
-	txParam.From = Kr{PKr: *refundTo}
+	txParam.From = txtool.Kr{PKr: *refundTo}
 
-	wits, err := SRI_Inst.GetAnchor(utxos.Roots())
+	wits, err := txtool.SRI_Inst.GetAnchor(utxos.Roots())
 	if err != nil {
 		e = err
 		return
 	}
 
-	Ins := []GIn{}
+	Ins := []txtool.GIn{}
 	amounts := make(map[string]*big.Int)
 	ticekts := make(map[keys.Uint256]keys.Uint256)
 	oins_count := 0
 	for index, utxo := range utxos {
-		if out := GetOut(&utxo.Root, 0); out != nil {
+		if out := txtool.GetOut(&utxo.Root, 0); out != nil {
 			need_add := false
 			if utxo.Asset.Tkn != nil {
 				if utxo.Asset.Tkn.Value.Cmp(&utils.U256_0) != 0 {
@@ -285,7 +282,7 @@ func BuildTxParam(
 			}
 
 			if need_add {
-				Ins = append(Ins, GIn{Out: Out{Root: utxo.Root, State: *out}, Witness: wits[index]})
+				Ins = append(Ins, txtool.GIn{Out: txtool.Out{Root: utxo.Root, State: *out}, Witness: wits[index]})
 				if out.OS.Out_O != nil {
 					oins_count++
 				}
@@ -298,9 +295,8 @@ func BuildTxParam(
 		return
 	}
 
-	Outs := []GOut{}
+	Outs := []txtool.GOut{}
 	for _, reception := range receptions {
-		asset := &assets.Asset{}
 		pkr := reception.Addr
 		if IsPk(reception.Addr) {
 			pk := reception.Addr.ToUint512()
@@ -321,8 +317,8 @@ func BuildTxParam(
 					return
 				}
 			}
+			Outs = append(Outs, txtool.GOut{PKr: pkr, Asset: reception.Asset})
 		}
-		Outs = append(Outs, GOut{PKr: pkr, Asset: *asset})
 	}
 
 	if cmds != nil {
@@ -358,7 +354,7 @@ func BuildTxParam(
 
 	if len(amounts) > 0 {
 		for currency, value := range amounts {
-			Outs = append(Outs, GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkn: &assets.Token{
+			Outs = append(Outs, txtool.GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkn: &assets.Token{
 				Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
 				Value:    utils.U256(*value),
 			}}})
@@ -366,7 +362,7 @@ func BuildTxParam(
 	}
 	if len(ticekts) > 0 {
 		for value, category := range ticekts {
-			Outs = append(Outs, GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkt: &assets.Ticket{
+			Outs = append(Outs, txtool.GOut{PKr: txParam.From.PKr, Asset: assets.Asset{Tkt: &assets.Ticket{
 				Category: category,
 				Value:    value,
 			}}})
@@ -375,7 +371,22 @@ func BuildTxParam(
 
 	txParam.Ins = Ins
 	txParam.Outs = Outs
-	txParam.Cmds = *cmds
+	txParam.Cmds.Contract = cmds.Contract
+	txParam.Cmds.BuyShare = cmds.BuyShare
+	txParam.Cmds.RegistPool = cmds.RegistPool
+	txParam.Cmds.ClosePool = cmds.ClosePool
+
+	if cmds.PkgCreate != nil {
+
+	}
+
+	if cmds.PkgTransfer != nil {
+
+	}
+
+	if cmds.PkgClose != nil {
+
+	}
 
 	return
 }

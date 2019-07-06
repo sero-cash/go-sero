@@ -21,6 +21,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/txtool/prepare"
+
 	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/sero-cash/go-sero/zero/wallet/exchange"
@@ -88,7 +90,7 @@ type Backend interface {
 	GetPkNumber(pk keys.Uint512) (number uint64, e error)
 	GetPkr(address *keys.Uint512, index *keys.Uint256) (keys.PKr, error)
 	GetBalances(address keys.Uint512) (balances map[string]*big.Int)
-	GenTx(param txtool.PreTxParam) (*txtool.GTxParam, error)
+	GenTx(param prepare.PreTxParam) (*txtool.GTxParam, error)
 	GetRecordsByPk(pk *keys.Uint512, begin, end uint64) (records []exchange.Utxo, err error)
 	GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records []exchange.Utxo, err error)
 	GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int)

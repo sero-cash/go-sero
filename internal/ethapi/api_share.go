@@ -4,12 +4,12 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/txtool/prepare"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
 	"github.com/sero-cash/go-sero/zero/wallet/exchange"
-
-	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-sero/common"
@@ -84,13 +84,13 @@ func (args *BuyShareTxArg) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
-func (args *BuyShareTxArg) toPreTxParam() txtool.PreTxParam {
-	preTx := txtool.PreTxParam{}
+func (args *BuyShareTxArg) toPreTxParam() prepare.PreTxParam {
+	preTx := prepare.PreTxParam{}
 	preTx.From = *args.From.ToUint512()
 	preTx.RefundTo = keys.Addr2PKr(args.From.ToUint512(), &shareFromRand).NewRef()
 	preTx.Gas = uint64(*args.Gas)
 	preTx.GasPrice = (*big.Int)(args.GasPrice)
-	preTx.Cmds = txtool.Cmds{}
+	preTx.Cmds = prepare.Cmds{}
 
 	buyShareCmd := stx.BuyShareCmd{}
 	buyShareCmd.Value = utils.U256(*args.Value.ToInt())
@@ -167,13 +167,13 @@ func (args *RegistStakePoolTxArg) setDefaults(ctx context.Context, b Backend) er
 	return nil
 }
 
-func (args *RegistStakePoolTxArg) toPreTxParam() txtool.PreTxParam {
-	preTx := txtool.PreTxParam{}
+func (args *RegistStakePoolTxArg) toPreTxParam() prepare.PreTxParam {
+	preTx := prepare.PreTxParam{}
 	preTx.From = *args.From.ToUint512()
 	preTx.RefundTo = keys.Addr2PKr(args.From.ToUint512(), &shareFromRand).NewRef()
 	preTx.Gas = uint64(*args.Gas)
 	preTx.GasPrice = (*big.Int)(args.GasPrice)
-	preTx.Cmds = txtool.Cmds{}
+	preTx.Cmds = prepare.Cmds{}
 	registPoolCmd := stx.RegistPoolCmd{}
 	registPoolCmd.Value = utils.U256(*args.Value.ToInt())
 	registPoolCmd.Vote = common.AddrToPKr(*args.Vote)

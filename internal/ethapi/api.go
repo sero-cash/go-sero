@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
+	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
 	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
@@ -825,11 +826,11 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 
 }
 
-func getAccountAddress(addr common.Address, b Backend) (*address.AccountAddress) {
+func getAccountAddress(addr common.Address, b Backend) *address.AccountAddress {
 	//accountAddr = &address.AccountAddress{}
 	if addr.IsAccountAddress() {
 		accountAddr := common.AddrToAccountAddr(addr)
-		return  &accountAddr
+		return &accountAddr
 	} else {
 		wallets := b.AccountManager().Wallets()
 		return getLocalAccountAddressByPkr(wallets, addr)
@@ -1778,7 +1779,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
-func (args *SendTxArgs) toTxParam() (txParam txtool.PreTxParam, e error) {
+func (args *SendTxArgs) toTxParam() (txParam prepare.PreTxParam, e error) {
 
 	if args.To == nil {
 		e = errors.New("to can not be nil")
@@ -1813,9 +1814,9 @@ func (args *SendTxArgs) toTxParam() (txParam txtool.PreTxParam, e error) {
 		Tkt: ticket,
 	}
 
-	receptions := []txtool.Reception{{Addr: topkr, Asset: asset}}
+	receptions := []prepare.Reception{{Addr: topkr, Asset: asset}}
 
-	txParam = txtool.PreTxParam{From: *args.From.ToUint512(),
+	txParam = prepare.PreTxParam{From: *args.From.ToUint512(),
 		Receptions: receptions,
 		Gas:        uint64(*args.Gas),
 		GasPrice:   (*big.Int)(args.GasPrice),

@@ -22,6 +22,7 @@ import (
 	"math/big"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
+	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
 	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
@@ -300,7 +301,7 @@ func (b *SeroAPIBackend) GetBalances(address keys.Uint512) (balances map[string]
 	return b.sero.exchange.GetBalances(address)
 }
 
-func (b *SeroAPIBackend) GenTx(param txtool.PreTxParam) (txParam *txtool.GTxParam, e error) {
+func (b *SeroAPIBackend) GenTx(param prepare.PreTxParam) (txParam *txtool.GTxParam, e error) {
 	if b.sero.exchange == nil {
 		e = errors.New("not start exchange")
 		return

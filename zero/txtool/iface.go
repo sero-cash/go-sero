@@ -29,6 +29,41 @@ type GTx struct {
 	Hash     keys.Uint256
 }
 
+type GPkgCloseCmd struct {
+	Id      keys.Uint256
+	Owner   keys.PKr
+	AssetCM keys.Uint256
+	Ar      keys.Uint256
+}
+
+type GPkgTransferCmd struct {
+	Id    keys.Uint256
+	Owner keys.PKr
+	PKr   keys.PKr
+}
+
+type GPkgCreateCmd struct {
+	Id    keys.Uint256
+	PKr   keys.PKr
+	Asset assets.Asset
+	Memo  keys.Uint512
+	Ar    keys.Uint256
+}
+
+type Cmds struct {
+	//Share
+	BuyShare *stx.BuyShareCmd
+	//Pool
+	RegistPool *stx.RegistPoolCmd
+	ClosePool  *stx.ClosePoolCmd
+	//Contract
+	Contract *stx.ContractCmd
+	//Package
+	PkgCreate   *GPkgCreateCmd
+	PkgTransfer *GPkgTransferCmd
+	PkgClose    *GPkgCloseCmd
+}
+
 type GTxParam struct {
 	Gas      uint64
 	GasPrice big.Int

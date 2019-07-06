@@ -3,8 +3,10 @@ package ethapi
 import (
 	"context"
 	"fmt"
+
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
 	"github.com/sero-cash/go-sero/common/address"
 
@@ -156,19 +158,19 @@ func MixAdrressToPkr(addr MixAdrress) keys.PKr {
 	return pkr
 }
 
-func (args GenTxArgs) toTxParam() txtool.PreTxParam {
+func (args GenTxArgs) toTxParam() prepare.PreTxParam {
 	gasPrice := args.GasPrice.ToInt()
 
 	if gasPrice.Sign() == 0 {
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
-	receptions := []txtool.Reception{}
+	receptions := []prepare.Reception{}
 	for _, rec := range args.Receptions {
 		pkr := MixAdrressToPkr(rec.Addr)
 		var currency keys.Uint256
 		bytes := common.LeftPadBytes([]byte(string(rec.Currency)), 32)
 		copy(currency[:], bytes)
-		receptions = append(receptions, txtool.Reception{
+		receptions = append(receptions, prepare.Reception{
 			pkr,
 			assets.Asset{Tkn: &assets.Token{
 				Currency: currency,
@@ -180,11 +182,11 @@ func (args GenTxArgs) toTxParam() txtool.PreTxParam {
 	if args.RefundTo != nil {
 		refundPkr = args.RefundTo.ToPKr()
 	}
-	return txtool.PreTxParam{
+	return prepare.PreTxParam{
 		args.From.ToUint512(),
 		refundPkr,
 		receptions,
-		txtool.Cmds{},
+		prepare.Cmds{},
 		args.Gas,
 		gasPrice,
 		args.Roots,
