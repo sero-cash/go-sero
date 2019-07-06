@@ -456,7 +456,7 @@ func (state *StakeState) CaleAvgPrice(amount *big.Int) (uint32, *big.Int) {
 	return uint32(left), new(big.Int).Div(sumAmount, big.NewInt(left))
 }
 
-func (state *StakeState) stakeReward() (*big.Int, *big.Int) {
+func (state *StakeState) StakeCurrentReward() (*big.Int, *big.Int) {
 	size := NewTree(state).size()
 
 	soleAmount := new(big.Int).Add(baseReware, new(big.Int).Mul(rewareStep, big.NewInt(int64(size))))
@@ -529,8 +529,8 @@ func (state *StakeState) processVotedShare(header *types.Header, bc blockChain, 
 		}
 	}
 
-	soloReware, reward := state.stakeReward()
-	for _, vote := range append(preHeader.CurrentVotes, preHeader.ParentVotes...) {
+	soloReware, reward := state.StakeCurrentReward()
+	for _, vote := range preHeader.CurrentVotes {
 		share := state.getShare(vote.Hash, shareCashMap)
 
 		if share.WishVotNum > 0 {
@@ -565,6 +565,47 @@ func (state *StakeState) processVotedShare(header *types.Header, bc blockChain, 
 			share.AddProfit(soloReware)
 		}
 	}
+
+	if len(preHeader.ParentHash) > 0 {
+		reward = new(big.Int).Sub(reward, new(big.Int).Div(reward, big.NewInt(3)))
+		soloReware = new(big.Int).Sub(soloReware, new(big.Int).Div(soloReware, big.NewInt(3)))
+		for _, vote := range preHeader.ParentVotes {
+			share := state.getShare(vote.Hash, shareCashMap)
+
+			if share.WishVotNum > 0 {
+				share.WishVotNum -= 1
+			} else {
+				log.Crit("ProcessBeforeApply: process vote err", "shareId", common.Bytes2Hex(share.Id()), "error", "share.WishVotNum=0")
+			}
+
+			pool := state.getStakePool(*share.PoolId, poolCashMap)
+			if pool != nil {
+				if pool.WishVotNum > 0 {
+					pool.WishVotNum -= 1
+				} else {
+					log.Crit("ProcessBeforeApply: process vote err", "poolId", share.PoolId, "error", "pool.WishVotNum=0")
+				}
+			}
+
+			if vote.IsPool {
+				if pool.MissedNum > 0 {
+					pool.MissedNum -= 1
+				} else {
+					log.Crit("ProcessBeforeApply: process vote err", "poolId", share.PoolId, "error", "pool.MissedNum=0")
+				}
+				poolProfit := new(big.Int).Div(new(big.Int).Mul(reward, big.NewInt(int64(share.Fee))), big.NewInt(10000))
+				pool.AddProfit(poolProfit)
+				share.AddProfit(new(big.Int).Add(share.Value, new(big.Int).Sub(reward, poolProfit)))
+
+				if pool.Closed && pool.ShareNum == 0 && pool.WishVotNum == 0 {
+					pool.AddProfit(pool.Amount)
+				}
+			} else {
+				share.AddProfit(soloReware)
+			}
+		}
+	}
+
 }
 
 func (state *StakeState) processOutDate(header *types.Header, bc blockChain, shareCashMap map[common.Hash]*Share, poolCashMap map[common.Hash]*StakePool) (shares []*Share) {
