@@ -65,6 +65,8 @@ func NewVoter(chainconfig *params.ChainConfig, chain blockChain, sero Backend) *
 		sero:         sero,
 		chain:        chain,
 		lotteryCh:    make(chan *types.Lottery, chainLotterySize),
+		votes:        make(map[common.Hash]time.Time),
+		lotterys:     make(map[common.Hash]time.Time),
 		lotteryQueue: &PriorityQueue{},
 	}
 	voter.lotteryQueue.Init(lotteryQueueSize)
