@@ -825,18 +825,17 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 
 }
 
-func getAccountAddress(addr common.Address, b Backend) (accountAddr *address.AccountAddress) {
+func getAccountAddress(addr common.Address, b Backend) (*address.AccountAddress) {
+	//accountAddr = &address.AccountAddress{}
 	if addr.IsAccountAddress() {
-		*accountAddr = common.AddrToAccountAddr(addr)
+		accountAddr := common.AddrToAccountAddr(addr)
+		return  &accountAddr
 	} else {
 		wallets := b.AccountManager().Wallets()
-		keystoreAccount := getLocalAccountAddressByPkr(wallets, addr)
-		if keystoreAccount == nil {
-			return
-		}
-		accountAddr = keystoreAccount
+		return getLocalAccountAddressByPkr(wallets, addr)
+
 	}
-	return
+	return nil
 }
 
 func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, addr common.Address, packed bool, id *keys.Uint256) (interface{}, error) {

@@ -18,16 +18,14 @@ package miner
 
 import (
 	"fmt"
+	"github.com/deckarep/golang-set"
+	"github.com/sero-cash/go-sero/core/types/typeserial"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/sero-cash/go-sero/zero/stake"
-
-	"github.com/sero-cash/go-sero/core/types/typeserial"
-
-	"github.com/deckarep/golang-set"
 
 	"github.com/sero-cash/go-sero/common/address"
 
@@ -150,10 +148,14 @@ type worker struct {
 	mining int32
 	atWork int32
 
-	pendingPosMu  sync.RWMutex
-	pendingPos    map[common.Hash]time.Time
-	pendingVoteMu sync.RWMutex
-	pendingVote   map[common.Hash]mapset.Set
+	runPos          int32
+	pendingVoteMu   sync.RWMutex
+	pendingVote     map[common.Hash]mapset.Set
+	pendingVoteTime sync.Map
+	//pendingPosMu  sync.RWMutex
+	//pendingPos    map[common.Hash]time.Time
+	//pendingVoteMu sync.RWMutex
+	//pendingVote   map[common.Hash]mapset.Set
 }
 
 func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase address.AccountAddress, voter voter, sero Backend, mux *event.TypeMux) *worker {
@@ -176,8 +178,9 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase add
 		agents:      make(map[Agent]struct{}),
 		unconfirmed: newUnconfirmedBlocks(sero.BlockChain(), miningLogAtDepth),
 		voter:       voter,
-		pendingPos:  make(map[common.Hash]time.Time),
-		pendingVote: make(map[common.Hash]mapset.Set),
+
+		pendingVote:     make(map[common.Hash]mapset.Set),
+		pendingVoteTime: sync.Map{},
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = sero.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -187,7 +190,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase add
 	worker.chainSideSub = sero.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 	go worker.update()
 	go worker.voteLoop()
-	go worker.posTaskLoop()
 	go worker.powResultLoop()
 	go worker.resultLoop()
 	worker.commitNewWork()
@@ -284,9 +286,23 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case block := <-self.chainHeadCh:
-			self.pendingPosMu.Lock()
-			delete(self.pendingPos, block.Block.Header().HashPos())
-			self.pendingPosMu.Unlock()
+			self.pendingVoteMu.Lock()
+			header := block.Block.Header()
+			parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+
+			delHashs := []common.Hash{}
+			self.pendingVoteTime.Range(func(key, value interface{}) bool {
+				if value.(uint64) <= parentHeader.Number.Uint64() {
+					delHashs = append(delHashs, key.(common.Hash))
+				}
+				return true
+			})
+
+			for _, hash := range delHashs {
+				self.pendingVoteTime.Delete(hash)
+				delete(self.pendingVote, hash)
+			}
+			self.pendingVoteMu.Unlock()
 			self.commitNewWork()
 
 			// Handle ChainSideEvent
@@ -321,89 +337,75 @@ func (self *worker) update() {
 	}
 }
 
-const pos = false
-
 func (self *worker) powResultLoop() {
 	for {
 		select {
 		case result := <-self.powRecv:
-			self.voter.SendLotteryEvent(&types.Lottery{
-				result.Block.Header().ParentHash,
-				result.Block.NumberU64() - 1,
-				result.Block.Header().HashPos()})
-			if pos {
-				self.pendingPosMu.Lock()
-				_, ok := self.pendingPos[result.Block.Header().HashPos()]
-				if !ok {
-					self.pendingPos[result.Block.Header().HashPos()] = time.Now()
-				}
-				self.pendingPosMu.Unlock()
-				self.posTaskCh <- result
-			} else {
+			header := result.Block.Header()
+			hashPos := header.HashPos()
+			self.pendingVoteMu.Lock()
+			self.pendingVote[hashPos] = mapset.NewSet()
+			self.pendingVoteMu.Unlock()
+			self.pendingVoteTime.Store(hashPos, header.Number.Uint64())
+			self.voter.SendLotteryEvent(&types.Lottery{header.ParentHash, header.Number.Uint64() - 1, hashPos})
+
+			stakeState := stake.NewStakeState(self.snapshotState)
+			if stakeState.ShareSize() < 1000 {
 				self.recv <- result
-			}
-		}
-	}
-}
+			} else {
+				go func() {
+					parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+					var currentVotes []interface{}
+					var parentVotes []interface{}
+					for atomic.LoadInt32(&self.runPos) == 0 {
+						self.pendingVoteMu.Lock()
+						if votesSet, ok := self.pendingVote[hashPos]; ok {
+							currentVotes = votesSet.ToSlice()
+						}
+						parentSet := self.pendingVote[parentHeader.HashPos()]
+						if parentSet != nil {
+							parentVotes = parentSet.ToSlice()
+						}
+						self.pendingVoteMu.Unlock()
 
-func (self *worker) posTaskLoop() {
-
-	for {
-		select {
-		case task := <-self.posTaskCh:
-			if self.current != nil {
-				for self.current.Block.Header().HashPos() == task.Block.Header().HashPos() {
-					currentHashPos := task.Block.Header().HashPos()
-					parentHashPos := self.parentPoshash(task.Block.Header().ParentHash)
-					if parentHashPos == nil {
-						break
+						currentHeader := self.chain.CurrentHeader()
+						if len(currentVotes) >= 2 || currentHeader.Number.Uint64() >= header.Number.Uint64()+1 {
+							break
+						}
+						time.Sleep(1)
 					}
-					self.pendingVoteMu.RLock()
-					votes, ok := self.pendingVote[currentHashPos]
-					if ok {
+
+					if len(currentVotes) >= 2 {
 						CurrentVotes := []typeserial.Vote{}
+						for _, item := range currentVotes {
+							vote := item.(*types.Vote)
+							CurrentVotes = append(CurrentVotes, typeserial.Vote{vote.ShareHash, vote.IsPool, vote.Sign})
+						}
+
 						ParentVotes := []typeserial.Vote{}
-						if len(votes.ToSlice()) > 1 {
-							task.Block.Header().CurrentVotes = nil
-							for _, v := range votes.ToSlice() {
-								CurrentVotes = append(CurrentVotes, typeserial.Vote{
-									v.(types.Vote).ShareHash,
-									v.(types.Vote).IsPool,
-									v.(types.Vote).Sign})
-							}
-							parentVotes, exists := self.pendingVote[*parentHashPos]
-							if exists {
-								for _, v := range parentVotes.ToSlice() {
-									if self.contains(task.Block.Header().ParentHash, v.(types.Vote).Sign) {
-										continue
-									} else {
-										ParentVotes = append(ParentVotes, typeserial.Vote{
-											v.(types.Vote).ShareHash,
-											v.(types.Vote).IsPool,
-											v.(types.Vote).Sign})
+						if len(parentVotes) > 0 {
+							for _, item := range parentVotes {
+								vote := item.(*types.Vote)
+								flag := true
+								for _, each := range parentHeader.CurrentVotes {
+									if each.Hash == vote.PosHash {
+										flag = false
+										break
 									}
-									parentVotes.Remove(v)
-									if len(parentVotes.ToSlice()) == 0 {
-										delete(self.pendingVote, *parentHashPos)
-									}
-
 								}
-
+								if flag {
+									ParentVotes[0] = typeserial.Vote{vote.ShareHash, vote.IsPool, vote.Sign}
+								}
 							}
 						}
-						task.Block.Header().CurrentVotes = CurrentVotes
-						task.Block.Header().ParentVotes = ParentVotes
-						self.recv <- task
-
-					} else {
-						continue
+						atomic.StoreInt32(&self.runPos, 1)
+						result.Block.SetVotes(CurrentVotes, ParentVotes)
+						self.recv <- result
 					}
-					self.pendingVoteMu.RUnlock()
-				}
+				}()
 			}
 		}
 	}
-
 }
 
 func (self *worker) parentPoshash(parent common.Hash) (ret *common.Hash) {
@@ -435,39 +437,18 @@ func (self *worker) voteLoop() {
 	defer self.voteSub.Unsubscribe()
 	for {
 		select {
-		case vote := <-self.voteCh:
-			self.pendingPosMu.RUnlock()
-			_, ok := self.pendingPos[vote.Vote.PosHash]
-			self.pendingPosMu.RUnlock()
-			if !ok {
-				self.voter.SendVoteEvent(vote.Vote)
-			}
+		case voteResult := <-self.voteCh:
+			vote := voteResult.Vote
+
 			self.pendingVoteMu.Lock()
-			votes, ok := self.pendingVote[vote.Vote.PosHash]
-			if ok {
+			if votes, ok := self.pendingVote[vote.PosHash]; ok {
 				votes.Add(vote)
 			} else {
-				vs := mapset.NewSet(vote)
-				self.pendingVote[vote.Vote.PosHash] = vs
+				self.voter.SendVoteEvent(vote)
 			}
 			self.pendingVoteMu.Unlock()
 		case <-evict.C:
-			deletes := []common.Hash{}
-			self.pendingPosMu.Lock()
-			for k, v := range self.pendingPos {
-				if time.Since(v) > lifeTime {
-					deletes = append(deletes, k)
-				}
-			}
-			for _, h := range deletes {
-				delete(self.pendingPos, h)
-			}
-			self.pendingPosMu.Unlock()
-			self.pendingVoteMu.Lock()
-			for _, h := range deletes {
-				delete(self.pendingVote, h)
-			}
-			self.pendingVoteMu.Unlock()
+			
 		case <-self.voteSub.Err():
 			return
 

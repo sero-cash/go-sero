@@ -19,6 +19,7 @@ package types
 
 import (
 	"encoding/binary"
+	"github.com/sero-cash/go-sero/core/types/typeserial"
 	"io"
 	"math/big"
 	"sort"
@@ -57,6 +58,11 @@ type Block struct {
 	// inter-peer block relay.
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
+}
+
+func (b *Block) SetVotes(CurrentVotes []typeserial.Vote, ParentVotes []typeserial.Vote) {
+	b.header.CurrentVotes = CurrentVotes
+	b.header.ParentVotes = ParentVotes
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the
