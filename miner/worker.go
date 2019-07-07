@@ -98,6 +98,11 @@ type Result struct {
 	Block *types.Block
 }
 
+type voteKey struct {
+	headerNumber uint64
+	posHash      common.Hash
+}
+
 // worker is the main object which takes care of applying messages to the new state
 type worker struct {
 	config *params.ChainConfig
@@ -145,10 +150,10 @@ type worker struct {
 	mining int32
 	atWork int32
 
-	runPos          int32
-	pendingVoteMu   sync.RWMutex
-	pendingVote     map[common.Hash]mapset.Set
-	pendingVoteTime sync.Map
+	runPos        int32
+	pendingVoteMu sync.RWMutex
+	pendingVote   map[voteKey]mapset.Set
+	//pendingVoteTime sync.Map
 	//pendingPosMu  sync.RWMutex
 	//pendingPos    map[common.Hash]time.Time
 	//pendingVoteMu sync.RWMutex
@@ -176,8 +181,8 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase add
 		unconfirmed: newUnconfirmedBlocks(sero.BlockChain(), miningLogAtDepth),
 		voter:       voter,
 
-		pendingVote:     make(map[common.Hash]mapset.Set),
-		pendingVoteTime: sync.Map{},
+		pendingVote: make(map[voteKey]mapset.Set),
+		//pendingVoteTime: sync.Map{},
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = sero.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -287,18 +292,17 @@ func (self *worker) update() {
 			header := block.Block.Header()
 			parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 
-			delHashs := []common.Hash{}
-			self.pendingVoteTime.Range(func(key, value interface{}) bool {
-				if value.(uint64) <= parentHeader.Number.Uint64() {
-					delHashs = append(delHashs, key.(common.Hash))
+			delKeys := []voteKey{}
+			for key, _ := range self.pendingVote {
+				if key.headerNumber <= parentHeader.Number.Uint64() {
+					delKeys = append(delKeys, key)
 				}
-				return true
-			})
-
-			for _, hash := range delHashs {
-				self.pendingVoteTime.Delete(hash)
-				delete(self.pendingVote, hash)
 			}
+
+			for _, key := range delKeys {
+				delete(self.pendingVote, key)
+			}
+
 			self.pendingVoteMu.Unlock()
 			self.commitNewWork()
 
@@ -334,11 +338,6 @@ func (self *worker) update() {
 	}
 }
 
-type workKey struct {
-	hashPos    common.Hash
-	parentHash common.Hash
-}
-
 func (self *worker) powResultLoop() {
 	for {
 		select {
@@ -348,10 +347,10 @@ func (self *worker) powResultLoop() {
 			}
 			header := result.Block.Header()
 			hashPos := header.HashPos()
+			key := voteKey{header.Number.Uint64(), hashPos}
 			self.pendingVoteMu.Lock()
-			self.pendingVote[hashPos] = mapset.NewSet()
+			self.pendingVote[key] = mapset.NewSet()
 			self.pendingVoteMu.Unlock()
-			self.pendingVoteTime.Store(hashPos, header.Number.Uint64())
 			self.voter.AddLottery(&types.Lottery{header.ParentHash, header.Number.Uint64() - 1, hashPos})
 
 			stakeState := stake.NewStakeState(self.snapshotState)
@@ -363,10 +362,10 @@ func (self *worker) powResultLoop() {
 				var parentVotes []interface{}
 				for atomic.LoadInt32(&self.runPos) == 0 {
 					self.pendingVoteMu.Lock()
-					if votesSet, ok := self.pendingVote[hashPos]; ok {
+					if votesSet, ok := self.pendingVote[key]; ok {
 						currentVotes = votesSet.ToSlice()
 					}
-					parentSet := self.pendingVote[parentHeader.HashPos()]
+					parentSet := self.pendingVote[voteKey{parentHeader.Number.Uint64(), parentHeader.HashPos()}]
 					if parentSet != nil {
 						parentVotes = parentSet.ToSlice()
 					}
@@ -434,42 +433,49 @@ func (self *worker) contains(parent common.Hash, sign keys.Uint512) bool {
 	return false
 }
 
+func (self *worker) checkVote(vote *types.Vote) bool {
+	share := stake.GetShare(self.chain.GetDB(), vote.ShareHash)
+	if share != nil {
+		work := self.current
+		var parentHeader *types.Header
+		if work != nil && work.header.Number.Uint64() == vote.ParentNum+1 {
+			parentHeader = self.chain.GetHeader(work.header.ParentHash, vote.ParentNum)
+		} else {
+			parentHeader = self.chain.GetHeaderByNumber(vote.ParentNum)
+		}
+		parentPosHash := parentHeader.HashPos()
+		ret := types.StakeHash(&vote.PosHash, &parentPosHash)
+		if share.VoteKr != nil {
+			if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, share.VoteKr) {
+				return true
+			}
+		}
+		if share.PoolId != nil {
+			stakeState := stake.NewStakeState(self.current.state)
+			pool := stakeState.GetStakePool(*share.PoolId)
+			if pool != nil {
+				if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, &pool.VotePKr) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (self *worker) voteLoop() {
 	defer self.voteSub.Unsubscribe()
 	for {
 		select {
 		case voteResult := <-self.voteCh:
 			vote := voteResult.Vote
+			key := voteKey{vote.ParentNum + 1, vote.PosHash}
 			self.pendingVoteMu.Lock()
 			defer self.pendingVoteMu.Unlock()
-			if votes, ok := self.pendingVote[vote.PosHash]; ok {
-				share := stake.GetShare(self.chain.GetDB(), vote.ShareHash)
-				if share != nil {
-					work := self.current
-					var parentHeader *types.Header
-					if work.header.Number == big.NewInt(0) {
-						parentHeader = self.chain.GetHeader(work.header.ParentHash, work.header.Number.Uint64()-1)
-					} else {
-						parentHeader = self.chain.GetHeaderByNumber(uint64(0))
-					}
-					parentPosHash := parentHeader.HashPos()
-					ret := types.StakeHash(&vote.PosHash, &parentPosHash)
-					if share.VoteKr != nil {
-						if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, share.VoteKr) {
-							votes.Add(vote)
-							return
-						}
-					}
-					if share.PoolId != nil {
-						stakeState := stake.NewStakeState(self.current.state)
-						pool := stakeState.GetStakePool(*share.PoolId)
-						if pool != nil {
-							if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, &pool.VotePKr) {
-								votes.Add(vote)
-								return
-							}
-						}
-					}
+			if votes, ok := self.pendingVote[key]; ok {
+				if self.checkVote(vote) {
+					votes.Add(vote)
+					return
 				}
 			} else {
 				self.voter.SendVoteEvent(vote)
