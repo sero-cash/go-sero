@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
@@ -414,6 +415,27 @@ var (
 	payPeriod       = uint64(42336)
 )
 
+func getOutOfDatePeriod() uint64 {
+	if seroparam.Is_Dev() {
+		return 10
+	}
+	return outOfDatePeriod
+}
+
+func getMissVotedPeriod() uint64 {
+	if seroparam.Is_Dev() {
+		return 15
+	}
+	return missVotedPeriod
+}
+
+func getPayPeriod() uint64 {
+	if seroparam.Is_Dev() {
+		return 3
+	}
+	return missVotedPeriod
+}
+
 func (state *StakeState) CurrentPrice() *big.Int {
 	tree := NewTree(state)
 	return new(big.Int).Add(basePrice, new(big.Int).Mul(addition, big.NewInt(int64(tree.size()))))
@@ -613,6 +635,7 @@ func (state *StakeState) processVotedShare(header *types.Header, bc blockChain, 
 }
 
 func (state *StakeState) processOutDate(header *types.Header, bc blockChain, shareCacheMap map[common.Hash]*Share, poolCacheMap map[common.Hash]*StakePool) (shares []*Share) {
+	outOfDatePeriod := getOutOfDatePeriod()
 	if header.Number.Uint64() < outOfDatePeriod {
 		return
 	}
@@ -654,6 +677,7 @@ func (state *StakeState) processOutDate(header *types.Header, bc blockChain, sha
 }
 
 func (state *StakeState) processMissVoted(header *types.Header, bc blockChain, shareCacheMap map[common.Hash]*Share, poolCacheMap map[common.Hash]*StakePool) {
+	missVotedPeriod := getMissVotedPeriod()
 	if header.Number.Uint64() < missVotedPeriod {
 		return
 	}
@@ -705,6 +729,7 @@ func (state *StakeState) processNowShares(header *types.Header, shareCashMap map
 }
 
 func (state *StakeState) payProfit(bc blockChain, header *types.Header, shareCashMap map[common.Hash]*Share, poolCashMap map[common.Hash]*StakePool) {
+	payPeriod := getPayPeriod()
 	if header.Number.Uint64() < payPeriod {
 		return
 	}
