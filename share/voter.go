@@ -77,6 +77,7 @@ func NewVoter(chainconfig *params.ChainConfig, chain blockChain, sero Backend) *
 	// Start the event loop and return
 	go voter.loop()
 	go voter.lotteryTaskLoop()
+	go voter.voteLoop()
 
 	return voter
 }
