@@ -4,6 +4,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
+
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
@@ -20,13 +22,13 @@ import (
 	"github.com/sero-cash/go-sero/zero/stake"
 )
 
-type PublicShareApI struct {
+type PublicStakeApI struct {
 	b         Backend
 	nonceLock *AddrLocker
 }
 
-func NewPublicShareApI(b Backend, nonceLock *AddrLocker) *PublicShareApI {
-	return &PublicShareApI{
+func NewPublicStakeApI(b Backend, nonceLock *AddrLocker) *PublicStakeApI {
+	return &PublicStakeApI{
 		nonceLock: nonceLock,
 		b:         b,
 	}
@@ -35,7 +37,7 @@ func NewPublicShareApI(b Backend, nonceLock *AddrLocker) *PublicShareApI {
 type BuyShareTxArg struct {
 	From     address.AccountAddress `json:"from"`
 	Vote     *common.Address        `json:"vote"`
-	Pool     *common.Hash           `json:"pool"`
+	Pool     *hexutil.Bytes         `json:"pool"`
 	Gas      *hexutil.Uint64        `json:"gas"`
 	GasPrice *hexutil.Big           `json:"gasPrice"`
 	Value    *hexutil.Big           `json:"value"`
@@ -57,7 +59,7 @@ func (args *BuyShareTxArg) setDefaults(ctx context.Context, b Backend) error {
 			return err
 		}
 
-		pool := stake.NewStakeState(state).GetStakePool(*args.Pool)
+		pool := stake.NewStakeState(state).GetStakePool(common.BytesToHash((*args.Pool)[:]))
 
 		if pool == nil {
 			return errors.New("stake pool not exists")
@@ -103,7 +105,7 @@ func (args *BuyShareTxArg) toPreTxParam() prepare.PreTxParam {
 	buyShareCmd.Vote = common.AddrToPKr(*args.Vote)
 	if args.Pool != nil {
 		var pool keys.Uint256
-		copy(pool[:], args.Pool[:])
+		copy(pool[:], (*args.Pool)[:])
 		buyShareCmd.Pool = &pool
 	}
 	preTx.Cmds.BuyShare = &buyShareCmd
@@ -120,7 +122,7 @@ func fromRand() *keys.Uint256 {
 	return &rand
 }
 
-func (s *PublicShareApI) BuyShare(ctx context.Context, args BuyShareTxArg) (common.Hash, error) {
+func (s *PublicStakeApI) BuyShare(ctx context.Context, args BuyShareTxArg) (common.Hash, error) {
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
@@ -200,7 +202,7 @@ func (args *RegistStakePoolTxArg) toPreTxParam() prepare.PreTxParam {
 
 }
 
-func (s *PublicShareApI) RegistStakePool(ctx context.Context, args RegistStakePoolTxArg) (common.Hash, error) {
+func (s *PublicStakeApI) RegistStakePool(ctx context.Context, args RegistStakePoolTxArg) (common.Hash, error) {
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
@@ -217,7 +219,7 @@ func (s *PublicShareApI) RegistStakePool(ctx context.Context, args RegistStakePo
 	return common.BytesToHash(gtx.Hash[:]), nil
 }
 
-func (s *PublicShareApI) PoolState(ctx context.Context, pool common.Hash) (map[string]interface{}, error) {
+func (s *PublicStakeApI) PoolState(ctx context.Context, pool common.Hash) (map[string]interface{}, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
 		return nil, err
@@ -227,6 +229,60 @@ func (s *PublicShareApI) PoolState(ctx context.Context, pool common.Hash) (map[s
 	if poolState == nil {
 		return nil, errors.New("stake pool not exists")
 	}
+	return newRPCStakePool(*poolState), nil
+}
 
-	return nil, nil
+func (s *PublicStakeApI) SharePrice(ctx context.Context) (*hexutil.Big, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return nil, err
+	}
+	price := stake.NewStakeState(state).CurrentPrice()
+	return (*hexutil.Big)(price), nil
+}
+
+func (s *PublicStakeApI) SharePoolSize(ctx context.Context) (hexutil.Uint64, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return 0, err
+	}
+	size := stake.NewStakeState(state).ShareSize()
+	return hexutil.Uint64(size), nil
+}
+
+type StakePool struct {
+	PKr             keys.PKr
+	VotePKr         keys.PKr
+	TransactionHash common.Hash
+	Amount          *big.Int `rlp:"nil"`
+	Fee             uint16
+	ShareNum        uint32
+	ChoicedNum      uint32
+	MissedNum       uint32
+	WishVotNum      uint32
+	Profit          *big.Int `rlp:"nil"`
+	LastPayTime     uint64
+	Closed          bool
+}
+
+func newRPCStakePool(pool stake.StakePool) map[string]interface{} {
+	result := map[string]interface{}{}
+	result["own"] = common.BytesToAddress(pool.PKr[:])
+	result["voteAddress"] = common.BytesToAddress(pool.VotePKr[:])
+	result["fee"] = hexutil.Uint(pool.Fee)
+	result["shareNum"] = hexutil.Uint64(pool.ShareNum)
+	result["choicedNum"] = hexutil.Uint64(pool.ChoicedNum)
+	result["missedNum"] = hexutil.Uint64(pool.MissedNum)
+	result["lastPayTime"] = hexutil.Uint64(pool.LastPayTime)
+	result["closed"] = pool.Closed
+	return result
+}
+
+func (s *PublicStakeApI) StakePools(ctx context.Context) []map[string]interface{} {
+	pools := stakeservice.CurrentStakeService().StakePools()
+	result := []map[string]interface{}{}
+	for _, pool := range pools {
+		result = append(result, newRPCStakePool(*pool))
+	}
+	return result
 }

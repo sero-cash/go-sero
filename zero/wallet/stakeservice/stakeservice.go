@@ -1,6 +1,8 @@
 package stakeservice
 
 import (
+	"sync"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/accounts"
@@ -11,7 +13,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/stake"
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 	"github.com/sero-cash/go-sero/zero/wallet/utils"
-	"sync"
 )
 
 type Account struct {
@@ -35,6 +36,12 @@ type StakeService struct {
 	lock    sync.RWMutex
 }
 
+var current_StakeService *StakeService
+
+func CurrentStakeService() *StakeService {
+	return current_StakeService
+}
+
 func NewStakeService(dbpath string, bc *core.BlockChain, accountManager *accounts.Manager) *StakeService {
 	update := make(chan accounts.WalletEvent, 1)
 	updater := accountManager.Subscribe(update)
@@ -45,6 +52,7 @@ func NewStakeService(dbpath string, bc *core.BlockChain, accountManager *account
 		update:         update,
 		updater:        updater,
 	}
+	current_StakeService = stakeService
 
 	db, err := serodb.NewLDBDatabase(dbpath, 1024, 1024)
 	if err != nil {

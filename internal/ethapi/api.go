@@ -1846,14 +1846,17 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB) (txParam prepare.PreTxPa
 
 }
 
+func defaultFee(gasPrice *hexutil.Big, gas *hexutil.Uint64) *big.Int {
+	return new(big.Int).Mul(((*big.Int)(gasPrice)), new(big.Int).SetUint64(uint64(*gas)))
+}
+
 func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T) {
 	var input []byte
 	var Pkr keys.PKr
 	var isZ bool
 	to := args.To
 	fromRand := keys.Uint256{}
-
-	feevalue := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
+	feevalue := defaultFee(args.GasPrice, args.Gas)
 	if to == nil {
 		copy(fromRand[:16], (*args.Data)[:16])
 		isZ = false
@@ -1920,7 +1923,7 @@ func (args *SendTxArgs) toCreatePkg(state *state.StateDB) (txParam prepare.PreTx
 	var toPkr keys.PKr
 	txParam.GasPrice = (*big.Int)(args.GasPrice)
 	txParam.From = *args.From.ToUint512()
-	feevalue := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
+	feevalue := defaultFee(args.GasPrice, args.Gas)
 	asset := args.toAsset()
 	if state.IsContract(common.BytesToAddress(args.To[:])) {
 		toPkr = *(args.To.ToPKr())
@@ -2078,6 +2081,10 @@ func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArg
 		return common.Hash{}, err
 	}
 
+	if args.GasCurrency.IsNotSero() {
+		return common.Hash{}, errors.New("create pkg gasCurrency must be sero")
+	}
+
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 
 	if err != nil {
@@ -2099,19 +2106,6 @@ func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArg
 	} else {
 		// Assemble the transaction and sign with the wallet
 		tx, txt := args.toPkg(state)
-
-		if th, ok := s.b.GetEngin().(threaded); ok {
-			miner := s.b.GetMiner()
-			if miner.CanStart() {
-				miner.SetCanStart(0)
-				defer miner.SetCanStart(1)
-			}
-			threads := th.Threads()
-			if threads >= 0 {
-				th.SetThreads(-1)
-				defer th.SetThreads(threads)
-			}
-		}
 		encrypted, err := wallet.EncryptTx(account, tx, txt, state)
 		if err != nil {
 			return common.Hash{}, err
@@ -2156,6 +2150,23 @@ func (args *ClosePkgArgs) setDefaults(ctx context.Context, b Backend) error {
 	}
 
 	return nil
+}
+
+func (args *ClosePkgArgs) toTxParam() (txParam prepare.PreTxParam) {
+	txParam.GasPrice = (*big.Int)(args.GasPrice)
+	txParam.From = *args.From.ToUint512()
+	feevalue := defaultFee(args.GasPrice, args.Gas)
+	feeToken := assets.Token{
+		utils.CurrencyToUint256("SERO"),
+		utils.U256(*feevalue),
+	}
+	txParam.From = *args.From.ToUint512()
+	txParam.RefundTo = keys.Addr2PKr(args.From.ToUint512(), keys.RandUint256().NewRef()).NewRef()
+	txParam.Fee = feeToken
+	pkgCloseCmd := prepare.PkgCloseCmd{*args.PkgId}
+	txParam.Cmds.PkgClose = &pkgCloseCmd
+	return
+
 }
 
 func (args *ClosePkgArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {

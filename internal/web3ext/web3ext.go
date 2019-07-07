@@ -32,7 +32,7 @@ var Modules = map[string]string{
 	"txpool":     TxPool_JS,
 	"ssi":        SSI_JS,
 	"exchange":   Exchange_JS,
-	"share":      SHARE_JS,
+	"stake":      Stake_JS,
 }
 
 const Chequebook_JS = `
@@ -726,21 +726,40 @@ web3._extend({
 	]
 });
 `
-const SHARE_JS = `
+const Stake_JS = `
 web3._extend({
-	property: 'share',
+	property: 'stake',
 	methods: [
 		new web3._extend.Method({
 			name: 'buyShare',
-			call: 'share_buyShare',
+			call: 'stake_buyShare',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'registStakePool',
-			call: 'share_registStakePool',
+			call: 'stake_registStakePool',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+        new web3._extend.Method({
+			name: 'poolState',
+			call: 'stake_poolState',
+			params: 1
+		})
+	],
+    properties: [
+       new web3._extend.Property({
+			name: 'sharePoolSize',
+			getter: 'stake_sharePoolSize'
+		}),
+       new web3._extend.Property({
+			name: 'sharePrice',
+			getter: 'stake_sharePrice'
+		}),
+		new web3._extend.Property({
+			name: 'stakePools',
+			getter: 'stake_stakePools'
 		})
 	]
 });
