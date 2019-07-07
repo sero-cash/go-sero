@@ -133,12 +133,9 @@ func (self *StakeService) stakeIndex() {
 		err := batch.Write()
 		if err == nil {
 			self.nextBlockNumber = blockNumber + 1
-			log.Info("StakeIndex", "blockNumber", blockNumber, "sharesCount", sharesCount, "poolsCount", poolsCount)
 		}
-	} else {
-		self.nextBlockNumber = blockNumber + 1
 	}
-
+	log.Info("StakeIndex", "blockNumber", blockNumber, "sharesCount", sharesCount, "poolsCount", poolsCount)
 }
 
 func (self *StakeService) ownPkr(pkr keys.PKr) (pk *keys.Uint512, ok bool) {
