@@ -23,10 +23,10 @@ type ZtxVersion_0 struct {
 }
 
 type ZtxVersion_1 struct {
-	BuyShare   *BuyShareCmd
-	RegistPool *RegistPoolCmd
-	ClosePool  *ClosePoolCmd
-	Contract   *ContractCmd
+	BuyShare   *BuyShareCmd   `rlp:"nil"`
+	RegistPool *RegistPoolCmd `rlp:"nil"`
+	ClosePool  *ClosePoolCmd  `rlp:"nil"`
+	Contract   *ContractCmd   `rlp:"nil"`
 }
 
 type ZtxRlp struct {
