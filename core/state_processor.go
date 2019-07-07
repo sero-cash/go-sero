@@ -143,6 +143,10 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	return receipt, gas, err
 }
 
+var (
+	poolValueThreshold, _ = new(big.Int).SetString("1000000000000000000", 10)
+)
+
 func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.StateDB, txHash common.Hash, number uint64) error {
 	stakeState := stake.NewStakeState(statedb)
 	pkr := *from.ToPKr()
@@ -196,9 +200,13 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			statedb.GetZState().AddTxOut(from, asset)
 		}
 	} else if stakeDesc.RegistPool != nil {
-		cmd := stakeDesc.RegistPool
-		pool := &stake.StakePool{PKr: pkr, Amount: cmd.Value.ToInt(), VotePKr: cmd.Vote, TransactionHash: txHash, Fee: uint16(cmd.FeeRate)}
-		stakeState.UpdateStakePool(pool)
+		if poolValueThreshold.Cmp(stakeDesc.RegistPool.Value.ToInt()) <= 0 {
+			cmd := stakeDesc.RegistPool
+			pool := &stake.StakePool{PKr: pkr, Amount: cmd.Value.ToInt(), VotePKr: cmd.Vote, TransactionHash: txHash, Fee: uint16(cmd.FeeRate)}
+			stakeState.UpdateStakePool(pool)
+		} else {
+			return errors.New("value < poolValueThreshold(1000000000000000000)")
+		}
 	} else if stakeDesc.ClosePool != nil {
 		poolId := crypto.Keccak256Hash(pkr[:])
 		stakePool := stakeState.GetStakePool(poolId)

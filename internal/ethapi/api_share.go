@@ -194,7 +194,7 @@ func (args *RegistStakePoolTxArg) toPreTxParam() prepare.PreTxParam {
 	registPoolCmd := stx.RegistPoolCmd{}
 	registPoolCmd.Value = utils.U256(*args.Value.ToInt())
 	registPoolCmd.Vote = common.AddrToPKr(*args.Vote)
-	registPoolCmd.FeeRate = uint32(*args.Fee) * 2 / 3
+	registPoolCmd.FeeRate = uint32(*args.Fee)*2/3 + 3334
 	preTx.Cmds.RegistPool = &registPoolCmd
 	return preTx
 
