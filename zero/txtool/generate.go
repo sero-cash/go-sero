@@ -156,6 +156,7 @@ func (self *gen_ctx) setData() {
 	self.setFeeData()
 	self.setInsData()
 	self.setOutsData()
+	self.setCmdsData()
 	self.s.From = self.param.From.PKr
 }
 

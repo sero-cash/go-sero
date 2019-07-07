@@ -67,6 +67,7 @@ type Cmds struct {
 type GTxParam struct {
 	Gas      uint64
 	GasPrice big.Int
+	Fee      assets.Token
 	From     Kr
 	Ins      []GIn
 	Outs     []GOut
