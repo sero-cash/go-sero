@@ -79,8 +79,8 @@ func NewStakeService(dbpath string, bc *core.BlockChain, accountManager *account
 func (self *StakeService) StakePools() (pools []*stake.StakePool) {
 	iterator := self.db.NewIteratorWithPrefix(poolPrefix)
 	if iterator.Next() {
-		key := iterator.Key()
-		pool := stake.StakePoolDB.GetObject(self.bc.GetDB(), key[4:], &stake.StakePool{})
+		value := iterator.Value()
+		pool := stake.StakePoolDB.GetObject(self.bc.GetDB(), value, &stake.StakePool{})
 		pools = append(pools, pool.(*stake.StakePool))
 	}
 	return
@@ -89,8 +89,8 @@ func (self *StakeService) StakePools() (pools []*stake.StakePool) {
 func (self *StakeService) Shares() (shares []*stake.Share) {
 	iterator := self.db.NewIteratorWithPrefix(sharePrefix)
 	if iterator.Next() {
-		key := iterator.Key()
-		share := stake.ShareDB.GetObject(self.bc.GetDB(), key[5:], &stake.Share{})
+		value := iterator.Value()
+		share := stake.ShareDB.GetObject(self.bc.GetDB(), value, &stake.Share{})
 		shares = append(shares, share.(*stake.Share))
 	}
 	return
@@ -99,8 +99,8 @@ func (self *StakeService) Shares() (shares []*stake.Share) {
 func (self *StakeService) SharesByPk(pk keys.Uint512) (shares []*stake.Share) {
 	iterator := self.db.NewIteratorWithPrefix(pk[:])
 	if iterator.Next() {
-		key := iterator.Key()
-		share := stake.ShareDB.GetObject(self.bc.GetDB(), key[64:], &stake.Share{})
+		value := iterator.Value()
+		share := stake.ShareDB.GetObject(self.bc.GetDB(), value, &stake.Share{})
 		shares = append(shares, share.(*stake.Share))
 	}
 	return
