@@ -18,14 +18,13 @@ package miner
 
 import (
 	"fmt"
+	"github.com/sero-cash/go-sero/core/types/typeserial"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/deckarep/golang-set"
-	"github.com/sero-cash/go-sero/core/types/typeserial"
-
 	"github.com/sero-cash/go-sero/zero/stake"
 
 	"github.com/sero-cash/go-sero/common/address"
@@ -59,10 +58,6 @@ const (
 	chainVoteSize = 30
 
 	delayBlock = 1
-
-	evictionInterval = time.Minute
-
-	lifeTime = 30 * time.Minute
 )
 
 // Agent can register themself with the worker
@@ -338,6 +333,11 @@ func (self *worker) update() {
 	}
 }
 
+type workKey struct {
+	hashPos    common.Hash
+	parentHash common.Hash
+}
+
 func (self *worker) powResultLoop() {
 	for {
 		select {
@@ -354,60 +354,58 @@ func (self *worker) powResultLoop() {
 			self.voter.AddLottery(&types.Lottery{header.ParentHash, header.Number.Uint64() - 1, hashPos})
 
 			stakeState := stake.NewStakeState(self.snapshotState)
-			if !stakeState.IsEffect() {
-				self.recv <- result
-			} else {
-				go func() {
-					parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-					var currentVotes []interface{}
-					var parentVotes []interface{}
-					for atomic.LoadInt32(&self.runPos) == 0 {
-						self.pendingVoteMu.Lock()
-						if votesSet, ok := self.pendingVote[hashPos]; ok {
-							currentVotes = votesSet.ToSlice()
-						}
-						parentSet := self.pendingVote[parentHeader.HashPos()]
-						if parentSet != nil {
-							parentVotes = parentSet.ToSlice()
-						}
-						self.pendingVoteMu.Unlock()
 
-						currentHeader := self.chain.CurrentHeader()
-						if len(currentVotes) >= 2 || currentHeader.Number.Uint64() >= header.Number.Uint64()+1 {
-							break
-						}
-						time.Sleep(1)
+			isEffect := !stakeState.IsEffect(header.Number.Uint64())
+			go func() {
+				parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+				var currentVotes []interface{}
+				var parentVotes []interface{}
+				for atomic.LoadInt32(&self.runPos) == 0 {
+					self.pendingVoteMu.Lock()
+					if votesSet, ok := self.pendingVote[hashPos]; ok {
+						currentVotes = votesSet.ToSlice()
+					}
+					parentSet := self.pendingVote[parentHeader.HashPos()]
+					if parentSet != nil {
+						parentVotes = parentSet.ToSlice()
+					}
+					self.pendingVoteMu.Unlock()
+
+					currentHeader := self.chain.CurrentHeader()
+					if len(currentVotes) >= 2 || currentHeader.Number.Uint64() >= header.Number.Uint64()+1 || !isEffect {
+						break
+					}
+					time.Sleep(1)
+				}
+
+				if len(currentVotes) >= 2 || !isEffect {
+					CurrentVotes := []typeserial.Vote{}
+					for _, item := range currentVotes {
+						vote := item.(*types.Vote)
+						CurrentVotes = append(CurrentVotes, typeserial.Vote{vote.ShareHash, vote.IsPool, vote.Sign})
 					}
 
-					if len(currentVotes) >= 2 {
-						CurrentVotes := []typeserial.Vote{}
-						for _, item := range currentVotes {
+					ParentVotes := []typeserial.Vote{}
+					if len(parentVotes) > 0 {
+						for _, item := range parentVotes {
 							vote := item.(*types.Vote)
-							CurrentVotes = append(CurrentVotes, typeserial.Vote{vote.ShareHash, vote.IsPool, vote.Sign})
-						}
-
-						ParentVotes := []typeserial.Vote{}
-						if len(parentVotes) > 0 {
-							for _, item := range parentVotes {
-								vote := item.(*types.Vote)
-								flag := true
-								for _, each := range parentHeader.CurrentVotes {
-									if each.Hash == vote.PosHash {
-										flag = false
-										break
-									}
-								}
-								if flag {
-									ParentVotes[0] = typeserial.Vote{vote.ShareHash, vote.IsPool, vote.Sign}
+							flag := true
+							for _, each := range parentHeader.CurrentVotes {
+								if each.Hash == vote.PosHash {
+									flag = false
+									break
 								}
 							}
+							if flag {
+								ParentVotes[0] = typeserial.Vote{vote.ShareHash, vote.IsPool, vote.Sign}
+							}
 						}
-						atomic.StoreInt32(&self.runPos, 1)
-						result.Block.SetVotes(CurrentVotes, ParentVotes)
-						self.recv <- result
 					}
-				}()
-			}
+					atomic.StoreInt32(&self.runPos, 1)
+					result.Block.SetVotes(CurrentVotes, ParentVotes)
+					self.recv <- result
+				}
+			}()
 		}
 	}
 }
@@ -436,23 +434,45 @@ func (self *worker) contains(parent common.Hash, sign keys.Uint512) bool {
 }
 
 func (self *worker) voteLoop() {
-	evict := time.NewTicker(evictionInterval)
-	defer evict.Stop()
 	defer self.voteSub.Unsubscribe()
 	for {
 		select {
 		case voteResult := <-self.voteCh:
 			vote := voteResult.Vote
-
 			self.pendingVoteMu.Lock()
+			defer self.pendingVoteMu.Unlock()
 			if votes, ok := self.pendingVote[vote.PosHash]; ok {
-				votes.Add(vote)
+				share := stake.GetShare(self.chain.GetDB(), vote.ShareHash)
+				if share != nil {
+					work := self.current
+					var parentHeader *types.Header
+					if work.header.Number == big.NewInt(0) {
+						parentHeader = self.chain.GetHeader(work.header.ParentHash, work.header.Number.Uint64()-1)
+					} else {
+						parentHeader = self.chain.GetHeaderByNumber(uint64(0))
+					}
+					parentPosHash := parentHeader.HashPos()
+					ret := types.StakeHash(&vote.PosHash, &parentPosHash)
+					if share.VoteKr != nil {
+						if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, share.VoteKr) {
+							votes.Add(vote)
+							return
+						}
+					}
+					if share.PoolId != nil {
+						stakeState := stake.NewStakeState(self.current.state)
+						pool := stakeState.GetStakePool(*share.PoolId)
+						if pool != nil {
+							if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, &pool.VotePKr) {
+								votes.Add(vote)
+								return
+							}
+						}
+					}
+				}
 			} else {
 				self.voter.SendVoteEvent(vote)
 			}
-			self.pendingVoteMu.Unlock()
-		case <-evict.C:
-
 		case <-self.voteSub.Err():
 			return
 
