@@ -211,12 +211,12 @@ type StakeState struct {
 	sharePool    consensus.KVPoint
 	shareObj     consensus.ObjPoint
 	stakePoolObj consensus.ObjPoint
-	//shareDB      consensus.DBObj
+	//ShareDB      consensus.DBObj
 }
 
 var (
-	shareDB = consensus.DBObj{"SHARE$DB$"}
-	stakeDB = consensus.DBObj{"STAKE$POOL$"}
+	ShareDB     = consensus.DBObj{"SHARE$DB$"}
+	StakePoolDB = consensus.DBObj{"STAKE$POOL$"}
 )
 
 func NewStakeState(statedb *state.StateDB) *StakeState {
@@ -225,8 +225,8 @@ func NewStakeState(statedb *state.StateDB) *StakeState {
 	stakeState := &StakeState{statedb: statedb}
 
 	stakeState.sharePool = consensus.NewKVPt(cons, "SHARE$POOL$CONS$", "")
-	stakeState.shareObj = consensus.NewObjPt(cons, "SHARE$OBJ$CONS", shareDB.Pre, "share")
-	stakeState.stakePoolObj = consensus.NewObjPt(cons, "STAKE$POOL$CONS", stakeDB.Pre, "pool")
+	stakeState.shareObj = consensus.NewObjPt(cons, "SHARE$OBJ$CONS", ShareDB.Pre, "share")
+	stakeState.stakePoolObj = consensus.NewObjPt(cons, "STAKE$POOL$CONS", StakePoolDB.Pre, "pool")
 
 	return stakeState
 }
@@ -321,17 +321,17 @@ func (state *StakeState) getStakePool(poolId common.Hash, cacheMap map[common.Ha
 }
 
 func GetBlockRecords(getter serodb.Getter, blockHash common.Hash, blockNumber uint64) (shares []*Share, pools []*StakePool) {
-	records := shareDB.GetBlockRecords(getter, blockNumber, &blockHash)
+	records := ShareDB.GetBlockRecords(getter, blockNumber, &blockHash)
 	for _, record := range records {
 		if record.Name == "share" {
 			for _, each := range record.Pairs {
-				ret := shareDB.GetObject(getter, each.Hash, &Share{})
+				ret := ShareDB.GetObject(getter, each.Hash, &Share{})
 				shares = append(shares, ret.(*Share))
 			}
 		}
 		if record.Name == "pool" {
 			for _, each := range record.Pairs {
-				ret := shareDB.GetObject(getter, each.Hash, &StakePool{})
+				ret := ShareDB.GetObject(getter, each.Hash, &StakePool{})
 				pools = append(pools, ret.(*StakePool))
 			}
 		}
@@ -340,7 +340,7 @@ func GetBlockRecords(getter serodb.Getter, blockHash common.Hash, blockNumber ui
 }
 
 func (state *StakeState) getBlockRecords(getter serodb.Getter, blockHash common.Hash, blockNumber uint64, shareCacheMap map[common.Hash]*Share, poolCacheMap map[common.Hash]*StakePool) (shares []*Share, pools []*StakePool) {
-	records := shareDB.GetBlockRecords(getter, blockNumber, &blockHash)
+	records := ShareDB.GetBlockRecords(getter, blockNumber, &blockHash)
 	for _, record := range records {
 		if record.Name == "share" {
 			for _, each := range record.Pairs {
@@ -367,12 +367,12 @@ func (state *StakeState) getBlockRecords(getter serodb.Getter, blockHash common.
 }
 
 func GetSharesByBlock(getter serodb.Getter, blockHash common.Hash, blockNumber uint64) []*Share {
-	records := shareDB.GetBlockRecords(getter, blockNumber, &blockHash)
+	records := ShareDB.GetBlockRecords(getter, blockNumber, &blockHash)
 	list := []*Share{}
 	for _, record := range records {
 		if record.Name == "share" {
 			for _, each := range record.Pairs {
-				ret := shareDB.GetObject(getter, each.Hash, &Share{})
+				ret := ShareDB.GetObject(getter, each.Hash, &Share{})
 				list = append(list, ret.(*Share))
 			}
 		}
@@ -382,7 +382,7 @@ func GetSharesByBlock(getter serodb.Getter, blockHash common.Hash, blockNumber u
 }
 
 func (state *StakeState) getShares(getter serodb.Getter, blockHash common.Hash, blockNumber uint64, shareCacheMap map[common.Hash]*Share) []*Share {
-	records := shareDB.GetBlockRecords(getter, blockNumber, &blockHash)
+	records := ShareDB.GetBlockRecords(getter, blockNumber, &blockHash)
 	list := []*Share{}
 	for _, record := range records {
 		if record.Name == "share" {

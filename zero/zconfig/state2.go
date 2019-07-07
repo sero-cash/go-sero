@@ -38,3 +38,7 @@ func Exchange_dir() string {
 func Init_State2() {
 	os.Mkdir(State2_dir(), os.ModePerm)
 }
+
+func Stake_dir() string{
+	return filepath.Join(dir, "stake")
+}
