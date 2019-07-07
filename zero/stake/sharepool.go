@@ -537,6 +537,7 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 	self.processNowShares(header, bc, shareCacheMap, poolCacheMap)
 	self.payProfit(bc, header, shareCacheMap, poolCacheMap)
 
+	self.statisticsByWindow(header, bc)
 	for _, share := range shareCacheMap {
 		self.updateShare(share)
 	}
@@ -568,8 +569,6 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain, s
 	if header.Number.Uint64() == 1 {
 		return
 	}
-
-	self.statisticsByWindow(header, bc)
 	preHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 
 	tree := NewTree(self)

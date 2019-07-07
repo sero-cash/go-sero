@@ -223,11 +223,11 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 		return nil, err
 	} else {
 		stakeState := stake.NewStakeState(state)
-		newHeader := &types.Header{
+		header := &types.Header{
 			ParentHash: parent,
-			Number:     parentNumber.Add(parentNumber, common.Big1),
+			Number:     new(big.Int).Add(parentNumber, common.Big1),
 		}
-		stakeState.ProcessBeforeApply(self.chain, newHeader)
+		stakeState.ProcessBeforeApply(self.chain, header)
 		if stakeState.ShareSize() == 0 {
 			return nil, nil
 		}
