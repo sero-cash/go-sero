@@ -3,6 +3,8 @@ package exchange
 import (
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -202,10 +204,10 @@ func (self *Exchange) buildTxParam(
 	refundTo *keys.PKr,
 	receptions []prepare.Reception,
 	cmds *prepare.Cmds,
-	gas uint64,
+	fee *assets.Token,
 	gasPrice *big.Int) (txParam *txtool.GTxParam, e error) {
 
-	txParam, e = prepare.BuildTxParam(utxos, refundTo, receptions, cmds, gas, gasPrice)
+	txParam, e = prepare.BuildTxParam(utxos, refundTo, receptions, cmds, fee, gasPrice)
 
 	for _, in := range txParam.Ins {
 		self.usedFlag.Store(in.Out.Root, 1)

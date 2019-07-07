@@ -2,14 +2,12 @@ package txtool
 
 import (
 	"errors"
-	"math/big"
 
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type gen_ctx struct {
@@ -50,8 +48,8 @@ func (self *gen_ctx) prepare() {
 func (self *gen_ctx) setFeeData() {
 	{
 		self.s.Fee = assets.Token{
-			utils.CurrencyToUint256("SERO"),
-			utils.U256(*big.NewInt(0).Mul(&self.param.GasPrice, big.NewInt(int64(self.param.Gas)))),
+			self.param.Fee.Currency,
+			self.param.Fee.Value,
 		}
 		asset_desc := cpt.AssetDesc{
 			Tkn_currency: self.s.Fee.Currency,

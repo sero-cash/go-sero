@@ -1816,10 +1816,14 @@ func (args *SendTxArgs) toTxParam() (txParam prepare.PreTxParam, e error) {
 
 	receptions := []prepare.Reception{{Addr: topkr, Asset: asset}}
 
-	txParam = prepare.PreTxParam{From: *args.From.ToUint512(),
+	txParam = prepare.PreTxParam{
+		From:       *args.From.ToUint512(),
 		Receptions: receptions,
-		Gas:        uint64(*args.Gas),
-		GasPrice:   (*big.Int)(args.GasPrice),
+		Fee: assets.Token{
+			utils.CurrencyToUint256("SERO"),
+			utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(*args.Gas)), args.GasPrice.ToInt())),
+		},
+		GasPrice: (*big.Int)(args.GasPrice),
 	}
 	return
 

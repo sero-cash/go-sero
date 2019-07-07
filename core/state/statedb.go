@@ -24,6 +24,12 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sero-cash/go-sero/common/hexutil"
+
+	"github.com/sero-cash/go-sero/zero/utils"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
 	"github.com/sero-cash/go-sero/zero/consensus"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -234,6 +240,33 @@ func (self *StateDB) GetTokenRate(contractAddr common.Address, coinName string) 
 		return new(big.Int).SetBytes(hash0[:]), new(big.Int).SetBytes(hash1[:])
 	}
 	return new(big.Int), new(big.Int)
+}
+
+func (self *StateDB) GetSeroFee(contractAddr *common.Address, tfee *assets.Token) (sfee utils.U256, e error) {
+	tcurrency := utils.Uint256ToCurrency(&tfee.Currency)
+	if tcurrency != "SERO" {
+		if trate, srate := self.GetTokenRate(*contractAddr, tcurrency); trate.Sign() != 0 && srate.Sign() != 0 {
+			tvalue := big.Int(tfee.Value)
+			sfee = utils.U256(*big.NewInt(0).Div(big.NewInt(0).Mul(&tvalue, srate), trate))
+			return
+		} else {
+			e = fmt.Errorf("current address(%v) can not support the token(%v) fee", hexutil.Encode(contractAddr[:]), tcurrency)
+			return
+		}
+	} else {
+		sfee = tfee.Value
+		return
+	}
+}
+
+func (self *StateDB) GetSeroGasLimit(tx *types.Transaction) (gaslimit uint64, e error) {
+	if sero_fee, err := self.GetSeroFee(tx.To(), &tx.Stxt().Fee); err != nil {
+		e = err
+		return
+	} else {
+		gaslimit = big.NewInt(0).Div(sero_fee.ToInt(), tx.GasPrice()).Uint64()
+		return
+	}
 }
 
 func (self *StateDB) SetTokenRate(contractAddr common.Address, coinName string, tokens *big.Int, tas *big.Int) bool {

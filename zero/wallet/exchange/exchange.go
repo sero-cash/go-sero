@@ -476,7 +476,7 @@ func (self *Exchange) GenTxWithSign(param prepare.PreTxParam) (pretx *txtool.GTx
 		return
 	}
 
-	if pretx, tx, e = self.genTx(roots, account, param.Receptions, &param.Cmds, param.Gas, param.GasPrice); e != nil {
+	if pretx, tx, e = self.genTx(roots, account, param.Receptions, &param.Cmds, &param.Fee, param.GasPrice); e != nil {
 		log.Error("Exchange genTx", "error", e)
 		return
 	}
@@ -517,8 +517,8 @@ func (self *Exchange) ClearTxParam(txParam *txtool.GTxParam) (count int) {
 	return
 }
 
-func (self *Exchange) genTx(utxos prepare.Utxos, account *Account, receptions []prepare.Reception, cmds *prepare.Cmds, gas uint64, gasPrice *big.Int) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
-	if txParam, e = self.buildTxParam(utxos, &account.mainPkr, receptions, cmds, gas, gasPrice); e != nil {
+func (self *Exchange) genTx(utxos prepare.Utxos, account *Account, receptions []prepare.Reception, cmds *prepare.Cmds, fee *assets.Token, gasPrice *big.Int) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
+	if txParam, e = self.buildTxParam(utxos, &account.mainPkr, receptions, cmds, fee, gasPrice); e != nil {
 		return
 	}
 
@@ -1123,7 +1123,10 @@ func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e er
 		mp.To,
 		receptions,
 		nil,
-		25000,
+		&assets.Token{
+			utils.CurrencyToUint256("SERO"),
+			utils.NewU256(25000),
+		},
 		big.NewInt(1000000000),
 	)
 	if e != nil {
@@ -1164,7 +1167,17 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string, force bool) (coun
 			}
 		}
 
-		pretx, gtx, err := self.genTx(mu.list.Roots(), account, receptions, nil, 25000, big.NewInt(1000000000))
+		pretx, gtx, err := self.genTx(
+			mu.list.Roots(),
+			account,
+			receptions,
+			nil,
+			&assets.Token{
+				utils.CurrencyToUint256("SERO"),
+				utils.NewU256(25000),
+			},
+			big.NewInt(1000000000),
+		)
 		if err != nil {
 			account.nextMergeTime = time.Now().Add(time.Hour * 6)
 			e = err

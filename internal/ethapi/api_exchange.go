@@ -187,7 +187,10 @@ func (args GenTxArgs) toTxParam() prepare.PreTxParam {
 		refundPkr,
 		receptions,
 		prepare.Cmds{},
-		args.Gas,
+		assets.Token{
+			utils.CurrencyToUint256("SERO"),
+			utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(args.Gas)), args.GasPrice.ToInt())),
+		},
 		gasPrice,
 		args.Roots,
 	}

@@ -108,7 +108,7 @@ type PreTxParam struct {
 	RefundTo   *keys.PKr
 	Receptions []Reception
 	Cmds       Cmds
-	Gas        uint64
+	Fee        assets.Token
 	GasPrice   *big.Int
 	Roots      []keys.Uint256
 }
@@ -148,7 +148,7 @@ func GenTxParam(param *PreTxParam, gen TxParamGenerator) (txParam *txtool.GTxPar
 			return nil, errors.New("can not find default refund to")
 		}
 	}
-	txParam, e = BuildTxParam(utxos, param.RefundTo, param.Receptions, &param.Cmds, param.Gas, param.GasPrice)
+	txParam, e = BuildTxParam(utxos, param.RefundTo, param.Receptions, &param.Cmds, &param.Fee, param.GasPrice)
 	return
 }
 
@@ -202,10 +202,10 @@ func PreGenTx(param *PreTxParam, gen TxParamGenerator) (utxos Utxos, err error) 
 			}
 		}
 
-		if amount, ok := amounts["SERO"]; ok {
-			amount.Add(amount, new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), param.GasPrice))
+		if amount, ok := amounts[utils.Uint256ToCurrency(&param.Fee.Currency)]; ok {
+			amount.Add(amount, param.Fee.Value.ToInt())
 		} else {
-			amounts["SERO"] = new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), param.GasPrice)
+			amounts[utils.Uint256ToCurrency(&param.Fee.Currency)] = param.Fee.Value.ToInt()
 		}
 
 		for currency, amount := range amounts {
@@ -241,11 +241,11 @@ func BuildTxParam(
 	refundTo *keys.PKr,
 	receptions []Reception,
 	cmds *Cmds,
-	gas uint64,
+	fee *assets.Token,
 	gasPrice *big.Int) (txParam *txtool.GTxParam, e error) {
 
 	txParam = new(txtool.GTxParam)
-	txParam.Gas = gas
+	txParam.Fee = *fee
 	txParam.GasPrice = *gasPrice
 
 	txParam.From = txtool.Kr{PKr: *refundTo}
@@ -341,12 +341,11 @@ func BuildTxParam(
 		}
 	}
 
-	fee := new(big.Int).Mul(new(big.Int).SetUint64(gas), gasPrice)
-	if amount, ok := amounts["SERO"]; !ok || amount.Cmp(fee) < 0 {
+	if amount, ok := amounts[utils.Uint256ToCurrency(&fee.Currency)]; !ok || amount.Cmp(fee.Value.ToInt()) < 0 {
 		e = fmt.Errorf("Exchange Error: not enough")
 		return
 	} else {
-		amount.Sub(amount, fee)
+		amount.Sub(amount, fee.Value.ToInt())
 		if amount.Sign() == 0 {
 			delete(amounts, "SERO")
 		}
