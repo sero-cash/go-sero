@@ -471,6 +471,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	if gaslimit, e = pool.currentState.GetSeroGasLimit(tx); e != nil {
 		return
 	}
+	if pool.currentMaxGas < gaslimit {
+		return ErrGasLimit
+	}
 
 	err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
 	if err != nil {
