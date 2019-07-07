@@ -1121,21 +1121,21 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		Tkt: ticket,
 	}
 	rand := keys.RandUint128()
-	var to *common.Address
+	var to common.Address
 	if args.To != nil && state.IsContract(common.BytesToAddress(args.To[:])) && !args.Dynamic {
 		copy(rand[:], args.To[:16])
 	}
 	if args.To != nil {
 
 		if state.IsContract(common.BytesToAddress(args.To[:])) {
-			*to = common.BytesToAddress(args.To[:])
+			to = common.BytesToAddress(args.To[:])
 		} else {
 			if args.To.IsAccountAddress() {
 				pk := common.AddrToAccountAddr(*args.To)
 				pkr := (keys.Addr2PKr(pk.ToUint512(), nil))
-				*to = common.BytesToAddress(pkr[:])
+				to = common.BytesToAddress(pkr[:])
 			} else {
-				to = args.To
+				to = *args.To
 			}
 		}
 	}
@@ -1155,7 +1155,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 	pkr := keys.Addr2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
 
-	msg := types.NewMessage(common.BytesToAddress(pkr[:]), to, 0, asset, feeToken, gasPrice, args.Data)
+	msg := types.NewMessage(common.BytesToAddress(pkr[:]), &to, 0, asset, feeToken, gasPrice, args.Data)
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.
