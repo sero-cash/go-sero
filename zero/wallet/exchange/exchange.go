@@ -840,17 +840,11 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 				}
 			}
 		}
-
-		if len(block.Pkgs) > 0 {
-			pkgIdx = self.resolvePkgs(block.Pkgs)
-		}
 	}
 
 	batch := self.db.NewBatch()
 
-	if pkgIdx != nil {
-		self.indexPkgs(batch, pkgIdx)
-	}
+	self.indexPkgs(pks, batch, blocks)
 
 	if len(utxosMap) > 0 || len(nils) > 0 {
 		if err := self.indexBlocks(batch, utxosMap, blockMap, nils); err != nil {

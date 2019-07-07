@@ -3,54 +3,19 @@ package exchange
 import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/localdb"
 	"github.com/sero-cash/go-sero/zero/txtool"
 )
 
-func (self *Exchange) findPkgs(pk *keys.Uint512) (pkgs []localdb.ZPkg) {
-	prefix := append(pk2pkgKeyPrefix, pk[:]...)
-	iterator := self.db.NewIteratorWithPrefix(prefix)
-	for iterator.Next() {
-		if hash := iterator.Value(); len(hash) == 32 {
-			h := keys.Uint256{}
-			copy(h[:], hash[:])
-			if pkg := localdb.GetPkg(txtool.Ref_inst.Bc.GetDB(), &h); pkg == nil {
-				log.Error("the pkg is empty", "pkg", hash)
-			} else {
-				pkgs = append(pkgs, *pkg)
-			}
-		} else {
-			log.Error("the pkg hash is error", "pkg", hash)
-		}
-	}
-	return
-}
-
-type pkg struct {
-	id   keys.Uint256
-	hash keys.Uint256
-	pk   keys.Uint512
-	from bool
-}
-
 var (
-	pk2pkgKeyPrefix = []byte("PK2PKG")
+	pk_from_id_2_id_KeyPrefix = []byte("PK_FROM_ID_2_ID")
+	id_2_pkg_KeyPrefix        = []byte("ID_2_PKG")
 )
 
-type pkgIndexes struct {
-}
-
-func (self *Exchange) resolvePkgs(pkgs []localdb.ZPkg) (indexes *pkgIndexes) {
-	return
-}
-
-func (self *Exchange) indexPkgs(batch serodb.Batch, indexes *pkgIndexes) {
-	return
-}
-
-func pk2pkgKey(pk keys.Uint512, from *bool, id *keys.Uint256) []byte {
-	ret := append(pk2pkgKeyPrefix, pk[:]...)
+func pk_from_id_2_id_Key(pk *keys.Uint512, from *bool, id *keys.Uint256) []byte {
+	ret := append(pk_from_id_2_id_KeyPrefix, pk[:]...)
 	if from != nil {
 		f := byte(0)
 		if *from {
@@ -62,4 +27,102 @@ func pk2pkgKey(pk keys.Uint512, from *bool, id *keys.Uint256) []byte {
 		ret = append(ret, id[:]...)
 	}
 	return ret
+}
+
+type Pkg struct {
+	z    localdb.ZPkg
+	to   *keys.Uint512 `rlp: nil`
+	from *keys.Uint512 `rlp: nil`
+}
+
+func id_2_pkg_key(id *keys.Uint256) []byte {
+	ret := append(id_2_pkg_KeyPrefix, id[:]...)
+	return ret
+}
+
+func (self *Exchange) findPkgs(pk *keys.Uint512, from bool) (pkgs []Pkg) {
+	prefix := pk_from_id_2_id_Key(pk, &from, nil)
+	iterator := self.db.NewIteratorWithPrefix(prefix)
+	for iterator.Next() {
+		if id := iterator.Value(); len(id) == 32 {
+			i := keys.Uint256{}
+			copy(i[:], id[:])
+			if pkg := self.findPkgById(&i); pkg != nil {
+				pkgs = append(pkgs, *pkg)
+			} else {
+				log.Error("find pkg error", "pkg", id)
+			}
+		} else {
+			log.Error("pkg id error", "pkg", id)
+		}
+	}
+	return
+}
+
+func (self *Exchange) findPkgById(id *keys.Uint256) (pkg *Pkg) {
+	if bs, e := self.db.Get(id_2_pkg_key(id)); e != nil {
+		return
+	} else {
+		pkg := Pkg{}
+		if e := rlp.DecodeBytes(bs, &pkg); e == nil {
+			return &pkg
+		} else {
+			panic(e)
+		}
+	}
+}
+
+type pkgIndexes struct {
+	deleteKeys      [][]byte
+	pk_from_id_maps map[string]keys.Uint256
+}
+
+func (self *Exchange) indexPkgs(pks []keys.Uint512, batch serodb.Batch, blocks []txtool.Block) {
+	for _, block := range blocks {
+		for _, pkg := range block.Pkgs {
+			if p := self.findPkgById(&pkg.Pack.Id); p != nil {
+				if p.to != nil {
+					from := false
+					batch.Delete(pk_from_id_2_id_Key(p.to, &from, &p.z.Pack.Id))
+				}
+				if p.from != nil {
+					from := true
+					batch.Delete(pk_from_id_2_id_Key(p.to, &from, &p.z.Pack.Id))
+				}
+				batch.Delete(id_2_pkg_key(&p.z.Pack.Id))
+			}
+			var p Pkg
+			if account, ok := self.ownPkr(pks, pkg.Pack.PKr); ok {
+				p.to = account.pk
+			}
+			if account, ok := self.ownPkr(pks, pkg.From); ok {
+				p.from = account.pk
+			}
+			if p.from != nil || p.to != nil {
+				if !pkg.Closed {
+					p.z = pkg
+					if bs, e := rlp.EncodeToBytes(&p); e == nil {
+						if p.to != nil {
+							from := false
+							if e := batch.Put(pk_from_id_2_id_Key(p.to, &from, &p.z.Pack.Id), p.z.Pack.Id[:]); e != nil {
+								panic(e)
+							}
+						}
+						if p.from != nil {
+							from := true
+							if e := batch.Put(pk_from_id_2_id_Key(p.to, &from, &p.z.Pack.Id), p.z.Pack.Id[:]); e != nil {
+								panic(e)
+							}
+						}
+						if e := batch.Put(id_2_pkg_key(&p.z.Pack.Id), bs); e != nil {
+							panic(e)
+						}
+					} else {
+						panic(e)
+					}
+				}
+			}
+		}
+	}
+	return
 }

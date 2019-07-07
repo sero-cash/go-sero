@@ -120,10 +120,10 @@ func (h *Header) HashPos() (ret common.Hash) {
 	return
 }
 
-func StakeHash(currentHash *common.Hash, parentHash *common.Hash) (ret common.Hash) {
+func StakeHash(currentPosHash *common.Hash, parentPosHash *common.Hash) (ret common.Hash) {
 	m := sha3.NewKeccak256()
-	m.Write(currentHash[:])
-	m.Write(parentHash[:])
+	m.Write(currentPosHash[:])
+	m.Write(parentPosHash[:])
 	sh := m.Sum(nil)
 	copy(ret[:], sh)
 	return
