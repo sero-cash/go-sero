@@ -8,10 +8,12 @@ import (
 
 type Lottery struct {
 	ParentHash common.Hash
+	ParentNum  uint64
 	PosHash    common.Hash
 }
 
 type Vote struct {
+	ParentNum uint64
 	ShareHash common.Hash
 	PosHash   common.Hash
 	IsPool    bool

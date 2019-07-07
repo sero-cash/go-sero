@@ -48,8 +48,8 @@ const (
 	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize       = 4096
-	voteChainSize    = 10
-	lotteryChainSize = 10
+	voteChainSize    = 1000
+	lotteryChainSize = 1000
 )
 
 // errIncompatibleConfig is returned if the requested protocols and configs are

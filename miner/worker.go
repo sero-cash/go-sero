@@ -351,7 +351,7 @@ func (self *worker) powResultLoop() {
 			self.pendingVote[hashPos] = mapset.NewSet()
 			self.pendingVoteMu.Unlock()
 			self.pendingVoteTime.Store(hashPos, header.Number.Uint64())
-			self.voter.SendLotteryEvent(&types.Lottery{header.ParentHash, hashPos})
+			self.voter.AddLottery(&types.Lottery{header.ParentHash, header.Number.Uint64() - 1, hashPos})
 
 			stakeState := stake.NewStakeState(self.snapshotState)
 			if !stakeState.IsEffect() {

@@ -4,20 +4,19 @@ import (
 	"container/heap"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/sero-cash/go-sero/core/types"
 )
 
 type lotteryItem struct {
-	lottery  *types.Lottery
-	attempts uint8
+	Lottery  *types.Lottery
+	Attempts uint8
 }
 
 type Item struct {
 	Key   interface{} //the unique key of item
 	Value interface{} //the value of the item
-	Time  time.Time   //the priority of the item in the queue
+	Block uint64      //the priority of the item in the queue
 
 	//heap.Interface need this index and update them
 	Index int //index of the item in the heap
@@ -30,7 +29,7 @@ type ItemSlice struct {
 
 func (s ItemSlice) Len() int { return len(s.items) }
 func (s ItemSlice) Less(i, j int) bool {
-	return s.items[i].Time.Before(s.items[i].Time)
+	return s.items[i].Block > s.items[j].Block
 }
 
 func (s ItemSlice) Swap(i, j int) {
@@ -61,10 +60,10 @@ func (s *ItemSlice) Pop() interface{} {
 	return item
 }
 
-func (s *ItemSlice) Update(key interface{}, value interface{}, time time.Time) {
+func (s *ItemSlice) Update(key interface{}, value interface{}, block uint64) {
 	item := s.itemByKey(key)
 	if item != nil {
-		s.updateItem(item, value, time)
+		s.updateItem(item, value, block)
 	}
 
 }
@@ -77,9 +76,9 @@ func (s *ItemSlice) itemByKey(key interface{}) *Item {
 }
 
 func (s *ItemSlice) updateItem(item *Item,
-	value interface{}, time time.Time) {
+	value interface{}, block uint64) {
 	item.Value = value
-	item.Time = time
+	item.Block = block
 	heap.Fix(s, item.Index)
 }
 
@@ -117,19 +116,19 @@ func (pq *PriorityQueue) MinItem() *Item {
 }
 
 func (pq *PriorityQueue) PushItem(key, value interface{},
-	time time.Time) (bPushed bool) {
+	block uint64) (bPushed bool) {
 	pq.mutex.Lock()
 	defer pq.mutex.Unlock()
 	size := pq.slice.Len()
 	item := pq.slice.itemByKey(key)
 	if size > 0 && item != nil {
-		pq.slice.updateItem(item, value, time)
+		pq.slice.updateItem(item, value, block)
 		return true
 	}
 	item = &Item{
 		Value: value,
 		Key:   key,
-		Time:  time,
+		Block: block,
 		Index: -1,
 	}
 	if pq.maxSize <= 0 || size < pq.maxSize {
@@ -147,6 +146,17 @@ func (pq *PriorityQueue) PopItem() interface{} {
 	sz := pq.slice.Len()
 	if sz > 0 {
 		return heap.Pop(&(pq.slice)).(*Item).Value
+	} else {
+		return nil
+	}
+}
+
+func (pq *PriorityQueue) Pop() *Item {
+	pq.mutex.Lock()
+	defer pq.mutex.Unlock()
+	sz := pq.slice.Len()
+	if sz > 0 {
+		return heap.Pop(&(pq.slice)).(*Item)
 	} else {
 		return nil
 	}
@@ -172,7 +182,7 @@ func (pq PriorityQueue) GetQueueItems() []*Item {
 	for i := 0; i < size; i++ {
 		s.items[i] = &Item{
 			Value: pq.slice.items[i].Value,
-			Time:  pq.slice.items[i].Time,
+			Block: pq.slice.items[i].Block,
 		}
 	}
 	pq.mutex.RUnlock()

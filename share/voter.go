@@ -1,8 +1,11 @@
 package share
 
 import (
+	"math/big"
 	"sync"
 	"time"
+
+	"github.com/sero-cash/go-sero/serodb"
 
 	"github.com/sero-cash/go-sero/common/address"
 
@@ -23,7 +26,7 @@ import (
 
 const (
 	evictionInterval = time.Minute
-	chainLotterySize = 10
+	chainLotterySize = 300
 	lifeTime         = 30 * time.Minute
 
 	delayNum         = 2
@@ -35,6 +38,9 @@ type blockChain interface {
 	GetHeaderByHash(hash common.Hash) *types.Header
 	StateAt(root common.Hash, number uint64) (*state.StateDB, error)
 	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
+	GetHeader(hash common.Hash, number uint64) *types.Header
+	GetHeaderByNumber(number uint64) *types.Header
+	GetDB() serodb.Database
 }
 
 type Voter struct {
@@ -77,7 +83,7 @@ func NewVoter(chainconfig *params.ChainConfig, chain blockChain, sero Backend) *
 	// Start the event loop and return
 	go voter.loop()
 	go voter.lotteryTaskLoop()
-	go voter.voteLoop()
+	//go voter.voteLoop()
 
 	return voter
 }
@@ -119,30 +125,39 @@ func (self *Voter) lotteryTaskLoop() {
 	for {
 		select {
 		case lottery := <-self.lotteryCh:
-			self.lotteryQueue.PushItem(lottery.PosHash, &lotteryItem{lottery: lottery, attempts: uint8(0)}, time.Now())
-
+			current := self.chain.CurrentBlock().NumberU64()
+			if current+delayNum >= lottery.ParentNum {
+				self.lotteryQueue.PushItem(lottery.PosHash, &lotteryItem{Lottery: lottery, Attempts: uint8(0)}, lottery.ParentNum+1)
+			}
 		}
 	}
 }
 
-const lotteryLifeTime = 28 * time.Second
-
 func (self *Voter) voteLoop() {
 	for {
-		for _, item := range self.lotteryQueue.GetQueueItems() {
-			if time.Since(item.Time) > lotteryLifeTime {
+		if self.lotteryQueue.Len() == 0 {
+			time.Sleep(time.Second)
+			continue
+		}
+		current := self.chain.CurrentBlock().NumberU64()
+		for range self.lotteryQueue.GetQueueItems() {
+			item := self.lotteryQueue.Pop()
+			if item == nil {
 				continue
 			}
-			lItem := item.Value.(lotteryItem)
-			parentHeader := self.chain.GetHeaderByHash(lItem.lottery.ParentHash)
+			lItem := item.Value.(*lotteryItem)
+			if lItem.Lottery.ParentNum+delayNum < current {
+				continue
+			}
+			parentHeader := self.chain.GetHeaderByHash(lItem.Lottery.ParentHash)
 			if parentHeader == nil {
+				lItem.Attempts += 1
+				if lItem.Attempts < 2 {
+					self.lotteryQueue.PushItem(lItem.Lottery.PosHash, lItem, item.Block)
+				}
 				continue
 			}
-			currentNum := self.chain.CurrentBlock().NumberU64()
-			if currentNum > parentHeader.Number.Uint64()+uint64(delayNum) {
-				continue
-			}
-			selfShares, err := self.SelfShares(lItem.lottery.PosHash, parentHeader.Hash(), parentHeader.Number.Uint64())
+			selfShares, err := self.SelfShares(lItem.Lottery.PosHash, parentHeader.Hash(), parentHeader.Number)
 			if err != nil {
 				log.Info("lotteryTaskLoop", "selfShare error ", err)
 			} else {
@@ -156,11 +171,13 @@ func (self *Voter) voteLoop() {
 }
 
 type voteInfo struct {
-	poshash common.Hash
-	parent  common.Hash
-	votePKr keys.PKr
-	isPool  bool
-	seed    address.Seed
+	parentNum  uint64
+	shareHash  common.Hash
+	poshash    common.Hash
+	statkeHash common.Hash
+	votePKr    keys.PKr
+	isPool     bool
+	seed       address.Seed
 }
 
 func cotainsSeed(voteInfos []voteInfo, seed address.Seed) bool {
@@ -178,13 +195,26 @@ func pkrToAddress(pkr keys.PKr) common.Address {
 	return addr
 }
 
-func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNumber uint64) ([]voteInfo, error) {
-	state, err := self.chain.StateAt(parent, parentNumber)
+func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNumber *big.Int) ([]voteInfo, error) {
+	current := self.chain.CurrentBlock().NumberU64()
+	if current > delayNum+parentNumber.Uint64() {
+		return nil, nil
+	}
+	parentHeader := self.chain.GetHeaderByHash(parent)
+	if parentHeader == nil {
+		return nil, nil
+	}
+	state, err := self.chain.StateAt(parentHeader.Root, parentNumber.Uint64())
 	if err != nil {
 		log.Info("lotteryTaskLoop", "stateAt", poshash, "err", err)
 		return nil, err
 	} else {
 		stakeState := stake.NewStakeState(state)
+		newHeader := &types.Header{
+			ParentHash: parent,
+			Number:     parentNumber.Add(parentNumber, common.Big1),
+		}
+		stakeState.ProcessBeforeApply(self.chain, newHeader)
 		shares, err := stakeState.SeleteShare(poshash)
 		if err != nil {
 			return nil, err
@@ -204,7 +234,16 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 							if err != nil {
 								return nil, err
 							}
-							voteInfos = append(voteInfos, voteInfo{poshash, parent, *share.VoteKr, true, *seed})
+							parentPos := parentHeader.HashPos()
+							stakeHash := types.StakeHash(&poshash, &parentPos)
+							voteInfos = append(voteInfos, voteInfo{
+								parentNumber.Uint64(),
+								common.BytesToHash(share.Id()),
+								poshash,
+								stakeHash,
+								*share.VoteKr,
+								true,
+								*seed})
 						}
 					}
 				}
@@ -219,7 +258,16 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 					if cotainsSeed(voteInfos, *seed) {
 						continue
 					} else {
-						voteInfos = append(voteInfos, voteInfo{poshash, parent, *share.VoteKr, false, *seed})
+						parentPos := parentHeader.HashPos()
+						stakeHash := types.StakeHash(&poshash, &parentPos)
+						voteInfos = append(voteInfos, voteInfo{
+							parentNumber.Uint64(),
+							common.BytesToHash(share.Id()),
+							poshash,
+							stakeHash,
+							*share.VoteKr,
+							false,
+							*seed})
 					}
 				}
 			}
@@ -231,7 +279,14 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 }
 
 func (self *Voter) sign(info voteInfo) {
-	vote := &types.Vote{common.Hash{}, info.poshash, info.isPool, keys.Uint512{}}
+	data := keys.Uint256{}
+	copy(data[:], info.statkeHash[:])
+	sign, err := keys.SignPKr(info.seed.SeedToUint256(), &data, &info.votePKr)
+	if err != nil {
+		log.Info("voter sign", "sign err", err)
+		return
+	}
+	vote := &types.Vote{info.parentNum, info.shareHash, info.poshash, info.isPool, sign}
 	go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
 	self.SendVoteEvent(vote)
 }
@@ -264,7 +319,7 @@ func (self *Voter) AddLottery(lottery *types.Lottery) {
 	defer self.lotteryMu.Unlock()
 	_, exits := self.lotterys[lottery.PosHash]
 	if exits {
-
+		self.SendLotteryEvent(lottery)
 	} else {
 		self.lotterys[lottery.PosHash] = time.Now()
 		self.lotteryCh <- lottery

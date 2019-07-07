@@ -49,6 +49,8 @@ type voter interface {
 	SendLotteryEvent(lottery *types.Lottery)
 
 	SendVoteEvent(vote *types.Vote)
+
+	AddLottery(lottery *types.Lottery)
 }
 
 // Miner creates blocks and searches for proof-of-work values.
