@@ -774,7 +774,8 @@ func (pm *ProtocolManager) lotteryBroadLoop() {
 			pm.BroadcastLottery(event.Lottery)
 
 			// Err() channel will be closed when unsubscribing.
-		case <-pm.lotterySub.Err():
+		case e := <-pm.lotterySub.Err():
+			log.Error("lotteryBroadLoop ", "err", e)
 			return
 		}
 	}

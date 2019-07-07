@@ -3,6 +3,8 @@ package stake
 import (
 	"encoding/binary"
 	"errors"
+	"math/big"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
@@ -16,7 +18,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/consensus"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"math/big"
 )
 
 type Share struct {
@@ -840,6 +841,9 @@ func (self *StakeState) deleteShare(tree *STree, share *Share, poolCashMap map[c
 }
 
 func decodeNumber32(data []byte) uint32 {
+	if len(data) == 0 {
+		return 0
+	}
 	return binary.BigEndian.Uint32(data)
 }
 

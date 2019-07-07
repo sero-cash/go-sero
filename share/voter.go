@@ -228,6 +228,9 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 			Number:     parentNumber.Add(parentNumber, common.Big1),
 		}
 		stakeState.ProcessBeforeApply(self.chain, newHeader)
+		if stakeState.ShareSize() == 0 {
+			return nil, nil
+		}
 		shares, err := stakeState.SeleteShare(poshash)
 		if err != nil {
 			return nil, err

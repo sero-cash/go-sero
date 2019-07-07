@@ -18,11 +18,12 @@ package miner
 
 import (
 	"fmt"
-	"github.com/sero-cash/go-sero/core/types/typeserial"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/sero-cash/go-sero/core/types/typeserial"
 
 	"github.com/deckarep/golang-set"
 	"github.com/sero-cash/go-sero/zero/stake"
@@ -355,7 +356,7 @@ func (self *worker) powResultLoop() {
 
 			stakeState := stake.NewStakeState(self.snapshotState)
 
-			isEffect := !stakeState.IsEffect(header.Number.Uint64())
+			isEffect := stakeState.IsEffect(header.Number.Uint64())
 			go func() {
 				parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 				var currentVotes []interface{}
