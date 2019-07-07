@@ -105,11 +105,12 @@ func (self *StakeService) GetBlockRecords(blockNumber uint64) (shares []*stake.S
 
 func (self *StakeService) stakeIndex() {
 	header := self.bc.CurrentHeader()
-	batch := self.db.NewBatch()
+
 	blockNumber := self.nextBlockNumber
 
 	sharesCount := 0
 	poolsCount := 0
+	batch := self.db.NewBatch()
 	for blockNumber+seroparam.DefaultConfirmedBlock() <= header.Number.Uint64() {
 		shares, pools := self.GetBlockRecords(blockNumber)
 		for _, share := range shares {
@@ -125,14 +126,19 @@ func (self *StakeService) stakeIndex() {
 		sharesCount += len(shares)
 		poolsCount += len(pools)
 		blockNumber += 1
+	}
 
-	}
-	batch.Put(nextKey, prepare.EncodeNumber(blockNumber+1))
-	err := batch.Write()
-	if err == nil {
+	if batch.ValueSize() > 0 {
+		batch.Put(nextKey, prepare.EncodeNumber(blockNumber+1))
+		err := batch.Write()
+		if err == nil {
+			self.nextBlockNumber = blockNumber + 1
+			log.Info("StakeIndex", "blockNumber", blockNumber, "sharesCount", sharesCount, "poolsCount", poolsCount)
+		}
+	} else {
 		self.nextBlockNumber = blockNumber + 1
-		log.Info("StakeIndex", "blockNumber", blockNumber, "sharesCount", sharesCount, "poolsCount", poolsCount)
 	}
+
 }
 
 func (self *StakeService) ownPkr(pkr keys.PKr) (pk *keys.Uint512, ok bool) {
