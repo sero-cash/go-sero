@@ -127,7 +127,20 @@ func (self *Voter) lotteryTaskLoop() {
 		case lottery := <-self.lotteryCh:
 			current := self.chain.CurrentBlock().NumberU64()
 			if current+delayNum >= lottery.ParentNum {
-				self.lotteryQueue.PushItem(lottery.PosHash, &lotteryItem{Lottery: lottery, Attempts: uint8(0)}, lottery.ParentNum+1)
+				parentHeader := self.chain.GetHeaderByHash(lottery.ParentHash)
+				if parentHeader == nil {
+					self.lotteryQueue.PushItem(lottery.PosHash, &lotteryItem{Lottery: lottery, Attempts: uint8(0)}, lottery.ParentNum+1)
+				} else {
+					selfShares, err := self.SelfShares(lottery.PosHash, lottery.ParentHash, parentHeader.Number)
+					if err != nil {
+						log.Info("lotteryTaskLoop", "selfShare error ", err)
+					} else {
+						for _, s := range selfShares {
+							go self.sign(s)
+						}
+					}
+				}
+
 			}
 		}
 	}
