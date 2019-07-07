@@ -354,7 +354,7 @@ func (self *worker) powResultLoop() {
 			self.voter.SendLotteryEvent(&types.Lottery{header.ParentHash, hashPos})
 
 			stakeState := stake.NewStakeState(self.snapshotState)
-			if stakeState.ShareSize() < 1000 {
+			if !stakeState.IsEffect() {
 				self.recv <- result
 			} else {
 				go func() {

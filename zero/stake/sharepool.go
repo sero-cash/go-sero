@@ -254,6 +254,10 @@ func (state *StakeState) UpdateStakePool(pool *StakePool) {
 	state.stakePoolObj.AddObj(pool)
 }
 
+func (state *StakeState) IsEffect() bool {
+	return state.ShareSize() > 10
+}
+
 func (state *StakeState) ShareSize() uint32 {
 	tree := NewTree(state)
 	return tree.size()
