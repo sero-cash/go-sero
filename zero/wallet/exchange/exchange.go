@@ -769,7 +769,6 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 	nilsMap := map[keys.Uint256]Utxo{}
 	nils := []keys.Uint256{}
 	blockMap := map[uint64]*BlockInfo{}
-	var pkgIdx *pkgIndexes
 	for _, block := range blocks {
 		num := uint64(block.Num)
 		utxos := []Utxo{}
