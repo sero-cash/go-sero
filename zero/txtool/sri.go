@@ -64,6 +64,13 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []Block, e er
 						block.Outs = append(block.Outs, Out{k, *out})
 					}
 				}
+				for _, k := range local_block.Pkgs {
+					if pkg := localdb.GetPkg(Ref_inst.Bc.GetDB(), &k); pkg == nil {
+						log.Error("GetBlocksInfo ERROR", "num", num, "pkg", k)
+					} else {
+						block.Pkgs = append(block.Pkgs, *pkg)
+					}
+				}
 				blocks = append(blocks, block)
 			} else {
 				e = fmt.Errorf("GetBlocksInfo.GetBlock Failed, num: %v", num)

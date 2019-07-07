@@ -12,7 +12,7 @@ import (
 type BuyShareCmd struct {
 	Value utils.U256
 	Vote  keys.PKr
-	Pool  *keys.Uint256
+	Pool  *keys.Uint256 `rlp:"nil"`
 }
 
 func (self *BuyShareCmd) ToHash() (ret keys.Uint256) {
@@ -80,10 +80,10 @@ func (self *ContractCmd) ToHash() (ret keys.Uint256) {
 }
 
 type DescCmd struct {
-	BuyShare   *BuyShareCmd
-	RegistPool *RegistPoolCmd
-	ClosePool  *ClosePoolCmd
-	Contract   *ContractCmd
+	BuyShare   *BuyShareCmd   `rlp:"nil"`
+	RegistPool *RegistPoolCmd `rlp:"nil"`
+	ClosePool  *ClosePoolCmd  `rlp:"nil"`
+	Contract   *ContractCmd   `rlp:"nil"`
 }
 
 func (self *DescCmd) ToHash() (ret keys.Uint256) {

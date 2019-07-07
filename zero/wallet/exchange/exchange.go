@@ -634,7 +634,6 @@ func (self *Exchange) findUtxos(pk *keys.Uint512, currency string, amount *big.I
 	prefix := append(pkPrefix, append(pk[:], common.LeftPadBytes([]byte(currency), 32)...)...)
 	iterator := self.db.NewIteratorWithPrefix(prefix)
 
-	//list := []Utxo{}
 	for iterator.Next() {
 		key := iterator.Key()
 		var root keys.Uint256
@@ -650,22 +649,8 @@ func (self *Exchange) findUtxos(pk *keys.Uint512, currency string, amount *big.I
 					}
 				}
 			}
-
-			//else {
-			//	list = append(list, utxo)
-			//}
 		}
 	}
-	//
-	//if remain.Sign() > 0 {
-	//	for _, utxo := range list {
-	//		utxos = append(utxos, utxo)
-	//		remain.Sub(remain, utxo.Asset.Tkn.Value.ToIntRef())
-	//		if remain.Sign() <= 0 {
-	//			break
-	//		}
-	//	}
-	//}
 	return
 }
 
@@ -784,6 +769,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 	nilsMap := map[keys.Uint256]Utxo{}
 	nils := []keys.Uint256{}
 	blockMap := map[uint64]*BlockInfo{}
+	var pkgIdx *pkgIndexes
 	for _, block := range blocks {
 		num := uint64(block.Num)
 		utxos := []Utxo{}
@@ -816,12 +802,12 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 			}
 			utxos = append(utxos, utxo)
 		}
+
 		if len(utxos) > 0 {
 			blockMap[num] = &BlockInfo{Num: num, Hash: block.Hash, Outs: utxos}
 		}
 
 		if len(block.Nils) > 0 {
-
 			roots := []keys.Uint256{}
 			for _, Nil := range block.Nils {
 				var utxo Utxo
@@ -854,9 +840,18 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 				}
 			}
 		}
+
+		if len(block.Pkgs) > 0 {
+			pkgIdx = self.resolvePkgs(block.Pkgs)
+		}
 	}
 
 	batch := self.db.NewBatch()
+
+	if pkgIdx != nil {
+		self.indexPkgs(batch, pkgIdx)
+	}
+
 	if len(utxosMap) > 0 || len(nils) > 0 {
 		if err := self.indexBlocks(batch, utxosMap, blockMap, nils); err != nil {
 			log.Error("indexBlocks ", "error", err)

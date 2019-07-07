@@ -30,6 +30,7 @@ type Block struct {
 	Hash keys.Uint256
 	Outs []Out
 	Nils []keys.Uint256
+	Pkgs []localdb.ZPkg
 }
 
 type Witness struct {
