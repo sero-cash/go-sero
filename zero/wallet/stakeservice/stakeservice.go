@@ -107,6 +107,9 @@ func (self *StakeService) stakeIndex() {
 	header := self.bc.CurrentHeader()
 	batch := self.db.NewBatch()
 	blockNumber := self.nextBlockNumber
+
+	sharesCount := 0
+	poolsCount := 0
 	for blockNumber+seroparam.DefaultConfirmedBlock() <= header.Number.Uint64() {
 		shares, pools := self.GetBlockRecords(blockNumber)
 		for _, share := range shares {
@@ -119,7 +122,8 @@ func (self *StakeService) stakeIndex() {
 		for _, pool := range pools {
 			batch.Put(poolKey(pool.Id()), pool.State())
 		}
-
+		sharesCount += len(shares)
+		poolsCount += len(pools)
 		blockNumber += 1
 
 	}
@@ -127,7 +131,7 @@ func (self *StakeService) stakeIndex() {
 	err := batch.Write()
 	if err == nil {
 		self.nextBlockNumber = blockNumber + 1
-		log.Info("StakeIndex", "blockNumber", blockNumber)
+		log.Info("StakeIndex", "blockNumber", blockNumber, "sharesCount", sharesCount, "poolsCount", poolsCount)
 	}
 }
 
