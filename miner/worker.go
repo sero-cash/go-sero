@@ -459,10 +459,8 @@ func (self *worker) checkVote(vote *types.Vote) bool {
 				}
 			}
 		} else {
-			if share.VoteKr != nil {
-				if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, share.VoteKr) {
-					return true
-				}
+			if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, &share.VotePKr) {
+				return true
 			}
 		}
 	}

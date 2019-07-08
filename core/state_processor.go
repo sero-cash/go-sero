@@ -20,7 +20,6 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/stake"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -178,17 +177,11 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 				statedb.GetZState().AddTxOut(from, asset)
 			}
 
-			share := &stake.Share{PKr: pkr, Value: avgPrice, TransactionHash: txHash, BlockNumber: number, InitNum: num, Num: num, Profit: big.NewInt(0)}
+			share := &stake.Share{PKr: pkr, VotePKr: stakeDesc.BuyShare.Vote, Value: avgPrice, TransactionHash: txHash, BlockNumber: number, InitNum: num, Num: num, Profit: big.NewInt(0)}
 			if stakePool != nil {
 				hash := common.BytesToHash(stakePool.Id())
 				share.PoolId = &hash
 				share.Fee = stakePool.Fee
-			} else {
-				if stakeDesc.BuyShare.Vote != (keys.PKr{}) {
-					share.VoteKr = &stakeDesc.BuyShare.Vote
-				} else {
-					return errors.New("not votepkr")
-				}
 			}
 			stakeState.UpdateShare(share)
 		} else {

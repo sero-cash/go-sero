@@ -22,7 +22,7 @@ import (
 
 type Share struct {
 	PKr             keys.PKr
-	VoteKr          *keys.PKr `rlp:"nil"`
+	VotePKr         keys.PKr
 	TransactionHash common.Hash
 	PoolId          *common.Hash `rlp:"nil"`
 	Value           *big.Int     `rlp:"nil"`
@@ -56,7 +56,7 @@ func (s *Share) Id() []byte {
 	hash := common.Hash{}
 	rlp.Encode(hw, []interface{}{
 		s.PKr,
-		s.VoteKr,
+		s.VotePKr,
 		s.TransactionHash,
 		s.PoolId,
 		s.Value,
@@ -85,7 +85,7 @@ func (s *Share) State() []byte {
 func (s *Share) CopyTo() (ret consensus.CItem) {
 	share := &Share{
 		PKr:             s.PKr,
-		VoteKr:          s.VoteKr,
+		VotePKr:         s.VotePKr,
 		TransactionHash: s.TransactionHash,
 		PoolId:          s.PoolId,
 		Value:           new(big.Int).Set(s.Value),
@@ -103,7 +103,7 @@ func (s *Share) CopyTo() (ret consensus.CItem) {
 func (s *Share) CopyFrom(ret consensus.CItem) {
 	obj := ret.(*Share)
 	s.PKr = obj.PKr
-	s.VoteKr = obj.VoteKr
+	s.VotePKr = obj.VotePKr
 	s.TransactionHash = obj.TransactionHash
 	s.PoolId = obj.PoolId
 	s.BlockNumber = obj.BlockNumber

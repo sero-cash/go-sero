@@ -245,7 +245,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 					log.Info("lotteryTaskLoop", "GetStakePool", share.PoolId, "note exist")
 				} else {
 					for _, w := range wallets {
-						if w.IsMine(pkrToAddress(*share.VoteKr)) {
+						if w.IsMine(pkrToAddress(share.VotePKr)) {
 							seed, err := w.GetSeed()
 							if err != nil {
 								return nil, err
@@ -257,7 +257,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 								common.BytesToHash(share.Id()),
 								poshash,
 								stakeHash,
-								*share.VoteKr,
+								share.VotePKr,
 								true,
 								*seed})
 						}
@@ -265,7 +265,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 				}
 			}
 			for _, w := range wallets {
-				if w.IsMine(pkrToAddress(*share.VoteKr)) {
+				if w.IsMine(pkrToAddress(share.VotePKr)) {
 					seed, err := w.GetSeed()
 
 					if err != nil {
@@ -281,7 +281,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 							common.BytesToHash(share.Id()),
 							poshash,
 							stakeHash,
-							*share.VoteKr,
+							share.VotePKr,
 							false,
 							*seed})
 					}
