@@ -102,6 +102,13 @@ func NewTestObj(name string) (ret *TestObj) {
 	return
 }
 
+func NewTestObj2(id string, name string) (ret *TestObj) {
+	ret = &TestObj{}
+	ret.I = id
+	ret.S = name
+	return
+}
+
 func TestConsSetObj(t *testing.T) {
 	db := NewFakeDB()
 	cmap := NewCons(&db, "block")
@@ -226,6 +233,13 @@ func TestConsRecord(t *testing.T) {
 	}
 	fmt.Println(v)
 
+	tree.AddObj(NewTestObj2("obj1", "3"))
+	v = tree.GetObj(s2u("obj1"), &TestObj{})
+	if v.(*TestObj).S != "3" {
+		t.FailNow()
+	}
+	fmt.Println(v)
+
 	blockhash := common.Hash(keys.RandUint256())
 	cmap.Record(&blockhash, &db.db)
 
@@ -261,6 +275,10 @@ func TestConsRecord(t *testing.T) {
 	tree1 := NewObjPt(&cmap1, "tree$", dbobj.Pre, "test")
 	v = tree1.GetObj(s2u("obj0"), &TestObj{})
 	if v.(*TestObj).S != "1" {
+		t.FailNow()
+	}
+	v = tree1.GetObj(s2u("obj1"), &TestObj{})
+	if v.(*TestObj).S != "3" {
 		t.FailNow()
 	}
 	fmt.Println(v)
