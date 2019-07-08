@@ -37,6 +37,14 @@ type inBlock struct {
 	ref  []byte
 }
 
+func (self *inBlock) CopyRef() (ret *inBlock) {
+	ret = &inBlock{
+		self.name,
+		append([]byte{}, self.ref...),
+	}
+	return
+}
+
 type consItem struct {
 	key     key
 	item    CItem
@@ -44,6 +52,30 @@ type consItem struct {
 	inCons  bool
 	inBlock *inBlock
 	inDB    bool
+}
+
+func (self *consItem) CopyRef() (ret *consItem) {
+	ret = &consItem{
+		self.key.CopyTo(),
+		self.item.CopyTo(),
+		self.index,
+		self.inCons,
+		self.inBlock.CopyRef(),
+		self.inDB,
+	}
+	return
+}
+
+func (self *consItem) CopyRefWithoutItem() (ret *consItem) {
+	ret = &consItem{
+		self.key.CopyTo(),
+		self.item,
+		self.index,
+		self.inCons,
+		self.inBlock.CopyRef(),
+		self.inDB,
+	}
+	return
 }
 
 type Cons struct {
@@ -161,13 +193,15 @@ func (self *Cons) getObj(k *key, item CItem, inCons bool, inDB bool) (ret *consI
 			if e := rlp.DecodeBytes(v, item); e != nil {
 				return nil
 			}
-			ret = &consItem{*k, item, -1, false, nil, false}
-			self.content[k.k()] = ret
-			return ret
+			ret = &consItem{k.CopyTo(), item, -1, false, nil, false}
+			self.content[k.k()] = ret.CopyRef()
+			return
 		}
 	} else {
 		item.CopyFrom(i.item)
-		return i
+		ret = i.CopyRefWithoutItem()
+		ret.item = item
+		return
 	}
 }
 
