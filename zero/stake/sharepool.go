@@ -764,9 +764,10 @@ func (self *StakeState) processMissVoted(header *types.Header, bc blockChain, sh
 	}
 }
 
-func (self *StakeState) processNowShares(header *types.Header, bc blockChain, shareCacheMap map[common.Hash]*Share, poolCacheMap map[common.Hash]*StakePool) {
+func (self *StakeState) processNowShares(header *types.Header, bc blockChain, poolCacheMap map[common.Hash]*StakePool) {
 	perHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-	shares := self.getShares(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64(), shareCacheMap)
+	shares := GetSharesByBlock(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64())
+	//shares := self.getShares(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64(), shareCacheMap)
 	if len(shares) > 0 {
 		tree := NewTree(self)
 		for _, share := range shares {
