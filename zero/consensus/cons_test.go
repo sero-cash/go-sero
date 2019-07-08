@@ -21,8 +21,13 @@ func TestConsSetValue(t *testing.T) {
 	tree := NewKVPt(&cmap, "tree", "test")
 
 	tree.SetValue(s2u("k0"), s2u("v0"))
+	tree.SetValue(s2u("k1"), s2u("v1"))
 	v := tree.GetValue(s2u("k0"))
 	if v == nil || bytes.Compare(v, s2u("v0")) != 0 {
+		t.FailNow()
+	}
+	v = tree.GetValue(s2u("k1"))
+	if v == nil || bytes.Compare(v, s2u("v1")) != 0 {
 		t.FailNow()
 	}
 	fmt.Println(v)

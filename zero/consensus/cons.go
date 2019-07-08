@@ -22,6 +22,12 @@ type key struct {
 	id  []byte
 }
 
+func (self *key) CopyTo() (ret key) {
+	ret.pre = self.pre
+	ret.id = append([]byte{}, self.id...)
+	return
+}
+
 func (self *key) k() string {
 	return self.pre + string(self.id)
 }
@@ -104,7 +110,7 @@ func (self *Cons) deleteObj(k *key, item CItem, inCons bool, inblock *inBlock, i
 		cl.index = -1
 	}
 	cl.ver = self.ver
-	self.content[k.k()] = &consItem{*k, nil, len(self.cls), inCons, inblock, inDB}
+	self.content[k.k()] = &consItem{k.CopyTo(), nil, len(self.cls), inCons, inblock, inDB}
 	self.cls = append(self.cls, cl)
 	return
 }
@@ -124,7 +130,7 @@ func (self *Cons) addObj(k *key, item CItem, inCons bool, inblock *inBlock, inDB
 		cl.index = -1
 	}
 	cl.ver = self.ver
-	self.content[k.k()] = &consItem{*k, item, len(self.cls), inCons, inblock, inDB}
+	self.content[k.k()] = &consItem{k.CopyTo(), item.CopyTo(), len(self.cls), inCons, inblock, inDB}
 	self.cls = append(self.cls, cl)
 	return
 }
@@ -232,7 +238,10 @@ func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
 			m[v.inBlock.name] = r
 			ret = append(ret, r)
 		}
-		r.Pairs = append(r.Pairs, RecordPair{v.inBlock.ref, v.key.id})
+		rp := RecordPair{}
+		rp.Hash = append([]byte{}, v.key.id...)
+		rp.Ref = append([]byte{}, v.inBlock.ref...)
+		r.Pairs = append(r.Pairs, rp)
 	}
 
 	for _, v := range cis {
@@ -245,19 +254,30 @@ func (self *Cons) Update() {
 	self.updateVer = self.ver
 	conslist := self.fetchConsPairs(false)
 	for _, v := range conslist {
-		if b, err := rlp.EncodeToBytes(v.item); err != nil {
-			panic(err)
+		if v.item == nil {
+			if err := self.db.CurrentTri().TryDelete([]byte(v.key.k())); err != nil {
+				panic(err)
+			}
 		} else {
-			if err := self.db.CurrentTri().TryUpdate([]byte(v.key.k()), b); err != nil {
+			if b, err := rlp.EncodeToBytes(v.item); err != nil {
 				panic(err)
 			} else {
-				return
+				if err := self.db.CurrentTri().TryUpdate([]byte(v.key.k()), b); err != nil {
+					panic(err)
+				} else {
+					return
+				}
 			}
 		}
 	}
 }
 
-func (self *Cons) Record(hash *common.Hash, batch serodb.Putter) {
+type DPutter interface {
+	serodb.Putter
+	serodb.Deleter
+}
+
+func (self *Cons) Record(hash *common.Hash, batch DPutter) {
 	recordlist := self.fetchBlockRecords(false)
 
 	if len(recordlist) > 0 {
@@ -266,11 +286,17 @@ func (self *Cons) Record(hash *common.Hash, batch serodb.Putter) {
 
 	dblist := self.fetchDBPairs(false)
 	for _, v := range dblist {
-		if b, err := rlp.EncodeToBytes(v.item); err != nil {
-			panic(err)
-		} else {
-			if err := batch.Put([]byte(v.key.k()), b); err != nil {
+		if v.item == nil {
+			if err := batch.Delete([]byte(v.key.k())); err != nil {
 				panic(err)
+			}
+		} else {
+			if b, err := rlp.EncodeToBytes(v.item); err != nil {
+				panic(err)
+			} else {
+				if err := batch.Put([]byte(v.key.k()), b); err != nil {
+					panic(err)
+				}
 			}
 		}
 	}

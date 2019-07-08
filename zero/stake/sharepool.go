@@ -94,7 +94,7 @@ func (s *Share) CopyTo() (ret consensus.CItem) {
 		Num:             s.Num,
 		WishVotNum:      s.WishVotNum,
 		Fee:             s.Fee,
-		Profit:          s.Profit,
+		Profit:          new(big.Int).Set(s.Profit),
 		LastPayTime:     s.LastPayTime,
 	}
 }
@@ -162,7 +162,7 @@ func (s *StakePool) CopyTo() (ret consensus.CItem) {
 		ChoicedNum:      s.ChoicedNum,
 		MissedNum:       s.MissedNum,
 		WishVotNum:      s.ShareNum,
-		Profit:          s.Profit,
+		Profit:          new(big.Int).Set(s.Profit),
 		LastPayTime:     s.LastPayTime,
 		Closed:          s.Closed,
 	}
