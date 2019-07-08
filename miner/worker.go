@@ -150,7 +150,6 @@ type worker struct {
 	mining int32
 	atWork int32
 
-	runPos        int32
 	pendingVoteMu sync.RWMutex
 	pendingVote   map[voteKey]mapset.Set
 	//pendingVoteTime sync.Map
@@ -360,7 +359,8 @@ func (self *worker) powResultLoop() {
 				parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 				var currentVotes []interface{}
 				var parentVotes []interface{}
-				for atomic.LoadInt32(&self.runPos) == 0 {
+				currentHeader := self.chain.CurrentHeader()
+				for currentHeader.Hash() == header.ParentHash {
 					self.pendingVoteMu.Lock()
 					if votesSet, ok := self.pendingVote[key]; ok {
 						currentVotes = votesSet.ToSlice()
@@ -371,11 +371,11 @@ func (self *worker) powResultLoop() {
 					}
 					self.pendingVoteMu.Unlock()
 
-					currentHeader := self.chain.CurrentHeader()
-					if len(currentVotes) >= 2 || currentHeader.Number.Uint64() >= header.Number.Uint64()+1 || !isEffect {
+					if len(currentVotes) >= 2 || !isEffect {
 						break
 					}
 					time.Sleep(1)
+					currentHeader = self.chain.CurrentHeader()
 				}
 
 				if len(currentVotes) >= 2 || !isEffect {
@@ -397,11 +397,11 @@ func (self *worker) powResultLoop() {
 								}
 							}
 							if flag {
-								ParentVotes[0] = typeserial.Vote{vote.ShareHash, vote.IsPool, vote.Sign}
+								ParentVotes = append(ParentVotes, typeserial.Vote{vote.ShareHash, vote.IsPool, vote.Sign})
 							}
 						}
 					}
-					atomic.StoreInt32(&self.runPos, 1)
+
 					result.Block.SetVotes(CurrentVotes, ParentVotes)
 					self.recv <- result
 				}
