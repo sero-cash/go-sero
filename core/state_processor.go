@@ -178,7 +178,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 				statedb.GetZState().AddTxOut(from, asset)
 			}
 
-			share := &stake.Share{PKr: pkr, Value: avgPrice, TransactionHash: txHash, BlockNumber: number, InitNum: num, Num: num}
+			share := &stake.Share{PKr: pkr, Value: avgPrice, TransactionHash: txHash, BlockNumber: number, InitNum: num, Num: num, Profit: big.NewInt(0)}
 			if stakePool != nil {
 				hash := common.BytesToHash(stakePool.Id())
 				share.PoolId = &hash
@@ -202,7 +202,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 	} else if stakeDesc.RegistPool != nil {
 		if poolValueThreshold.Cmp(stakeDesc.RegistPool.Value.ToInt()) <= 0 {
 			cmd := stakeDesc.RegistPool
-			pool := &stake.StakePool{PKr: pkr, Amount: cmd.Value.ToInt(), VotePKr: cmd.Vote, TransactionHash: txHash, Fee: uint16(cmd.FeeRate)}
+			pool := &stake.StakePool{PKr: pkr, Amount: cmd.Value.ToInt(), VotePKr: cmd.Vote, TransactionHash: txHash, Fee: uint16(cmd.FeeRate), Profit: big.NewInt(0)}
 			stakeState.UpdateStakePool(pool)
 		} else {
 			return errors.New("value < poolValueThreshold(1000000000000000000)")

@@ -83,7 +83,7 @@ func (s *Share) State() []byte {
 }
 
 func (s *Share) CopyTo() (ret consensus.CItem) {
-	return &Share{
+	share := &Share{
 		PKr:             s.PKr,
 		VoteKr:          s.VoteKr,
 		TransactionHash: s.TransactionHash,
@@ -97,6 +97,7 @@ func (s *Share) CopyTo() (ret consensus.CItem) {
 		Profit:          new(big.Int).Set(s.Profit),
 		LastPayTime:     s.LastPayTime,
 	}
+	return share
 }
 
 func (s *Share) CopyFrom(ret consensus.CItem) {
@@ -534,7 +535,7 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 	self.processVotedShare(header, bc, shareCacheMap, poolCacheMap)
 	self.processOutDate(header, bc, shareCacheMap, poolCacheMap)
 	self.processMissVoted(header, bc, shareCacheMap, poolCacheMap)
-	self.processNowShares(header, bc, shareCacheMap, poolCacheMap)
+	self.processNowShares(header, bc, poolCacheMap)
 	self.payProfit(bc, header, shareCacheMap, poolCacheMap)
 
 	//self.statisticsByWindow(header, bc)
