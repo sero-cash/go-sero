@@ -3,7 +3,8 @@ package types
 import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/crypto/sha3"
+	"github.com/sero-cash/go-sero/rlp"
 )
 
 type Lottery struct {
@@ -13,6 +14,7 @@ type Lottery struct {
 }
 
 type Vote struct {
+	Idx       uint32
 	ParentNum uint64
 	ShareHash common.Hash
 	PosHash   common.Hash
@@ -20,6 +22,18 @@ type Vote struct {
 	Sign      keys.Uint512
 }
 
-func (vote Vote) Hash() common.Hash {
-	return crypto.Keccak256Hash(vote.Sign[:])
+func (s Vote) Hash() common.Hash {
+
+	hw := sha3.NewKeccak256()
+	hash := common.Hash{}
+	rlp.Encode(hw, []interface{}{
+		s.Idx,
+		s.ParentNum,
+		s.ShareHash,
+		s.PosHash,
+		s.IsPool,
+		s.Sign,
+	})
+	hw.Sum(hash[:0])
+	return hash
 }

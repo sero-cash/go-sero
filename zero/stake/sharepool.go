@@ -3,8 +3,9 @@ package stake
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/sero-cash/go-sero/core/types/typeserial"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/core/types/typeserial"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -281,18 +282,18 @@ func (self *StakeState) ShareSize() uint32 {
 	return tree.size()
 }
 
-func (self *StakeState) SeleteShare(seed common.Hash) (shares []*Share, err error) {
+func (self *StakeState) SeleteShare(seed common.Hash) (ints []uint32, shares []*Share, err error) {
 	tree := NewTree(self)
 
-	ints, err := FindShareIdxs(tree.size(), 3, NewHash256PRNG(seed[:]))
+	ints, err = FindShareIdxs(tree.size(), 3, NewHash256PRNG(seed[:]))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for _, i := range ints {
 		node := tree.findByIndex(uint32(i))
 		share := self.GetShare(node.key)
 		if share == nil {
-			return nil, errors.New("not found share by index")
+			return nil, nil, errors.New("not found share by index")
 		}
 		shares = append(shares, share)
 	}

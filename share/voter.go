@@ -181,6 +181,7 @@ func (self *Voter) voteLoop() {
 }
 
 type voteInfo struct {
+	index      uint32
 	parentNum  uint64
 	shareHash  common.Hash
 	poshash    common.Hash
@@ -228,13 +229,14 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 		if stakeState.ShareSize() == 0 {
 			return nil, nil
 		}
-		shares, err := stakeState.SeleteShare(poshash)
+		ints, shares, err := stakeState.SeleteShare(poshash)
 		if err != nil {
+			log.Info("lotteryTaskLoop", "SeleteShare", poshash, "err", err)
 			return nil, err
 		}
-		log.Info("lotteryTaskLoop", "SeleteShare", poshash, "err", err)
+
 		var voteInfos []voteInfo
-		for _, share := range shares {
+		for i, share := range shares {
 			wallets := self.sero.AccountManager().Wallets()
 			if share.PoolId != nil {
 				pool := stakeState.GetStakePool(*share.PoolId)
@@ -250,6 +252,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 							parentPos := parentHeader.HashPos()
 							stakeHash := types.StakeHash(&poshash, &parentPos)
 							voteInfos = append(voteInfos, voteInfo{
+								ints[i],
 								parentNumber.Uint64(),
 								common.BytesToHash(share.Id()),
 								poshash,
@@ -269,11 +272,23 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 						return nil, err
 					}
 					if cotainsSeed(voteInfos, *seed) {
-						continue
+						//continue
+						parentPos := parentHeader.HashPos()
+						stakeHash := types.StakeHash(&poshash, &parentPos)
+						voteInfos = append(voteInfos, voteInfo{
+							ints[i],
+							parentNumber.Uint64(),
+							common.BytesToHash(share.Id()),
+							poshash,
+							stakeHash,
+							share.VotePKr,
+							false,
+							*seed})
 					} else {
 						parentPos := parentHeader.HashPos()
 						stakeHash := types.StakeHash(&poshash, &parentPos)
 						voteInfos = append(voteInfos, voteInfo{
+							ints[i],
 							parentNumber.Uint64(),
 							common.BytesToHash(share.Id()),
 							poshash,
@@ -299,7 +314,7 @@ func (self *Voter) sign(info voteInfo) {
 		log.Info("voter sign", "sign err", err)
 		return
 	}
-	vote := &types.Vote{info.parentNum, info.shareHash, info.poshash, info.isPool, sign}
+	vote := &types.Vote{info.index, info.parentNum, info.shareHash, info.poshash, info.isPool, sign}
 	go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
 	self.AddVote(vote)
 }

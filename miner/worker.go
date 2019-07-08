@@ -293,7 +293,7 @@ func (self *worker) update() {
 			parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 
 			delKeys := []voteKey{}
-			for key, _ := range self.pendingVote {
+			for key := range self.pendingVote {
 				if key.headerNumber <= parentHeader.Number.Uint64() {
 					delKeys = append(delKeys, key)
 				}
@@ -477,15 +477,14 @@ func (self *worker) voteLoop() {
 			vote := voteResult.Vote
 			key := voteKey{vote.ParentNum + 1, vote.PosHash}
 			self.pendingVoteMu.Lock()
-			defer self.pendingVoteMu.Unlock()
 			if votes, ok := self.pendingVote[key]; ok {
 				if self.checkVote(vote) {
 					votes.Add(vote)
-					return
 				}
 			} else {
 				self.voter.SendVoteEvent(vote)
 			}
+			self.pendingVoteMu.Unlock()
 		case <-self.voteSub.Err():
 			return
 
