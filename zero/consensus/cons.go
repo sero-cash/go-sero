@@ -300,8 +300,6 @@ func (self *Cons) Update() {
 			} else {
 				if err := self.db.CurrentTri().TryUpdate([]byte(v.key.k()), b); err != nil {
 					panic(err)
-				} else {
-					return
 				}
 			}
 		}

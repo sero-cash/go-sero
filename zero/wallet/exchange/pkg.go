@@ -47,7 +47,7 @@ func (self *Exchange) findPkgs(pk *keys.Uint512, from bool) (pkgs []Pkg) {
 		if id := iterator.Value(); len(id) == 32 {
 			i := keys.Uint256{}
 			copy(i[:], id[:])
-			if pkg := self.findPkgById(&i); pkg != nil {
+			if pkg := self.FindPkgById(&i); pkg != nil {
 				pkgs = append(pkgs, *pkg)
 			} else {
 				log.Error("find pkg error", "pkg", id)
@@ -59,7 +59,7 @@ func (self *Exchange) findPkgs(pk *keys.Uint512, from bool) (pkgs []Pkg) {
 	return
 }
 
-func (self *Exchange) findPkgById(id *keys.Uint256) (pkg *Pkg) {
+func (self *Exchange) FindPkgById(id *keys.Uint256) (pkg *Pkg) {
 	if bs, e := self.db.Get(id_2_pkg_key(id)); e != nil {
 		return
 	} else {
@@ -80,7 +80,7 @@ type pkgIndexes struct {
 func (self *Exchange) indexPkgs(pks []keys.Uint512, batch serodb.Batch, blocks []txtool.Block) {
 	for _, block := range blocks {
 		for _, pkg := range block.Pkgs {
-			if p := self.findPkgById(&pkg.Pack.Id); p != nil {
+			if p := self.FindPkgById(&pkg.Pack.Id); p != nil {
 				if p.to != nil {
 					from := false
 					batch.Delete(pk_from_id_2_id_Key(p.to, &from, &p.z.Pack.Id))

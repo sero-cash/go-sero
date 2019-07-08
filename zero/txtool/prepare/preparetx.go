@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/sero-cash/go-sero/zero/wallet/exchange"
+
 	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -376,7 +378,21 @@ func BuildTxParam(
 	txParam.Cmds.ClosePool = cmds.ClosePool
 
 	if cmds.PkgCreate != nil {
+		if pkg := txtool.Ref_inst.GetState().Pkgs.GetPkgById(&cmds.PkgCreate.Id); pkg != nil {
+			e = errors.New("create pkg but the pkg id is exsits")
+			return
+		}
+		if exg := exchange.CurrentExchange(); exg != nil {
 
+			//if pkg:=exg.FindPkgById(cmds.PkgCreate.Id)
+			txParam.Cmds.PkgCreate.Id = cmds.PkgCreate.Id
+			txParam.Cmds.PkgCreate.PKr = cmds.PkgCreate.PKr
+			txParam.Cmds.PkgCreate.Asset = cmds.PkgCreate.Asset
+			txParam.Cmds.PkgCreate.Memo = cmds.PkgCreate.Memo
+		} else {
+			e = errors.New("create pkg but exchange not init")
+			return
+		}
 	}
 
 	if cmds.PkgTransfer != nil {
