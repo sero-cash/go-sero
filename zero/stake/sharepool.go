@@ -393,38 +393,36 @@ func GetShare(getter serodb.Getter, hash common.Hash) *Share {
 	return ret.(*Share)
 }
 
-func GetSharesByBlock(getter serodb.Getter, blockHash common.Hash, blockNumber uint64) []*Share {
+func GetSharesByBlock(getter serodb.Getter, blockHash common.Hash, blockNumber uint64) (shares []*Share) {
 	records := state.StakeDB.GetBlockRecords(getter, blockNumber, &blockHash)
-	list := []*Share{}
 	for _, record := range records {
 		if record.Name == "share" {
 			for _, each := range record.Pairs {
 				ret := ShareDB.GetObject(getter, each.Hash, &Share{})
-				list = append(list, ret.(*Share))
+				shares = append(shares, ret.(*Share))
 			}
 		}
 
 	}
-	return []*Share{}
+	return
 }
 
-func (self *StakeState) getShares(getter serodb.Getter, blockHash common.Hash, blockNumber uint64, shareCacheMap map[common.Hash]*Share) []*Share {
+func (self *StakeState) getShares(getter serodb.Getter, blockHash common.Hash, blockNumber uint64, shareCacheMap map[common.Hash]*Share) (shares []*Share) {
 	records := state.StakeDB.GetBlockRecords(getter, blockNumber, &blockHash)
-	list := []*Share{}
 	for _, record := range records {
 		if record.Name == "share" {
 			for _, each := range record.Pairs {
 				key := common.BytesToHash(each.Ref)
 				if share, ok := shareCacheMap[key]; ok {
-					list = append(list, share)
+					shares = append(shares, share)
 				} else {
-					list = append(list, self.getShare(key, shareCacheMap))
+					shares = append(shares, self.getShare(key, shareCacheMap))
 				}
 			}
 		}
 
 	}
-	return []*Share{}
+	return
 }
 
 var (
