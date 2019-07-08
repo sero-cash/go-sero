@@ -176,7 +176,7 @@ func CopyHeader(h *Header) *Header {
 		cpy.CurrentVotes = append([]typeserial.Vote{}, h.CurrentVotes...)
 	}
 	if len(h.ParentVotes) > 0 {
-		cpy.CurrentVotes = append([]typeserial.Vote{}, h.ParentVotes...)
+		cpy.ParentVotes = append([]typeserial.Vote{}, h.ParentVotes...)
 	}
 	return &cpy
 }
