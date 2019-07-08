@@ -147,38 +147,35 @@ func (self *Voter) lotteryTaskLoop() {
 }
 
 func (self *Voter) voteLoop() {
+	evict := time.NewTicker(time.Second)
+	defer evict.Stop()
 	for {
-		if self.lotteryQueue.Len() == 0 {
-			time.Sleep(time.Second)
-			continue
-		}
-		current := self.chain.CurrentBlock().NumberU64()
-		for range self.lotteryQueue.GetQueueItems() {
-			item := self.lotteryQueue.Pop()
-			if item == nil {
-				continue
-			}
-			lItem := item.Value.(*lotteryItem)
-			if lItem.Lottery.ParentNum+delayNum < current {
-				continue
-			}
-			parentHeader := self.chain.GetHeaderByHash(lItem.Lottery.ParentHash)
-			if parentHeader == nil {
-				lItem.Attempts += 1
-				if lItem.Attempts < 2 {
-					self.lotteryQueue.PushItem(lItem.Lottery.PosHash, lItem, item.Block)
+		select {
+		case <-evict.C:
+			current := self.chain.CurrentBlock().NumberU64()
+			for item := self.lotteryQueue.Pop(); item != nil; item = self.lotteryQueue.Pop() {
+				lItem := item.Value.(*lotteryItem)
+				if lItem.Lottery.ParentNum+delayNum < current {
+					continue
 				}
-				continue
-			}
-			selfShares, err := self.SelfShares(lItem.Lottery.PosHash, parentHeader.Hash(), parentHeader.Number)
-			if err != nil {
-				log.Info("lotteryTaskLoop", "selfShare error ", err)
-			} else {
-				for _, s := range selfShares {
-					go self.sign(s)
+				parentHeader := self.chain.GetHeaderByHash(lItem.Lottery.ParentHash)
+				if parentHeader == nil {
+					lItem.Attempts += 1
+					if lItem.Attempts < 2 {
+						self.lotteryQueue.PushItem(lItem.Lottery.PosHash, lItem, item.Block)
+					}
+					continue
 				}
-			}
+				selfShares, err := self.SelfShares(lItem.Lottery.PosHash, parentHeader.Hash(), parentHeader.Number)
+				if err != nil {
+					log.Info("lotteryTaskLoop", "selfShare error ", err)
+				} else {
+					for _, s := range selfShares {
+						self.sign(s)
+					}
+				}
 
+			}
 		}
 	}
 }
@@ -344,16 +341,49 @@ func (self *Voter) AddLottery(lottery *types.Lottery) {
 
 }
 
+func (self *Voter) getStakeHashByParentHash(posHash common.Hash, parentHash common.Hash) common.Hash {
+	parentHeader := self.chain.GetHeaderByHash(parentHash)
+	if parentHeader == nil {
+		return common.Hash{}
+	}
+	parentPosHash := parentHeader.HashPos()
+	stakeHash := types.StakeHash(&posHash, &parentPosHash)
+	return stakeHash
+
+}
+
+func (self *Voter) getStakeHashByParentNumb(posHash common.Hash, parentNumber uint64) common.Hash {
+	parentHeader := self.chain.GetHeaderByNumber(parentNumber)
+	if parentHeader == nil {
+		return common.Hash{}
+	}
+	parentPosHash := parentHeader.HashPos()
+	stakeHash := types.StakeHash(&posHash, &parentPosHash)
+	return stakeHash
+
+}
+func (self *Voter) getStateByNumber(num uint64) (*state.StateDB, error) {
+	header := self.chain.GetHeaderByNumber(num)
+	if header == nil {
+		return nil, nil
+	}
+	return self.chain.StateAt(header.Root, header.Number.Uint64())
+
+}
+
 func (self *Voter) AddVote(vote *types.Vote) {
 	log.Info("AddVote", "hashpos", vote.PosHash)
 	self.voteMu.Lock()
 	defer self.voteMu.Unlock()
+
+	current := self.chain.CurrentBlock().Number().Uint64()
+	if current > vote.ParentNum+delayNum {
+		return
+	}
 	_, exits := self.votes[vote.Hash()]
-	if exits {
-
-	} else {
+	if !exits {
 		go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
+		self.SendVoteEvent(vote)
 		self.votes[vote.Hash()] = time.Now()
-
 	}
 }
