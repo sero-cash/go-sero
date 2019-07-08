@@ -301,7 +301,7 @@ func (self *Voter) sign(info voteInfo) {
 	}
 	vote := &types.Vote{info.parentNum, info.shareHash, info.poshash, info.isPool, sign}
 	go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
-	self.SendVoteEvent(vote)
+	self.AddVote(vote)
 }
 
 // SubscribeNewTxsEvent registers a subscription of NewTxsEvent and
