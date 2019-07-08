@@ -443,18 +443,24 @@ func (self *worker) checkVote(vote *types.Vote) bool {
 		} else {
 			parentHeader = self.chain.GetHeaderByNumber(vote.ParentNum)
 		}
+		if parentHeader == nil {
+			return false
+		}
 		parentPosHash := parentHeader.HashPos()
 		ret := types.StakeHash(&vote.PosHash, &parentPosHash)
-		if share.VoteKr != nil {
-			if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, share.VoteKr) {
-				return true
+		if vote.IsPool {
+			if share.PoolId != nil {
+				stakeState := stake.NewStakeState(self.current.state)
+				pool := stakeState.GetStakePool(*share.PoolId)
+				if pool != nil {
+					if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, &pool.VotePKr) {
+						return true
+					}
+				}
 			}
-		}
-		if share.PoolId != nil {
-			stakeState := stake.NewStakeState(self.current.state)
-			pool := stakeState.GetStakePool(*share.PoolId)
-			if pool != nil {
-				if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, &pool.VotePKr) {
+		} else {
+			if share.VoteKr != nil {
+				if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, share.VoteKr) {
 					return true
 				}
 			}
