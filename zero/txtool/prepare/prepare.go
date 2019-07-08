@@ -68,6 +68,8 @@ func SelectUtxos(param *PreTxParam, generator TxParamGenerator) (utxos Utxos, e 
 }
 
 func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds *Cmds, fee *assets.Token, gasPrice *big.Int) (txParam *txtool.GTxParam, e error) {
+	txParam = &txtool.GTxParam{}
+
 	ck := NewCKState(false, fee)
 
 	txParam.Fee = *fee
