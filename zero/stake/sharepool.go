@@ -213,20 +213,20 @@ type StakeState struct {
 	sharePool    consensus.KVPoint
 	shareObj     consensus.ObjPoint
 	stakePoolObj consensus.ObjPoint
-	//ShareDB      consensus.DBObj
+	missedNum    consensus.KVPoint
 }
 
 var (
 	ShareDB      = consensus.DBObj{"STAKE$SHARE$"}
 	StakePoolDB  = consensus.DBObj{"STAKE$POOL$"}
-	missedNumKey = []byte("SHAREMISSEDNNUM$")
+	missedNumKey = []byte("missednum")
 )
 
 func NewStakeState(statedb *state.StateDB) *StakeState {
 	cons := statedb.GetStakeCons()
 
 	stakeState := &StakeState{statedb: statedb}
-
+	stakeState.missedNum = consensus.NewKVPt(cons, "STAKE$EMISSEDNNUM$", "")
 	stakeState.sharePool = consensus.NewKVPt(cons, "STAKE$SHAREPOOL$CONS$", "")
 	stakeState.shareObj = consensus.NewObjPt(cons, "STAKE$SHAREOBJ$CONS", ShareDB.Pre, "share")
 	stakeState.stakePoolObj = consensus.NewObjPt(cons, "STAKE$POOL$CONS", StakePoolDB.Pre, "pool")
@@ -261,7 +261,7 @@ func (self *StakeState) IsEffect(currentBlockNumber uint64) bool {
 	if seroparam.Is_Dev() {
 		return self.ShareSize() > 10
 	} else {
-		missedNum := decodeNumber32(self.sharePool.GetValue(missedNumKey))
+		missedNum := decodeNumber32(self.missedNum.GetValue(missedNumKey))
 		seletedNum := (currentBlockNumber - seroparam.SIP3()) * 3
 		if seletedNum == 0 {
 			return false
@@ -537,7 +537,7 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 	self.processNowShares(header, bc, shareCacheMap, poolCacheMap)
 	self.payProfit(bc, header, shareCacheMap, poolCacheMap)
 
-	self.statisticsByWindow(header, bc)
+	//self.statisticsByWindow(header, bc)
 	for _, share := range shareCacheMap {
 		self.updateShare(share)
 	}
@@ -552,7 +552,7 @@ func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) 
 	}
 	preHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	prepreHeader := bc.GetHeader(preHeader.ParentHash, preHeader.Number.Uint64()-1)
-	value := self.sharePool.GetValue(missedNumKey)
+	value := self.missedNum.GetValue(missedNumKey)
 	missedNum := decodeNumber32(value) + uint32(3-len(prepreHeader.CurrentVotes)-len(preHeader.ParentVotes))
 
 	statisticsMissWindow := getStatisticsMissWindow()
@@ -562,7 +562,7 @@ func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) 
 		missedNum -= uint32(3 - len(preWindiwHeader.CurrentVotes) - len(windiwHeader.ParentVotes))
 	}
 
-	self.sharePool.SetValue(missedNumKey, encodeNumber32(missedNum))
+	self.missedNum.SetValue(missedNumKey, encodeNumber32(missedNum))
 }
 
 func (self *StakeState) processVotedShare(header *types.Header, bc blockChain, shareCacheMap map[common.Hash]*Share, poolCacheMap map[common.Hash]*StakePool) {
