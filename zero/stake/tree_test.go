@@ -97,72 +97,62 @@ func initTree(state State) (*STree, map[common.Hash]uint32) {
 //
 //	}
 //}
-
-func TestDelByIndex2(t *testing.T) {
-	state, _ := newState()
-	tree, _ := initTree(state)
-	tree.deletNodeByIndex(7)
-
-	fmt.Println()
-	root := &SNode{key: state.GetStakeState(rootKey)}
-	root.MiddleOrder(state)
-
-}
-func TestDelByIndex(t *testing.T) {
-
-	state, stateDB := newState()
-	tree, _ := initTree(state)
-
-	fmt.Println()
-	for {
-		size := tree.size()
-
-		if size == 0 {
-			break
-		}
-
-		snapshot := stateDB.Snapshot()
-		fmt.Println("size : ", size)
-		index := rand.Uint32() % size
-		node := tree.deletNodeByIndex(index)
-		node.println()
-
-		stateDB.RevertToSnapshot(snapshot)
-
-		rootNode := &SNode{key: state.GetStakeState(rootKey)}
-		rootNode.MiddleOrder(state)
-
-		root := stateDB.IntermediateRoot(true)
-		fmt.Println("root:", root.String())
-		fmt.Println()
-	}
-
-	hash := state.GetStakeState(rootKey)
-	rootNode := &SNode{key: hash}
-	rootNode.MiddleOrder(state)
-
-	root := stateDB.IntermediateRoot(true)
-	fmt.Println("root:", root.String())
-}
+//
+//func TestDelByIndex(t *testing.T) {
+//
+//	state, stateDB := newState()
+//	tree, _ := initTree(state)
+//
+//	fmt.Println()
+//	for {
+//		size := tree.size()
+//
+//		if size == 0 {
+//			break
+//		}
+//
+//		snapshot := stateDB.Snapshot()
+//		fmt.Println("size : ", size)
+//		index := rand.Uint32() % size
+//		node := tree.deletNodeByIndex(index)
+//		node.println()
+//
+//		stateDB.RevertToSnapshot(snapshot)
+//
+//		rootNode := &SNode{key: state.GetStakeState(rootKey)}
+//		rootNode.MiddleOrder(state)
+//
+//		root := stateDB.IntermediateRoot(true)
+//		fmt.Println("root:", root.String())
+//		fmt.Println()
+//	}
+//
+//	hash := state.GetStakeState(rootKey)
+//	rootNode := &SNode{key: hash}
+//	rootNode.MiddleOrder(state)
+//
+//	root := stateDB.IntermediateRoot(true)
+//	fmt.Println("root:", root.String())
+//}
 
 func TestDelByHash(t *testing.T) {
-	state, stateDB := newState()
+	state, _ := newState()
 	tree, all := initTree(state)
 
 	fmt.Println()
 	index := 0
-	for hash, _ := range all {
+	for hash, num := range all {
 		fmt.Println("delete ", common.Bytes2Hex(hash[:]))
 
-		snapshot := stateDB.Snapshot()
-		fmt.Println("snapshot : ", snapshot)
-		tree.deleteNodeByHash(hash)
-		if index == 2 {
-			root := stateDB.IntermediateRoot(true)
-			fmt.Println("root : ", root.String())
-		} else {
-			stateDB.RevertToSnapshot(snapshot)
-		}
+		//snapshot := stateDB.Snapshot()
+		//fmt.Println("snapshot : ", snapshot)
+		tree.deleteNodeByHash(hash, num)
+		//if index == 2 {
+		//	root := stateDB.IntermediateRoot(true)
+		//	fmt.Println("root : ", root.String())
+		//} else {
+		//	stateDB.RevertToSnapshot(snapshot)
+		//}
 
 		rootNode := &SNode{key: state.GetStakeState(rootKey)}
 		rootNode.MiddleOrder(state)

@@ -127,7 +127,7 @@ func (tree *STree) insertNode(parent *SNode, children *SNode) {
 		if hash == emptyHash {
 			tree.state.SetStakeState(key, children.key)
 			tree.state.SetStakeState(children.numKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(children.num), 32)))
-			tree.state.SetStakeState(children.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(children.total), 32)))
+			tree.state.SetStakeState(children.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(children.num), 32)))
 			return
 		} else {
 			parent = &SNode{key: hash}
@@ -136,12 +136,12 @@ func (tree *STree) insertNode(parent *SNode, children *SNode) {
 	}
 }
 
-func (tree *STree) deleteNodeByHash(nodeHash common.Hash) *SNode {
+func (tree *STree) deleteNodeByHash(nodeHash common.Hash, num uint32) *SNode {
 	rootHash := tree.state.GetStakeState(rootKey)
 	if rootHash == nodeHash {
 		node := &SNode{key: rootHash}
 		node.init(tree.state)
-		tree.deleteNode(rootKey, node, node.num)
+		tree.deleteNode(rootKey, node, num)
 		return node
 	} else {
 		paths := []*SNode{}
@@ -165,9 +165,9 @@ func (tree *STree) deleteNodeByHash(nodeHash common.Hash) *SNode {
 				for _, path := range paths {
 					value := tree.state.GetStakeState(path.totalKey())
 					number := decodeNumber32(value[28:32])
-					tree.state.SetStakeState(path.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(number-node.num), 32)))
+					tree.state.SetStakeState(path.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(number-num), 32)))
 				}
-				tree.deleteNode(key, node, node.num)
+				tree.deleteNode(key, node, num)
 				return node
 			}
 
@@ -179,49 +179,49 @@ func (tree *STree) deleteNodeByHash(nodeHash common.Hash) *SNode {
 		}
 	}
 }
-
-func (tree *STree) deletNodeByIndex(index uint32) *SNode {
-	if index >= tree.size() {
-		panic("index > size")
-	}
-	key := rootKey
-	node := &SNode{key: tree.state.GetStakeState(key)}
-	node.init(tree.state)
-
-	for {
-		left := node.left(tree.state)
-		if left != nil {
-			if index < left.total {
-				value := tree.state.GetStakeState(node.totalKey())
-				number := decodeNumber32(value[28:32])
-				tree.state.SetStakeState(node.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(number-1), 32)))
-
-				key = node.leftKey()
-				node = left
-				continue
-			}
-			index -= left.total
-		}
-
-		if index < node.num {
-			return tree.deleteNode(key, node, 1)
-		}
-		index -= node.num
-
-		right := node.right(tree.state)
-		if right != nil {
-			value := tree.state.GetStakeState(node.totalKey())
-			number := decodeNumber32(value[28:32])
-			tree.state.SetStakeState(node.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(number-1), 32)))
-
-			key = node.rightKey()
-			node = right
-			continue
-		}
-		panic("not found by index")
-	}
-
-}
+//
+//func (tree *STree) deletNodeByIndex(index uint32) *SNode {
+//	if index >= tree.size() {
+//		panic("index > size")
+//	}
+//	key := rootKey
+//	node := &SNode{key: tree.state.GetStakeState(key)}
+//	node.init(tree.state)
+//
+//	for {
+//		left := node.left(tree.state)
+//		if left != nil {
+//			if index < left.total {
+//				value := tree.state.GetStakeState(node.totalKey())
+//				number := decodeNumber32(value[28:32])
+//				tree.state.SetStakeState(node.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(number-1), 32)))
+//
+//				key = node.leftKey()
+//				node = left
+//				continue
+//			}
+//			index -= left.total
+//		}
+//
+//		if index < node.num {
+//			return tree.deleteNode(key, node, 1)
+//		}
+//		index -= node.num
+//
+//		right := node.right(tree.state)
+//		if right != nil {
+//			value := tree.state.GetStakeState(node.totalKey())
+//			number := decodeNumber32(value[28:32])
+//			tree.state.SetStakeState(node.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(number-1), 32)))
+//
+//			key = node.rightKey()
+//			node = right
+//			continue
+//		}
+//		panic("not found by index")
+//	}
+//
+//}
 
 func (tree *STree) deleteNode(key common.Hash, children *SNode, num uint32) *SNode {
 	number := children.num - num

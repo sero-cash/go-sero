@@ -434,7 +434,9 @@ func (self *worker) contains(parent common.Hash, sign keys.Uint512) bool {
 }
 
 func (self *worker) checkVote(vote *types.Vote) bool {
-	share := stake.GetShare(self.chain.GetDB(), vote.ShareHash)
+	db, _ := self.chain.State()
+	stakeState := stake.NewStakeState(db)
+	share := stakeState.GetShare(vote.ShareHash)
 	if share != nil {
 		work := self.current
 		var parentHeader *types.Header
@@ -450,7 +452,7 @@ func (self *worker) checkVote(vote *types.Vote) bool {
 		ret := types.StakeHash(&vote.PosHash, &parentPosHash)
 		if vote.IsPool {
 			if share.PoolId != nil {
-				stakeState := stake.NewStakeState(self.current.state)
+
 				pool := stakeState.GetStakePool(*share.PoolId)
 				if pool != nil {
 					if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, &pool.VotePKr) {
