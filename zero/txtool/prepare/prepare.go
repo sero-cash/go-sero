@@ -26,7 +26,7 @@ func SelectUtxos(param *PreTxParam, generator TxParamGenerator) (utxos Utxos, e 
 		}
 		return
 	} else {
-		ck := NewCKState(&param.Fee)
+		ck := NewCKState(true, &param.Fee)
 
 		if cmdsAsset := param.Cmds.OutAsset(); cmdsAsset != nil {
 			ck.AddOut(cmdsAsset)
@@ -46,17 +46,15 @@ func SelectUtxos(param *PreTxParam, generator TxParamGenerator) (utxos Utxos, e 
 		}
 
 		for currency, value := range ck.cy {
-			outs, _ := generator.FindRoots(&param.From, utils.Uint256ToCurrency(&currency), value.balance.ToIntRef())
-			utxos = append(utxos, outs...)
+			sign := value.balance.ToIntRef().Sign()
+			if sign > 0 {
+				outs, _ := generator.FindRoots(&param.From, utils.Uint256ToCurrency(&currency), new(big.Int).Abs(value.balance.ToIntRef()))
+				utxos = append(utxos, outs...)
+			}
 		}
 
 		for _, utxo := range utxos {
 			ck.AddIn(&utxo.Asset)
-		}
-
-		if err := ck.CheckToken(); err != nil {
-			e = err
-			return
 		}
 
 		if len(ck.tk) > 0 {
@@ -70,7 +68,7 @@ func SelectUtxos(param *PreTxParam, generator TxParamGenerator) (utxos Utxos, e 
 }
 
 func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds *Cmds, fee *assets.Token, gasPrice *big.Int) (txParam *txtool.GTxParam, e error) {
-	ck := NewCKState(fee)
+	ck := NewCKState(false, fee)
 
 	txParam.Fee = *fee
 	txParam.GasPrice = *gasPrice

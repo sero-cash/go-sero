@@ -39,8 +39,9 @@ func newcyStateMap() (ret cyStateMap) {
 }
 
 type CKState struct {
-	cy cyStateMap
-	tk map[keys.Uint256]keys.Uint256
+	outPlus bool
+	cy      cyStateMap
+	tk      map[keys.Uint256]keys.Uint256
 }
 
 func (self *CKState) GetList() (tkns []assets.Token, tkts []assets.Ticket) {
@@ -53,9 +54,14 @@ func (self *CKState) GetList() (tkns []assets.Token, tkts []assets.Ticket) {
 	return
 }
 
-func NewCKState(fee *assets.Token) (ret CKState) {
+func NewCKState(outPlus bool, fee *assets.Token) (ret CKState) {
+	ret.outPlus = outPlus
 	ret.cy = newcyStateMap()
-	ret.cy.sub(&fee.Currency, &fee.Value)
+	if outPlus {
+		ret.cy.add(&fee.Currency, &fee.Value)
+	} else {
+		ret.cy.sub(&fee.Currency, &fee.Value)
+	}
 	ret.tk = make(map[keys.Uint256]keys.Uint256)
 	return
 }
@@ -65,7 +71,11 @@ func (self *CKState) AddIn(asset *assets.Asset) (added bool, e error) {
 	if asset.Tkn != nil {
 		if asset.Tkn.Currency != keys.Empty_Uint256 {
 			if asset.Tkn.Value.ToUint256() != keys.Empty_Uint256 {
-				self.cy.add(&asset.Tkn.Currency, &asset.Tkn.Value)
+				if self.outPlus {
+					self.cy.sub(&asset.Tkn.Currency, &asset.Tkn.Value)
+				} else {
+					self.cy.add(&asset.Tkn.Currency, &asset.Tkn.Value)
+				}
 				added = true
 			}
 		}
@@ -74,11 +84,20 @@ func (self *CKState) AddIn(asset *assets.Asset) (added bool, e error) {
 		if asset.Tkt.Category != keys.Empty_Uint256 {
 			if asset.Tkt.Value != keys.Empty_Uint256 {
 				if _, ok := self.tk[asset.Tkt.Value]; !ok {
-					added = true
-					self.tk[asset.Tkt.Value] = asset.Tkt.Category
+					if self.outPlus {
+						added = true
+						delete(self.tk, asset.Tkt.Value)
+					} else {
+						e = fmt.Errorf("in tkt duplicate: %v", asset.Tkt.Value)
+					}
 					return
 				} else {
-					e = fmt.Errorf("in tkt duplicate: %v", asset.Tkt.Value)
+					if !self.outPlus {
+						added = true
+						self.tk[asset.Tkt.Value] = asset.Tkt.Category
+					} else {
+						e = fmt.Errorf("in tkt duplicate: %v", asset.Tkt.Value)
+					}
 					return
 				}
 			} else {
@@ -95,15 +114,28 @@ func (self *CKState) AddIn(asset *assets.Asset) (added bool, e error) {
 func (self *CKState) AddOut(asset *assets.Asset) (added bool, e error) {
 	added = false
 	if asset.Tkn != nil {
-		self.cy.sub(&asset.Tkn.Currency, &asset.Tkn.Value)
+		if self.outPlus {
+			self.cy.add(&asset.Tkn.Currency, &asset.Tkn.Value)
+		} else {
+			self.cy.sub(&asset.Tkn.Currency, &asset.Tkn.Value)
+		}
 		added = true
 	}
 	if asset.Tkt != nil {
-		if _, ok := self.tk[asset.Tkt.Value]; ok {
-			delete(self.tk, asset.Tkt.Value)
-			added = true
+		if _, ok := self.tk[asset.Tkt.Value]; !ok {
+			if self.outPlus {
+				self.tk[asset.Tkt.Value] = asset.Tkt.Category
+				added = true
+			} else {
+				e = fmt.Errorf("out tkt not in ins: %v", asset.Tkt.Value)
+			}
 		} else {
-			e = fmt.Errorf("out tkt not in ins: %v", asset.Tkt.Value)
+			if !self.outPlus {
+				delete(self.tk, asset.Tkt.Value)
+				added = true
+			} else {
+				e = fmt.Errorf("out tkt not in ins: %v", asset.Tkt.Value)
+			}
 			return
 		}
 	}
