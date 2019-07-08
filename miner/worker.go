@@ -372,6 +372,7 @@ func (self *worker) powResultLoop() {
 					self.pendingVoteMu.Unlock()
 
 					if len(currentVotes) >= 2 || !isEffect {
+						//self.pendingVote[key] = mapset.NewSet()
 						break
 					}
 					time.Sleep(1)
@@ -389,15 +390,9 @@ func (self *worker) powResultLoop() {
 					if len(parentVotes) > 0 {
 						for _, item := range parentVotes {
 							vote := item.(*types.Vote)
-							flag := true
-							for _, each := range parentHeader.CurrentVotes {
-								if each.Hash == vote.PosHash {
-									flag = false
-									break
-								}
-							}
-							if flag {
+							if !self.contains(parentHeader, vote.Sign) {
 								ParentVotes = append(ParentVotes, typeserial.Vote{vote.ShareHash, vote.IsPool, vote.Sign})
+								break
 							}
 						}
 					}
@@ -410,24 +405,11 @@ func (self *worker) powResultLoop() {
 	}
 }
 
-func (self *worker) parentPoshash(parent common.Hash) (ret *common.Hash) {
-	header := self.chain.GetHeaderByHash(parent)
-	if header == nil {
-		return nil
-	}
-	*ret = header.HashPos()
-	return
-
-}
-
-func (self *worker) contains(parent common.Hash, sign keys.Uint512) bool {
-	header := self.chain.GetHeaderByHash(parent)
-	if header != nil {
-		votes := header.CurrentVotes
-		for _, vote := range votes {
-			if vote.Sign == sign {
-				return true
-			}
+func (self *worker) contains(parentHeader *types.Header, sign keys.Uint512) bool {
+	votes := parentHeader.CurrentVotes
+	for _, vote := range votes {
+		if vote.Sign == sign {
+			return true
 		}
 	}
 	return false
