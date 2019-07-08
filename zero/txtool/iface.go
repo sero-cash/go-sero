@@ -47,7 +47,6 @@ type GPkgCreateCmd struct {
 	PKr   keys.PKr
 	Asset assets.Asset
 	Memo  keys.Uint512
-	Ar    keys.Uint256
 }
 
 type Cmds struct {

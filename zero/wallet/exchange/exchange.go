@@ -464,7 +464,7 @@ func (self *Exchange) GenTxWithSign(param prepare.PreTxParam) (pretx *txtool.GTx
 		return
 	}
 	var roots prepare.Utxos
-	if roots, e = prepare.PreGenTx(&param, self); e != nil {
+	if roots, e = prepare.SelectUtxos(&param, self); e != nil {
 		return
 	}
 

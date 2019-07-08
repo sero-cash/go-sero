@@ -19,12 +19,13 @@ package types
 
 import (
 	"encoding/binary"
-	"github.com/sero-cash/go-sero/core/types/typeserial"
 	"io"
 	"math/big"
 	"sort"
 	"sync/atomic"
 	"time"
+
+	"github.com/sero-cash/go-sero/core/types/typeserial"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/rlp"
@@ -61,8 +62,8 @@ type Block struct {
 }
 
 func (b *Block) SetVotes(CurrentVotes []typeserial.Vote, ParentVotes []typeserial.Vote) {
-	b.header.CurrentVotes = CurrentVotes
-	b.header.ParentVotes = ParentVotes
+	b.header.CurrentVotes = append([]typeserial.Vote{}, CurrentVotes...)
+	b.header.ParentVotes = append([]typeserial.Vote{}, ParentVotes...)
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the

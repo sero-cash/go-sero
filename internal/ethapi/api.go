@@ -2163,7 +2163,7 @@ func (args *ClosePkgArgs) toTxParam() (txParam prepare.PreTxParam) {
 	txParam.From = *args.From.ToUint512()
 	txParam.RefundTo = keys.Addr2PKr(args.From.ToUint512(), keys.RandUint256().NewRef()).NewRef()
 	txParam.Fee = feeToken
-	pkgCloseCmd := prepare.PkgCloseCmd{*args.PkgId}
+	pkgCloseCmd := prepare.PkgCloseCmd{*args.PkgId, *args.Key}
 	txParam.Cmds.PkgClose = &pkgCloseCmd
 	return
 

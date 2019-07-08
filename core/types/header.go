@@ -172,6 +172,12 @@ func CopyHeader(h *Header) *Header {
 		cpy.Extra = make([]byte, len(h.Extra))
 		copy(cpy.Extra, h.Extra)
 	}
+	if len(h.CurrentVotes) > 0 {
+		cpy.CurrentVotes = append([]typeserial.Vote{}, h.CurrentVotes...)
+	}
+	if len(h.ParentVotes) > 0 {
+		cpy.CurrentVotes = append([]typeserial.Vote{}, h.ParentVotes...)
+	}
 	return &cpy
 }
 
