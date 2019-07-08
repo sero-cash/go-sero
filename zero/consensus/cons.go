@@ -38,9 +38,11 @@ type inBlock struct {
 }
 
 func (self *inBlock) CopyRef() (ret *inBlock) {
-	ret = &inBlock{
-		self.name,
-		append([]byte{}, self.ref...),
+	if self != nil {
+		ret = &inBlock{
+			self.name,
+			append([]byte{}, self.ref...),
+		}
 	}
 	return
 }
