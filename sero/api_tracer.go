@@ -643,7 +643,7 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 			return msg, context, statedb, nil
 		}
 		var gaslimit uint64
-		if gas, e := statedb.GetSeroGasLimit(tx); e != nil {
+		if gas, e := statedb.GetTxGasLimit(tx); e != nil {
 			return nil, vm.Context{}, nil, e
 		} else {
 			gaslimit = gas

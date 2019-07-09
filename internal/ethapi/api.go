@@ -1125,12 +1125,14 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	if args.To != nil {
 
 		if state.IsContract(common.BytesToAddress(args.To[:])) {
-			*to = common.BytesToAddress(args.To[:])
+			t := common.BytesToAddress(args.To[:])
+			to = &t
 		} else {
 			if args.To.IsAccountAddress() {
 				pk := common.AddrToAccountAddr(*args.To)
 				pkr := (keys.Addr2PKr(pk.ToUint512(), nil))
-				*to = common.BytesToAddress(pkr[:])
+				t := common.BytesToAddress(pkr[:])
+				to = &t
 			} else {
 				to = args.To
 			}
@@ -1801,18 +1803,17 @@ func (args *SendTxArgs) toAsset() assets.Asset {
 
 func (args *SendTxArgs) toTxParam(state *state.StateDB) (txParam prepare.PreTxParam) {
 
-	var toPkr keys.PKr
 	var refundPkr keys.PKr
 	txParam.GasPrice = (*big.Int)(args.GasPrice)
 	txParam.From = *args.From.ToUint512()
 
 	feevalue := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	asset := args.toAsset()
-	if args.To == nil || state.IsContract(common.BytesToAddress(args.To[:])) {
+	if args.To == nil {
 		fromRand := keys.Uint256{}
 		copy(fromRand[:16], (*args.Data)[:16])
 		txParam.Cmds = prepare.Cmds{}
-		contractCmd := stx.ContractCmd{asset, toPkr, *args.Data}
+		contractCmd := stx.ContractCmd{asset, nil, *args.Data}
 		txParam.Cmds.Contract = &contractCmd
 		refundPkr = keys.Addr2PKr(args.From.ToUint512(), &fromRand)
 	} else if state.IsContract(common.BytesToAddress(args.To[:])) {

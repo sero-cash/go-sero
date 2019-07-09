@@ -24,6 +24,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -245,12 +247,17 @@ func (self *StateDB) GetTokenRate(contractAddr common.Address, coinName string) 
 func (self *StateDB) GetSeroFee(contractAddr *common.Address, tfee *assets.Token) (sfee utils.U256, e error) {
 	tcurrency := utils.Uint256ToCurrency(&tfee.Currency)
 	if tcurrency != "SERO" {
-		if trate, srate := self.GetTokenRate(*contractAddr, tcurrency); trate.Sign() != 0 && srate.Sign() != 0 {
-			tvalue := big.Int(tfee.Value)
-			sfee = utils.U256(*big.NewInt(0).Div(big.NewInt(0).Mul(&tvalue, srate), trate))
-			return
+		if contractAddr != nil {
+			if trate, srate := self.GetTokenRate(*contractAddr, tcurrency); trate.Sign() != 0 && srate.Sign() != 0 {
+				tvalue := big.Int(tfee.Value)
+				sfee = utils.U256(*big.NewInt(0).Div(big.NewInt(0).Mul(&tvalue, srate), trate))
+				return
+			} else {
+				e = fmt.Errorf("current address(%v) can not support the token(%v) fee", hexutil.Encode(contractAddr[:]), tcurrency)
+				return
+			}
 		} else {
-			e = fmt.Errorf("current address(%v) can not support the token(%v) fee", hexutil.Encode(contractAddr[:]), tcurrency)
+			e = fmt.Errorf("contractAddr is nil for token(%v) fee", tcurrency)
 			return
 		}
 	} else {
@@ -259,12 +266,25 @@ func (self *StateDB) GetSeroFee(contractAddr *common.Address, tfee *assets.Token
 	}
 }
 
-func (self *StateDB) GetSeroGasLimit(tx *types.Transaction) (gaslimit uint64, e error) {
-	if sero_fee, err := self.GetSeroFee(tx.To(), &tx.Stxt().Fee); err != nil {
+func (self *StateDB) GetSeroGasLimit(to *common.Address, tfee *assets.Token, gasPrice *big.Int) (gaslimit uint64, e error) {
+	if gasPrice == nil || gasPrice.Sign() <= 0 {
+		e = errors.New("gas must > 0")
+		return
+	}
+	if sero_fee, err := self.GetSeroFee(to, tfee); err != nil {
 		e = err
 		return
 	} else {
-		gaslimit = big.NewInt(0).Div(sero_fee.ToInt(), tx.GasPrice()).Uint64()
+		gaslimit = big.NewInt(0).Div(sero_fee.ToInt(), gasPrice).Uint64()
+		return
+	}
+
+}
+
+func (self *StateDB) GetTxGasLimit(tx *types.Transaction) (gaslimit uint64, e error) {
+	if gaslimit, e = self.GetSeroGasLimit(tx.To(), &tx.Stxt().Fee, tx.GasPrice()); e != nil {
+		return
+	} else {
 		return
 	}
 }

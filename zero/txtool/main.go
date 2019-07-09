@@ -1,6 +1,10 @@
 package txtool
 
 import (
+	"math/big"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
@@ -14,6 +18,7 @@ type BlockChain interface {
 	GetCurrenHeader() *types.Header
 	GetHeader(hash *common.Hash) *types.Header
 	NewState(hash *common.Hash) *zstate.ZState
+	GetSeroGasLimit(to *common.Address, tfee *assets.Token, gasPrice *big.Int) (gaslimit uint64, e error)
 	GetTks() []keys.Uint512
 	GetTkAt(tk *keys.Uint512) uint64
 	GetBlockByNumber(num uint64) *types.Block

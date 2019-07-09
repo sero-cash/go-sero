@@ -468,7 +468,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 
 	// Ensure the transaction doesn't exceed the current block limit gas.
 	var gaslimit uint64
-	if gaslimit, e = pool.currentState.GetSeroGasLimit(tx); e != nil {
+	if gaslimit, e = pool.currentState.GetTxGasLimit(tx); e != nil {
 		return
 	}
 	if pool.currentMaxGas < gaslimit {

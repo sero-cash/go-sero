@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/common"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
@@ -48,8 +50,13 @@ func SelectUtxos(param *PreTxParam, generator TxParamGenerator) (utxos Utxos, e 
 		for currency, value := range ck.cy {
 			sign := value.balance.ToIntRef().Sign()
 			if sign > 0 {
-				outs, _ := generator.FindRoots(&param.From, utils.Uint256ToCurrency(&currency), new(big.Int).Abs(value.balance.ToIntRef()))
-				utxos = append(utxos, outs...)
+				outs, remain := generator.FindRoots(&param.From, utils.Uint256ToCurrency(&currency), new(big.Int).Abs(value.balance.ToIntRef()))
+				if remain.Sign() <= 0 {
+					utxos = append(utxos, outs...)
+				} else {
+					e = errors.New("no enough unlocked utxos")
+					return
+				}
 			}
 		}
 
@@ -99,7 +106,7 @@ func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds 
 				}
 			}
 		} else {
-			e = fmt.Errorf("can not find utxo for root %v", hexutil.Encode(utxo.Root[:]))
+			e = fmt.Errorf("can not find Out for utxo %v", hexutil.Encode(utxo.Root[:]))
 			return
 		}
 	}
@@ -156,7 +163,12 @@ func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds 
 			a.Tkt.Category = tkt.Category
 			a.Tkt.Value = tkt.Value
 		}
+		ck.AddOut(&a)
 		Outs = append(Outs, txtool.GOut{PKr: txParam.From.PKr, Asset: a})
+	}
+
+	if e = ck.Check(); e != nil {
+		return
 	}
 
 	txParam.Ins = Ins
@@ -216,6 +228,22 @@ func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds 
 			}
 		}
 	}
+
+	var contractTo *common.Address
+	if cmds.Contract != nil {
+		if cmds.Contract.To != nil {
+			contractTo = &common.Address{}
+			copy(contractTo[:], cmds.Contract.To[:])
+		}
+	}
+
+	if gaslimit, err := txtool.Ref_inst.Bc.GetSeroGasLimit(contractTo, &txParam.Fee, &txParam.GasPrice); err != nil {
+		e = err
+		return
+	} else {
+		txParam.Gas = gaslimit
+	}
+
 	return
 
 }

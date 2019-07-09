@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/zero/stake"
@@ -241,6 +243,15 @@ func (self *State1BlockChain) IsValid() bool {
 		return false
 	}
 	return true
+}
+
+func (self *State1BlockChain) GetSeroGasLimit(to *common.Address, tfee *assets.Token, gas *big.Int) (gaslimit uint64, e error) {
+	if state, err := self.Bc.State(); err != nil {
+		e = err
+		return
+	} else {
+		return state.GetSeroGasLimit(to, tfee, gas)
+	}
 }
 
 func (self *State1BlockChain) NewState(hash *common.Hash) *zstate.ZState {
