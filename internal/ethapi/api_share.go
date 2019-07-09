@@ -4,6 +4,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/accounts"
+
 	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -286,4 +288,57 @@ func (s *PublicStakeApI) StakePools(ctx context.Context) []map[string]interface{
 		result = append(result, newRPCStakePool(*pool))
 	}
 	return result
+}
+
+func getAccountAddrByPKr(wallets []accounts.Wallet, PKr keys.PKr) interface{} {
+	addr := common.Address{}
+	copy(addr[:], PKr[:])
+	for _, wallet := range wallets {
+		if wallet.IsMine(addr) {
+			return wallet.Accounts()[0].Address
+		}
+	}
+	return addr
+}
+
+func newRPCShare(wallets []accounts.Wallet, share stake.Share) map[string]interface{} {
+	s := map[string]interface{}{}
+	s["id"] = share.Id()
+	s["addr"] = getAccountAddrByPKr(wallets, share.PKr)
+	s["voteAddr"] = getAccountAddrByPKr(wallets, share.VotePKr)
+	s["total"] = share.InitNum
+	s["remaining"] = share.Num
+	s["missed"] = share.WishVoteNum
+	if share.PoolId != nil {
+		s["pool"] = share.PoolId
+	}
+	s["tx"] = share.TransactionHash
+	return s
+}
+
+func (s *PublicStakeApI) MyShare(ctx context.Context, addr common.Address) []map[string]interface{} {
+	var pk keys.Uint512
+	wallets := s.b.AccountManager().Wallets()
+	if addr.IsAccountAddress() {
+		pk = *common.AddrToAccountAddr(addr).ToUint512()
+	} else {
+
+		for _, wallet := range wallets {
+			if wallet.IsMine(addr) {
+				pk = *wallet.Accounts()[0].Address.ToUint512()
+				break
+			}
+		}
+	}
+
+	result := []map[string]interface{}{}
+	shares := stakeservice.CurrentStakeService().SharesByPk(pk)
+	for _, share := range shares {
+		result = append(result, newRPCShare(wallets, *share))
+	}
+	return result
+}
+
+func (s *PublicStakeApI) getShare(ctx context.Context, shareId common.Hash) map[string]interface{} {
+	return nil
 }

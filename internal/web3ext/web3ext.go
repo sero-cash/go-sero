@@ -746,6 +746,11 @@ web3._extend({
 			name: 'poolState',
 			call: 'stake_poolState',
 			params: 1
+		}),
+        new web3._extend.Method({
+			name: 'myShare',
+			call: 'stake_myShare',
+			params: 1
 		})
 	],
     properties: [
