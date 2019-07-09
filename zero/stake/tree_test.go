@@ -140,25 +140,36 @@ func TestDelByHash(t *testing.T) {
 	tree, all := initTree(state)
 
 	fmt.Println()
-	index := 0
-	for hash, num := range all {
-		fmt.Println("delete ", common.Bytes2Hex(hash[:]))
+	for {
+		var key common.Hash
+		for hash, _ := range all {
+			key = hash
+			fmt.Println("delete ", common.Bytes2Hex(hash[:]))
 
-		//snapshot := stateDB.Snapshot()
-		//fmt.Println("snapshot : ", snapshot)
-		tree.deleteNodeByHash(hash, num)
-		//if index == 2 {
-		//	root := stateDB.IntermediateRoot(true)
-		//	fmt.Println("root : ", root.String())
-		//} else {
-		//	stateDB.RevertToSnapshot(snapshot)
-		//}
+			//snapshot := stateDB.Snapshot()
+			//fmt.Println("snapshot : ", snapshot)
+			tree.deleteNodeByHash(hash, 1)
+			//if index == 2 {
+			//	root := stateDB.IntermediateRoot(true)
+			//	fmt.Println("root : ", root.String())
+			//} else {
+			//	stateDB.RevertToSnapshot(snapshot)
+			//}
 
-		rootNode := &SNode{key: state.GetStakeState(rootKey)}
-		rootNode.MiddleOrder(state)
-		fmt.Println()
-		index++
+			rootNode := &SNode{key: state.GetStakeState(rootKey)}
+			rootNode.MiddleOrder(state)
+			fmt.Println()
+			break
+		}
+		all[key] -= 1
+		if all[key] == 0 {
+			delete(all, key)
+		}
+		if len(all) == 0 {
+			break
+		}
 	}
+
 	hash := state.GetStakeState(rootKey)
 	root := &SNode{key: hash}
 	fmt.Println("rootNode", common.Bytes2Hex(hash[:]))

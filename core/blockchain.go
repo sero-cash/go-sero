@@ -978,7 +978,14 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	blockhash := block.Hash()
 	state.GetStakeCons().Record(&blockhash, batch)
 	state.GetZState().RecordBlock(batch, blockhash.HashToUint256())
-	//rawdb.WriteHash(bc.db, block.Number().Uint64(), block.Hash())
+
+	stakeState := stake.NewStakeState(state)
+	_, shares, _ := stakeState.SeleteShare(block.Header().HashPos())
+	voteHashs := []common.Hash{}
+	for _, share := range shares {
+		voteHashs = append(voteHashs, common.BytesToHash(share.Id()))
+	}
+	rawdb.WriteBlockVotes(batch, block.Hash(), voteHashs)
 
 	root, err := state.Commit(true)
 	if root != block.Root() {
@@ -1230,15 +1237,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		}
 		state, err := state.New(parent.Root(), bc.stateCache, parent.NumberU64())
 
-		if bc.accountManager != nil {
-			seeds := []keys.Uint512{}
-			for _, w := range bc.accountManager.Wallets() {
-				seed := w.Accounts()[0].Tk
-				seeds = append(seeds, *seed.ToUint512())
-			}
-			state.SetSeeds(seeds)
+		if err != nil {
+			return i, events, coalescedLogs, err
 		}
 
+		stakeState := stake.NewStakeState(state)
+		err = stakeState.CheckVotes(block, bc)
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
@@ -1250,7 +1254,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 			}
 		}
 
-		stakeState := stake.NewStakeState(state)
 		stakeState.ProcessBeforeApply(bc, block.Header())
 
 		// Process block using the parent state as reference point.

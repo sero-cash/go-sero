@@ -34,7 +34,6 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/consensus"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/crypto"
@@ -103,7 +102,7 @@ type StateDB struct {
 	validRevisions []revision
 	nextRevisionId int
 
-	seeds  []keys.Uint512
+	//seeds  []keys.Uint512
 	number uint64
 	lock   sync.Mutex
 }
@@ -125,14 +124,6 @@ func (self *StateDB) GetStakeState(key common.Hash) common.Hash {
 
 func (self *StateDB) IsContract(addr common.Address) bool {
 	return self.getStateObject(addr) != nil
-}
-
-func (self *StateDB) GetSeeds() []keys.Uint512 {
-	return self.seeds
-}
-
-func (self *StateDB) SetSeeds(seeds []keys.Uint512) {
-	self.seeds = seeds
 }
 
 func NewGenesis(root common.Hash, db Database) (*StateDB, error) {

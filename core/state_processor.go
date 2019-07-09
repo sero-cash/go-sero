@@ -17,7 +17,6 @@
 package core
 
 import (
-	"errors"
 	"github.com/sero-cash/go-sero/log"
 	"math/big"
 
@@ -145,6 +144,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 
 var (
 	poolValueThreshold, _ = new(big.Int).SetString("1000000000000000000", 10)
+	lockingBlockNum       = uint64(200) //uint64(1088640)
 )
 
 func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.StateDB, txHash common.Hash, number uint64) error {
@@ -156,10 +156,12 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			poolId := common.BytesToHash(stakeDesc.BuyShare.Pool[:])
 			stakePool = stakeState.GetStakePool(poolId)
 			if stakePool == nil {
-				return errors.New("not exist pool,id" + poolId.String())
+				log.Warn("BuyShare, not exist pool", "PoolId", poolId.String())
+				return nil
 			}
 			if stakePool.Closed {
-				return errors.New("pool is closed,id" + poolId.String())
+				log.Warn("BuyShare, pool is closed", poolId.String())
+				return nil
 			}
 		}
 
@@ -178,13 +180,13 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 				statedb.GetZState().AddTxOut(from, asset)
 			}
 
-			share := &stake.Share{PKr: pkr, VotePKr: stakeDesc.BuyShare.Vote, Value: avgPrice, TransactionHash: txHash, BlockNumber: number, InitNum: num, Num: num, Profit: big.NewInt(0)}
+			share := &stake.Share{PKr: pkr, VotePKr: stakeDesc.BuyShare.Vote, Value: avgPrice, TransactionHash: txHash, BlockNumber: number, InitNum: num}
 			if stakePool != nil {
 				hash := common.BytesToHash(stakePool.Id())
 				share.PoolId = &hash
 				share.Fee = stakePool.Fee
 			}
-			stakeState.UpdateShare(share)
+			stakeState.AddShare(share)
 		} else {
 			asset := assets.Asset{Tkn: &assets.Token{
 				Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
@@ -194,18 +196,51 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			statedb.GetZState().AddTxOut(from, asset)
 		}
 	} else if stakeDesc.RegistPool != nil {
-		if poolValueThreshold.Cmp(stakeDesc.RegistPool.Value.ToInt()) <= 0 {
+		poolId := crypto.Keccak256Hash(pkr[:])
+		stakePool := stakeState.GetStakePool(poolId)
+		if stakePool != nil {
+			if stakeDesc.RegistPool.Value.ToInt().Sign() > 0 {
+				asset := assets.Asset{Tkn: &assets.Token{
+					Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+					Value:    stakeDesc.RegistPool.Value,
+				},
+				}
+				statedb.GetZState().AddTxOut(from, asset)
+			}
+			stakePool.Fee = uint16(stakeDesc.RegistPool.FeeRate)
+			stakePool.VotePKr = stakeDesc.RegistPool.Vote
+			stakeState.UpdateStakePool(stakePool)
+			return nil
+		} else {
+			if poolValueThreshold.Cmp(stakeDesc.RegistPool.Value.ToInt()) != 0 {
+				log.Warn("stakeDesc.RegistPool.Value != poolValueThreshold")
+				asset := assets.Asset{Tkn: &assets.Token{
+					Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+					Value:    stakeDesc.BuyShare.Value,
+				},
+				}
+				statedb.GetZState().AddTxOut(from, asset)
+				return nil
+			}
 			cmd := stakeDesc.RegistPool
 			pool := &stake.StakePool{PKr: pkr, Amount: cmd.Value.ToInt(), VotePKr: cmd.Vote, TransactionHash: txHash, Fee: uint16(cmd.FeeRate), Profit: big.NewInt(0)}
 			stakeState.UpdateStakePool(pool)
-		} else {
-			return errors.New("value < poolValueThreshold(1000000000000000000)")
 		}
+
 	} else if stakeDesc.ClosePool != nil {
 		poolId := crypto.Keccak256Hash(pkr[:])
 		stakePool := stakeState.GetStakePool(poolId)
 		if stakePool == nil {
-			return errors.New("not exist pool,id" + poolId.String())
+			log.Warn("ClosePool, not exist pool", "PoolId", poolId.String())
+			return nil
+		}
+		if stakePool.BlockNumber+lockingBlockNum < number {
+			log.Warn("ClosePool, locking in", "PoolId", poolId.String())
+			return nil
+		}
+		if stakePool.Closed {
+			log.Warn("ClosePool, pool is closed", "PoolId", poolId.String())
+			return nil
 		}
 		stakePool.Closed = true
 		stakeState.UpdateStakePool(stakePool)

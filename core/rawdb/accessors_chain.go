@@ -383,3 +383,27 @@ func FindCommonAncestor(db DatabaseReader, a, b *types.Header) *types.Header {
 	}
 	return a
 }
+
+func WriteBlockVotes(db DatabaseWriter, blockHash common.Hash, blockVotes []common.Hash) {
+	data, err := rlp.EncodeToBytes(blockVotes)
+	if err != nil {
+		log.Crit("Failed to RLP encode blockVotes", "err", err)
+	}
+
+	if err := db.Put(blockVotesKey(blockHash), data); err != nil {
+		log.Crit("Failed to store blockVotes to number mapping", "err", err)
+	}
+}
+
+func ReadBlockVotes(db DatabaseReader, blockHash common.Hash) []common.Hash {
+	data, _ := db.Get(blockVotesKey(blockHash))
+	if len(data) == 0 {
+		return nil
+	}
+	votes := []common.Hash{}
+	if err := rlp.Decode(bytes.NewReader(data), &votes); err != nil {
+		log.Error("Invalid block blockVotes RLP", "hash", blockHash, "err", err)
+		return nil
+	}
+	return votes
+}

@@ -40,6 +40,7 @@ type blockChain interface {
 	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
 	GetHeader(hash common.Hash, number uint64) *types.Header
 	GetHeaderByNumber(number uint64) *types.Header
+	GetBlock(hash common.Hash, number uint64) *types.Block
 	GetDB() serodb.Database
 }
 

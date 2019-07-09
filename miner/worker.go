@@ -549,14 +549,14 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		createdAt: time.Now(),
 	}
 
-	if self.eth.AccountManager() != nil {
-		seeds := []keys.Uint512{}
-		for _, w := range self.eth.AccountManager().Wallets() {
-			seed := w.Accounts()[0].Tk
-			seeds = append(seeds, *seed.ToUint512())
-		}
-		work.state.SetSeeds(seeds)
-	}
+	//if self.eth.AccountManager() != nil {
+	//	seeds := []keys.Uint512{}
+	//	for _, w := range self.eth.AccountManager().Wallets() {
+	//		seed := w.Accounts()[0].Tk
+	//		seeds = append(seeds, *seed.ToUint512())
+	//	}
+	//	work.state.SetSeeds(seeds)
+	//}
 
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0

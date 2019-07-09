@@ -102,6 +102,10 @@ func (self *StakeService) SharesById(id common.Hash) *stake.Share {
 	if err != nil {
 		return nil
 	}
+	return self.getShareByHash(hash)
+}
+
+func (self *StakeService) getShareByHash(hash []byte) *stake.Share {
 	ret := stake.ShareDB.GetObject(self.bc.GetDB(), hash, &stake.Share{})
 	if ret == nil {
 		return nil
@@ -122,12 +126,6 @@ func (self *StakeService) SharesByPk(pk keys.Uint512) (shares []*stake.Share) {
 func (self *StakeService) GetBlockRecords(blockNumber uint64) (shares []*stake.Share, pools []*stake.StakePool) {
 	header := self.bc.GetHeaderByNumber(blockNumber)
 	return stake.GetBlockRecords(self.bc.GetDB(), header.Hash(), blockNumber)
-}
-
-type myshare struct {
-	PoolId     common.Hash
-	SeleteNum  uint32
-	CurrentNum uint32
 }
 
 func (self *StakeService) stakeIndex() {

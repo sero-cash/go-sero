@@ -271,9 +271,9 @@ func newRPCStakePool(pool stake.StakePool) map[string]interface{} {
 	result["own"] = common.BytesToAddress(pool.PKr[:])
 	result["voteAddress"] = common.BytesToAddress(pool.VotePKr[:])
 	result["fee"] = hexutil.Uint(pool.Fee)
-	result["shareNum"] = hexutil.Uint64(pool.ShareNum)
-	result["choicedNum"] = hexutil.Uint64(pool.ChoicedNum)
-	result["missedNum"] = hexutil.Uint64(pool.MissedNum)
+	result["shareNum"] = hexutil.Uint64(pool.CurrentShareNum)
+	result["choicedNum"] = hexutil.Uint64(pool.ChoicedShareNum)
+	result["missedNum"] = hexutil.Uint64(pool.MissedVoteNum)
 	result["lastPayTime"] = hexutil.Uint64(pool.LastPayTime)
 	result["closed"] = pool.Closed
 	return result
