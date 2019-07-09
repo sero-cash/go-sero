@@ -45,8 +45,9 @@ type Block struct {
 	transactions Transactions
 
 	// caches
-	hash atomic.Value
-	size atomic.Value
+	hash    atomic.Value
+	hashPos atomic.Value
+	size    atomic.Value
 
 	// Td is used by package core to store the total difficulty
 	// of the chain up to and including the block.
@@ -192,6 +193,15 @@ func (b *Block) Hash() common.Hash {
 	}
 	v := b.header.Hash()
 	b.hash.Store(v)
+	return v
+}
+
+func (b *Block) HashPos() common.Hash {
+	if hash := b.hashPos.Load(); hash != nil {
+		return hash.(common.Hash)
+	}
+	v := b.header.HashPos()
+	b.hashPos.Store(v)
 	return v
 }
 
