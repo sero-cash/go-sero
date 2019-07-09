@@ -1,8 +1,10 @@
 package stake
 
 import (
-	"github.com/sero-cash/go-sero/common"
+	"fmt"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/common"
 )
 
 var (
@@ -11,9 +13,9 @@ var (
 )
 
 type SNode struct {
-	key       common.Hash
-	num       uint32
-	total     uint32
+	key   common.Hash
+	num   uint32
+	total uint32
 }
 
 func (node *SNode) init(state State) *SNode {
@@ -84,7 +86,34 @@ type STree struct {
 func NewTree(state State) *STree {
 	return &STree{common.Hash{}, state}
 }
+func (node *SNode) Print(state State) {
+	if node.key == emptyHash {
+		return
+	}
+	total := state.GetStakeState(node.totalKey())
+	num := state.GetStakeState(node.numKey())
+	fmt.Printf("%s, %v, %v\n", common.Bytes2Hex(node.key[:]), decodeNumber32(total[28:32]), decodeNumber32(num[28:32]))
+}
 
+func (node *SNode) MiddleOrder(state State) {
+	leftHash := state.GetStakeState(node.leftKey())
+	if leftHash != emptyHash {
+		left := &SNode{key: leftHash}
+		left.MiddleOrder(state)
+	}
+	node.Print(state)
+	rightHash := state.GetStakeState(node.rightKey())
+	if rightHash != emptyHash {
+		right := &SNode{key: rightHash}
+		right.MiddleOrder(state)
+	}
+}
+
+func (tree *STree) MiddleOrder() {
+	hash := tree.state.GetStakeState(rootKey)
+	rootNode := &SNode{key: hash}
+	rootNode.MiddleOrder(tree.state)
+}
 func (tree *STree) size() uint32 {
 	parentHash := tree.state.GetStakeState(rootKey)
 	parent := &SNode{key: parentHash}
@@ -179,6 +208,7 @@ func (tree *STree) deleteNodeByHash(nodeHash common.Hash, num uint32) *SNode {
 		}
 	}
 }
+
 //
 //func (tree *STree) deletNodeByIndex(index uint32) *SNode {
 //	if index >= tree.size() {

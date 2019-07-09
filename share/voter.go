@@ -222,6 +222,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 		return nil, err
 	} else {
 		stakeState := stake.NewStakeState(state)
+
 		header := &types.Header{
 			ParentHash: parent,
 			Number:     new(big.Int).Add(parentNumber, common.Big1),
@@ -231,6 +232,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 			return nil, nil
 		}
 		ints, shares, err := stakeState.SeleteShare(poshash)
+		log.Info("SelfShares selete share", "poshash", poshash, "blockNumber", header.Number.Uint64(), "indexs", ints, "pool size", stakeState.ShareSize())
 		if err != nil {
 			log.Info("lotteryTaskLoop", "SeleteShare", poshash, "err", err)
 			return nil, err
@@ -315,8 +317,9 @@ func (self *Voter) sign(info voteInfo) {
 		log.Info("voter sign", "sign err", err)
 		return
 	}
+	log.Info("sign vote", "poshas", info.poshash, "block", info.parentNum+1, "share", info.shareHash, "idx", info.index)
 	vote := &types.Vote{info.index, info.parentNum, info.shareHash, info.poshash, info.isPool, sign}
-	go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
+	//go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
 	self.AddVote(vote)
 }
 

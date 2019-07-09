@@ -304,6 +304,7 @@ func (self *StakeState) ShareSize() uint32 {
 
 func (self *StakeState) SeleteShare(seed common.Hash) (ints []uint32, shares []*Share, err error) {
 	tree := NewTree(self)
+	tree.MiddleOrder()
 
 	ints, err = FindShareIdxs(tree.size(), 3, NewHash256PRNG(seed[:]))
 	if err != nil {
@@ -671,8 +672,9 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain, s
 	preHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 
 	tree := NewTree(self)
-	hash := preHeader.HashPos()
-	indexs, err := FindShareIdxs(tree.size(), 3, NewHash256PRNG(hash[:]))
+	poshash := preHeader.HashPos()
+	indexs, err := FindShareIdxs(tree.size(), 3, NewHash256PRNG(poshash[:]))
+	log.Info("processVotedShare selete share", "poshash", poshash, "blockNumber", preHeader.Number.Uint64(), "indexs", indexs, "pool size", tree.size())
 	if err == nil {
 		ndoes := []*SNode{}
 		for _, index := range indexs {

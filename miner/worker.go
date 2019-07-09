@@ -23,7 +23,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/deckarep/golang-set"
 	"github.com/sero-cash/go-sero/zero/stake"
 
 	"github.com/sero-cash/go-sero/common/address"
@@ -101,6 +100,24 @@ type voteKey struct {
 	posHash      common.Hash
 }
 
+type votes []types.Vote
+
+func (vs votes) contains(item types.Vote) bool {
+	for _, v := range vs {
+		if v.Hash() == item.Hash() {
+			return true
+		}
+	}
+	return false
+}
+func (vs *votes) add(item types.Vote) bool {
+	if vs.contains(item) {
+		return false
+	}
+	*vs = append(*vs, item)
+	return true
+}
+
 // worker is the main object which takes care of applying messages to the new state
 type worker struct {
 	config *params.ChainConfig
@@ -149,7 +166,7 @@ type worker struct {
 	atWork int32
 
 	pendingVoteMu sync.RWMutex
-	pendingVote   map[voteKey]mapset.Set
+	pendingVote   map[voteKey]*votes
 	//pendingVoteTime sync.Map
 	//pendingPosMu  sync.RWMutex
 	//pendingPos    map[common.Hash]time.Time
@@ -178,7 +195,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase add
 		unconfirmed: newUnconfirmedBlocks(sero.BlockChain(), miningLogAtDepth),
 		voter:       voter,
 
-		pendingVote: make(map[voteKey]mapset.Set),
+		pendingVote: make(map[voteKey]*votes),
 		//pendingVoteTime: sync.Map{},
 	}
 	// Subscribe NewTxsEvent for tx pool
@@ -286,6 +303,7 @@ func (self *worker) update() {
 		// Handle ChainHeadEvent
 		case block := <-self.chainHeadCh:
 			self.pendingVoteMu.Lock()
+			self.pendingVote[voteKey{block.Block.NumberU64(), block.Block.Header().HashPos()}] = &votes{}
 			header := block.Block.Header()
 			parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 
@@ -346,26 +364,27 @@ func (self *worker) powResultLoop() {
 			hashPos := header.HashPos()
 			key := voteKey{header.Number.Uint64(), hashPos}
 			self.pendingVoteMu.Lock()
-			self.pendingVote[key] = mapset.NewSet()
+			self.pendingVote[key] = &votes{}
 			self.pendingVoteMu.Unlock()
 			self.voter.AddLottery(&types.Lottery{header.ParentHash, header.Number.Uint64() - 1, hashPos})
+			log.Info("Brodcast Lottery", "poshash", hashPos, "block", header.Number.Uint64())
 
 			stakeState := stake.NewStakeState(self.snapshotState)
 
 			isEffect := stakeState.IsEffect(header.Number.Uint64())
 			go func() {
 				parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-				var currentVotes []interface{}
-				var parentVotes []interface{}
+				var currentVotes votes
+				var parentVotes votes
 				currentHeader := self.chain.CurrentHeader()
 				for currentHeader.Hash() == header.ParentHash {
 					self.pendingVoteMu.Lock()
 					if votesSet, ok := self.pendingVote[key]; ok {
-						currentVotes = votesSet.ToSlice()
+						currentVotes = *votesSet
 					}
 					parentSet := self.pendingVote[voteKey{parentHeader.Number.Uint64(), parentHeader.HashPos()}]
 					if parentSet != nil {
-						parentVotes = parentSet.ToSlice()
+						parentVotes = *parentSet
 					}
 					self.pendingVoteMu.Unlock()
 
@@ -379,16 +398,16 @@ func (self *worker) powResultLoop() {
 
 				if len(currentVotes) >= 2 || !isEffect {
 					CurrentVotes := []types.HeaderVote{}
-					for _, item := range currentVotes {
-						vote := item.(*types.Vote)
+					for _, vote := range currentVotes {
+						log.Info("pos currentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 						CurrentVotes = append(CurrentVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
 					}
 
 					ParentVotes := []types.HeaderVote{}
 					if len(parentVotes) > 0 {
-						for _, item := range parentVotes {
-							vote := item.(*types.Vote)
+						for _, vote := range parentVotes {
 							if !self.contains(parentHeader, vote.Sign) {
+								log.Info("pos parentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 								ParentVotes = append(ParentVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
 								break
 							}
@@ -455,11 +474,14 @@ func (self *worker) voteLoop() {
 		select {
 		case voteResult := <-self.voteCh:
 			vote := voteResult.Vote
+
+			log.Info("voteLoop", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
+
 			key := voteKey{vote.ParentNum + 1, vote.PosHash}
 			self.pendingVoteMu.Lock()
 			if votes, ok := self.pendingVote[key]; ok {
 				if self.checkVote(vote) {
-					votes.Add(vote)
+					votes.add(*vote)
 				}
 			} else {
 				self.voter.SendVoteEvent(vote)
