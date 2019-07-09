@@ -84,7 +84,7 @@ func NewVoter(chainconfig *params.ChainConfig, chain blockChain, sero Backend) *
 	// Start the event loop and return
 	go voter.loop()
 	go voter.lotteryTaskLoop()
-	//go voter.voteLoop()
+	go voter.voteLoop()
 
 	return voter
 }
@@ -127,11 +127,11 @@ func (self *Voter) lotteryTaskLoop() {
 		select {
 		case lottery := <-self.lotteryCh:
 			current := self.chain.CurrentBlock().NumberU64()
-			log.Info("lotteryTaskLoop new lottery", "poshash", lottery.PosHash, "block", lottery.ParentNum+1, "localBlock", current)
+			log.Info(">>>>>>>lotteryTaskLoop new lottery", "poshash", lottery.PosHash, "block", lottery.ParentNum+1, "localBlock", current)
 			if current+delayNum >= lottery.ParentNum {
 				parentHeader := self.chain.GetHeaderByHash(lottery.ParentHash)
 				if parentHeader == nil {
-					log.Info("lotteryTaskLoop can not find parentblokc", "parent block", lottery.ParentNum)
+					log.Info(">>>>>lotteryTaskLoop can not find parentblokc", "parent block", lottery.ParentNum)
 					self.lotteryQueue.PushItem(lottery.PosHash, &lotteryItem{Lottery: lottery, Attempts: uint8(0)}, lottery.ParentNum+1)
 				} else {
 					selfShares, err := self.SelfShares(lottery.PosHash, lottery.ParentHash, parentHeader.Number)
@@ -158,17 +158,16 @@ func (self *Voter) voteLoop() {
 			current := self.chain.CurrentBlock().NumberU64()
 			for item := self.lotteryQueue.Pop(); item != nil; item = self.lotteryQueue.Pop() {
 				lItem := item.Value.(*lotteryItem)
+				log.Info(">>>>>voteLoop get Vote Item", "poshash", lItem.Lottery.PosHash, "block", lItem.Lottery.ParentNum+1)
 				if lItem.Lottery.ParentNum+delayNum < current {
-					log.Info("not need vote", "current", current, "vote block", lItem.Lottery.ParentNum+1)
+					log.Info(">>>>>>not need vote", "current", current, "vote block", lItem.Lottery.ParentNum+1)
 					continue
 				}
 				parentHeader := self.chain.GetHeaderByHash(lItem.Lottery.ParentHash)
 				if parentHeader == nil {
-					lItem.Attempts += 1
-					if lItem.Attempts < 2 {
-						self.lotteryQueue.PushItem(lItem.Lottery.PosHash, lItem, item.Block)
-					}
-					continue
+					log.Info(">>>>>voteLoop get parent is nil")
+					self.lotteryQueue.PushItem(lItem.Lottery.PosHash, lItem, item.Block)
+					break
 				}
 				selfShares, err := self.SelfShares(lItem.Lottery.PosHash, parentHeader.Hash(), parentHeader.Number)
 				if err != nil {
@@ -349,7 +348,7 @@ func (self *Voter) SendVoteEvent(vote *types.Vote) {
 }
 
 func (self *Voter) AddLottery(lottery *types.Lottery) {
-	log.Info("AddLottery", "block", lottery.ParentHash)
+	log.Info("AddLottery", "poshas", lottery.PosHash, "block", lottery.ParentNum+1)
 	self.lotteryMu.Lock()
 	defer self.lotteryMu.Unlock()
 	_, exits := self.lotterys[lottery.PosHash]
@@ -394,7 +393,7 @@ func (self *Voter) getStateByNumber(num uint64) (*state.StateDB, error) {
 }
 
 func (self *Voter) AddVote(vote *types.Vote) {
-	log.Info("AddVote", "hashpos", vote.PosHash)
+	log.Info("AddVote", "hashpos", vote.PosHash, "block", vote.ParentNum+1)
 	self.voteMu.Lock()
 	defer self.voteMu.Unlock()
 
