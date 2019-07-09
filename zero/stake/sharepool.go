@@ -479,12 +479,12 @@ func sum(basePrice, addition *big.Int, n int64) *big.Int {
 	return new(big.Int).Add(new(big.Int).Mul(basePrice, big.NewInt(n)), new(big.Int).Div(new(big.Int).Mul(new(big.Int).Mul(big.NewInt(n), big.NewInt(n-1)), addition), big.NewInt(2)))
 }
 
-func (self *StakeState) CaleAvgPrice(amount *big.Int) (uint32, *big.Int) {
+func (self *StakeState) CaleAvgPrice(amount *big.Int) (uint32, *big.Int, *big.Int) {
 	basePrice := self.CurrentPrice()
 	left := int64(1)
 	right := new(big.Int).Div(amount, basePrice).Int64()
 	if right <= 1 {
-		return uint32(right), basePrice
+		return uint32(right), basePrice, basePrice
 	}
 	minx := new(big.Int).Set(amount)
 	//n := int64(0)
@@ -513,7 +513,7 @@ func (self *StakeState) CaleAvgPrice(amount *big.Int) (uint32, *big.Int) {
 		left -= 1
 		sumAmount = sum(basePrice, addition, left)
 	}
-	return uint32(left), new(big.Int).Div(sumAmount, big.NewInt(left))
+	return uint32(left), new(big.Int).Div(sumAmount, big.NewInt(left)), basePrice
 }
 
 func (self *StakeState) StakeCurrentReward() (*big.Int, *big.Int) {
@@ -541,7 +541,7 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 	self.processNowShares(header, bc, poolCacheMap)
 	self.payProfit(bc, header, shareCacheMap, poolCacheMap)
 
-	//self.statisticsByWindow(header, bc)
+	self.statisticsByWindow(header, bc)
 	for _, share := range shareCacheMap {
 		self.updateShare(share)
 	}
@@ -551,21 +551,23 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 }
 
 func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) {
-	if header.Number.Uint64() <= 1 {
+
+	if header.Number.Uint64() < 2 || !self.IsEffect(header.Number.Uint64()){
 		return
 	}
+	value := self.missedNum.GetValue(missedNumKey)
+
 	preHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	prepreHeader := bc.GetHeader(preHeader.ParentHash, preHeader.Number.Uint64()-1)
-	value := self.missedNum.GetValue(missedNumKey)
 	missedNum := decodeNumber32(value) + uint32(3-len(prepreHeader.CurrentVotes)-len(preHeader.ParentVotes))
 
 	statisticsMissWindow := getStatisticsMissWindow()
-	if header.Number.Uint64() > statisticsMissWindow {
-		windiwHeader := bc.GetHeaderByNumber(header.Number.Uint64() - statisticsMissWindow)
-		preWindiwHeader := bc.GetHeaderByNumber(header.Number.Uint64() - statisticsMissWindow - 1)
+	if prepreHeader.Number.Uint64() > statisticsMissWindow {
+		windiwHeader := bc.GetHeaderByNumber(preHeader.Number.Uint64() - statisticsMissWindow - 1)
+		preWindiwHeader := bc.GetHeaderByNumber(prepreHeader.Number.Uint64() - statisticsMissWindow - 1)
 		missedNum -= uint32(3 - len(preWindiwHeader.CurrentVotes) - len(windiwHeader.ParentVotes))
 	}
-
+	log.Info("ProcessBeforeApply: statisticsByWindow", "missedNum", missedNum)
 	self.missedNum.SetValue(missedNumKey, encodeNumber32(missedNum))
 }
 

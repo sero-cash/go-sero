@@ -18,6 +18,7 @@ package core
 
 import (
 	"errors"
+	"github.com/sero-cash/go-sero/log"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/zero/stake"
@@ -163,8 +164,8 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		}
 
 		value := stakeDesc.BuyShare.Value.ToInt()
-		num, avgPrice := stakeState.CaleAvgPrice(value)
-
+		num, avgPrice, currentPrice := stakeState.CaleAvgPrice(value)
+		log.Info("BuyShare", "num", num, "price", avgPrice, "currentPrice", currentPrice)
 		if num > 0 {
 			amount := new(big.Int).Mul(avgPrice, big.NewInt(int64(num)))
 			refund := new(big.Int).Sub(new(big.Int).Set(stakeDesc.BuyShare.Value.ToInt()), amount)
