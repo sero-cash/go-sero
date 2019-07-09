@@ -29,7 +29,7 @@ const (
 	chainLotterySize = 300
 	lifeTime         = 30 * time.Minute
 
-	delayNum         = 2
+	delayNum         = 6
 	lotteryQueueSize = 12
 )
 
@@ -127,9 +127,11 @@ func (self *Voter) lotteryTaskLoop() {
 		select {
 		case lottery := <-self.lotteryCh:
 			current := self.chain.CurrentBlock().NumberU64()
+			log.Info("lotteryTaskLoop new lottery", "poshash", lottery.PosHash, "block", lottery.ParentNum+1, "localBlock", current)
 			if current+delayNum >= lottery.ParentNum {
 				parentHeader := self.chain.GetHeaderByHash(lottery.ParentHash)
 				if parentHeader == nil {
+					log.Info("lotteryTaskLoop can not find parentblokc", "parent block", lottery.ParentNum)
 					self.lotteryQueue.PushItem(lottery.PosHash, &lotteryItem{Lottery: lottery, Attempts: uint8(0)}, lottery.ParentNum+1)
 				} else {
 					selfShares, err := self.SelfShares(lottery.PosHash, lottery.ParentHash, parentHeader.Number)
@@ -157,6 +159,7 @@ func (self *Voter) voteLoop() {
 			for item := self.lotteryQueue.Pop(); item != nil; item = self.lotteryQueue.Pop() {
 				lItem := item.Value.(*lotteryItem)
 				if lItem.Lottery.ParentNum+delayNum < current {
+					log.Info("not need vote", "current", current, "vote block", lItem.Lottery.ParentNum+1)
 					continue
 				}
 				parentHeader := self.chain.GetHeaderByHash(lItem.Lottery.ParentHash)
