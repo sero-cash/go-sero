@@ -5,8 +5,6 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/core/types/typeserial"
-
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
@@ -552,7 +550,7 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 
 func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) {
 
-	if header.Number.Uint64() < 2 || !self.IsEffect(header.Number.Uint64()){
+	if header.Number.Uint64() < 2 || !self.IsEffect(header.Number.Uint64()) {
 		return
 	}
 	value := self.missedNum.GetValue(missedNumKey)
@@ -639,9 +637,9 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain, s
 
 }
 
-func (self *StakeState) rewardVote(vote typeserial.Vote, soloReware, reward *big.Int, shareCacheMap map[common.Hash]*Share, poolCacheMap map[common.Hash]*StakePool) {
+func (self *StakeState) rewardVote(vote types.HeaderVote, soloReware, reward *big.Int, shareCacheMap map[common.Hash]*Share, poolCacheMap map[common.Hash]*StakePool) {
 
-	share := self.getShare(vote.Hash, shareCacheMap)
+	share := self.getShare(vote.Id, shareCacheMap)
 	if share.WishVoteNum > 0 {
 		share.WishVoteNum -= 1
 		log.Info("processVotedShare rewardVote", "shareId", common.Bytes2Hex(share.Id()), "share.WishVoteNum", share.WishVoteNum)

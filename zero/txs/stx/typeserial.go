@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/core/types/typeserial"
+	"github.com/sero-cash/go-sero/core/types/vserial"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 )
@@ -30,7 +30,7 @@ type ZtxVersion_1 struct {
 }
 
 type ZtxRlp struct {
-	Version   typeserial.Version
+	Version   vserial.Version
 	Version_0 ZtxVersion_0
 	Version_1 ZtxVersion_1
 }
@@ -38,10 +38,10 @@ type ZtxRlp struct {
 func (self *ZtxRlp) DecodeRLP(s *rlp.Stream) error {
 	_, size, _ := s.Kind()
 	if size == 0 {
-		self.Version.V = typeserial.VERSION_NIL
+		self.Version.V = vserial.VERSION_NIL
 	} else {
 		if size > 10 {
-			self.Version.V = typeserial.VERSION_0
+			self.Version.V = vserial.VERSION_0
 		} else {
 			if e := s.Decode(&self.Version); e != nil {
 				return e
@@ -51,7 +51,7 @@ func (self *ZtxRlp) DecodeRLP(s *rlp.Stream) error {
 	if e := s.Decode(&self.Version_0); e != nil {
 		return e
 	}
-	if self.Version.V >= typeserial.VERSION_1 {
+	if self.Version.V >= vserial.VERSION_1 {
 		if e := s.Decode(&self.Version_1); e != nil {
 			return e
 		}
@@ -60,12 +60,12 @@ func (self *ZtxRlp) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (self *ZtxRlp) EncodeRLP(w io.Writer) error {
-	if self.Version.V == typeserial.VERSION_NIL {
+	if self.Version.V == vserial.VERSION_NIL {
 		e := errors.New("encode header rlp error: version is nil")
 		panic(e)
 		return e
 	}
-	if self.Version.V >= typeserial.VERSION_1 {
+	if self.Version.V >= vserial.VERSION_1 {
 		if e := rlp.Encode(w, &self.Version); e != nil {
 			return e
 		}
@@ -73,7 +73,7 @@ func (self *ZtxRlp) EncodeRLP(w io.Writer) error {
 	if e := rlp.Encode(w, &self.Version_0); e != nil {
 		return e
 	}
-	if self.Version.V >= typeserial.VERSION_1 {
+	if self.Version.V >= vserial.VERSION_1 {
 		if e := rlp.Encode(w, &self.Version_1); e != nil {
 			return e
 		}
@@ -108,9 +108,9 @@ func (b *T) DecodeRLP(s *rlp.Stream) error {
 func (b *T) EncodeRLP(w io.Writer) error {
 	hr := ZtxRlp{}
 	if b.Desc_Cmd.Count() > 0 {
-		hr.Version.V = typeserial.VERSION_1
+		hr.Version.V = vserial.VERSION_1
 	} else {
-		hr.Version.V = typeserial.VERSION_0
+		hr.Version.V = vserial.VERSION_0
 	}
 	hr.Version_0.Ehash = b.Ehash
 	hr.Version_0.From = b.From

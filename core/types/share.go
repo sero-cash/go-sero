@@ -16,7 +16,7 @@ type Lottery struct {
 type Vote struct {
 	Idx       uint32
 	ParentNum uint64
-	ShareHash common.Hash
+	ShareId   common.Hash
 	PosHash   common.Hash
 	IsPool    bool
 	Sign      keys.Uint512
@@ -29,11 +29,17 @@ func (s Vote) Hash() common.Hash {
 	rlp.Encode(hw, []interface{}{
 		s.Idx,
 		s.ParentNum,
-		s.ShareHash,
+		s.ShareId,
 		s.PosHash,
 		s.IsPool,
 		s.Sign,
 	})
 	hw.Sum(hash[:0])
 	return hash
+}
+
+type HeaderVote struct {
+	Id     common.Hash
+	IsPool bool
+	Sign   keys.Uint512
 }

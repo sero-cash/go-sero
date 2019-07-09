@@ -19,13 +19,10 @@ package types
 
 import (
 	"encoding/binary"
-	"io"
 	"math/big"
 	"sort"
 	"sync/atomic"
 	"time"
-
-	"github.com/sero-cash/go-sero/core/types/typeserial"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/rlp"
@@ -61,9 +58,9 @@ type Block struct {
 	ReceivedFrom interface{}
 }
 
-func (b *Block) SetVotes(CurrentVotes []typeserial.Vote, ParentVotes []typeserial.Vote) {
-	b.header.CurrentVotes = append([]typeserial.Vote{}, CurrentVotes...)
-	b.header.ParentVotes = append([]typeserial.Vote{}, ParentVotes...)
+func (b *Block) SetVotes(CurrentVotes []HeaderVote, ParentVotes []HeaderVote) {
+	b.header.CurrentVotes = append([]HeaderVote{}, CurrentVotes...)
+	b.header.ParentVotes = append([]HeaderVote{}, ParentVotes...)
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the
@@ -71,12 +68,6 @@ func (b *Block) SetVotes(CurrentVotes []typeserial.Vote, ParentVotes []typeseria
 // new, after which it should be deleted. Do not use!
 func (b *Block) DeprecatedTd() *big.Int {
 	return b.td
-}
-
-// "external" block encoding. used for sero protocol, etc.
-type extblock struct {
-	Header *Header
-	Txs    []*Transaction
 }
 
 // NewBlock creates a new block. The input data is copied,
@@ -112,26 +103,6 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 // will not affect the block.
 func NewBlockWithHeader(header *Header) *Block {
 	return &Block{header: CopyHeader(header)}
-}
-
-// DecodeRLP decodes the Ethereum
-func (b *Block) DecodeRLP(s *rlp.Stream) error {
-	var eb extblock
-	_, size, _ := s.Kind()
-	if err := s.Decode(&eb); err != nil {
-		return err
-	}
-	b.header, b.transactions = eb.Header, eb.Txs
-	b.size.Store(common.StorageSize(rlp.ListSize(size)))
-	return nil
-}
-
-// EncodeRLP serializes b into the Ethereum RLP block format.
-func (b *Block) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, extblock{
-		Header: b.header,
-		Txs:    b.transactions,
-	})
 }
 
 // TODO: copies

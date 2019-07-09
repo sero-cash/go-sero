@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"unsafe"
 
-	"github.com/sero-cash/go-sero/core/types/typeserial"
+	"github.com/sero-cash/go-sero/core/types/vserial"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
@@ -64,8 +64,8 @@ type Header struct {
 	MixDigest common.Hash `json:"mixHash"          gencodec:"required"`
 	Nonce     BlockNonce  `json:"nonce"            gencodec:"required"`
 	//POS
-	CurrentVotes []typeserial.Vote
-	ParentVotes  []typeserial.Vote
+	CurrentVotes []HeaderVote
+	ParentVotes  []HeaderVote
 }
 
 // field type overrides for gencodec
@@ -173,79 +173,102 @@ func CopyHeader(h *Header) *Header {
 		copy(cpy.Extra, h.Extra)
 	}
 	if len(h.CurrentVotes) > 0 {
-		cpy.CurrentVotes = append([]typeserial.Vote{}, h.CurrentVotes...)
+		cpy.CurrentVotes = append([]HeaderVote{}, h.CurrentVotes...)
 	}
 	if len(h.ParentVotes) > 0 {
-		cpy.ParentVotes = append([]typeserial.Vote{}, h.ParentVotes...)
+		cpy.ParentVotes = append([]HeaderVote{}, h.ParentVotes...)
 	}
 	return &cpy
 }
 
-func HeaderToTypeSerial(b *Header) (hr typeserial.HeaderRLP) {
-	//Version_0
-	hr.Version_0.ParentHash = b.ParentHash
-	hr.Version_0.Coinbase = b.Coinbase
-	hr.Version_0.Licr = b.Licr
-	hr.Version_0.Root = b.Root
-	hr.Version_0.TxHash = b.TxHash
-	hr.Version_0.ReceiptHash = b.ReceiptHash
-	hr.Version_0.Bloom = b.Bloom
-	hr.Version_0.Difficulty = b.Difficulty
-	hr.Version_0.Number = b.Number
-	hr.Version_0.GasLimit = b.GasLimit
-	hr.Version_0.GasUsed = b.GasUsed
-	hr.Version_0.Time = b.Time
-	hr.Version_0.Extra = b.Extra
-	hr.Version_0.MixDigest = b.MixDigest
-	hr.Version_0.Nonce = b.Nonce
-
-	//Version_1
-	if len(b.CurrentVotes) > 0 || len(b.ParentVotes) > 0 {
-		hr.Version_1.CurrentVotes = b.CurrentVotes
-		hr.Version_1.ParentVotes = b.ParentVotes
-		//Version Number
-		hr.Version.V = typeserial.VERSION_1
-	} else {
-		hr.Version.V = typeserial.VERSION_0
-	}
-	return
+type Header_Version_0 struct {
+	//Data
+	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
+	Coinbase    common.Address `json:"miner"            gencodec:"required"`
+	Licr        keys.LICr      `json:"licr"            	gencodec:"required"`
+	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
+	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
+	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
+	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
+	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
+	Number      *big.Int       `json:"number"           gencodec:"required"`
+	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"`
+	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
+	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
+	Extra       []byte         `json:"extraData"        gencodec:"required"`
+	//POW
+	MixDigest common.Hash `json:"mixHash"          gencodec:"required"`
+	Nonce     BlockNonce  `json:"nonce"            gencodec:"required"`
 }
 
-func TypeSerialToHeader(hr *typeserial.HeaderRLP) (b Header) {
-	b.ParentHash = hr.Version_0.ParentHash
-	b.Coinbase = hr.Version_0.Coinbase
-	b.Licr = hr.Version_0.Licr
-	b.Root = hr.Version_0.Root
-	b.TxHash = hr.Version_0.TxHash
-	b.ReceiptHash = hr.Version_0.ReceiptHash
-	b.Bloom = hr.Version_0.Bloom
-	b.Difficulty = hr.Version_0.Difficulty
-	b.Number = hr.Version_0.Number
-	b.GasLimit = hr.Version_0.GasLimit
-	b.GasUsed = hr.Version_0.GasUsed
-	b.Time = hr.Version_0.Time
-	b.Extra = hr.Version_0.Extra
-	b.MixDigest = hr.Version_0.MixDigest
-	b.Nonce = hr.Version_0.Nonce
-	if hr.Version.V == typeserial.VERSION_1 {
-		b.CurrentVotes = hr.Version_1.CurrentVotes
-		b.ParentVotes = hr.Version_1.ParentVotes
-	}
-	return
+type Header_Version_1 struct {
+	//POS
+	CurrentVotes []HeaderVote
+	ParentVotes  []HeaderVote
 }
 
 // DecodeRLP decodes the Ethereum
 func (b *Header) DecodeRLP(s *rlp.Stream) error {
-	hr := typeserial.HeaderRLP{}
-	if e := s.Decode(&hr); e != nil {
+	h0 := Header_Version_0{}
+	h1 := Header_Version_1{}
+	vs := vserial.VSerial{}
+	vs.Versions = append(vs.Versions, &h0)
+	vs.Versions = append(vs.Versions, &h1)
+
+	if e := s.Decode(&vs); e != nil {
 		return e
 	}
-	*b = TypeSerialToHeader(&hr)
+
+	b.ParentHash = h0.ParentHash
+	b.Coinbase = h0.Coinbase
+	b.Licr = h0.Licr
+	b.Root = h0.Root
+	b.TxHash = h0.TxHash
+	b.ReceiptHash = h0.ReceiptHash
+	b.Bloom = h0.Bloom
+	b.Difficulty = h0.Difficulty
+	b.Number = h0.Number
+	b.GasLimit = h0.GasLimit
+	b.GasUsed = h0.GasUsed
+	b.Time = h0.Time
+	b.Extra = h0.Extra
+	b.MixDigest = h0.MixDigest
+	b.Nonce = h0.Nonce
+
+	b.CurrentVotes = h1.CurrentVotes
+	b.ParentVotes = h1.ParentVotes
 	return nil
 }
 
 // EncodeRLP serializes b into the Ethereum RLP block format.
 func (b *Header) EncodeRLP(w io.Writer) error {
-	hr := HeaderToTypeSerial(b)
-	return rlp.Encode(w, &hr)
+	vs := vserial.VSerial{}
+
+	h0 := Header_Version_0{}
+	h0.ParentHash = b.ParentHash
+	h0.Coinbase = b.Coinbase
+	h0.Licr = b.Licr
+	h0.Root = b.Root
+	h0.TxHash = b.TxHash
+	h0.ReceiptHash = b.ReceiptHash
+	h0.Bloom = b.Bloom
+	h0.Difficulty = b.Difficulty
+	h0.Number = b.Number
+	h0.GasLimit = b.GasLimit
+	h0.GasUsed = b.GasUsed
+	h0.Time = b.Time
+	h0.Extra = b.Extra
+	h0.MixDigest = b.MixDigest
+	h0.Nonce = b.Nonce
+
+	vs.Versions = append(vs.Versions, &h0)
+
+	if len(b.CurrentVotes) > 0 || len(b.ParentVotes) > 0 {
+		h1 := Header_Version_1{}
+		h1.CurrentVotes = b.CurrentVotes
+		h1.ParentVotes = b.ParentVotes
+		vs.Versions = append(vs.Versions, &h1)
+	}
+
+	return rlp.Encode(w, &vs)
 }

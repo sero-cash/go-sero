@@ -23,8 +23,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sero-cash/go-sero/core/types/typeserial"
-
 	"github.com/deckarep/golang-set"
 	"github.com/sero-cash/go-sero/zero/stake"
 
@@ -380,18 +378,18 @@ func (self *worker) powResultLoop() {
 				}
 
 				if len(currentVotes) >= 2 || !isEffect {
-					CurrentVotes := []typeserial.Vote{}
+					CurrentVotes := []types.HeaderVote{}
 					for _, item := range currentVotes {
 						vote := item.(*types.Vote)
-						CurrentVotes = append(CurrentVotes, typeserial.Vote{vote.ShareHash, vote.IsPool, vote.Sign})
+						CurrentVotes = append(CurrentVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
 					}
 
-					ParentVotes := []typeserial.Vote{}
+					ParentVotes := []types.HeaderVote{}
 					if len(parentVotes) > 0 {
 						for _, item := range parentVotes {
 							vote := item.(*types.Vote)
 							if !self.contains(parentHeader, vote.Sign) {
-								ParentVotes = append(ParentVotes, typeserial.Vote{vote.ShareHash, vote.IsPool, vote.Sign})
+								ParentVotes = append(ParentVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
 								break
 							}
 						}
@@ -418,7 +416,7 @@ func (self *worker) contains(parentHeader *types.Header, sign keys.Uint512) bool
 func (self *worker) checkVote(vote *types.Vote) bool {
 	db, _ := self.chain.State()
 	stakeState := stake.NewStakeState(db)
-	share := stakeState.GetShare(vote.ShareHash)
+	share := stakeState.GetShare(vote.ShareId)
 	if share != nil {
 		work := self.current
 		var parentHeader *types.Header
