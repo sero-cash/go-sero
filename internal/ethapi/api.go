@@ -1123,7 +1123,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		copy(rand[:], args.To[:16])
 	}
 	if args.To != nil {
-
+		to = &common.Address{}
 		if state.IsContract(common.BytesToAddress(args.To[:])) {
 			t := common.BytesToAddress(args.To[:])
 			to = &t
