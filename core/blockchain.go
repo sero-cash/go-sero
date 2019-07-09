@@ -20,7 +20,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/stake"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 
+	"github.com/sero-cash/go-sero/zero/stake"
 	"github.com/sero-cash/go-sero/zero/txs/verify"
 
 	"github.com/hashicorp/golang-lru"
