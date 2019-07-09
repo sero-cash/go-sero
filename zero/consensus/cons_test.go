@@ -185,11 +185,11 @@ func TestConsFetch(t *testing.T) {
 		t.FailNow()
 	}
 	blocklist := cmap.fetchBlockRecords(false)
-	if len(blocklist) != 1 && len(blocklist[0].Pairs) != 2 {
+	if len(blocklist) != 1 && len(blocklist[0].Pairs) != 1 {
 		t.FailNow()
 	}
 	dblist := cmap.fetchDBPairs(false)
-	if len(dblist) != 2 {
+	if len(dblist) != 1 {
 		t.FailNow()
 	}
 
@@ -252,10 +252,7 @@ func TestConsRecord(t *testing.T) {
 		t.FailNow()
 	}
 	v = dbobj.GetObject(db.GlobalGetter(), []byte("0"), &testObj)
-	if v == nil {
-		t.FailNow()
-	}
-	if testObj.S != "0" {
+	if v != nil {
 		t.FailNow()
 	}
 	v = dbobj.GetObject(db.GlobalGetter(), []byte("2"), &testObj)
@@ -279,6 +276,119 @@ func TestConsRecord(t *testing.T) {
 	}
 	v = tree1.GetObj(s2u("obj1"), &TestObj{})
 	if v.(*TestObj).S != "3" {
+		t.FailNow()
+	}
+	fmt.Println(v)
+
+}
+
+func TestConsRecord2(t *testing.T) {
+	db := NewFakeDB()
+	dbcons := DBObj{"BLOCK$CONS$INDEX$"}
+	cmap := NewCons(&db, dbcons.Pre)
+	dbobj := DBObj{"treestate$"}
+	tree := NewObjPt(&cmap, "tree$", dbobj.Pre, "test")
+
+	cmap.CreateSnapshot(0)
+
+	tree.AddObj(NewTestObj2("obj1", "11"))
+	tree.AddObj(NewTestObj2("obj1", "12"))
+	tree.AddObj(NewTestObj2("obj1", "13"))
+	tree.AddObj(NewTestObj2("obj2", "21"))
+	tree.AddObj(NewTestObj2("obj2", "22"))
+	tree.AddObj(NewTestObj2("obj3", "33"))
+
+	cmap.CreateSnapshot(1)
+	tree.AddObj(NewTestObj2("obj1", "14"))
+	tree.AddObj(NewTestObj2("obj2", "25"))
+	tree.AddObj(NewTestObj2("obj3", "36"))
+
+	v := tree.GetObj(s2u("obj1"), &TestObj{})
+	if v.(*TestObj).S != "14" {
+		t.FailNow()
+	}
+	v = tree.GetObj(s2u("obj2"), &TestObj{})
+	if v.(*TestObj).S != "25" {
+		t.FailNow()
+	}
+	v = tree.GetObj(s2u("obj3"), &TestObj{})
+	if v.(*TestObj).S != "36" {
+		t.FailNow()
+	}
+
+	cmap.RevertToSnapshot(1)
+
+	v = tree.GetObj(s2u("obj1"), &TestObj{})
+	if v.(*TestObj).S != "13" {
+		t.FailNow()
+	}
+	v = tree.GetObj(s2u("obj2"), &TestObj{})
+	if v.(*TestObj).S != "22" {
+		t.FailNow()
+	}
+	v = tree.GetObj(s2u("obj3"), &TestObj{})
+	if v.(*TestObj).S != "33" {
+		t.FailNow()
+	}
+
+	blockhash := common.Hash(keys.RandUint256())
+	cmap.Record(&blockhash, &db.db)
+
+	testObj := TestObj{}
+	v = dbobj.GetObject(db.GlobalGetter(), []byte("13"), &testObj)
+	if v == nil {
+		t.FailNow()
+	}
+	if testObj.I != "obj1" {
+		t.FailNow()
+	}
+	v = dbobj.GetObject(db.GlobalGetter(), []byte("22"), &testObj)
+	if v == nil {
+		t.FailNow()
+	}
+	if testObj.I != "obj2" {
+		t.FailNow()
+	}
+	v = dbobj.GetObject(db.GlobalGetter(), []byte("33"), &testObj)
+	if v == nil {
+		t.FailNow()
+	}
+	if testObj.I != "obj3" {
+		t.FailNow()
+	}
+
+	//========
+
+	v = dbobj.GetObject(db.GlobalGetter(), []byte("11"), &testObj)
+	if v != nil {
+		t.FailNow()
+	}
+
+	v = dbobj.GetObject(db.GlobalGetter(), []byte("21"), &testObj)
+	if v != nil {
+		t.FailNow()
+	}
+
+	records := dbcons.GetBlockRecords(db.GlobalGetter(), 0, &blockhash)
+	if len(records) != 1 && len(records[0].Pairs) != 3 {
+		t.FailNow()
+	}
+	fmt.Println(records)
+
+	cmap.Update()
+
+	cmap1 := NewCons(&db, dbcons.Pre)
+	tree1 := NewObjPt(&cmap1, "tree$", dbobj.Pre, "test")
+	v = tree1.GetObj(s2u("obj1"), &TestObj{})
+	if v.(*TestObj).S != "13" {
+		t.FailNow()
+	}
+	v = tree1.GetObj(s2u("obj2"), &TestObj{})
+	if v.(*TestObj).S != "22" {
+		t.FailNow()
+	}
+	v = tree1.GetObj(s2u("obj3"), &TestObj{})
+	if v.(*TestObj).S != "33" {
 		t.FailNow()
 	}
 	fmt.Println(v)

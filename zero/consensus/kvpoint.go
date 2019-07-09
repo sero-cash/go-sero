@@ -13,7 +13,7 @@ func NewKVPt(cons *Cons, keyPre string, inblock string) (ret KVPoint) {
 
 func (self *KVPoint) SetValue(id []byte, value []byte) {
 	v := Bytes(value)
-	self.cons.addObj(&key{self.keyPre, id}, &v, true, nil, false)
+	self.cons.addObj(&key{self.keyPre, id}, &v, true, nil, nil)
 	return
 }
 

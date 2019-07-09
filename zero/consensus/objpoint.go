@@ -22,8 +22,8 @@ func (self *ObjPoint) AddObj(item PItem) {
 		panic(errors.New("item can not be nil"))
 	}
 	stateHash := Bytes(item.State())
-	self.cons.addObj(&key{self.objPre, item.Id()}, &stateHash, true, nil, false)
-	self.cons.addObj(&key{self.statePre, stateHash}, item, false, &inBlock{self.inblock, item.Id()}, true)
+	self.cons.addObj(&key{self.objPre, item.Id()}, &stateHash, true, nil, nil)
+	self.cons.addObj(&key{self.statePre, stateHash}, item, false, &inBlock{self.inblock, item.Id()}, &inDB{item.Id()})
 	return
 }
 

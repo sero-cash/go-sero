@@ -34,6 +34,9 @@ import (
 )
 
 func CheckUint(i *utils.U256) bool {
+	if len(i.ToInt().Bytes()) > 32 {
+		return false
+	}
 	u := i.ToUint256()
 	if u[31] == 0 && u[30] == 0 {
 		return true
@@ -43,9 +46,6 @@ func CheckUint(i *utils.U256) bool {
 }
 
 func Verify(s *stx.T, state *zstate.ZState) (e error) {
-	return Verify_state1(s, state)
-}
-func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 
 	t := utils.TR_enter("Miner-Verify-----Pre")
 
@@ -111,27 +111,6 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 			desc.hash_z = hash_z
 			desc.src = *src
 			verify_input_o_procs.StartProc(&desc)
-
-			/*g := cpt.VerifyInputSDesc{}
-			g.Ehash = hash_z
-			g.Nil = in_o.Nil
-			g.RootCM = *src.ToRootCM()
-			g.Sign = in_o.Sign
-			g.Pkr = *src.ToPKr()
-			if err := cpt.VerifyInputS(&g); err != nil {
-				e = errors.New("txs.Verify: in_o verify failed!")
-				return
-			} else {
-				asset := src.Out_O.Asset.ToFlatAsset()
-				asset_desc := cpt.AssetDesc{
-					Tkn_currency: asset.Tkn.Currency,
-					Tkn_value:    asset.Tkn.Value.ToUint256(),
-					Tkt_category: asset.Tkt.Category,
-					Tkt_value:    asset.Tkt.Value,
-				}
-				cpt.GenAssetCC(&asset_desc)
-				balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
-			}*/
 		} else {
 			e = errors.New("txs.Verify: in_o not find in the outs!")
 			return

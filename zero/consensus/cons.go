@@ -37,6 +37,10 @@ type inBlock struct {
 	ref  []byte
 }
 
+type inDB struct {
+	ref []byte
+}
+
 func (self *inBlock) CopyRef() (ret *inBlock) {
 	if self != nil {
 		ret = &inBlock{
@@ -53,7 +57,7 @@ type consItem struct {
 	index   int
 	inCons  bool
 	inBlock *inBlock
-	inDB    bool
+	inDB    *inDB
 }
 
 func (self *consItem) CopyRef() (ret *consItem) {
@@ -129,11 +133,15 @@ func (self *Cons) RevertToSnapshot(ver int) {
 	}
 }
 
-func (self *Cons) deleteObj(k *key, item CItem, inCons bool, inblock *inBlock, inDB bool) {
+func (self *Cons) deleteObj(k *key, item CItem, inCons bool, inblock *inBlock, indb *inDB) {
 	if item == nil {
 		panic(errors.New("item can not be nil"))
 	}
-	old := self.getObj(k, item.CopyTo(), inCons, inDB)
+	is_indb := false
+	if indb != nil {
+		is_indb = true
+	}
+	old := self.getObj(k, item.CopyTo(), inCons, is_indb)
 	cl := changelog{}
 	cl.key = k.k()
 	if old != nil {
@@ -144,16 +152,20 @@ func (self *Cons) deleteObj(k *key, item CItem, inCons bool, inblock *inBlock, i
 		cl.index = -1
 	}
 	cl.ver = self.ver
-	self.content[k.k()] = &consItem{k.CopyTo(), nil, len(self.cls), inCons, inblock, inDB}
+	self.content[k.k()] = &consItem{k.CopyTo(), nil, len(self.cls), inCons, inblock, indb}
 	self.cls = append(self.cls, cl)
 	return
 }
 
-func (self *Cons) addObj(k *key, item CItem, inCons bool, inblock *inBlock, inDB bool) {
+func (self *Cons) addObj(k *key, item CItem, inCons bool, inblock *inBlock, indb *inDB) {
 	if item == nil {
 		panic(errors.New("item can not be nil"))
 	}
-	old := self.getObj(k, item.CopyTo(), inCons, inDB)
+	is_indb := false
+	if indb != nil {
+		is_indb = true
+	}
+	old := self.getObj(k, item.CopyTo(), inCons, is_indb)
 	cl := changelog{}
 	cl.key = k.k()
 	if old != nil {
@@ -164,7 +176,7 @@ func (self *Cons) addObj(k *key, item CItem, inCons bool, inblock *inBlock, inDB
 		cl.index = -1
 	}
 	cl.ver = self.ver
-	self.content[k.k()] = &consItem{k.CopyTo(), item.CopyTo(), len(self.cls), inCons, inblock, inDB}
+	self.content[k.k()] = &consItem{k.CopyTo(), item.CopyTo(), len(self.cls), inCons, inblock, indb}
 	self.cls = append(self.cls, cl)
 	return
 }
@@ -187,15 +199,15 @@ func (self *Cons) getData(k []byte, inCons bool, inDB bool) (ret []byte) {
 	return nil
 }
 
-func (self *Cons) getObj(k *key, item CItem, inCons bool, inDB bool) (ret *consItem) {
+func (self *Cons) getObj(k *key, item CItem, inCons bool, indb bool) (ret *consItem) {
 	if i, ok := self.content[k.k()]; !ok {
-		if v := self.getData([]byte(k.k()), inCons, inDB); v == nil {
+		if v := self.getData([]byte(k.k()), inCons, indb); v == nil {
 			return nil
 		} else {
 			if e := rlp.DecodeBytes(v, item); e != nil {
 				return nil
 			}
-			ret = &consItem{k.CopyTo(), item, -1, false, nil, false}
+			ret = &consItem{k.CopyTo(), item, -1, false, nil, nil}
 			self.content[k.k()] = ret.CopyRef()
 			return
 		}
@@ -233,15 +245,30 @@ func (self *Cons) fetchConsPairs(onlyget bool) (ret consItems) {
 }
 
 func (self *Cons) fetchDBPairs(onlyget bool) (ret consItems) {
+	cis := consItems{}
 	for _, v := range self.content {
-		if v.inDB {
-			ret = append(ret, v)
-			if !onlyget {
-				v.inDB = false
-			}
+		if v.inDB != nil {
+			cis = append(cis, v)
 		}
 	}
+	sort.Sort(cis)
+
+	ref_map := make(map[string]*consItem)
+	for _, v := range cis {
+		ref_map[string(v.inDB.ref)] = v
+	}
+
+	for _, v := range ref_map {
+		ret = append(ret, v)
+	}
+
 	sort.Sort(ret)
+
+	for _, v := range cis {
+		if !onlyget {
+			v.inDB = nil
+		}
+	}
 	return
 }
 
@@ -255,17 +282,31 @@ type Record struct {
 }
 
 func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
-	cis := consItems{}
+
+	cis0 := consItems{}
 	for _, v := range self.content {
 		if v.inBlock != nil {
-			cis = append(cis, v)
+			cis0 = append(cis0, v)
 		}
 	}
-	sort.Sort(cis)
+	sort.Sort(cis0)
+
+	ref_map := make(map[string]*consItem)
+	for _, v := range cis0 {
+		ref_map[string(v.inBlock.ref)] = v
+	}
+
+	cis1 := consItems{}
+
+	for _, v := range ref_map {
+		cis1 = append(cis1, v)
+	}
+
+	sort.Sort(cis1)
 
 	m := make(map[string]*Record)
 
-	for _, v := range cis {
+	for _, v := range cis1 {
 		var r *Record
 		if record, ok := m[v.inBlock.name]; ok {
 			r = record
@@ -280,8 +321,10 @@ func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
 		r.Pairs = append(r.Pairs, rp)
 	}
 
-	for _, v := range cis {
-		v.inBlock = nil
+	for _, v := range cis0 {
+		if !onlyget {
+			v.inBlock = nil
+		}
 	}
 	return
 }
