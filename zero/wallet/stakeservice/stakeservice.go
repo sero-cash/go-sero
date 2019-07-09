@@ -1,6 +1,7 @@
 package stakeservice
 
 import (
+	"github.com/sero-cash/go-sero/common"
 	"sync"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -96,6 +97,18 @@ func (self *StakeService) Shares() (shares []*stake.Share) {
 	return
 }
 
+func (self *StakeService) SharesById(id common.Hash) *stake.Share {
+	hash, err := self.db.Get(sharekey(id[:]))
+	if err != nil {
+		return nil
+	}
+	ret := stake.ShareDB.GetObject(self.bc.GetDB(), hash, &stake.Share{})
+	if ret == nil {
+		return nil
+	}
+	return ret.(*stake.Share)
+}
+
 func (self *StakeService) SharesByPk(pk keys.Uint512) (shares []*stake.Share) {
 	iterator := self.db.NewIteratorWithPrefix(pk[:])
 	if iterator.Next() {
@@ -109,6 +122,12 @@ func (self *StakeService) SharesByPk(pk keys.Uint512) (shares []*stake.Share) {
 func (self *StakeService) GetBlockRecords(blockNumber uint64) (shares []*stake.Share, pools []*stake.StakePool) {
 	header := self.bc.GetHeaderByNumber(blockNumber)
 	return stake.GetBlockRecords(self.bc.GetDB(), header.Hash(), blockNumber)
+}
+
+type myshare struct {
+	PoolId     common.Hash
+	SeleteNum  uint32
+	CurrentNum uint32
 }
 
 func (self *StakeService) stakeIndex() {
@@ -146,7 +165,6 @@ func (self *StakeService) stakeIndex() {
 	} else {
 		self.nextBlockNumber = blockNumber
 	}
-
 }
 
 func (self *StakeService) ownPkr(pkr keys.PKr) (pk *keys.Uint512, ok bool) {
