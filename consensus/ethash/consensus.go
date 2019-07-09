@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/zero/stake"
 	"math/big"
 	"runtime"
@@ -458,6 +459,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 	//pos
 	if len(header.ParentVotes) > 0 {
 		soloReware, reward := stake.NewStakeState(statedb).StakeCurrentReward()
+		log.Info("accumulateRewards: currentReward", "soloReware", soloReware, "reward", reward, "header.ParentVotes", len(header.ParentVotes))
 		for _, vote := range header.ParentVotes {
 			if vote.IsPool {
 				reward.Add(reward, new(big.Int).Div(reward, big.NewInt(3)))
