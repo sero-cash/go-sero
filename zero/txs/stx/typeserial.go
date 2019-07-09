@@ -1,7 +1,6 @@
 package stx
 
 import (
-	"errors"
 	"io"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -29,101 +28,58 @@ type ZtxVersion_1 struct {
 	Contract   *ContractCmd   `rlp:"nil"`
 }
 
-type ZtxRlp struct {
-	Version   vserial.Version
-	Version_0 ZtxVersion_0
-	Version_1 ZtxVersion_1
-}
-
-func (self *ZtxRlp) DecodeRLP(s *rlp.Stream) error {
-	_, size, _ := s.Kind()
-	if size == 0 {
-		self.Version.V = vserial.VERSION_NIL
-	} else {
-		if size > 10 {
-			self.Version.V = vserial.VERSION_0
-		} else {
-			if e := s.Decode(&self.Version); e != nil {
-				return e
-			}
-		}
-	}
-	if e := s.Decode(&self.Version_0); e != nil {
-		return e
-	}
-	if self.Version.V >= vserial.VERSION_1 {
-		if e := s.Decode(&self.Version_1); e != nil {
-			return e
-		}
-	}
-	return nil
-}
-
-func (self *ZtxRlp) EncodeRLP(w io.Writer) error {
-	if self.Version.V == vserial.VERSION_NIL {
-		e := errors.New("encode header rlp error: version is nil")
-		panic(e)
-		return e
-	}
-	if self.Version.V >= vserial.VERSION_1 {
-		if e := rlp.Encode(w, &self.Version); e != nil {
-			return e
-		}
-	}
-	if e := rlp.Encode(w, &self.Version_0); e != nil {
-		return e
-	}
-	if self.Version.V >= vserial.VERSION_1 {
-		if e := rlp.Encode(w, &self.Version_1); e != nil {
-			return e
-		}
-	}
-	return nil
-}
-
 func (b *T) DecodeRLP(s *rlp.Stream) error {
-	hr := ZtxRlp{}
-	if e := s.Decode(&hr); e != nil {
+	vs := vserial.VSerial{}
+	v0 := ZtxVersion_0{}
+	v1 := ZtxVersion_1{}
+
+	vs.Versions = append(vs.Versions, &v0)
+	vs.Versions = append(vs.Versions, &v1)
+	if e := s.Decode(&vs); e != nil {
 		return e
 	}
 
-	b.Ehash = hr.Version_0.Ehash
-	b.From = hr.Version_0.From
-	b.Fee = hr.Version_0.Fee
-	b.Sign = hr.Version_0.Sign
-	b.Bcr = hr.Version_0.Bcr
-	b.Bsign = hr.Version_0.Bsign
-	b.Desc_Z = hr.Version_0.Desc_Z
-	b.Desc_O = hr.Version_0.Desc_O
-	b.Desc_Pkg = hr.Version_0.Desc_Pkg
-	b.Desc_Cmd.BuyShare = hr.Version_1.BuyShare
-	b.Desc_Cmd.RegistPool = hr.Version_1.RegistPool
-	b.Desc_Cmd.ClosePool = hr.Version_1.ClosePool
-	b.Desc_Cmd.Contract = hr.Version_1.Contract
+	b.Ehash = v0.Ehash
+	b.From = v0.From
+	b.Fee = v0.Fee
+	b.Sign = v0.Sign
+	b.Bcr = v0.Bcr
+	b.Bsign = v0.Bsign
+	b.Desc_Z = v0.Desc_Z
+	b.Desc_O = v0.Desc_O
+	b.Desc_Pkg = v0.Desc_Pkg
+	b.Desc_Cmd.BuyShare = v1.BuyShare
+	b.Desc_Cmd.RegistPool = v1.RegistPool
+	b.Desc_Cmd.ClosePool = v1.ClosePool
+	b.Desc_Cmd.Contract = v1.Contract
 
 	return nil
 }
 
 // EncodeRLP serializes b into the Ethereum RLP block format.
 func (b *T) EncodeRLP(w io.Writer) error {
-	hr := ZtxRlp{}
+	vs := vserial.VSerial{}
+
+	v0 := ZtxVersion_0{}
+	v0.Ehash = b.Ehash
+	v0.From = b.From
+	v0.Fee = b.Fee
+	v0.Sign = b.Sign
+	v0.Bcr = b.Bcr
+	v0.Bsign = b.Bsign
+	v0.Desc_Z = b.Desc_Z
+	v0.Desc_O = b.Desc_O
+	v0.Desc_Pkg = b.Desc_Pkg
+	vs.Versions = append(vs.Versions, &v0)
+
 	if b.Desc_Cmd.Count() > 0 {
-		hr.Version.V = vserial.VERSION_1
-	} else {
-		hr.Version.V = vserial.VERSION_0
+		v1 := ZtxVersion_1{}
+		v1.BuyShare = b.Desc_Cmd.BuyShare
+		v1.RegistPool = b.Desc_Cmd.RegistPool
+		v1.ClosePool = b.Desc_Cmd.ClosePool
+		v1.Contract = b.Desc_Cmd.Contract
+		vs.Versions = append(vs.Versions, &v1)
 	}
-	hr.Version_0.Ehash = b.Ehash
-	hr.Version_0.From = b.From
-	hr.Version_0.Fee = b.Fee
-	hr.Version_0.Sign = b.Sign
-	hr.Version_0.Bcr = b.Bcr
-	hr.Version_0.Bsign = b.Bsign
-	hr.Version_0.Desc_Z = b.Desc_Z
-	hr.Version_0.Desc_O = b.Desc_O
-	hr.Version_0.Desc_Pkg = b.Desc_Pkg
-	hr.Version_1.BuyShare = b.Desc_Cmd.BuyShare
-	hr.Version_1.RegistPool = b.Desc_Cmd.RegistPool
-	hr.Version_1.ClosePool = b.Desc_Cmd.ClosePool
-	hr.Version_1.Contract = b.Desc_Cmd.Contract
-	return rlp.Encode(w, &hr)
+
+	return rlp.Encode(w, &vs)
 }
