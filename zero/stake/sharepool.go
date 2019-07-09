@@ -1,10 +1,12 @@
 package stake
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"math/big"
+	"sort"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -564,12 +566,38 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 	self.payProfit(bc, header, shareCacheMap, poolCacheMap)
 
 	self.statisticsByWindow(header, bc)
-	for _, share := range shareCacheMap {
-		self.updateShare(share)
+
+	shareList := List{}
+	for id, _ := range shareCacheMap {
+		shareList = append(shareList, id)
+		//self.updateShare(share)
 	}
-	for _, pool := range poolCacheMap {
-		self.UpdateStakePool(pool)
+	sort.Sort(shareList)
+	for _, id := range shareList {
+		self.updateShare(shareCacheMap[id])
 	}
+
+	poolList := List{}
+	for id, _ := range poolCacheMap {
+		poolList = append(poolList, id)
+		//self.UpdateStakePool(pool)
+	}
+	sort.Sort(poolList)
+	for _, id := range poolList {
+		self.UpdateStakePool(poolCacheMap[id])
+	}
+}
+
+type List []common.Hash
+
+func (list List) Len() int {
+	return len(list)
+}
+func (list List) Swap(i, j int) {
+	list[i], list[j] = list[j], list[i]
+}
+func (list List) Less(i, j int) bool { // 重写 Less() 方法
+	return bytes.Compare(list[i][:], list[j][:]) < 0
 }
 
 func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) {
