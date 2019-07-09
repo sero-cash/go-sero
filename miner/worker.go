@@ -375,7 +375,7 @@ func (self *worker) powResultLoop() {
 						//self.pendingVote[key] = mapset.NewSet()
 						break
 					}
-					time.Sleep(1)
+					time.Sleep(time.Second)
 					currentHeader = self.chain.CurrentHeader()
 				}
 

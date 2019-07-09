@@ -2,7 +2,6 @@ package stake
 
 import (
 	"fmt"
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/crypto"
@@ -21,16 +20,16 @@ func newState() (*StakeState, *state.StateDB) {
 }
 
 func TestCaleAvePrice(t *testing.T) {
-	state, stateDB := newState()
-	var pkr keys.PKr
-	copy(pkr[:], crypto.Keccak512([]byte("123")))
-	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 10, Num: 10}
-	state.UpdateShare(share)
-	root := stateDB.IntermediateRoot(true)
-	fmt.Println("root:", root.String())
-	fmt.Println(state.ShareSize())
+	state, _ := newState()
+	//var pkr keys.PKr
+	//copy(pkr[:], crypto.Keccak512([]byte("123")))
+	//share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 10, Num: 10}
+	//state.UpdateShare(share)
+	//root := stateDB.IntermediateRoot(true)
+	//fmt.Println("root:", root.String())
+	//fmt.Println(state.ShareSize())
 
-	amount, _ := big.NewInt(0).SetString("9377458754660837845", 10)
+	amount, _ := big.NewInt(0).SetString("98000000000000000000", 10)
 	n, price := state.CaleAvgPrice(amount)
 	sum := sum(basePrice, addition, int64(n))
 	fmt.Println(n, price, sum)

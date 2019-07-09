@@ -262,7 +262,7 @@ func (self *StakeState) UpdateStakePool(pool *StakePool) {
 func (self *StakeState) IsEffect(currentBlockNumber uint64) bool {
 	tree := NewTree(self)
 	if seroparam.Is_Dev() {
-		return self.ShareSize() > 10
+		return self.ShareSize() > 2
 	} else {
 		missedNum := decodeNumber32(self.missedNum.GetValue(missedNumKey))
 		seletedNum := (currentBlockNumber - seroparam.SIP3()) * 3
