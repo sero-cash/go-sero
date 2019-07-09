@@ -308,7 +308,7 @@ func newRPCShare(wallets []accounts.Wallet, share stake.Share) map[string]interf
 	s["voteAddr"] = getAccountAddrByPKr(wallets, share.VotePKr)
 	s["total"] = share.InitNum
 	s["remaining"] = share.Num
-	s["missed"] = share.WishVoteNum
+	s["missed"] = share.WillVoteNum
 	s["price"] = share.Value
 	if share.PoolId != nil {
 		s["pool"] = share.PoolId

@@ -115,7 +115,7 @@ func (self *StakeService) getShareByHash(hash []byte) *stake.Share {
 
 func (self *StakeService) SharesByPk(pk keys.Uint512) (shares []*stake.Share) {
 	iterator := self.db.NewIteratorWithPrefix(pk[:])
-	if iterator.Next() {
+	for iterator.Next() {
 		value := iterator.Value()
 		share := stake.ShareDB.GetObject(self.bc.GetDB(), value, &stake.Share{})
 		shares = append(shares, share.(*stake.Share))
