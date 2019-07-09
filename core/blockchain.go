@@ -1242,10 +1242,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		}
 
 		stakeState := stake.NewStakeState(state)
-		err = stakeState.CheckVotes(block, bc)
-		if err != nil {
-			return i, events, coalescedLogs, err
-		}
+
 
 		for _, tx := range block.Transactions() {
 			err := verify.Verify(tx.GetZZSTX(), state.GetZState())
@@ -1255,6 +1252,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		}
 
 		stakeState.ProcessBeforeApply(bc, block.Header())
+		err = stakeState.CheckVotes(block, bc)
+		if err != nil {
+			return i, events, coalescedLogs, err
+		}
 
 		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)
