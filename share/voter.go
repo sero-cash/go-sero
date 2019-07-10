@@ -319,7 +319,7 @@ func (self *Voter) sign(info voteInfo) {
 		log.Info("voter sign", "sign err", err)
 		return
 	}
-	log.Info("sign vote", "poshas", info.poshash, "block", info.parentNum+1, "share", info.shareHash, "idx", info.index)
+	log.Info(">>>>>>>>>>>>>sign vote", "poshas", info.poshash, "block", info.parentNum+1, "share", info.shareHash, "idx", info.index)
 	vote := &types.Vote{info.index, info.parentNum, info.shareHash, info.poshash, info.isPool, sign}
 	//go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
 	self.AddVote(vote)

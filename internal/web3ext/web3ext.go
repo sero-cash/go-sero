@@ -750,7 +750,12 @@ web3._extend({
         new web3._extend.Method({
 			name: 'myShare',
 			call: 'stake_myShare',
-			params: 1
+			params:1 
+		}),
+        new web3._extend.Method({
+			name: 'getShare',
+			call: 'stake_getShare',
+			params:1 
 		})
 	],
     properties: [

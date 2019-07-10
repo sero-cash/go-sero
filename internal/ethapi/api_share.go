@@ -303,7 +303,7 @@ func getAccountAddrByPKr(wallets []accounts.Wallet, PKr keys.PKr) interface{} {
 
 func newRPCShare(wallets []accounts.Wallet, share stake.Share) map[string]interface{} {
 	s := map[string]interface{}{}
-	s["id"] = share.Id()
+	s["id"] = common.BytesToHash(share.Id())
 	s["addr"] = getAccountAddrByPKr(wallets, share.PKr)
 	s["voteAddr"] = getAccountAddrByPKr(wallets, share.VotePKr)
 	s["total"] = share.InitNum
@@ -317,13 +317,92 @@ func newRPCShare(wallets []accounts.Wallet, share stake.Share) map[string]interf
 	return s
 }
 
-func (s *PublicStakeApI) MyShare(ctx context.Context, addr common.Address) []map[string]interface{} {
+type RPCStatisticsShare struct{
+	Address interface{}     `json:"addr"`
+	VoteAddress []interface{}  `json:"voteAddr"`
+	Total uint32            `json:"total"`
+	Remaining uint32        `json:"remaining"`
+	Missed uint32           `json:"missed"`
+	ShareIds []common.Hash  `json:"shareIds"`
+	Pools    []common.Hash   `json:"pools"`
+}
+
+func containsVoteAddr(vas[]interface{},item interface{}) bool{
+	for _, v := range vas {
+		if v== item {
+			return true
+		}
+	}
+	return false
+}
+
+func containsHash(vas[]common.Hash,item common.Hash) bool{
+	for _, v := range vas {
+		if v== item {
+			return true
+		}
+	}
+	return false
+}
+
+
+
+
+func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []RPCStatisticsShare{
+	result := map[string]*RPCStatisticsShare{}
+	var key interface{}
+	for _, share := range shares {
+		key = getAccountAddrByPKr(wallets, share.PKr)
+		var keystr string
+		switch inst := key.(type) {
+
+		case common.Address:
+			keystr = inst.String()
+		case address.AccountAddress:
+			keystr = inst.String()
+		}
+		if s, ok := result[keystr]; ok {
+
+			s.Total += share.InitNum
+			s.Remaining += share.Num
+			s.Missed += share.WillVoteNum
+			s.ShareIds=append(	s.ShareIds,common.BytesToHash(share.Id()))
+			if !containsVoteAddr(s.VoteAddress,getAccountAddrByPKr(wallets, share.VotePKr)){
+				s.VoteAddress=append(s.VoteAddress,getAccountAddrByPKr(wallets, share.VotePKr))
+			}
+			if share.PoolId!=nil{
+				if !containsHash(s.Pools,*share.PoolId){
+					s.Pools=append(s.Pools,*share.PoolId)
+				}
+			}
+		} else {
+			s := &RPCStatisticsShare{}
+			s.Address=key
+			s.Total= share.InitNum
+			s.Remaining = share.Num
+			s.Missed= share.WillVoteNum
+			s.VoteAddress=append(s.VoteAddress,getAccountAddrByPKr(wallets, share.VotePKr))
+			if share.PoolId!=nil {
+				s.Pools=append(s.Pools,*share.PoolId)
+			}
+			s.ShareIds = append(s.ShareIds, common.BytesToHash(share.Id()))
+			result[keystr]=s
+		}
+	}
+	statistics:=[]RPCStatisticsShare{}
+	for _,v:= range result{
+		statistics=append(statistics,*v)
+	}
+	return statistics
+
+}
+
+func (s *PublicStakeApI) MyShare(ctx context.Context, addr common.Address) []RPCStatisticsShare {
 	var pk keys.Uint512
 	wallets := s.b.AccountManager().Wallets()
 	if addr.IsAccountAddress() {
 		pk = *common.AddrToAccountAddr(addr).ToUint512()
 	} else {
-
 		for _, wallet := range wallets {
 			if wallet.IsMine(addr) {
 				pk = *wallet.Accounts()[0].Address.ToUint512()
@@ -331,15 +410,16 @@ func (s *PublicStakeApI) MyShare(ctx context.Context, addr common.Address) []map
 			}
 		}
 	}
-
-	result := []map[string]interface{}{}
 	shares := stakeservice.CurrentStakeService().SharesByPk(pk)
-	for _, share := range shares {
-		result = append(result, newRPCShare(wallets, *share))
-	}
-	return result
+	return newRPCStatisticsShare(wallets,shares)
 }
 
-func (s *PublicStakeApI) getShare(ctx context.Context, shareId common.Hash) map[string]interface{} {
+func (s *PublicStakeApI) GetShare(ctx context.Context, shareId common.Hash) map[string]interface{} {
+	share := stakeservice.CurrentStakeService().SharesById(shareId)
+	if share == nil {
+		return nil
+	}
+	wallets := s.b.AccountManager().Wallets()
+	return newRPCShare(wallets,*share)
 	return nil
 }
