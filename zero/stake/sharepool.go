@@ -349,7 +349,7 @@ func (self *StakeState) GetShare(key common.Hash) *Share {
 func (self *StakeState) getShare(key common.Hash) *Share {
 	share := self.GetShare(key)
 	if share == nil {
-		log.Crit("ProcessBeforeApply: Get share error", "key", common.BytesToHash(key[:]))
+		log.Crit("getShare error", "key", common.BytesToHash(key[:]))
 	}
 	return share
 }
@@ -365,7 +365,7 @@ func (self *StakeState) GetStakePool(poolId common.Hash) *StakePool {
 func (self *StakeState) getStakePool(poolId common.Hash) *StakePool {
 	pool := self.GetStakePool(poolId)
 	if pool == nil {
-		log.Crit("ProcessBeforeApply: Get stakePoolObj error", "poolId", common.BytesToHash(poolId[:]))
+		log.Crit("getStakePool error", "poolId", common.BytesToHash(poolId[:]))
 	}
 	return pool
 }
@@ -387,8 +387,8 @@ func GetBlockRecords(getter serodb.Getter, blockHash common.Hash, blockNumber ui
 		if record.Name == "pool" {
 			for _, each := range record.Pairs {
 				ret := StakePoolDB.GetObject(getter, each.Hash, &StakePool{})
-				pool:=ret.(*StakePool)
-				log.Info("get blocks" ,"id",hexutil.Encode(each.Ref),"hash" ,hexutil.Encode(each.Hash),"retHash",hexutil.Encode(pool.State()))
+				pool := ret.(*StakePool)
+				log.Info("get blocks", "id", hexutil.Encode(each.Ref), "hash", hexutil.Encode(each.Hash), "retHash", hexutil.Encode(pool.State()))
 				pools = append(pools, ret.(*StakePool))
 			}
 		}
@@ -562,11 +562,18 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 			return errors.New("header.CurrentVotes.len < 2")
 		}
 	}
-
+	parentblock := bc.GetBlock(header.ParentHash, header.Number.Uint64()-1)
 	if len(header.CurrentVotes) > 0 {
 		// check repeated vote
 		voteMap := map[keys.Uint512]types.HeaderVote{}
+
+		parentPosHash := parentblock.HashPos()
+		blockPosHash := block.HashPos()
+		ret := types.StakeHash(&blockPosHash, &parentPosHash)
 		for _, vote := range header.CurrentVotes {
+			if err := self.verifyVote(vote, ret); err != nil {
+				return err
+			}
 			voteMap[vote.Sign] = vote
 		}
 		if len(voteMap) != len(header.CurrentVotes) {
@@ -594,9 +601,8 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 		}
 	}
 
-	if len(header.ParentVotes) == 1 {
-		block := bc.GetBlock(header.ParentHash, header.Number.Uint64()-1)
-		preHeader := block.Header()
+	if len(header.ParentVotes) > 0 {
+		preHeader := parentblock.Header()
 		shareMapNum := map[common.Hash]uint8{}
 		voteHashs := rawdb.ReadBlockVotes(bc.GetDB(), header.ParentHash)
 		for _, key := range voteHashs {
@@ -612,7 +618,15 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 			parentVoteMap[vote.Sign] = vote
 		}
 
+		perperBlock := bc.GetBlock(parentblock.ParentHash(), parentblock.NumberU64()-1)
+		parentPosHash := perperBlock.HashPos()
+		blockPosHash := parentblock.HashPos()
+		ret := types.StakeHash(&blockPosHash, &parentPosHash)
 		for _, vote := range header.ParentVotes {
+			if err := self.verifyVote(vote, ret); err != nil {
+				return err
+			}
+
 			if _, ok := parentVoteMap[vote.Sign]; ok {
 				return errors.New("exist in parent header votes")
 			}
@@ -624,6 +638,22 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 		}
 	}
 	return nil
+}
+
+func (self *StakeState) verifyVote(vote types.HeaderVote, stakeHash common.Hash) error {
+	share := self.getShare(vote.Id)
+	if vote.IsPool {
+		pool := self.getStakePool(*share.PoolId)
+		if !keys.VerifyPKr(stakeHash.HashToUint256(), &vote.Sign, &pool.VotePKr) {
+			return errors.New("Verify header votes error")
+		}
+	} else {
+		if !keys.VerifyPKr(stakeHash.HashToUint256(), &vote.Sign, &share.VotePKr) {
+			return errors.New("Verify header votes error")
+		}
+	}
+	return nil
+
 }
 
 func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) {
