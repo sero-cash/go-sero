@@ -79,7 +79,7 @@ func NewStakeService(dbpath string, bc *core.BlockChain, accountManager *account
 
 func (self *StakeService) StakePools() (pools []*stake.StakePool) {
 	iterator := self.db.NewIteratorWithPrefix(poolPrefix)
-	if iterator.Next() {
+	for iterator.Next() {
 		value := iterator.Value()
 		pool := stake.StakePoolDB.GetObject(self.bc.GetDB(), value, &stake.StakePool{})
 		pools = append(pools, pool.(*stake.StakePool))
@@ -89,7 +89,7 @@ func (self *StakeService) StakePools() (pools []*stake.StakePool) {
 
 func (self *StakeService) Shares() (shares []*stake.Share) {
 	iterator := self.db.NewIteratorWithPrefix(sharePrefix)
-	if iterator.Next() {
+	for iterator.Next() {
 		value := iterator.Value()
 		share := stake.ShareDB.GetObject(self.bc.GetDB(), value, &stake.Share{})
 		shares = append(shares, share.(*stake.Share))
