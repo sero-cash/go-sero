@@ -8,31 +8,8 @@ import (
 	"testing"
 )
 
-func (node *SNode) Print(state State) {
-	if node.key == emptyHash {
-		return
-	}
-	total := state.GetStakeState(node.totalKey())
-	num := state.GetStakeState(node.numKey())
-	fmt.Printf("%s, %v, %v\n", common.Bytes2Hex(node.key[:]), decodeNumber32(total[28:32]), decodeNumber32(num[28:32]))
-}
-
 func (node *SNode) println() {
 	fmt.Printf("%s, %v, %v\n", common.Bytes2Hex(node.key[:]), node.total, node.num)
-}
-
-func (node *SNode) MiddleOrder(state State) {
-	leftHash := state.GetStakeState(node.leftKey())
-	if leftHash != emptyHash {
-		left := &SNode{key: leftHash}
-		left.MiddleOrder(state)
-	}
-	node.Print(state)
-	rightHash := state.GetStakeState(node.rightKey())
-	if rightHash != emptyHash {
-		right := &SNode{key: rightHash}
-		right.MiddleOrder(state)
-	}
 }
 
 //func newState() (State, *state.StateDB) {
@@ -56,7 +33,7 @@ func TestTree(t *testing.T) {
 func initTree(state State) (*STree, map[common.Hash]uint32) {
 	all := map[common.Hash]uint32{}
 	tree := NewTree(state)
-	for i := 1; i <= 10; i++ {
+	for i := 1; i <= 100; i++ {
 		u := uint8(rand.Intn(100))
 		hash := crypto.Keccak256Hash([]byte{u, uint8(i)})
 		for all[hash] > 0 || u == 0 {
@@ -66,7 +43,7 @@ func initTree(state State) (*STree, map[common.Hash]uint32) {
 		all[hash] = uint32(u)
 		num := uint32(u)
 		//num := uint32(1)
-		tree.insert(&SNode{key: hash, total: num, num: num})
+		tree.insert(&SNode{key: hash, total: num, num: num, nodeNum: 1})
 	}
 	hash := state.GetStakeState(rootKey)
 	root := &SNode{key: hash}
