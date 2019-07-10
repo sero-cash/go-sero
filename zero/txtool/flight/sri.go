@@ -1,7 +1,9 @@
-package txtool
+package flight
 
 import (
 	"fmt"
+
+	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 
@@ -21,11 +23,11 @@ type SRI struct {
 var SRI_Inst = SRI{}
 
 func GetOut(root *keys.Uint256, num uint64) (out *localdb.RootState) {
-	rs := localdb.GetRoot(Ref_inst.Bc.GetDB(), root)
+	rs := localdb.GetRoot(txtool.Ref_inst.Bc.GetDB(), root)
 	if rs != nil {
 		return rs
 	} else {
-		zst := Ref_inst.GetState()
+		zst := txtool.Ref_inst.GetState()
 		if os := zst.State.GetOut(root); os == nil {
 			return nil
 		} else {
@@ -39,19 +41,19 @@ func GetOut(root *keys.Uint256, num uint64) (out *localdb.RootState) {
 	}
 }
 
-func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []Block, e error) {
-	stable_num := Ref_inst.GetDelayedNum(seroparam.DefaultConfirmedBlock())
+func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []txtool.Block, e error) {
+	stable_num := txtool.Ref_inst.GetDelayedNum(seroparam.DefaultConfirmedBlock())
 	if start <= stable_num {
 		if stable_num-start+1 < count {
 			count = stable_num - start + 1
 		}
 		for i := uint64(0); i < count; i++ {
 			num := start + i
-			chain_block := Ref_inst.Bc.GetBlockByNumber(num)
+			chain_block := txtool.Ref_inst.Bc.GetBlockByNumber(num)
 			hash := chain_block.Hash()
-			local_block := localdb.GetBlock(Ref_inst.Bc.GetDB(), num, hash.HashToUint256())
+			local_block := localdb.GetBlock(txtool.Ref_inst.Bc.GetDB(), num, hash.HashToUint256())
 			if local_block != nil {
-				block := Block{}
+				block := txtool.Block{}
 				block.Hash = *hash.HashToUint256()
 				block.Num = hexutil.Uint64(num)
 				for _, k := range local_block.Dels {
@@ -61,11 +63,11 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []Block, e er
 					if out := GetOut(&k, num); out == nil {
 						log.Error("GetBlocksInfo ERROR", "num", num, "root", k)
 					} else {
-						block.Outs = append(block.Outs, Out{k, *out})
+						block.Outs = append(block.Outs, txtool.Out{k, *out})
 					}
 				}
 				for _, k := range local_block.Pkgs {
-					if pkg := localdb.GetPkg(Ref_inst.Bc.GetDB(), &k); pkg == nil {
+					if pkg := localdb.GetPkg(txtool.Ref_inst.Bc.GetDB(), &k); pkg == nil {
 						log.Error("GetBlocksInfo ERROR", "num", num, "pkg", k)
 					} else {
 						block.Pkgs = append(block.Pkgs, *pkg)
@@ -83,11 +85,11 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []Block, e er
 	}
 }
 
-func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []Witness, e error) {
-	state := Ref_inst.GetState()
+func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []txtool.Witness, e error) {
+	state := txtool.Ref_inst.GetState()
 	if state != nil {
 		for _, root := range roots {
-			wit := Witness{}
+			wit := txtool.Witness{}
 			if out := GetOut(&root, 0); out == nil {
 				e = errors.New("GetAnchor use root but out is nil !!!")
 				return

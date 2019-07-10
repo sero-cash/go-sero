@@ -1,7 +1,9 @@
-package txtool
+package generate
 
 import (
 	"errors"
+
+	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
@@ -11,14 +13,14 @@ import (
 )
 
 type gen_ctx struct {
-	param        GTxParam
-	O_Ins        []GIn
-	Z_Ins        []GIn
+	param        txtool.GTxParam
+	O_Ins        []txtool.GIn
+	Z_Ins        []txtool.GIn
 	balance_desc cpt.BalanceDesc
 	s            stx.T
 }
 
-func genTx(param *GTxParam) (ret stx.T, e error) {
+func GenTx(param *txtool.GTxParam) (ret stx.T, e error) {
 	ctx := gen_ctx{}
 	ctx.param = *param
 	ctx.prepare()

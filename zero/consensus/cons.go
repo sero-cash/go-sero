@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
 )
@@ -58,6 +59,27 @@ type consItem struct {
 	inCons  bool
 	inBlock *inBlock
 	inDB    *inDB
+}
+
+func (self *consItem) Log() string {
+	ret := fmt.Sprintf("index(%v) - id(%v) - ", self.index, hexutil.Encode(self.key.id))
+	if self.inCons {
+		ret += "inCons(true) - "
+	} else {
+		ret += "inCons(false) - "
+	}
+	if self.inBlock != nil {
+		ret += fmt.Sprintf("inBlock(%v : %v) - ", self.inBlock.name, hexutil.Encode(self.inBlock.ref))
+	} else {
+		ret += "inBlock(NULL) - "
+	}
+	if self.inDB != nil {
+		ret += fmt.Sprintf("inDB(%v) - ", hexutil.Encode(self.inDB.ref))
+	} else {
+		ret += "inDB(NULL) - "
+	}
+	ret += fmt.Sprintf("VALUE(%v)", self.item)
+	return ret
 }
 
 func (self *consItem) CopyRef() (ret *consItem) {
@@ -281,6 +303,16 @@ type Record struct {
 	Pairs []RecordPair
 }
 
+func (self *Record) Log() string {
+	ret := fmt.Sprintf("Name(%v)\n", self.Name)
+	for _, pair := range self.Pairs {
+		ret += fmt.Sprint("  ")
+		ret += fmt.Sprintf("Record(ref=%v,hash=%v)", hexutil.Encode(pair.Ref), hexutil.Encode(pair.Hash))
+		ret += "\n"
+	}
+	return ret
+}
+
 func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
 
 	cis0 := consItems{}
@@ -329,8 +361,26 @@ func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
 	return
 }
 
+func (self *Cons) ReportConItems(name string, items consItems) {
+	fmt.Printf("%v REPORT ITEMS: num=%v\n", name, self.db.Num())
+	for _, item := range items {
+		fmt.Print("  ")
+		fmt.Println(item.Log())
+	}
+	fmt.Print("\n")
+}
+
+func (self *Cons) ReportRecords(records []*Record) {
+	fmt.Printf("BLOCK RECORDS : num=%v\n", self.db.Num())
+	for _, record := range records {
+		fmt.Print(record.Log())
+	}
+	fmt.Print("\n")
+}
+
 func (self *Cons) Update() {
 	self.updateVer = self.ver
+	self.ReportConItems("CONS", self.fetchConsPairs(true))
 	conslist := self.fetchConsPairs(false)
 	for _, v := range conslist {
 		if v.item == nil {
@@ -355,6 +405,7 @@ type DPutter interface {
 }
 
 func (self *Cons) Record(hash *common.Hash, batch DPutter) {
+	self.ReportRecords(self.fetchBlockRecords(true))
 	recordlist := self.fetchBlockRecords(false)
 
 	if len(recordlist) > 0 {
@@ -362,6 +413,7 @@ func (self *Cons) Record(hash *common.Hash, batch DPutter) {
 	}
 
 	dblist := self.fetchDBPairs(false)
+	self.ReportConItems("DB", dblist)
 	for _, v := range dblist {
 		if v.item == nil {
 			if err := batch.Delete([]byte(v.key.k())); err != nil {

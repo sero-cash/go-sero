@@ -86,6 +86,31 @@ type DescCmd struct {
 	Contract   *ContractCmd   `rlp:"nil"`
 }
 
+func (self *DescCmd) ToPkr() *keys.PKr {
+	if self.BuyShare != nil {
+		return &self.BuyShare.Vote
+	}
+	if self.RegistPool != nil {
+		return &self.RegistPool.Vote
+	}
+	return nil
+}
+
+func (self *DescCmd) OutAsset() *assets.Asset {
+	if self.BuyShare != nil {
+		asset := self.BuyShare.Asset()
+		return &asset
+	}
+	if self.RegistPool != nil {
+		asset := self.RegistPool.Asset()
+		return &asset
+	}
+	if self.Contract != nil {
+		return &self.Contract.Asset
+	}
+	return nil
+}
+
 func (self *DescCmd) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	if self.BuyShare != nil {

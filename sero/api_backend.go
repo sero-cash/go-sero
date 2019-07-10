@@ -21,6 +21,8 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
+
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
@@ -249,11 +251,11 @@ func (b *SeroAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.M
 }
 
 func (b *SeroAPIBackend) GetBlocksInfo(start uint64, count uint64) ([]txtool.Block, error) {
-	return txtool.SRI_Inst.GetBlocksInfo(start, count)
+	return flight.SRI_Inst.GetBlocksInfo(start, count)
 
 }
 func (b *SeroAPIBackend) GetAnchor(roots []keys.Uint256) ([]txtool.Witness, error) {
-	return txtool.SRI_Inst.GetAnchor(roots)
+	return flight.SRI_Inst.GetAnchor(roots)
 
 }
 func (b *SeroAPIBackend) CommitTx(tx *txtool.GTx) error {

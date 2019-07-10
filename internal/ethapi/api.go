@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -552,7 +553,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 			return
 		}
 		sk := keys.Seed2Sk(seed.SeedToUint256())
-		gtx, err := txtool.SignTx(&sk, pretx)
+		gtx, err := flight.SignTx(&sk, pretx)
 		if err != nil {
 			exchange.CurrentExchange().ClearTxParam(pretx)
 			e = err

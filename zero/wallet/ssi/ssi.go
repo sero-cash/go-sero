@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -48,7 +50,7 @@ func (self *SSI) CreateKr() (kr txtool.Kr) {
 
 func (self *SSI) GetBlocksInfo(start uint64, count uint64) (blocks []Block, e error) {
 
-	if bs, err := txtool.SRI_Inst.GetBlocksInfo(start, count); err != nil {
+	if bs, err := flight.SRI_Inst.GetBlocksInfo(start, count); err != nil {
 		e = err
 		return
 	} else {
@@ -85,7 +87,7 @@ func (self *SSI) Detail(roots []keys.Uint256, skr *keys.PKr) (douts []txtool.DOu
 			outs = append(outs, txtool.Out{r, *root})
 		}
 	}
-	douts = txtool.SLI_Inst.DecOuts(outs, skr)
+	douts = flight.SLI_Inst.DecOuts(outs, skr)
 
 	return
 }
@@ -112,7 +114,7 @@ func (self *SSI) GenTx(param *GenTxParam) (hash keys.Uint256, e error) {
 			return
 		} else {
 			out := txtool.Out{in.Root, *root}
-			dOuts := txtool.SLI_Inst.DecOuts([]txtool.Out{out}, &in.SKr)
+			dOuts := flight.SLI_Inst.DecOuts([]txtool.Out{out}, &in.SKr)
 			if len(dOuts) == 0 {
 				e = fmt.Errorf("SSI GenTx Error for root %v", in.Root)
 				return
@@ -186,7 +188,7 @@ func (self *SSI) GenTx(param *GenTxParam) (hash keys.Uint256, e error) {
 
 	wits := []txtool.Witness{}
 
-	if wits, e = txtool.SRI_Inst.GetAnchor(roots); e != nil {
+	if wits, e = flight.SRI_Inst.GetAnchor(roots); e != nil {
 		return
 	}
 
@@ -199,7 +201,7 @@ func (self *SSI) GenTx(param *GenTxParam) (hash keys.Uint256, e error) {
 	}
 
 	log.Printf("genTx ins : %v, outs : %v", len(p.Ins), len(p.Outs))
-	if gtx, err := txtool.SLI_Inst.GenTx(&p); err != nil {
+	if gtx, err := flight.SLI_Inst.GenTx(&p); err != nil {
 		e = err
 		log.Printf("genTx error : %v", err)
 		return

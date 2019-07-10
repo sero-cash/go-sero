@@ -1,8 +1,12 @@
-package txtool
+package flight
 
 import (
 	"encoding/json"
 	"log"
+
+	"github.com/sero-cash/go-sero/zero/txtool"
+
+	"github.com/sero-cash/go-sero/zero/txtool/generate"
 
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
@@ -17,11 +21,11 @@ type SLI struct {
 
 var SLI_Inst = SLI{}
 
-func (self *SLI) DecOuts(outs []Out, skr *keys.PKr) (douts []DOut) {
+func (self *SLI) DecOuts(outs []txtool.Out, skr *keys.PKr) (douts []txtool.DOut) {
 	sk := keys.Uint512{}
 	copy(sk[:], skr[:])
 	for _, out := range outs {
-		dout := DOut{}
+		dout := txtool.DOut{}
 
 		data, _ := json.Marshal(out)
 		log.Printf("DecOuts out : %s", string(data))
@@ -67,9 +71,9 @@ func (self *SLI) DecOuts(outs []Out, skr *keys.PKr) (douts []DOut) {
 	return
 }
 
-func (self *SLI) GenTx(param *GTxParam) (gtx GTx, e error) {
+func (self *SLI) GenTx(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
 
-	if tx, err := genTx(param); err != nil {
+	if tx, err := generate.GenTx(param); err != nil {
 		e = err
 		return
 	} else {
@@ -81,7 +85,7 @@ func (self *SLI) GenTx(param *GTxParam) (gtx GTx, e error) {
 	}
 }
 
-func SignTx(sk *keys.Uint512, paramTx *GTxParam) (tx GTx, err error) {
+func SignTx(sk *keys.Uint512, paramTx *txtool.GTxParam) (tx txtool.GTx, err error) {
 	copy(paramTx.From.SKr[:], sk[:])
 	for i := range paramTx.Ins {
 		copy(paramTx.Ins[i].SKr[:], sk[:])

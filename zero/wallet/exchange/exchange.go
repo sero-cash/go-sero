@@ -14,6 +14,7 @@ import (
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -529,7 +530,7 @@ func (self *Exchange) genTx(utxos prepare.Utxos, account *Account, receptions []
 	}
 
 	sk := keys.Seed2Sk(seed.SeedToUint256())
-	gtx, err := txtool.SignTx(&sk, txParam)
+	gtx, err := flight.SignTx(&sk, txParam)
 	if err != nil {
 		self.ClearTxParam(txParam)
 		e = err
@@ -755,7 +756,7 @@ func (self *Exchange) fetchBlockInfo() {
 
 func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uint512) (count int) {
 
-	blocks, err := txtool.SRI_Inst.GetBlocksInfo(start, countBlock)
+	blocks, err := flight.SRI_Inst.GetBlocksInfo(start, countBlock)
 	if err != nil {
 		log.Info("Exchange GetBlocksInfo", "error", err)
 		return

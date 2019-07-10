@@ -11,6 +11,7 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/txtool"
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
 
 	"github.com/sero-cash/go-sero/zero/utils"
 
@@ -84,7 +85,7 @@ func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds 
 
 	txParam.From = txtool.Kr{PKr: *refundTo}
 
-	wits, err := txtool.SRI_Inst.GetAnchor(utxos.Roots())
+	wits, err := flight.SRI_Inst.GetAnchor(utxos.Roots())
 	if err != nil {
 		e = err
 		return
@@ -93,7 +94,7 @@ func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds 
 	Ins := []txtool.GIn{}
 	oins_count := 0
 	for index, utxo := range utxos {
-		if out := txtool.GetOut(&utxo.Root, 0); out != nil {
+		if out := flight.GetOut(&utxo.Root, 0); out != nil {
 			if added, err := ck.AddIn(&utxo.Asset); err != nil {
 				e = err
 				return
