@@ -184,7 +184,7 @@ func (s *StakePool) CopyTo() (ret consensus.CItem) {
 		Fee:             s.Fee,
 
 		CurrentShareNum: s.CurrentShareNum,
-		WishVoteNum:     s.CurrentShareNum,
+		WishVoteNum:     s.WishVoteNum,
 		ChoicedShareNum: s.ChoicedShareNum,
 		MissedVoteNum:   s.MissedVoteNum,
 		ExpireNum:       s.ExpireNum,
@@ -255,7 +255,6 @@ var (
 
 func NewStakeState(statedb *state.StateDB) *StakeState {
 	cons := statedb.GetStakeCons()
-
 	stakeState := &StakeState{statedb: statedb}
 	stakeState.missedNum = consensus.NewKVPt(cons, "STAKE$EMISSEDNNUM$", "")
 	stakeState.sharePool = consensus.NewKVPt(cons, "STAKE$SHAREPOOL$CONS$", "")
@@ -556,8 +555,8 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 	}
 
 	if self.IsEffect(block.NumberU64()) {
-		if len(header.CurrentVotes) < 2 || len(header.CurrentVotes) > 3 {
-			return errors.New("header.CurrentVotes.len < 2 or header.ParentVotes > 3")
+		if len(header.CurrentVotes) < 2 {
+			return errors.New("header.CurrentVotes.len < 2")
 		}
 	}
 
@@ -596,8 +595,8 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 		block := bc.GetBlock(header.ParentHash, header.Number.Uint64()-1)
 		preHeader := block.Header()
 		shareMapNum := map[common.Hash]uint8{}
-		voteHash := rawdb.ReadBlockVotes(bc.GetDB(), header.ParentHash)
-		for _, key := range voteHash {
+		voteHashs := rawdb.ReadBlockVotes(bc.GetDB(), header.ParentHash)
+		for _, key := range voteHashs {
 			shareMapNum[key] += 1
 		}
 
@@ -647,7 +646,9 @@ func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) 
 	if prepreHeader.Number.Uint64() > statisticsMissWindow {
 		windiwHeader := bc.GetHeaderByNumber(preHeader.Number.Uint64() - statisticsMissWindow - 1)
 		preWindiwHeader := bc.GetHeaderByNumber(prepreHeader.Number.Uint64() - statisticsMissWindow - 1)
-		missedNum -= uint32(3 - len(preWindiwHeader.CurrentVotes) - len(windiwHeader.ParentVotes))
+		if missedNum >= 3 {
+			missedNum -= uint32(3 - len(preWindiwHeader.CurrentVotes) - len(windiwHeader.ParentVotes))
+		}
 	}
 	log.Info("ProcessBeforeApply: statisticsByWindow", "missedNum", missedNum)
 	self.missedNum.SetValue(missedNumKey, encodeNumber32(missedNum))

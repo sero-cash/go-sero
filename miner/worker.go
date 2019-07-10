@@ -28,7 +28,6 @@ import (
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core"
@@ -100,9 +99,21 @@ type voteKey struct {
 	posHash      common.Hash
 }
 
-type votes map[uint32]types.Vote
+type voteSet map[uint32]types.Vote
 
-func (vs votes) add(item types.Vote) bool {
+func newVoteSet() voteSet {
+	return map[uint32]types.Vote{}
+}
+
+func (vs voteSet) copy() voteSet {
+	ret := map[uint32]types.Vote{}
+	for key, value := range vs {
+		ret[key] = value
+	}
+	return ret
+}
+
+func (vs voteSet) add(item types.Vote) bool {
 	if len(vs) > 2 {
 		return true
 	}
@@ -158,7 +169,7 @@ type worker struct {
 	atWork int32
 
 	pendingVoteMu sync.RWMutex
-	pendingVote   map[voteKey]*votes
+	pendingVote   map[voteKey]voteSet
 	//pendingVoteTime sync.Map
 	//pendingPosMu  sync.RWMutex
 	//pendingPos    map[common.Hash]time.Time
@@ -187,8 +198,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase add
 		unconfirmed: newUnconfirmedBlocks(sero.BlockChain(), miningLogAtDepth),
 		voter:       voter,
 
-		pendingVote: make(map[voteKey]*votes),
-		//pendingVoteTime: sync.Map{},
+		pendingVote: make(map[voteKey]voteSet),
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = sero.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -295,7 +305,7 @@ func (self *worker) update() {
 		// Handle ChainHeadEvent
 		case block := <-self.chainHeadCh:
 			self.pendingVoteMu.Lock()
-			self.pendingVote[voteKey{block.Block.NumberU64(), block.Block.Header().HashPos()}] = &votes{}
+			self.pendingVote[voteKey{block.Block.NumberU64(), block.Block.Header().HashPos()}] = newVoteSet()
 			header := block.Block.Header()
 			parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 
@@ -356,7 +366,7 @@ func (self *worker) powResultLoop() {
 			hashPos := header.HashPos()
 			key := voteKey{header.Number.Uint64(), hashPos}
 			self.pendingVoteMu.Lock()
-			self.pendingVote[key] = &votes{}
+			self.pendingVote[key] = map[uint32]types.Vote{}
 			self.pendingVoteMu.Unlock()
 			self.voter.AddLottery(&types.Lottery{header.ParentHash, header.Number.Uint64() - 1, hashPos})
 			log.Info("Brodcast Lottery", "poshash", hashPos, "block", header.Number.Uint64())
@@ -365,23 +375,27 @@ func (self *worker) powResultLoop() {
 
 			isEffect := stakeState.IsEffect(header.Number.Uint64())
 			go func() {
-				parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-				var currentVotes votes
-				var parentVotes votes
+				parentBlock := self.chain.GetBlockByHash(header.ParentHash)
+				if parentBlock == nil {
+					return
+				}
+				parentVoteKey := voteKey{parentBlock.NumberU64(), parentBlock.HashPos()}
+				var currentVotes map[uint32]types.Vote
+				var parentVotes map[uint32]types.Vote
 				currentHeader := self.chain.CurrentHeader()
 				for currentHeader.Hash() == header.ParentHash {
 					self.pendingVoteMu.Lock()
 					if votes, ok := self.pendingVote[key]; ok {
-						currentVotes = *votes
+						currentVotes = votes.copy()
 					}
-					parentSet := self.pendingVote[voteKey{parentHeader.Number.Uint64(), parentHeader.HashPos()}]
+
+					parentSet := self.pendingVote[parentVoteKey]
 					if parentSet != nil {
-						parentVotes = *parentSet
+						parentVotes = parentSet.copy()
 					}
 					self.pendingVoteMu.Unlock()
 
 					if len(currentVotes) >= 2 || !isEffect {
-						//self.pendingVote[key] = mapset.NewSet()
 						break
 					}
 					time.Sleep(100 * time.Millisecond)
@@ -400,8 +414,12 @@ func (self *worker) powResultLoop() {
 
 					ParentVotes := []types.HeaderVote{}
 					if len(parentVotes) > 0 {
+						voteMap := map[keys.Uint512]types.HeaderVote{}
+						for _, vote := range parentBlock.Header().CurrentVotes {
+							voteMap[vote.Sign] = vote
+						}
 						for _, vote := range parentVotes {
-							if !self.contains(parentHeader, vote.Sign) {
+							if _, ok := voteMap[vote.Sign]; !ok {
 								log.Info("pos parentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 								ParentVotes = append(ParentVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
 								if len(ParentVotes) == 3 {
@@ -417,16 +435,6 @@ func (self *worker) powResultLoop() {
 			}()
 		}
 	}
-}
-
-func (self *worker) contains(parentHeader *types.Header, sign keys.Uint512) bool {
-	votes := parentHeader.CurrentVotes
-	for _, vote := range votes {
-		if vote.Sign == sign {
-			return true
-		}
-	}
-	return false
 }
 
 func (self *worker) checkVote(vote *types.Vote) bool {
@@ -448,18 +456,13 @@ func (self *worker) checkVote(vote *types.Vote) bool {
 		ret := types.StakeHash(&vote.PosHash, &parentPosHash)
 		if vote.IsPool {
 			if share.PoolId != nil {
-
 				pool := stakeState.GetStakePool(*share.PoolId)
 				if pool != nil {
-					if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, &pool.VotePKr) {
-						return true
-					}
+					return keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, &pool.VotePKr)
 				}
 			}
 		} else {
-			if keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, &share.VotePKr) {
-				return true
-			}
+			return keys.VerifyPKr(ret.HashToUint256(), &vote.Sign, &share.VotePKr)
 		}
 	}
 	return false
@@ -471,7 +474,6 @@ func (self *worker) voteLoop() {
 		select {
 		case voteResult := <-self.voteCh:
 			vote := voteResult.Vote
-
 			log.Info("voteLoop", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 
 			key := voteKey{vote.ParentNum + 1, vote.PosHash}
@@ -687,13 +689,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		if tx == nil {
 			break
 		}
-
-		if env.header.Number.Uint64() == seroparam.VP0() {
-			txs.Shift()
-			env.errHandledTxs = append(env.errHandledTxs, tx)
-			continue
-		}
-
+		
 		// Start executing the transaction
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 
