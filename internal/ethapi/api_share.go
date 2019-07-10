@@ -269,7 +269,7 @@ type StakePool struct {
 
 func newRPCStakePool(pool stake.StakePool) map[string]interface{} {
 	result := map[string]interface{}{}
-	result["id"] = pool.Id()
+	result["id"] = common.BytesToHash(pool.Id())
 	result["own"] = common.BytesToAddress(pool.PKr[:])
 	result["voteAddress"] = common.BytesToAddress(pool.VotePKr[:])
 	result["fee"] = hexutil.Uint(pool.Fee)

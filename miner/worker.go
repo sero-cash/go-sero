@@ -100,21 +100,13 @@ type voteKey struct {
 	posHash      common.Hash
 }
 
-type votes []types.Vote
+type votes map[uint32]types.Vote
 
-func (vs votes) contains(item types.Vote) bool {
-	for _, v := range vs {
-		if v.Hash() == item.Hash() {
-			return true
-		}
+func (vs votes) add(item types.Vote) bool {
+	if len(vs) > 2 {
+		return true
 	}
-	return false
-}
-func (vs *votes) add(item types.Vote) bool {
-	if vs.contains(item) {
-		return false
-	}
-	*vs = append(*vs, item)
+	vs[item.Idx] = item
 	return true
 }
 
@@ -379,8 +371,8 @@ func (self *worker) powResultLoop() {
 				currentHeader := self.chain.CurrentHeader()
 				for currentHeader.Hash() == header.ParentHash {
 					self.pendingVoteMu.Lock()
-					if votesSet, ok := self.pendingVote[key]; ok {
-						currentVotes = *votesSet
+					if votes, ok := self.pendingVote[key]; ok {
+						currentVotes = *votes
 					}
 					parentSet := self.pendingVote[voteKey{parentHeader.Number.Uint64(), parentHeader.HashPos()}]
 					if parentSet != nil {
@@ -401,6 +393,9 @@ func (self *worker) powResultLoop() {
 					for _, vote := range currentVotes {
 						log.Info("pos currentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 						CurrentVotes = append(CurrentVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
+						if len(CurrentVotes) == 3 {
+							break
+						}
 					}
 
 					ParentVotes := []types.HeaderVote{}
@@ -409,7 +404,9 @@ func (self *worker) powResultLoop() {
 							if !self.contains(parentHeader, vote.Sign) {
 								log.Info("pos parentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 								ParentVotes = append(ParentVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
-								break
+								if len(ParentVotes) == 3 {
+									break
+								}
 							}
 						}
 					}
@@ -570,16 +567,6 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		header:    header,
 		createdAt: time.Now(),
 	}
-
-	//if self.eth.AccountManager() != nil {
-	//	seeds := []keys.Uint512{}
-	//	for _, w := range self.eth.AccountManager().Wallets() {
-	//		seed := w.Accounts()[0].Tk
-	//		seeds = append(seeds, *seed.ToUint512())
-	//	}
-	//	work.state.SetSeeds(seeds)
-	//}
-
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
 	self.current = work

@@ -355,7 +355,7 @@ func (self *StakeState) getShare(key common.Hash) *Share {
 }
 
 func (self *StakeState) GetStakePool(poolId common.Hash) *StakePool {
-	item := self.stakePoolObj.GetObj(poolId.Bytes(), &Share{})
+	item := self.stakePoolObj.GetObj(poolId.Bytes(), &StakePool{})
 	if item == nil {
 		return nil
 	}
@@ -371,7 +371,12 @@ func (self *StakeState) getStakePool(poolId common.Hash) *StakePool {
 }
 
 func GetBlockRecords(getter serodb.Getter, blockHash common.Hash, blockNumber uint64) (shares []*Share, pools []*StakePool) {
+	if blockNumber == 52 {
+		i := 0
+		i++
+	}
 	records := state.StakeDB.GetBlockRecords(getter, blockNumber, &blockHash)
+
 	for _, record := range records {
 		if record.Name == "share" {
 			for _, each := range record.Pairs {
@@ -546,9 +551,13 @@ func (self *StakeState) StakeCurrentReward() (*big.Int, *big.Int) {
 
 func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 	header := block.Header()
+	if len(header.CurrentVotes) > 3 || len(header.ParentVotes) > 3 {
+		return errors.New("header.CurrentVotes.len > 3 or header.ParentVotes > 3")
+	}
+
 	if self.IsEffect(block.NumberU64()) {
 		if len(header.CurrentVotes) < 2 || len(header.CurrentVotes) > 3 {
-			return errors.New("header.CurrentVotes < 2 or header.CurrentVotes > 3")
+			return errors.New("header.CurrentVotes.len < 2 or header.ParentVotes > 3")
 		}
 	}
 
@@ -663,7 +672,6 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) {
 
 			share := self.getShare(sndoe.key)
 			share.WillVoteNum += 1
-			log.Info("processVotedShare selecte share", "shareId", common.Bytes2Hex(share.Id()), "blockNumber", header.Number.Uint64())
 			if share.Num > 0 {
 				log.Info("ProcessBeforeApply: share.Num-1", "share.Num", share.Num, "key", common.Bytes2Hex(share.Id()))
 				share.Num -= 1
