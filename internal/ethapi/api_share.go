@@ -323,6 +323,7 @@ type RPCStatisticsShare struct{
 	Total uint32            `json:"total"`
 	Remaining uint32        `json:"remaining"`
 	Missed uint32           `json:"missed"`
+	Expired uint32           `json:"expired"`
 	ShareIds []common.Hash  `json:"shareIds"`
 	Pools    []common.Hash   `json:"pools"`
 }
@@ -364,7 +365,12 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []R
 		if s, ok := result[keystr]; ok {
 
 			s.Total += share.InitNum
-			s.Remaining += share.Num
+			if share.Status ==stake.STATUS_VALID{
+				s.Remaining += share.Num
+			}else {
+				s.Expired+=share.Num
+			}
+
 			s.Missed += share.WillVoteNum
 			s.ShareIds=append(	s.ShareIds,common.BytesToHash(share.Id()))
 			if !containsVoteAddr(s.VoteAddress,getAccountAddrByPKr(wallets, share.VotePKr)){
@@ -381,6 +387,11 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []R
 			s.Total= share.InitNum
 			s.Remaining = share.Num
 			s.Missed= share.WillVoteNum
+			if share.Status ==stake.STATUS_VALID{
+				s.Remaining =share.Num
+			}else{
+				s.Expired =share.Num
+			}
 			s.VoteAddress=append(s.VoteAddress,getAccountAddrByPKr(wallets, share.VotePKr))
 			if share.PoolId!=nil {
 				s.Pools=append(s.Pools,*share.PoolId)
