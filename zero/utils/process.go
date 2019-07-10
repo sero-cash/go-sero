@@ -8,14 +8,15 @@ import (
 )
 
 type Proc interface {
-	Run() bool
+	Run() error
 }
 
 type Procs struct {
 	ch   chan int
 	wait sync.WaitGroup
 	Runs []Proc
-	succ bool
+	E    error
+	ERun Proc
 }
 
 func NewProcs(num int) (ret Procs) {
@@ -23,7 +24,8 @@ func NewProcs(num int) (ret Procs) {
 		make(chan int, num),
 		sync.WaitGroup{},
 		nil,
-		true,
+		nil,
+		nil,
 	}
 	return
 }
@@ -39,8 +41,8 @@ func (self *Procs) HasProc() bool {
 func (self *Procs) StartProc(run Proc) {
 	self.Runs = append(self.Runs, run)
 	if cpt.Is_czero_debug() {
-		if !run.Run() {
-			self.succ = false
+		if e := run.Run(); e != nil {
+			self.E = e
 		}
 	} else {
 		self.wait.Add(1)
@@ -50,21 +52,22 @@ func (self *Procs) StartProc(run Proc) {
 				<-self.ch
 				self.wait.Done()
 			}()
-			if !run.Run() {
-				self.succ = false
+			if self.E == nil {
+				if e := run.Run(); e != nil {
+					self.E = e
+					self.ERun = run
+				}
 			}
 		}(run)
 	}
 }
 
-func (self *Procs) Wait() []Proc {
+func (self *Procs) End() error {
 	self.wait.Wait()
-	if self.succ {
-		p := self.Runs
-		self.Runs = nil
-		return p
-	} else {
+	if self.E == nil {
 		return nil
+	} else {
+		return self.E
 	}
 }
 
@@ -86,6 +89,7 @@ func NewProcsPool(numget func() int) (ret ProcsPool) {
 
 func (self *ProcsPool) GetProcs() (ret *Procs) {
 	ret = self.pool.Get().(*Procs)
+	ret.Runs = []Proc{}
 	if ret == nil {
 		panic(fmt.Errorf("GetProcsFromPool error: fetch nil!"))
 	}

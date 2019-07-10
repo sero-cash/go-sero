@@ -2,6 +2,9 @@ package stx
 
 import (
 	"math/big"
+	"sync/atomic"
+
+	"github.com/sero-cash/go-czero-import/cpt"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/crypto/sha3"
@@ -84,6 +87,9 @@ type DescCmd struct {
 	RegistPool *RegistPoolCmd `rlp:"nil"`
 	ClosePool  *ClosePoolCmd  `rlp:"nil"`
 	Contract   *ContractCmd   `rlp:"nil"`
+
+	//Cache
+	assetCC atomic.Value
 }
 
 func (self *DescCmd) ToPkr() *keys.PKr {
@@ -94,6 +100,27 @@ func (self *DescCmd) ToPkr() *keys.PKr {
 		return &self.RegistPool.Vote
 	}
 	return nil
+}
+
+func (self *DescCmd) ToAssetCC() *keys.Uint256 {
+	if asset := self.OutAsset(); asset != nil {
+		if cc, ok := self.assetCC.Load().(keys.Uint256); ok {
+			return &cc
+		}
+		asset := asset.ToFlatAsset()
+		asset_desc := cpt.AssetDesc{
+			Tkn_currency: asset.Tkn.Currency,
+			Tkn_value:    asset.Tkn.Value.ToUint256(),
+			Tkt_category: asset.Tkt.Category,
+			Tkt_value:    asset.Tkt.Value,
+		}
+		cpt.GenAssetCC(&asset_desc)
+		v := asset_desc.Asset_cc
+		self.assetCC.Store(v)
+		return &v
+	} else {
+		return nil
+	}
 }
 
 func (self *DescCmd) OutAsset() *assets.Asset {

@@ -170,7 +170,24 @@ type T struct {
 	Desc_Cmd DescCmd
 
 	//cache
-	hash atomic.Value
+	hash  atomic.Value
+	feeCC atomic.Value
+}
+
+func (self *T) ToFeeCC() keys.Uint256 {
+	if cc, ok := self.feeCC.Load().(keys.Uint256); ok {
+		return cc
+	}
+	asset_desc := cpt.AssetDesc{
+		Tkn_currency: self.Fee.Currency,
+		Tkn_value:    self.Fee.Value.ToUint256(),
+		Tkt_category: keys.Empty_Uint256,
+		Tkt_value:    keys.Empty_Uint256,
+	}
+	cpt.GenAssetCC(&asset_desc)
+	v := asset_desc.Asset_cc
+	self.feeCC.Store(v)
+	return v
 }
 
 func (self *T) ToHash() (ret keys.Uint256) {

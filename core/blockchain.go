@@ -27,12 +27,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/txtool/verify"
+
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/zero/stake"
-	"github.com/sero-cash/go-sero/zero/txs/verify"
 
 	"github.com/hashicorp/golang-lru"
 
@@ -1150,6 +1151,18 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 
 	// Start a parallel signature recovery (abi will fluke on fork transition, minimal perf loss)
 	//senderCacher.recoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number()), chain)
+	txChecker := txCheckerPool.GetProcs()
+	defer txCheckerPool.PutProcs(txChecker)
+	for i, block := range chain {
+		for _, tx := range block.Transactions() {
+			cd := CheckDesc{
+				tx,
+				block.NumberU64(),
+				i,
+			}
+			txChecker.StartProc(&cd)
+		}
+	}
 
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
@@ -1243,9 +1256,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 
 		stakeState := stake.NewStakeState(state)
 
-
 		for _, tx := range block.Transactions() {
-			err := verify.Verify(tx.GetZZSTX(), state.GetZState())
+			err := verify.VerifyWithState(tx.GetZZSTX(), state.GetZState())
+			//err := verify.Verify(tx.GetZZSTX(), state.GetZState())
 			if err != nil {
 				return i, events, coalescedLogs, err
 			}
@@ -1302,10 +1315,18 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		cache, _ := bc.stateCache.TrieDB().Size()
 		stats.report(chain, i, cache)
 	}
+
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.CurrentBlock().Hash() == lastCanon.Hash() {
 		events = append(events, ChainHeadEvent{lastCanon})
 	}
+
+	if txChecker.HasProc() {
+		if e := txChecker.End(); e != nil {
+			return txChecker.ERun.(*CheckDesc).index, events, coalescedLogs, e
+		}
+	}
+
 	return 0, events, coalescedLogs, nil
 }
 

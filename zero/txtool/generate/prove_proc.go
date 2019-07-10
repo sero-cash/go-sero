@@ -17,8 +17,6 @@
 package generate
 
 import (
-	"errors"
-
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
@@ -36,12 +34,12 @@ type gen_pkg_desc struct {
 	e    error
 }
 
-func (self *gen_pkg_desc) Run() bool {
+func (self *gen_pkg_desc) Run() error {
 	if err := cpt.GenPkgProof(&self.desc); err != nil {
 		self.e = err
-		return false
+		return err
 	} else {
-		return true
+		return nil
 	}
 }
 
@@ -53,12 +51,12 @@ type gen_input_desc struct {
 	e     error
 }
 
-func (self *gen_input_desc) Run() bool {
+func (self *gen_input_desc) Run() error {
 	if err := cpt.GenInputProofBySk(&self.desc); err != nil {
 		self.e = err
-		return false
+		return err
 	} else {
-		return true
+		return nil
 	}
 }
 
@@ -70,12 +68,12 @@ type gen_output_desc struct {
 	e     error
 }
 
-func (self *gen_output_desc) Run() bool {
+func (self *gen_output_desc) Run() error {
 	if err := cpt.GenOutputProof(&self.desc); err != nil {
 		self.e = err
-		return false
+		return err
 	} else {
-		return true
+		return nil
 	}
 }
 
@@ -138,8 +136,8 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 	}
 
 	if gen_pkg_procs.HasProc() {
-		if pkg_runs := gen_pkg_procs.Wait(); pkg_runs != nil {
-			for _, g := range pkg_runs {
+		if e = gen_pkg_procs.End(); e == nil {
+			for _, g := range gen_pkg_procs.Runs {
 				desc := g.(*gen_pkg_desc).desc
 
 				self.s.Desc_Pkg.Create.Proof = desc.Proof_ret
@@ -152,14 +150,13 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 				break
 			}
 		} else {
-			e = errors.New("gen create pkg prf failed!!!")
 			return
 		}
 	}
 
 	if gen_output_procs.HasProc() {
-		if o_runs := gen_output_procs.Wait(); o_runs != nil {
-			for _, g := range o_runs {
+		if e = gen_output_procs.End(); e == nil {
+			for _, g := range gen_output_procs.Runs {
 				output_desc := g.(*gen_output_desc)
 				desc := output_desc.desc
 				out_z := stx.Out_Z{}
@@ -175,14 +172,13 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 				self.balance_desc.Zout_ars = append(self.balance_desc.Zout_ars, desc.Ar_ret[:]...)
 			}
 		} else {
-			e = errors.New("gen output desc_z failed!!!")
 			return
 		}
 	}
 
 	if gen_input_procs.HasProc() {
-		if i_runs := gen_input_procs.Wait(); i_runs != nil {
-			for _, g := range i_runs {
+		if e = gen_input_procs.End(); e == nil {
+			for _, g := range gen_input_procs.Runs {
 				input_desc := g.(*gen_input_desc)
 				desc := input_desc.desc
 				in_z := stx.In_Z{}
@@ -197,7 +193,6 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 				self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, desc.Ar_ret[:]...)
 			}
 		} else {
-			e = errors.New("gen input desc_z failed!!!")
 			return
 		}
 	}

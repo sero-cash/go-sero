@@ -10,12 +10,10 @@ var verify_input_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_v
 
 type verify_input_desc struct {
 	desc cpt.InputVerifyDesc
-	e    error
 }
 
 func (self *verify_input_desc) Run() error {
 	if err := cpt.VerifyInput(&self.desc); err != nil {
-		self.e = err
 		return err
 	} else {
 		return nil

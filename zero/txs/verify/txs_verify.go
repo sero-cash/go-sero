@@ -117,8 +117,8 @@ func Verify(s *stx.T, state *zstate.ZState) (e error) {
 		}
 	}
 	if verify_input_o_procs.HasProc() {
-		if p_runs := verify_input_o_procs.Wait(); p_runs != nil {
-			for _, p_run := range p_runs {
+		if e = verify_input_o_procs.End(); e == nil {
+			for _, p_run := range verify_input_o_procs.Runs {
 				desc := p_run.(*verify_input_o_desc)
 				balance_desc.Oin_accs = append(balance_desc.Oin_accs, desc.asset_cc[:]...)
 			}
