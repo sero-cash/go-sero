@@ -226,12 +226,13 @@ func (s *PublicStakeApI) PoolState(ctx context.Context, pool common.Hash) (map[s
 	if err != nil {
 		return nil, err
 	}
+	wallets := s.b.AccountManager().Wallets()
 	poolState := stake.NewStakeState(state).GetStakePool(pool)
 
 	if poolState == nil {
 		return nil, errors.New("stake pool not exists")
 	}
-	return newRPCStakePool(*poolState), nil
+	return newRPCStakePool(wallets,*poolState), nil
 }
 
 func (s *PublicStakeApI) SharePrice(ctx context.Context) (*hexutil.Big, error) {
@@ -267,11 +268,11 @@ type StakePool struct {
 	Closed          bool
 }
 
-func newRPCStakePool(pool stake.StakePool) map[string]interface{} {
+func newRPCStakePool(wallets []accounts.Wallet,pool stake.StakePool) map[string]interface{} {
 	result := map[string]interface{}{}
 	result["id"] = common.BytesToHash(pool.Id())
-	result["own"] = common.BytesToAddress(pool.PKr[:])
-	result["voteAddress"] = common.BytesToAddress(pool.VotePKr[:])
+	result["own"] = getAccountAddrByPKr(wallets, pool.PKr)
+	result["voteAddress"] = getAccountAddrByPKr(wallets, pool.VotePKr)
 	result["fee"] = hexutil.Uint(pool.Fee)
 	result["shareNum"] = hexutil.Uint64(pool.CurrentShareNum)
 	result["choicedNum"] = hexutil.Uint64(pool.ChoicedShareNum)
@@ -284,8 +285,9 @@ func newRPCStakePool(pool stake.StakePool) map[string]interface{} {
 func (s *PublicStakeApI) StakePools(ctx context.Context) []map[string]interface{} {
 	pools := stakeservice.CurrentStakeService().StakePools()
 	result := []map[string]interface{}{}
+	wallets := s.b.AccountManager().Wallets()
 	for _, pool := range pools {
-		result = append(result, newRPCStakePool(*pool))
+		result = append(result, newRPCStakePool(wallets,*pool))
 	}
 	return result
 }

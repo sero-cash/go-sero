@@ -209,7 +209,7 @@ func (s *StakePool) CopyFrom(ret consensus.CItem) {
 	s.MissedVoteNum = obj.MissedVoteNum
 	s.ExpireNum = obj.ExpireNum
 	s.Profit = new(big.Int).Set(obj.Profit)
-	s.LastPayTime = s.LastPayTime
+	s.LastPayTime = obj.LastPayTime
 	s.Closed = obj.Closed
 }
 

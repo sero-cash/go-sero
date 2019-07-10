@@ -2,6 +2,7 @@ package stakeservice
 
 import (
 	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"sync"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -80,6 +81,7 @@ func NewStakeService(dbpath string, bc *core.BlockChain, accountManager *account
 func (self *StakeService) StakePools() (pools []*stake.StakePool) {
 	iterator := self.db.NewIteratorWithPrefix(poolPrefix)
 	for iterator.Next() {
+
 		value := iterator.Value()
 		pool := stake.StakePoolDB.GetObject(self.bc.GetDB(), value, &stake.StakePool{})
 		pools = append(pools, pool.(*stake.StakePool))
@@ -146,6 +148,7 @@ func (self *StakeService) stakeIndex() {
 		}
 
 		for _, pool := range pools {
+			log.Info("indexpool","id",hexutil.Encode(pool.Id()), "hash",hexutil.Encode(pool.State()))
 			batch.Put(poolKey(pool.Id()), pool.State())
 		}
 		sharesCount += len(shares)
