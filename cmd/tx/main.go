@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -91,7 +92,7 @@ func main() {
 			if e := json.Unmarshal([]byte(txParam), &gtp); e != nil {
 				fmt.Println("[OUTPUT-BEGIN] ERROR: Unmarshal-", e)
 			} else {
-				if gtx, e := txtool.SignTx(&sk_bytes, &gtp); e != nil {
+				if gtx, e := flight.SignTx(&sk_bytes, &gtp); e != nil {
 					fmt.Println("[OUTPUT-BEGIN] ERROR: SignTx-", e)
 				} else {
 					if jtx, e := json.Marshal(&gtx); e != nil {
