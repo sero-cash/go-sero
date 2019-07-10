@@ -194,9 +194,11 @@ type voteInfo struct {
 	seed       address.Seed
 }
 
-func cotainsSeed(voteInfos []voteInfo, seed address.Seed) bool {
+func cotainsVoteInfo(voteInfos []voteInfo, item voteInfo) bool {
 	for _, v := range voteInfos {
-		if v.seed == seed {
+		if v.seed == item.seed && v.index==item.index &&
+			v.shareHash==v.shareHash && v.poshash==item.poshash &&
+			v.parentNum==item.parentNum{
 			return true
 		}
 	}
@@ -241,6 +243,8 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 		}
 
 		var voteInfos []voteInfo
+		parentPos := parentHeader.HashPos()
+		stakeHash := types.StakeHash(&poshash, &parentPos)
 		for i, share := range shares {
 			wallets := self.sero.AccountManager().Wallets()
 			if share.PoolId != nil {
@@ -249,20 +253,20 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 					log.Info("lotteryTaskLoop", "GetStakePool", share.PoolId, "note exist")
 				} else {
 					for _, w := range wallets {
-						if w.IsMine(pkrToAddress(share.VotePKr)) {
+						if w.IsMine(pkrToAddress(pool.VotePKr)) {
 							seed, err := w.GetSeed()
 							if err != nil {
-								return nil, err
+								log.Info("SelfShares getSeed","err",err)
+								continue
 							}
-							parentPos := parentHeader.HashPos()
-							stakeHash := types.StakeHash(&poshash, &parentPos)
+
 							voteInfos = append(voteInfos, voteInfo{
 								ints[i],
 								parentNumber.Uint64(),
 								common.BytesToHash(share.Id()),
 								poshash,
 								stakeHash,
-								share.VotePKr,
+								pool.VotePKr,
 								true,
 								*seed})
 						}
@@ -272,35 +276,23 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 			for _, w := range wallets {
 				if w.IsMine(pkrToAddress(share.VotePKr)) {
 					seed, err := w.GetSeed()
-
 					if err != nil {
-						return nil, err
+						log.Info("SelfShares getSeed","err",err)
+						continue
 					}
-					if cotainsSeed(voteInfos, *seed) {
-						//continue
-						parentPos := parentHeader.HashPos()
-						stakeHash := types.StakeHash(&poshash, &parentPos)
-						voteInfos = append(voteInfos, voteInfo{
-							ints[i],
-							parentNumber.Uint64(),
-							common.BytesToHash(share.Id()),
-							poshash,
-							stakeHash,
-							share.VotePKr,
-							false,
-							*seed})
+					info:=voteInfo{
+						ints[i],
+						parentNumber.Uint64(),
+						common.BytesToHash(share.Id()),
+						poshash,
+						stakeHash,
+						share.VotePKr,
+						false,
+						*seed}
+					if cotainsVoteInfo(voteInfos, info) {
+						continue
 					} else {
-						parentPos := parentHeader.HashPos()
-						stakeHash := types.StakeHash(&poshash, &parentPos)
-						voteInfos = append(voteInfos, voteInfo{
-							ints[i],
-							parentNumber.Uint64(),
-							common.BytesToHash(share.Id()),
-							poshash,
-							stakeHash,
-							share.VotePKr,
-							false,
-							*seed})
+						voteInfos = append(voteInfos, info)
 					}
 				}
 			}

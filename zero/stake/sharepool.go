@@ -6,6 +6,7 @@ import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
@@ -386,6 +387,8 @@ func GetBlockRecords(getter serodb.Getter, blockHash common.Hash, blockNumber ui
 		if record.Name == "pool" {
 			for _, each := range record.Pairs {
 				ret := StakePoolDB.GetObject(getter, each.Hash, &StakePool{})
+				pool:=ret.(*StakePool)
+				log.Info("get blocks" ,"id",hexutil.Encode(each.Ref),"hash" ,hexutil.Encode(each.Hash),"retHash",hexutil.Encode(pool.State()))
 				pools = append(pools, ret.(*StakePool))
 			}
 		}
