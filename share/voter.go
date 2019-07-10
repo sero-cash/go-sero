@@ -129,12 +129,12 @@ func (self *Voter) lotteryTaskLoop() {
 			current := self.chain.CurrentBlock().NumberU64()
 			log.Info(">>>>>>>lotteryTaskLoop new lottery", "poshash", lottery.PosHash, "block", lottery.ParentNum+1, "localBlock", current)
 			if current+delayNum >= lottery.ParentNum {
-				parentHeader := self.chain.GetHeaderByHash(lottery.ParentHash)
-				if parentHeader == nil {
+				parentBlock := self.chain.GetBlock(lottery.ParentHash,lottery.ParentNum)
+				if parentBlock == nil {
 					log.Info(">>>>>lotteryTaskLoop can not find parentblokc", "parent block", lottery.ParentNum)
 					self.lotteryQueue.PushItem(lottery.PosHash, &lotteryItem{Lottery: lottery, Attempts: uint8(0)}, lottery.ParentNum+1)
 				} else {
-					selfShares, err := self.SelfShares(lottery.PosHash, lottery.ParentHash, parentHeader.Number)
+					selfShares, err := self.SelfShares(lottery.PosHash, lottery.ParentHash, parentBlock.Number())
 					if err != nil {
 						log.Info("lotteryTaskLoop", "selfShare error ", err)
 					} else {
@@ -163,13 +163,13 @@ func (self *Voter) voteLoop() {
 					log.Info(">>>>>>not need vote", "current", current, "vote block", lItem.Lottery.ParentNum+1)
 					continue
 				}
-				parentHeader := self.chain.GetHeaderByHash(lItem.Lottery.ParentHash)
-				if parentHeader == nil {
+				parentBlock := self.chain.GetBlock(lItem.Lottery.ParentHash,lItem.Lottery.ParentNum)
+				if parentBlock == nil {
 					log.Info(">>>>>voteLoop get parent is nil")
 					self.lotteryQueue.PushItem(lItem.Lottery.PosHash, lItem, item.Block)
 					break
 				}
-				selfShares, err := self.SelfShares(lItem.Lottery.PosHash, parentHeader.Hash(), parentHeader.Number)
+				selfShares, err := self.SelfShares(lItem.Lottery.PosHash, parentBlock.Hash(), parentBlock.Number())
 				if err != nil {
 					log.Info("lotteryTaskLoop", "selfShare error ", err)
 				} else {
