@@ -750,7 +750,7 @@ func (self *StakeState) rewardVote(vote types.HeaderVote, soloReware, reward *bi
 		self.UpdateStakePool(pool)
 	} else {
 		share.AddProfit(new(big.Int).Add(share.Value, soloReware))
-		log.Info("processVotedShare rewardVote", "shareId", common.Bytes2Hex(share.Id()), "share.Value", share.Value, "soloReware", soloReware)
+		log.Info("processVotedShare rewardVote", "shareId", common.Bytes2Hex(share.Id()), "share.Value", share.Value, "soloReware", soloReware, "Profit", share.Profit)
 	}
 	self.updateShare(share)
 }
@@ -826,9 +826,9 @@ func (self *StakeState) processMissVoted(header *types.Header, bc blockChain) {
 					continue
 				}
 
-				if share.Num != 0 {
-					log.Crit("ProcessBeforeApply: processMissVoted err, share.Num!=0", "shareId", common.Bytes2Hex(share.Id()), "share.Num", share.Num)
-				}
+				//if share.Num != 0 {
+				//	log.Crit("ProcessBeforeApply: processMissVoted err, share.Num!=0", "shareId", common.Bytes2Hex(share.Id()), "share.Num", share.Num)
+				//}
 
 				if share.PoolId != nil {
 					pool := self.getStakePool(*share.PoolId)
