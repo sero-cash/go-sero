@@ -57,8 +57,8 @@ type Receipt struct {
 	GasUsed         uint64         `json:"gasUsed" gencodec:"required"`
 
 	//Staking
-	PoolId  *common.Hash
-	ShareId *common.Hash
+	PoolId  *common.Hash `rlp:"nil"`
+	ShareId *common.Hash `rlp:"nil"`
 }
 
 type receiptMarshaling struct {

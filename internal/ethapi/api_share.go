@@ -100,7 +100,6 @@ func (args *BuyShareTxArg) toPreTxParam() prepare.PreTxParam {
 		utils.CurrencyToUint256("SERO"),
 		utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(*args.Gas)), args.GasPrice.ToInt())),
 	}
-	preTx.RefundTo = keys.Addr2PKr(args.From.ToUint512(), fromRand()).NewRef()
 	preTx.GasPrice = (*big.Int)(args.GasPrice)
 	preTx.Cmds = prepare.Cmds{}
 
@@ -117,14 +116,6 @@ func (args *BuyShareTxArg) toPreTxParam() prepare.PreTxParam {
 
 }
 
-const fromRandHex = "0x6e7d302d0c5ac4330dc5b006d9ad0a3bc88bcd45db01b030472fb00cfe3aa52"
-
-func fromRand() *keys.Uint256 {
-	var rand keys.Uint256
-	out, _ := hexutil.Decode(fromRandHex)
-	copy(rand[:], out)
-	return &rand
-}
 
 func (s *PublicStakeApI) BuyShare(ctx context.Context, args BuyShareTxArg) (common.Hash, error) {
 	if err := args.setDefaults(ctx, s.b); err != nil {
@@ -190,7 +181,6 @@ func (args *RegistStakePoolTxArg) setDefaults(ctx context.Context, b Backend) er
 func (args *RegistStakePoolTxArg) toPreTxParam() prepare.PreTxParam {
 	preTx := prepare.PreTxParam{}
 	preTx.From = *args.From.ToUint512()
-	preTx.RefundTo = keys.Addr2PKr(args.From.ToUint512(), fromRand()).NewRef()
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
 		utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(*args.Gas)), args.GasPrice.ToInt())),
@@ -210,7 +200,13 @@ func (s *PublicStakeApI) RegistStakePool(ctx context.Context, args RegistStakePo
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
+	wallet,err:=s.b.AccountManager().Find(accounts.Account{Address:args.From})
+	if err !=nil {
+		return common.Hash{},err
+	}
+	fromPkr:=getStakePoolPkr(wallet.Accounts()[0])
 	preTx := args.toPreTxParam()
+	preTx.RefundTo=&fromPkr
 	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(preTx)
 	if err != nil {
 		return common.Hash{}, err

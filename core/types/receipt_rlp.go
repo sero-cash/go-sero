@@ -20,8 +20,8 @@ type receiptForStorage_Version_0 struct {
 }
 
 type receiptForStorage_Version_1 struct {
-	PoolId  *common.Hash
-	ShareId *common.Hash
+	PoolId  *common.Hash  `rlp:"nil"`
+	ShareId *common.Hash  `rlp:"nil"`
 }
 
 // ReceiptForStorage is a wrapper around a Receipt that flattens and parses the
