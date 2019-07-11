@@ -14,7 +14,6 @@ import (
 	"github.com/sero-cash/go-sero/light-wallet/common/transport"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
-	"fmt"
 	"github.com/btcsuite/btcutil/base58"
 	"sort"
 )
@@ -34,7 +33,7 @@ type Service interface {
 	TXNum(pkStr string) map[string]uint64
 	TXList(pkStr string, request transport.PageRequest) (utxosResp, error)
 
-	Transfer(from, to, currency, amount, gasPrice string) (hash string, err error)
+	Transfer(from, to, currency, amount, gasPrice,pwd string) (hash string, err error)
 }
 
 func NewPrivateAccountAPI() Service {
@@ -243,10 +242,8 @@ func (s *PrivateAccountAPI) TXList(pkStr string, request transport.PageRequest) 
 	return
 }
 
-func (s *PrivateAccountAPI) Transfer(from, to, currency, amount, gasPrice string) (hash string, err error) {
-
-	fmt.Println(from, to, currency, amount, gasPrice)
-	return s.SL.CommitTx(from, to, currency, amount, gasPrice)
+func (s *PrivateAccountAPI) Transfer(from, to, currency, amount, gasPrice ,password string) (hash string, err error) {
+	return s.SL.CommitTx(from, to, currency, amount, gasPrice,password)
 }
 
 func (s *PrivateAccountAPI) TXNum(pkStr string) map[string]uint64 {

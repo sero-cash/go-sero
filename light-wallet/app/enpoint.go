@@ -249,7 +249,7 @@ func MakeTxSendEndpoint(service Service) endpoint.Endpoint {
 		transferReq := transferReq{}
 		utils.Convert(req.Biz, &transferReq)
 
-		hash, err := service.Transfer(transferReq.From, transferReq.To, transferReq.Currency, transferReq.Amount, transferReq.GasPrice)
+		hash, err := service.Transfer(transferReq.From, transferReq.To, transferReq.Currency, transferReq.Amount, transferReq.GasPrice, "12345678")
 		if err != nil {
 			response.SetBaseResponse(errorcode.FAIL_CODE, err.Error())
 			return response, nil
@@ -265,4 +265,5 @@ type transferReq struct {
 	Currency string
 	Amount   string
 	GasPrice string
+	Password string
 }
