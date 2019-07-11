@@ -207,7 +207,7 @@ func (self *Exchange) buildTxParam(
 	fee *assets.Token,
 	gasPrice *big.Int) (txParam *txtool.GTxParam, e error) {
 
-	txParam, e = prepare.BuildTxParam(utxos, refundTo, receptions, cmds, fee, gasPrice)
+	txParam, e = prepare.BuildTxParam(&prepare.DefaultTxParamState{}, utxos, refundTo, receptions, cmds, fee, gasPrice)
 
 	for _, in := range txParam.Ins {
 		self.usedFlag.Store(in.Out.Root, 1)

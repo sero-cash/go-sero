@@ -4,6 +4,11 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
+
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/zero/localdb"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
@@ -153,4 +158,30 @@ type TxParamGenerator interface {
 	FindRootsByTicket(pk *keys.Uint512, tickets map[keys.Uint256]keys.Uint256) (roots Utxos, remain map[keys.Uint256]keys.Uint256)
 	GetRoot(root *keys.Uint256) (utxos *Utxo)
 	DefaultRefundTo(from *keys.Uint512) (ret *keys.PKr)
+}
+
+type TxParamState interface {
+	GetAnchor(roots []keys.Uint256) (wits []txtool.Witness, e error)
+	GetOut(root *keys.Uint256) (out *localdb.RootState)
+	GetPkgById(id *keys.Uint256) (ret *localdb.ZPkg)
+	GetSeroGasLimit(to *common.Address, tfee *assets.Token, gasPrice *big.Int) (gaslimit uint64, e error)
+}
+
+type DefaultTxParamState struct {
+}
+
+func (self *DefaultTxParamState) GetAnchor(roots []keys.Uint256) (wits []txtool.Witness, e error) {
+	return flight.SRI_Inst.GetAnchor(roots)
+}
+
+func (self *DefaultTxParamState) GetOut(root *keys.Uint256) (out *localdb.RootState) {
+	return flight.GetOut(root, 0)
+}
+
+func (self *DefaultTxParamState) GetPkgById(id *keys.Uint256) (ret *localdb.ZPkg) {
+	return txtool.Ref_inst.GetState().Pkgs.GetPkgById(id)
+}
+
+func (self *DefaultTxParamState) GetSeroGasLimit(to *common.Address, tfee *assets.Token, gasPrice *big.Int) (gaslimit uint64, e error) {
+	return txtool.Ref_inst.Bc.GetSeroGasLimit(to, tfee, gasPrice)
 }

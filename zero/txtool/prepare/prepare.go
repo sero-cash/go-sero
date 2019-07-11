@@ -11,7 +11,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/txtool"
-	"github.com/sero-cash/go-sero/zero/txtool/flight"
 
 	"github.com/sero-cash/go-sero/zero/utils"
 
@@ -75,7 +74,16 @@ func SelectUtxos(param *PreTxParam, generator TxParamGenerator) (utxos Utxos, e 
 	}
 }
 
-func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds *Cmds, fee *assets.Token, gasPrice *big.Int) (txParam *txtool.GTxParam, e error) {
+func BuildTxParam(
+	state TxParamState,
+	utxos Utxos,
+	refundTo *keys.PKr,
+	receptions []Reception,
+	cmds *Cmds,
+	fee *assets.Token,
+	gasPrice *big.Int,
+) (txParam *txtool.GTxParam, e error) {
+
 	txParam = &txtool.GTxParam{}
 
 	ck := NewCKState(false, fee)
@@ -85,7 +93,7 @@ func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds 
 
 	txParam.From = txtool.Kr{PKr: *refundTo}
 
-	wits, err := flight.SRI_Inst.GetAnchor(utxos.Roots())
+	wits, err := state.GetAnchor(utxos.Roots())
 	if err != nil {
 		e = err
 		return
@@ -94,7 +102,7 @@ func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds 
 	Ins := []txtool.GIn{}
 	oins_count := 0
 	for index, utxo := range utxos {
-		if out := flight.GetOut(&utxo.Root, 0); out != nil {
+		if out := state.GetOut(&utxo.Root); out != nil {
 			if added, err := ck.AddIn(&utxo.Asset); err != nil {
 				e = err
 				return
@@ -180,7 +188,7 @@ func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds 
 	txParam.Cmds.ClosePool = cmds.ClosePool
 
 	if cmds.PkgCreate != nil {
-		if pkg := txtool.Ref_inst.GetState().Pkgs.GetPkgById(&cmds.PkgCreate.Id); pkg != nil {
+		if pkg := state.GetPkgById(&cmds.PkgCreate.Id); pkg != nil {
 			e = errors.New("create pkg but the pkg id is exsits")
 			return
 		}
@@ -192,7 +200,7 @@ func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds 
 	}
 
 	if cmds.PkgTransfer != nil {
-		if pkg := txtool.Ref_inst.GetState().Pkgs.GetPkgById(&cmds.PkgTransfer.Id); pkg == nil {
+		if pkg := state.GetPkgById(&cmds.PkgTransfer.Id); pkg == nil {
 			e = errors.New("transfer pkg but the pkg id is not exsits")
 			return
 		} else {
@@ -209,7 +217,7 @@ func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds 
 	}
 
 	if cmds.PkgClose != nil {
-		if p := txtool.Ref_inst.GetState().Pkgs.GetPkgById(&cmds.PkgTransfer.Id); p == nil {
+		if p := state.GetPkgById(&cmds.PkgTransfer.Id); p == nil {
 			e = errors.New("close pkg but the pkg id is not exsits")
 			return
 		} else {
@@ -238,7 +246,7 @@ func BuildTxParam(utxos Utxos, refundTo *keys.PKr, receptions []Reception, cmds 
 		}
 	}
 
-	if gaslimit, err := txtool.Ref_inst.Bc.GetSeroGasLimit(contractTo, &txParam.Fee, &txParam.GasPrice); err != nil {
+	if gaslimit, err := state.GetSeroGasLimit(contractTo, &txParam.Fee, &txParam.GasPrice); err != nil {
 		e = err
 		return
 	} else {

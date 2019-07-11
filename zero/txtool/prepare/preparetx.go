@@ -25,7 +25,7 @@ func GenTxParam(param *PreTxParam, gen TxParamGenerator) (txParam *txtool.GTxPar
 			return nil, errors.New("can not find default refund to")
 		}
 	}
-	txParam, e = BuildTxParam(utxos, param.RefundTo, param.Receptions, &param.Cmds, &param.Fee, param.GasPrice)
+	txParam, e = BuildTxParam(&DefaultTxParamState{}, utxos, param.RefundTo, param.Receptions, &param.Cmds, &param.Fee, param.GasPrice)
 	return
 }
 
@@ -43,4 +43,3 @@ func CreatePkr(pk *keys.Uint512, index uint64) keys.PKr {
 		return keys.Addr2PKr(pk, &r)
 	}
 }
-
