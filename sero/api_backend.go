@@ -49,6 +49,7 @@ import (
 	"github.com/sero-cash/go-sero/sero/downloader"
 	"github.com/sero-cash/go-sero/sero/gasprice"
 	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/zero/light/light_node"
 )
 
 // SeroAPIBackend implements ethapi.Backend for full nodes
@@ -333,4 +334,20 @@ func (b *SeroAPIBackend) GetRecordsByTxHash(txHash keys.Uint256) (records []exch
 		return
 	}
 	return b.sero.exchange.GetRecordsByTxHash(txHash)
+}
+
+func (b *SeroAPIBackend) GetOutByPKr(pkrs []keys.PKr, start,end uint64) (br light_node.BlockOutResp, e error) {
+	if b.sero.lightNode == nil {
+		e = errors.New("not start light")
+		return
+	}
+	return b.sero.lightNode.GetOutsByPKr(pkrs,start,end)
+}
+
+func (b *SeroAPIBackend) CheckNil(Nils []keys.Uint256, start uint64, end uint64) (delNil []light_node.BlockDelNil, e error) {
+	if b.sero.lightNode == nil {
+		e = errors.New("not start light")
+		return
+	}
+	return b.sero.lightNode.CheckNil(Nils,start,end)
 }

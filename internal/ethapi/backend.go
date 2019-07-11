@@ -43,6 +43,7 @@ import (
 	"github.com/sero-cash/go-sero/rpc"
 	"github.com/sero-cash/go-sero/sero/downloader"
 	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/zero/light/light_node"
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -96,6 +97,11 @@ type Backend interface {
 	GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int)
 	GetMaxAvailable(pk keys.Uint512, currency string) (amount *big.Int)
 	GetRecordsByTxHash(txHash keys.Uint256) (records []exchange.Utxo, err error)
+
+	//Light node api
+	GetOutByPKr(pkrs []keys.PKr, start,end uint64) (br light_node.BlockOutResp, e error)
+	CheckNil(Nils []keys.Uint256, start,end uint64) (delNils []light_node.BlockDelNil, e error)
+
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
@@ -105,6 +111,12 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Namespace: "stake",
 			Version:   "1.0",
 			Service:   NewPublicStakeApI(apiBackend, nonceLock),
+			Public:    true,
+		},
+		{
+			Namespace: "light",
+			Version:   "1.0",
+			Service:   &PublicLightNodeApi{apiBackend},
 			Public:    true,
 		},
 		{

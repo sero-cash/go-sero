@@ -32,6 +32,7 @@ var Modules = map[string]string{
 	"txpool":     TxPool_JS,
 	"ssi":        SSI_JS,
 	"exchange":   Exchange_JS,
+	"light":      LightNode_JS,
 	"stake":      Stake_JS,
 }
 
@@ -799,6 +800,24 @@ web3._extend({
 			name: 'sharePrice',
 			getter: 'stake_sharePrice'
 		})
+	]
+});
+`
+
+const LightNode_JS = `
+web3._extend({
+	property: 'light',
+	methods: [
+		new web3._extend.Method({
+			name: 'getOutsByPKr',
+			call: 'light_getOutsByPKr',
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'checkNil',
+			call: 'light_checkNil',
+			params: 2
+		}),
 	]
 });
 `

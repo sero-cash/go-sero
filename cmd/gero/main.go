@@ -117,6 +117,8 @@ var (
 		utils.ExchangeValueStrFlag,
 		utils.AutoMergeFlag,
 		utils.ConfirmedBlockFlag,
+		utils.LightNodeFlag,
+
 		utils.DeveloperFlag,
 		utils.SnapshotFlag,
 		utils.VMEnableDebugFlag,

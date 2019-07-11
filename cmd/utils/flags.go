@@ -311,6 +311,11 @@ var (
 		Usage: "autoMerge outs",
 	}
 
+	LightNodeFlag = cli.BoolFlag{
+		Name:  "lightNode",
+		Usage: "start light node",
+	}
+
 	ConfirmedBlockFlag = cli.Uint64Flag{
 		Name:  "confirmedBlock",
 		Usage: "The balance will be confirmed after the current block of number,default is 12",
@@ -1137,6 +1142,10 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 
 	if ctx.GlobalIsSet(ExchangeValueStrFlag.Name) {
 		seroparam.InitExchangeValueStr(true)
+	}
+
+	if ctx.GlobalIsSet(LightNodeFlag.Name) {
+		cfg.StartLight = true
 	}
 
 	// Override any default configs for hard coded networks.
