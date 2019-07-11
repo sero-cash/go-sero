@@ -11,7 +11,7 @@ import (
 	"github.com/sero-cash/go-sero/common"
 )
 
-func GenTxParam(param *PreTxParam, gen TxParamGenerator) (txParam *txtool.GTxParam, e error) {
+func GenTxParam(param *PreTxParam, gen TxParamGenerator, state TxParamState) (txParam *txtool.GTxParam, e error) {
 	if len(param.Receptions) > 500 {
 		return nil, errors.New("receptions count must <= 500")
 	}
@@ -25,7 +25,7 @@ func GenTxParam(param *PreTxParam, gen TxParamGenerator) (txParam *txtool.GTxPar
 			return nil, errors.New("can not find default refund to")
 		}
 	}
-	txParam, e = BuildTxParam(&DefaultTxParamState{}, utxos, param.RefundTo, param.Receptions, &param.Cmds, &param.Fee, param.GasPrice)
+	txParam, e = BuildTxParam(state, utxos, param.RefundTo, param.Receptions, &param.Cmds, &param.Fee, param.GasPrice)
 	return
 }
 
