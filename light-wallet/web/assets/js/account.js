@@ -188,27 +188,74 @@ function GetQueryString(name) {
 }
 
 
-var ImportKeystore = {
+var Keystore = {
+
+    file :'',
 
     init: function () {
+        var that = this;
 
+        $('.close').bind('click', function () {
+            $('.modal').hide();
+        });
 
+        $("#i-file").bind("change",function () {
+            that.file = this.files[0];
+        });
     },
 
-    importKeystore: function () {
+    import: function () {
+        var that = this;
+        var password = $('#password').val();
+        var formData = new FormData();
+        formData.append("passphrase",password);
+        formData.append("uploadFile",that.file);
 
+        $.ajax({
+            url:Common.host + "/account/import/keystore",
+            dataType:'json',
+            type:'POST',
+            async: false,
+            data: formData,
+            processData : false,
+            contentType : false,
+            success: function(data){
+                console.log("data:: ",data);
+                if (data.responseText === 'INVALID_FILE_TYPE'){
+                    alert('密码不对！');
+                }else if (data.responseText === 'SUCCESS') {
+                    alert('导入成功！');
+                }else{
+                    alert('导入失败！');
+                }
+            },
+            error:function(data){
+                if (data.responseText === 'INVALID_FILE_TYPE'){
+                    alert('密码不对！');
+                }else if (data.responseText === 'SUCCESS') {
+                    alert('导入成功！');
+                }else{
+                    alert('导入失败！');
+                }
+            }
+        });
+
+        $("#sub1").attr('disabled',false);
     },
+
 
 };
 
-var ImportMnemnic = {
+var Mnemnic = {
 
     init: function () {
-
+        $('.close').bind('click', function () {
+            $('.modal').hide();
+        });
 
     },
 
-    importMnemnic: function () {
+    import: function () {
 
     }
 

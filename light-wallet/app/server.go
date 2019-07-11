@@ -16,7 +16,6 @@ import (
 	"encoding/json"
 	"math/big"
 	"bytes"
-	"github.com/sero-cash/go-sero/zero/light/light_types"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -24,11 +23,13 @@ import (
 	"fmt"
 	"time"
 	"net/http"
-	"github.com/sero-cash/go-sero/common/base58"
-	"github.com/sero-cash/go-sero/zero/light"
 	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/common/hexutil"
-	"github.com/sero-cash/go-flight/util"
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
+	"github.com/btcsuite/btcutil/base58"
+	"github.com/sero-cash/go-sero/zero/txtool"
+	"github.com/sero-cash/go-sero/zero/txtool/prepare"
+	"strings"
 )
 
 var (
@@ -72,12 +73,14 @@ type SEROLight struct {
 
 	accountManager *accounts.Manager
 
-	accounts    sync.Map
+	accounts     sync.Map
+	accountIndex int8
+
 	pkrAccounts sync.Map
 
 	numbers sync.Map
 
-	sli light.SLI
+	sli flight.SLI
 
 	feed    event.Feed
 	updater event.Subscription        // Wallet update subscriptions for all backends
@@ -122,6 +125,7 @@ func NewSeroLight() {
 		accountManager: accountManager,
 		update:         update,
 		updater:        updater,
+		accountIndex:   0,
 	}
 	current_client = client
 
@@ -133,6 +137,7 @@ func NewSeroLight() {
 
 	client.numbers = sync.Map{}
 	client.accounts = sync.Map{}
+
 	for _, w := range accountManager.Wallets() {
 		client.initWallet(w)
 	}
@@ -185,7 +190,7 @@ func (self *SEROLight) keystoreListener() {
 				self.initWallet(event.Wallet)
 			case accounts.WalletDropped:
 				pk := *event.Wallet.Accounts()[0].Address.ToUint512()
-				fmt.Println("WalletDropped: ", base58.EncodeToString(pk[:]))
+				fmt.Println("WalletDropped: ", base58.Encode(pk[:]))
 				self.numbers.Delete(pk)
 			}
 			self.lock.Unlock()
@@ -207,8 +212,11 @@ func (self *SEROLight) initWallet(w accounts.Wallet) {
 		account.tk = w.Accounts()[0].Tk.ToUint512()
 		copy(account.skr[:], account.tk[:])
 
-		fmt.Println("initWallet: ", base58.EncodeToString(account.pk[:]))
+		fmt.Println("initWallet: ", base58.Encode(account.pk[:]))
 		account.mainPkr = self.createPkr(account.pk, 1)
+
+		self.accountIndex = self.accountIndex + 1
+		account.index = self.accountIndex
 
 		self.accounts.Store(*account.pk, &account)
 		account.isChanged = true
@@ -280,7 +288,7 @@ func (self *SEROLight) createPkr(pk *keys.Uint512, index uint64) keys.PKr {
 	copy(r[:], common.LeftPadBytes(encodeNumber(index), 32))
 	pkr := keys.Addr2PKr(pk, &r)
 	self.db.Put(pkrKey(*pk, r), pkr[:])
-	logex.Info("createPkr::: ", base58.EncodeToString(pkr[:]))
+	logex.Info("createPkr::: ", base58.Encode(pkr[:]))
 
 	return pkr
 }
@@ -346,7 +354,7 @@ type BlockOutResp struct {
 
 type BlockOut struct {
 	Num  uint64
-	Outs []light_types.Out
+	Outs []txtool.Out
 }
 
 type BlockInfo struct {
@@ -369,7 +377,7 @@ func (self *SEROLight) SyncOut() {
 		var start = current + 1
 		var end = start + fetchCount
 		for {
-			logex.Infof("sync begin,start=[%d],end=[%d],pk=[%v]",start,end,base58.EncodeToString(pk[:]))
+			logex.Infof("sync begin,start=[%d],end=[%d],pk=[%v]", start, end, base58.Encode(pk[:]))
 			current = self.FetchAndIndex(start, end, pk)
 			if current < end {
 				break
@@ -408,7 +416,7 @@ func (self *SEROLight) FetchAndIndex(start, end uint64, pk keys.Uint512) (curren
 		if maxPkrIndex < pkrAndIndex.index {
 			maxPkrIndex = pkrAndIndex.index
 		}
-		pkrs = append(pkrs, base58.EncodeToString(pkrAndIndex.pkr[:]))
+		pkrs = append(pkrs, base58.Encode(pkrAndIndex.pkr[:]))
 	}
 
 	sync := Sync{RpcHost: "http://127.0.0.1:8545", Method: "light_getOutsByPKr", Params: []interface{}{pkrs, start, end}}
@@ -444,7 +452,7 @@ func (self *SEROLight) FetchAndIndex(start, end uint64, pk keys.Uint512) (curren
 				pkr = out.State.OS.Out_O.Addr
 			}
 
-			dout := DecOuts([]light_types.Out{out}, &account.skr)[0]
+			dout := DecOuts([]txtool.Out{out}, &account.skr)[0]
 			num := uint64(0)
 			if dout.Asset.Tkn != nil {
 				currency := common.BytesToString(dout.Asset.Tkn.Currency[:])
@@ -459,7 +467,7 @@ func (self *SEROLight) FetchAndIndex(start, end uint64, pk keys.Uint512) (curren
 			key := PkKey{PK: *account.pk, Num: num}
 
 			utxo := Utxo{Pkr: pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset, IsZ: out.State.OS.Out_Z != nil, Flag: 0, Out: out}
-			//log.Info("DecOuts", "PK", base58.EncodeToString(account.pk[:]), "root", common.Bytes2Hex(out.Root[:]), "currency", common.BytesToString(utxo.Asset.Tkn.Currency[:]), "value", utxo.Asset.Tkn.Value)
+			//log.Info("DecOuts", "PK", base58.Encode(account.pk[:]), "root", common.Bytes2Hex(out.Root[:]), "currency", common.BytesToString(utxo.Asset.Tkn.Currency[:]), "value", utxo.Asset.Tkn.Value)
 			if list, ok := utxosMap[key]; ok {
 				utxosMap[key] = append(list, utxo)
 			} else {
@@ -506,7 +514,7 @@ func (self *SEROLight) FetchAndIndex(start, end uint64, pk keys.Uint512) (curren
 				ops[common.Bytes2Hex(rootkey)] = common.Bytes2Hex(pkKey)
 
 				roots = append(roots, utxo.Root)
-				//log.Info("Index add", "PK", base58.EncodeToString(key.PK[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "root", common.Bytes2Hex(utxo.Root[:]), "Value", utxo.Asset.Tkn.Value)
+				//log.Info("Index add", "PK", base58.Encode(key.PK[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "root", common.Bytes2Hex(utxo.Root[:]), "Value", utxo.Asset.Tkn.Value)
 			}
 			data, err := rlp.EncodeToBytes(roots)
 			if err != nil {
@@ -678,7 +686,7 @@ func (self *SEROLight) GetBalances(pk keys.Uint512) (balances map[string]*big.In
 				copy(root[:], key[98:130])
 				if utxo, err := self.getUtxo(root); err == nil {
 					if utxo.Asset.Tkn != nil {
-						if utxo.Flag == 0 {//available utxo
+						if utxo.Flag == 0 { //available utxo
 							currency := common.BytesToString(utxo.Asset.Tkn.Currency[:])
 							if amount, ok := balances[currency]; ok {
 								amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
@@ -766,11 +774,11 @@ func (self *SEROLight) getUtxo(root keys.Uint256) (utxo Utxo, e error) {
 	return
 }
 
-func DecOuts(outs []light_types.Out, skr *keys.PKr) (douts []light_types.DOut) {
+func DecOuts(outs []txtool.Out, skr *keys.PKr) (douts []txtool.DOut) {
 	sk := keys.Uint512{}
 	copy(sk[:], skr[:])
 	for _, out := range outs {
-		dout := light_types.DOut{}
+		dout := txtool.DOut{}
 
 		if out.State.OS.Out_O != nil {
 			dout.Asset = out.State.OS.Out_O.Asset.Clone()
@@ -814,7 +822,7 @@ type Utxo struct {
 	Asset  assets.Asset
 	IsZ    bool
 	Flag   int
-	Out    light_types.Out
+	Out    txtool.Out
 }
 
 func NewBigIntFromString(s string, base int) (*big.Int, error) {
@@ -825,41 +833,104 @@ func NewBigIntFromString(s string, base int) (*big.Int, error) {
 	return val, nil
 }
 
+func (self *SEROLight) findUtxos(pk *keys.Uint512, currency string, amount *big.Int) (utxos []Utxo, remain *big.Int) {
+	remain = new(big.Int).Set(amount)
 
-func (self *SEROLight) CommitTx(from, to, currency, amountStr, gasPriceStr string) (hash string,err error) {
+	currency = strings.ToUpper(currency)
+	prefix := append(pkPrefix, append(pk[:], common.LeftPadBytes([]byte(currency), 32)...)...)
+	iterator := self.db.NewIteratorWithPrefix(prefix)
+
+	for iterator.Next() {
+		key := iterator.Key()
+		var root keys.Uint256
+		copy(root[:], key[98:130])
+
+		if utxo, err := self.getUtxo(root); err == nil {
+			if utxo.Asset.Tkn != nil {
+
+				//TODO 增加已使用过的OUT标记
+				utxos = append(utxos, utxo)
+				remain.Sub(remain, utxo.Asset.Tkn.Value.ToIntRef())
+				if remain.Sign() <= 0 {
+					break
+				}
+			}
+		}
+	}
+	return
+}
+
+func (self *SEROLight) FindRoots(pk *keys.Uint512, currency string, amount *big.Int) (roots prepare.Utxos, remain big.Int) {
+	utxos, r := self.findUtxos(pk, currency, amount)
+	for _, utxo := range utxos {
+		roots = append(roots, prepare.Utxo{utxo.Root, utxo.Asset})
+	}
+	remain = *r
+	return
+}
+
+// tickets map[keys.Uint256]keys.Uint256) (utxos []Utxo, remain map[keys.Uint256]keys.Uint256)
+func (self *SEROLight) FindRootsByTicket(pk *keys.Uint512, tickets map[keys.Uint256]keys.Uint256) (roots prepare.Utxos, remain map[keys.Uint256]keys.Uint256) {
+	utxos, remain := self.findUtxosByTicket(pk, tickets)
+	for _, utxo := range utxos {
+		roots = append(roots, prepare.Utxo{utxo.Root, utxo.Asset})
+	}
+	return
+}
+
+func (self *SEROLight) DefaultRefundTo(from *keys.Uint512) (ret *keys.PKr) {
+	if value, ok := self.accounts.Load(from); ok {
+		account := value.(*Account)
+		return &account.mainPkr
+	} else {
+		return nil
+	}
+}
+
+func (self *SEROLight) GetRoot(root *keys.Uint256) (utxos *prepare.Utxo) {
+	if u, e := self.getUtxo(*root); e != nil {
+		return nil
+	} else {
+		return &prepare.Utxo{u.Root, u.Asset}
+	}
+}
+
+
+func (self *SEROLight) CommitTx(from, to, currency, amountStr, gasPriceStr string) (hash string, err error) {
 
 	amount, err := NewBigIntFromString(amountStr, 10)
 	if err != nil {
-		return hash,err
+		return hash, err
 	}
-	if amount.Sign() <0 {
-		return hash,fmt.Errorf("amount < 0 ")
+	if amount.Sign() < 0 {
+		return hash, fmt.Errorf("amount < 0 ")
 	}
 
 	gasprice, err := NewBigIntFromString(gasPriceStr, 10)
 	if err != nil {
 		return hash, err
 	}
-	if gasprice.Sign() <0 {
-		return hash,fmt.Errorf("gasprice < 0 ")
+	if gasprice.Sign() < 0 {
+		return hash, fmt.Errorf("gasprice < 0 ")
 	}
 
 	fee := new(big.Int).Mul(big.NewInt(25000), gasprice)
 
 	fromPk := address.Base58ToAccount(from).ToUint512()
-	txParam := light_types.GenTxParam{}
-	txParam.Gas = fee.Uint64()
-	txParam.GasPrice = *gasprice
+	txParam := txtool.GTxParam{}
+	txParam.Gas = 25000
+	txParam.GasPrice = *big.NewInt(0).Exp(big.NewInt(10),big.NewInt(9),nil)
+	txParam.Fee = assets.Token{Currency: utils.CurrencyToUint256("SERO"), Value: utils.NewU256(fee.Uint64())}
 
 	skr := keys.PKr{}
 	if ac := self.getAccountByPk(*fromPk); ac != nil {
 		skr = ac.skr
-		txParam.From = light_types.Kr{SKr: ac.skr, PKr: ac.mainPkr}
+		txParam.From = txtool.Kr{SKr: ac.skr, PKr: ac.mainPkr}
 	}
 	utxoUpdates := []Utxo{}
 	pageNo := uint64(1)
 	pageSize := uint64(100)
-	Ins := [] light_types.GIn{}
+	Ins := [] txtool.GIn{}
 	sumOut := big.NewInt(0)
 	total := big.NewInt(0).Add(amount, fee)
 Loop:
@@ -876,17 +947,16 @@ Loop:
 					continue
 				}
 				// has used
-				if utxo.Flag !=0 {
+				if utxo.Flag != 0 {
 					continue
 				}
 
-
 				sumOut = big.NewInt(0).Add(sumOut, utxo.Asset.Tkn.Value.ToIntRef())
-				In := light_types.GIn{}
+				In := txtool.GIn{}
 				In.Out = utxo.Out
 				In.SKr = skr
 				Ins = append(Ins, In)
-				utxoUpdates = append(utxoUpdates,utxo)
+				utxoUpdates = append(utxoUpdates, utxo)
 
 				if sumOut.Cmp(total) >= 0 {
 					break Loop
@@ -898,7 +968,7 @@ Loop:
 		break Loop
 	}
 	if sumOut.Cmp(total) < 0 {
-		return hash,fmt.Errorf("not enough outs")
+		return hash, fmt.Errorf("not enough outs")
 	}
 
 	//交易生成
@@ -910,7 +980,7 @@ Loop:
 	witnesses, err := self.GetAnchor(roots)
 	if err != nil {
 		logex.Infof("Withdraw: GetAnchor error : %s", err)
-		return hash,err
+		return hash, err
 	}
 
 	for index, witness := range witnesses {
@@ -920,53 +990,56 @@ Loop:
 
 	if sumOut.Cmp(total) == 0 {
 		out := self.buildOut(to, currency, amount)
-		txParam.Outs = []light_types.GOut{out}
+		txParam.Outs = []txtool.GOut{out}
 	} else if (sumOut.Cmp(total) > 0) {
 		amountMy := big.NewInt(0).Sub(sumOut, total)
 		outTo := self.buildOut(to, currency, amount)
 		outMy := self.buildOut(from, currency, amountMy)
-		txParam.Outs = []light_types.GOut{outTo, outMy}
+		txParam.Outs = []txtool.GOut{outTo, outMy}
 	}
+
+	by, _ := json.Marshal(txParam)
+	fmt.Println("txParam== ", string(by[:]))
 
 	gtx, err := self.sli.GenTx(&txParam)
 	if err != nil {
-		return hash,err
+		return hash, err
 	}
 
 	sync := Sync{RpcHost: "http://127.0.0.1:8545", Method: "sero_commitTx", Params: []interface{}{gtx}}
 	if _, err := sync.Do(); err != nil {
-		return hash,err
+		return hash, err
 	}
 
 	// update utxoflg
 	batch := self.db.NewBatch()
-	for _,utxo :=range utxoUpdates{
+	for _, utxo := range utxoUpdates {
 		utxoNew := utxo
 		utxoNew.Flag = 1
 		data, err := rlp.EncodeToBytes(utxoNew)
 		if err != nil {
-			return hash,err
+			return hash, err
 		}
 		// "ROOT" + root
 		batch.Put(rootKey(utxo.Root), data)
 	}
 	batch.Write()
 
-	return hash,nil
+	return hash, nil
 }
 
-func (self *SEROLight) buildOut(to string, currency string, amount *big.Int) light_types.GOut {
+func (self *SEROLight) buildOut(to string, currency string, amount *big.Int) txtool.GOut {
 	var pkr keys.PKr
-	copy(pkr[:], util.Base58ToBytes(to))
+	copy(pkr[:], base58.Decode(to)[:])
 	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
 		Value:    utils.U256(*amount),
 	},
 	}
-	return light_types.GOut{PKr: pkr, Asset: asset}
+	return txtool.GOut{PKr: pkr, Asset: asset}
 }
 
-func (self *SEROLight) GetAnchor(roots []keys.Uint256) ([]light_types.Witness, error) {
+func (self *SEROLight) GetAnchor(roots []keys.Uint256) ([]txtool.Witness, error) {
 	params := []string{}
 	for _, each := range roots {
 		params = append(params, hexutil.Encode(each[:]))
@@ -977,7 +1050,7 @@ func (self *SEROLight) GetAnchor(roots []keys.Uint256) ([]light_types.Witness, e
 		return nil, err
 	}
 	if rpcResp.Result != nil {
-		var witnesses []light_types.Witness
+		var witnesses []txtool.Witness
 		err = json.Unmarshal(*rpcResp.Result, &witnesses)
 		return witnesses, err
 	}

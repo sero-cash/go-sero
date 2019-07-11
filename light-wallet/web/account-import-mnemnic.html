@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>Login - Brand</title>
+    <title>Access Wallet By Mnemnic Phrase - SERO</title>
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i">
     <link rel="stylesheet" href="assets/fonts/fontawesome-all.min.css">
@@ -18,16 +18,21 @@
                     <div class="card-body p-0">
                         <div class="row">
                             <div class="col-lg-6 d-none d-lg-flex">
-                                <p class="text-break text-left" style="padding: 0px;padding-top: 90px;padding-right: 50px;padding-left: 50px;font-size: 20px;">This is not a recommended way to access your wallet. Due to the sensitivity of the information involved, these options should only be used in offline settings by experienced users.</p>
+                                <p class="text-break text-left" style="padding: 0px;padding-top: 90px;padding-right: 20px;padding-left: 50px;font-size: 16px;">Mnemonic phrases, also known as ‘seed words’ or ‘recovery phrases’, are ordered lists of 24 words which bring you to specific wallet addresses. .</p>
                             </div>
                             <div class="col-lg-6">
                                 <div class="p-5">
                                     <div class="text-center">
-                                        <h4 class="text-dark mb-4">Access By Mnemnic Phrase</h4>
+                                        <h4 class="text-dark mb-4">Access Wallet By Mnemnic Phrase</h4>
                                     </div>
                                     <form class="user">
-                                        <div class="form-group"><textarea class="form-control" rows="5" placeholder="Please type in your mnemonic phrase."></textarea></div>
-                                        <div class="form-group"><input class="form-control form-control-user" type="password" id="exampleInputPassword" placeholder="Please Enter Password" name="password"></div><button class="btn btn-primary btn-block text-white btn-user" type="submit">Continue</button>
+                                        <div class="form-group"><textarea class="form-control" rows="5" required placeholder="Please type in your mnemonic phrase."></textarea></div>
+                                        <div class="form-group">
+                                            <input class="form-control form-control-user" type="password" required />
+                                            <small>This password encrypts your private key. This does not act as a seed to generate your keys.</small>
+                                            <small>This password encrypts your private key. This does not act as a seed to generate your keys.</small>
+                                        </div>
+                                        <button class="btn btn-primary btn-block text-white btn-user" type="submit">Access My Wallet</button>
                                         <hr>
                                         <a href="account-new.html"><i class="fab fa-creative-commons-remix"></i>&nbsp; Create a New Account</a><br/>
                                         <a href="account-import-keystore.html"><i class="fas fa-file-import"></i>&nbsp; Import Account By Keystore File</a>
@@ -50,15 +55,22 @@
     <script src="assets/js/account.js"></script>
     <script>
 
-        Common.app = Account;
+        Common.app = Mnemnic;
         Common.init();
 
         $(function () {
-            $("#form1").submit(function(e) {
-                e.preventDefault();
-
-                Account.newAccount();
-            });
+            $("#form1").submit(function(event){
+                const f=$(this)
+                event.preventDefault()
+                event.stopPropagation()
+                f.addClass("was-validated")
+                if(f[0].checkValidity()===true){
+                    $("#sub1").attr('disabled',true);
+                    setTimeout(function () {
+                        Mnemnic.import();
+                    },10);
+                }
+            })
 
         })
 

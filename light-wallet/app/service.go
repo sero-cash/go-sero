@@ -13,9 +13,10 @@ import (
 	"math/big"
 	"github.com/sero-cash/go-sero/light-wallet/common/transport"
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/common"
 	"fmt"
+	"github.com/btcsuite/btcutil/base58"
+	"sort"
 )
 
 //keystore file upload
@@ -27,13 +28,13 @@ type Service interface {
 	ImportAccountFromMnemonic(mnemonic, password string) (map[string]string, error)
 	ImportAccountFromRawKey(privkey, password string) (map[string]string, error)
 	ExportMnemonic(addressStr, password string) (string, error)
-	AccountList() (accountListResps []accountResp)
+	AccountList() (accountResps)
 	AccountDetail(pkStr string) accountResp
 	AccountBalance(pkStr string) map[string]*big.Int
 	TXNum(pkStr string) map[string]uint64
-	TXList(pkStr string, request transport.PageRequest) (records []utxoResp, err error)
+	TXList(pkStr string, request transport.PageRequest) (utxosResp, error)
 
-	Transfer(from, to,currency, amount, gasPrice string) (hash string, err error)
+	Transfer(from, to, currency, amount, gasPrice string) (hash string, err error)
 }
 
 func NewPrivateAccountAPI() Service {
@@ -113,9 +114,22 @@ type accountResp struct {
 	Balance   map[string]*big.Int
 	UtxoNums  map[string]uint64
 	PkrBase58 []string
+	index     int8
 }
 
-func (s *PrivateAccountAPI) AccountList() (accountListResps []accountResp) {
+type accountResps []accountResp
+
+func (acrs accountResps) Len() int {
+	return len(acrs)
+}
+func (acrs accountResps) Less(i, j int) bool {
+	return acrs[i].index < acrs[j].index
+}
+func (acrs accountResps) Swap(i, j int) {
+	acrs[i], acrs[j] = acrs[j], acrs[i]
+}
+
+func (s *PrivateAccountAPI) AccountList() (accountListResps accountResps) {
 	s.SL.accounts.Range(func(key, value interface{}) bool {
 		pk := key.(keys.Uint512)
 		account := value.(*Account)
@@ -124,14 +138,17 @@ func (s *PrivateAccountAPI) AccountList() (accountListResps []accountResp) {
 
 		pkrAndIndexs := s.SL.getPKrsForQueryByPk(pk)
 		for _, pkrAndIndex := range pkrAndIndexs {
-			pkrs = append(pkrs, base58.EncodeToString(pkrAndIndex.pkr[:]))
+			pkrs = append(pkrs, base58.Encode(pkrAndIndex.pkr[:]))
 		}
 		balance := s.SL.GetBalances(pk)
 
-		accountListResp := accountResp{PK: base58.EncodeToString(pk[:]), MainPKr: base58.EncodeToString(account.mainPkr[:]), Balance: balance, UtxoNums: account.utxoNums, PkrBase58: pkrs}
+		accountListResp := accountResp{PK: base58.Encode(pk[:]), MainPKr: base58.Encode(account.mainPkr[:]), Balance: balance, UtxoNums: account.utxoNums, PkrBase58: pkrs,index:account.index}
 		accountListResps = append(accountListResps, accountListResp)
 		return true
 	})
+
+	sort.Sort(accountListResps)
+
 	return accountListResps
 }
 
@@ -141,10 +158,10 @@ func (s *PrivateAccountAPI) AccountDetail(pkStr string) (account accountResp) {
 		pkrs := []string{}
 		pkrAndIndexs := s.SL.getPKrsForQueryByPk(*pk.ToUint512())
 		for _, pkrAndIndex := range pkrAndIndexs {
-			pkrs = append(pkrs, base58.EncodeToString(pkrAndIndex.pkr[:]))
+			pkrs = append(pkrs, base58.Encode(pkrAndIndex.pkr[:]))
 		}
 		balance := s.SL.GetBalances(*pk.ToUint512())
-		account := accountResp{PK: base58.EncodeToString(pk[:]), MainPKr: base58.EncodeToString(ac.mainPkr[:]), Balance: balance, UtxoNums: ac.utxoNums, PkrBase58: pkrs}
+		account := accountResp{PK: base58.Encode(pk[:]), MainPKr: base58.Encode(ac.mainPkr[:]), Balance: balance, UtxoNums: ac.utxoNums, PkrBase58: pkrs}
 
 		return account
 	}
@@ -182,7 +199,19 @@ type tktResp struct {
 	Value    string
 }
 
-func (s *PrivateAccountAPI) TXList(pkStr string, request transport.PageRequest) (utxos []utxoResp, err error) {
+type utxosResp []utxoResp
+
+func (u utxosResp) Len() int {
+	return len(u)
+}
+func (u utxosResp) Less(i, j int) bool {
+	return u[i].Num > u[j].Num
+}
+func (u utxosResp) Swap(i, j int) {
+	u[i], u[j] = u[j], u[i]
+}
+
+func (s *PrivateAccountAPI) TXList(pkStr string, request transport.PageRequest) (utxos utxosResp, err error) {
 	pk := address.Base58ToAccount(pkStr)
 
 	if records, err := s.SL.GetRecordsByPk(pk.ToUint512(), uint64(request.PageSize*(request.PageNo-1)), uint64(request.PageNo*request.PageSize)); err != nil {
@@ -199,7 +228,7 @@ func (s *PrivateAccountAPI) TXList(pkStr string, request transport.PageRequest) 
 				tkt = tktResp{Category: string(record.Asset.Tkt.Category[:]), Value: string(record.Asset.Tkt.Value[:])}
 			}
 			utxo := utxoResp{
-				Pkr:    base58.EncodeToString(record.Pkr[:]),
+				Pkr:    base58.Encode(record.Pkr[:]),
 				Root:   record.Root,
 				TxHash: record.TxHash,
 				Num:    record.Num,
@@ -208,14 +237,16 @@ func (s *PrivateAccountAPI) TXList(pkStr string, request transport.PageRequest) 
 			}
 			utxos = append(utxos, utxo)
 		}
+
+		sort.Sort(utxos)
 	}
 	return
 }
 
-func (s *PrivateAccountAPI) Transfer(from, to,currency, amount, gasPrice string) (hash string, err error) {
+func (s *PrivateAccountAPI) Transfer(from, to, currency, amount, gasPrice string) (hash string, err error) {
 
-	fmt.Println(from, to,currency, amount, gasPrice )
-	return s.SL.CommitTx(from, to,currency, amount, gasPrice)
+	fmt.Println(from, to, currency, amount, gasPrice)
+	return s.SL.CommitTx(from, to, currency, amount, gasPrice)
 }
 
 func (s *PrivateAccountAPI) TXNum(pkStr string) map[string]uint64 {
@@ -225,31 +256,40 @@ func (s *PrivateAccountAPI) TXNum(pkStr string) map[string]uint64 {
 
 func (s *PrivateAccountAPI) UploadKeystoreHandler() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type")
+		if r.Method == "OPTIONS" {
+			return
+		}
+
 		r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 		if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-			renderError(w, "FILE_TOO_BIG", http.StatusBadRequest)
+			renderError(w, "FILE_TOO_BIG", http.StatusOK)
 			return
 		}
 		file, _, err := r.FormFile("uploadFile")
 		passphrase := r.FormValue("passphrase")
 		if err != nil {
-			renderError(w, "INVALID_FILE", http.StatusBadRequest)
+			renderError(w, "INVALID_FILE", http.StatusOK)
 			return
 		}
 		defer file.Close()
 		fileBytes, err := ioutil.ReadAll(file)
 		if err != nil {
-			renderError(w, "INVALID_FILE", http.StatusBadRequest)
+			renderError(w, "INVALID_FILE", http.StatusOK)
 			return
 		}
 		key, err := keystore.DecryptKey(fileBytes, passphrase)
 		if err != nil {
-			renderError(w, "INVALID_FILE_TYPE", http.StatusBadRequest)
+			//renderError(w, "INVALID_FILE_TYPE", http.StatusOK)
+			w.Write([]byte("INVALID_FILE_TYPE"))
 			return
 		}
 
 		if err := ioutil.WriteFile(GetKeystorePath()+"/"+key.Address.String(), fileBytes, 0600); err != nil {
-			renderError(w, "INVALID_FILE", http.StatusBadRequest)
+			renderError(w, "INVALID_FILE", http.StatusOK)
 			return
 		}
 
@@ -260,6 +300,6 @@ func (s *PrivateAccountAPI) UploadKeystoreHandler() http.HandlerFunc {
 }
 
 func renderError(w http.ResponseWriter, errcode string, code int) {
-	w.WriteHeader(code)
+	//w.WriteHeader(code)
 	w.Write([]byte(errcode))
 }

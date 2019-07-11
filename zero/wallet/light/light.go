@@ -1,25 +1,24 @@
-package light_node
+package light
 
 import (
 	"github.com/sero-cash/go-sero/serodb"
-	"github.com/sero-cash/go-sero/zero/light"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
 	"github.com/sero-cash/go-czero-import/keys"
 	"encoding/binary"
 	"fmt"
 	"github.com/sero-cash/go-sero/rlp"
 	"sync/atomic"
 	"github.com/robfig/cron"
-	"github.com/sero-cash/go-sero/zero/light/light_types"
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
+	"github.com/sero-cash/go-sero/zero/txtool"
 )
 
 type LightNode struct {
 	db     *serodb.LDBDatabase
 	txPool *core.TxPool
 
-	sri light.SRI
+	sri flight.SRI
 
 	lastNumber uint64
 }
@@ -37,7 +36,7 @@ func NewLightNode(dbPath string, txPool *core.TxPool) (lightNode *LightNode) {
 	}
 	lightNode = &LightNode{
 		txPool: txPool,
-		sri:    light.SRI_Inst,
+		sri:    flight.SRI_Inst,
 		db:     db,
 	}
 	current_light = lightNode
@@ -67,7 +66,7 @@ func numKey() []byte {
 }
 
 func (self *LightNode) fetchBlockInfo() {
-	if light_ref.Ref_inst.Bc == nil || !light_ref.Ref_inst.Bc.IsValid() {
+	if txtool.Ref_inst.Bc == nil || !txtool.Ref_inst.Bc.IsValid() {
 		return
 	}
 
@@ -90,7 +89,7 @@ func (self *LightNode) fetchBlockInfo() {
 		// PKR -> Outs
 		outs := block.Outs
 
-		pkrMap := make(map[keys.PKr][]light_types.Out)
+		pkrMap := make(map[keys.PKr][]txtool.Out)
 
 		for _, out := range outs {
 			var pkr keys.PKr
@@ -105,7 +104,7 @@ func (self *LightNode) fetchBlockInfo() {
 				v = append(v,out)
 				pkrMap[pkr]= v
 			}else{
-				pkrMap[pkr]= []light_types.Out{out}
+				pkrMap[pkr]= []txtool.Out{out}
 			}
 
 		}

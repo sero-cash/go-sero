@@ -1,12 +1,12 @@
-package light_node
+package light
 
 import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"fmt"
 	"bytes"
-	"github.com/sero-cash/go-sero/zero/light/light_types"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/zero/txtool"
 )
 
 var current_light *LightNode
@@ -32,7 +32,7 @@ func (self *LightNode) GetOutsByPKr(pkrs []keys.PKr, start, end uint64) (br Bloc
 			if num > end {
 				break
 			}
-			var outs []light_types.Out
+			var outs []txtool.Out
 			if err := rlp.Decode(bytes.NewReader(iterator.Value()), &outs); err != nil {
 				log.Error("Light Invalid block RLP", "Num:", num, "err:", err)
 				return br, err
@@ -79,7 +79,7 @@ type BlockOutResp struct {
 
 type BlockOut struct {
 	Num  uint64
-	Outs []light_types.Out
+	Outs []txtool.Out
 }
 
 type BlockDelNil struct {

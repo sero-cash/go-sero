@@ -15,13 +15,16 @@ import (
 )
 
 type Account struct {
-	wallet       accounts.Wallet
-	pk           *keys.Uint512
-	tk           *keys.Uint512
-	skr          keys.PKr
-	mainPkr      keys.PKr
-	balances     map[string]*big.Int
-	utxoNums     map[string]uint64
+	wallet   accounts.Wallet
+	pk       *keys.Uint512
+	tk       *keys.Uint512
+	skr      keys.PKr
+	mainPkr  keys.PKr
+	balances map[string]*big.Int
+	utxoNums map[string]uint64
+
+	//use for map sort
+	index int8
 
 	isChanged bool
 	keyPath   string

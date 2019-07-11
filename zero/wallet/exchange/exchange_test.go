@@ -15,8 +15,8 @@ import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/common/hexutil"
-	"github.com/sero-cash/go-sero/zero/light/light_issi"
-	"github.com/sero-cash/go-sero/zero/light/light_types"
+	"github.com/sero-cash/go-sero/zero/wallet/light/light_issi"
+	"github.com/sero-cash/go-sero/zero/wallet/light/light_types"
 )
 
 var (

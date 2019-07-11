@@ -3,7 +3,7 @@ package ethapi
 import (
 	"context"
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/zero/light/light_node"
+	"github.com/sero-cash/go-sero/zero/wallet/light"
 	"fmt"
 )
 
@@ -11,7 +11,7 @@ type PublicLightNodeApi struct {
 	b Backend
 }
 
-func (plna PublicLightNodeApi) GetOutsByPKr(ctx context.Context, addresses [] *MixAdrress, start, end uint64) (outBlockResp light_node.BlockOutResp, e error) {
+func (plna PublicLightNodeApi) GetOutsByPKr(ctx context.Context, addresses [] *MixAdrress, start, end uint64) (outBlockResp light.BlockOutResp, e error) {
 
 	pkrs := []keys.PKr{}
 	for _,address := range addresses{
@@ -28,7 +28,7 @@ func (plna PublicLightNodeApi) GetOutsByPKr(ctx context.Context, addresses [] *M
 	return plna.b.GetOutByPKr(pkrs, start, end)
 }
 
-func (plna PublicLightNodeApi) CheckNil(Nils []keys.Uint256, start ,end uint64) (delNils []light_node.BlockDelNil, e error) {
+func (plna PublicLightNodeApi) CheckNil(Nils []keys.Uint256, start ,end uint64) (delNils []light.BlockDelNil, e error) {
 
 	return plna.b.CheckNil(Nils, start,end)
 }

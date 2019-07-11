@@ -61,7 +61,7 @@ import (
 	"github.com/sero-cash/go-sero/sero/filters"
 	"github.com/sero-cash/go-sero/sero/gasprice"
 	"github.com/sero-cash/go-sero/serodb"
-	"github.com/sero-cash/go-sero/zero/light/light_node"
+	"github.com/sero-cash/go-sero/zero/wallet/light"
 )
 
 type LesServer interface {
@@ -84,7 +84,7 @@ type Sero struct {
 	voter           *share.Voter
 	blockchain      *core.BlockChain
 	exchange        *exchange.Exchange
-	lightNode           *light_node.LightNode
+	lightNode           *light.LightNode
 	protocolManager *ProtocolManager
 	lesServer       LesServer
 
@@ -207,7 +207,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 
 	//init light
 	if config.StartLight {
-		sero.lightNode = light_node.NewLightNode(zconfig.Light_dir(), sero.txPool)
+		sero.lightNode = light.NewLightNode(zconfig.Light_dir(), sero.txPool)
 	}
 
 	return sero, nil

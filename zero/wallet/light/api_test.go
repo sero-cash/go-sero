@@ -1,4 +1,4 @@
-package light_node
+package light
 
 import (
 	"testing"

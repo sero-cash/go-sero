@@ -43,7 +43,7 @@ import (
 	"github.com/sero-cash/go-sero/rpc"
 	"github.com/sero-cash/go-sero/sero/downloader"
 	"github.com/sero-cash/go-sero/serodb"
-	"github.com/sero-cash/go-sero/zero/light/light_node"
+	"github.com/sero-cash/go-sero/zero/wallet/light"
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -99,8 +99,8 @@ type Backend interface {
 	GetRecordsByTxHash(txHash keys.Uint256) (records []exchange.Utxo, err error)
 
 	//Light node api
-	GetOutByPKr(pkrs []keys.PKr, start,end uint64) (br light_node.BlockOutResp, e error)
-	CheckNil(Nils []keys.Uint256, start,end uint64) (delNils []light_node.BlockDelNil, e error)
+	GetOutByPKr(pkrs []keys.PKr, start,end uint64) (br light.BlockOutResp, e error)
+	CheckNil(Nils []keys.Uint256, start,end uint64) (delNils []light.BlockDelNil, e error)
 
 }
 
