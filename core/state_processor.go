@@ -223,9 +223,10 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 				log.Warn("stakeDesc.RegistPool.Value != poolValueThreshold")
 				asset := assets.Asset{Tkn: &assets.Token{
 					Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
-					Value:    stakeDesc.BuyShare.Value,
+					Value:    stakeDesc.RegistPool.Value,
 				},
 				}
+				poolId = nil
 				statedb.GetZState().AddTxOut(from, asset)
 				return
 			}
