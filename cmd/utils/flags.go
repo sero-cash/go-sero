@@ -145,6 +145,10 @@ var (
 		Name:  "dev",
 		Usage: "Dev network: pre-configured proof-of-work in development network",
 	}
+	SnapshotFlag = cli.Uint64Flag{
+		Name:  "snapshot",
+		Usage: "Use for create chaindata snapshot",
+	}
 
 	DeveloperPasswordFlag = cli.StringFlag{
 		Name:  "devpassword",
@@ -947,6 +951,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
 		seroparam.Init_Dev(true)
+	}
+	if ctx.GlobalIsSet(SnapshotFlag.Name) {
+		snapshot := ctx.GlobalUint64(SnapshotFlag.Name)
+		zconfig.Init_Snapshot(snapshot)
 	}
 }
 

@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
 	"github.com/sero-cash/go-sero/zero/txtool/verify"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -1020,8 +1022,16 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			header := bc.GetHeaderByNumber(current - triesInMemory)
 			chosen := header.Number.Uint64()
 
+			var needCommit bool
+
+			if zconfig.IsSnapshotMode() {
+				needCommit = zconfig.NeedSnapshot(block.NumberU64())
+			} else {
+				needCommit = (bc.gcproc > bc.cacheConfig.TrieTimeLimit) || (header.Number.Uint64()%10000 == 0)
+			}
+
 			// If we exceeded out time allowance, flush an entire trie to disk
-			if bc.gcproc > bc.cacheConfig.TrieTimeLimit || header.Number.Uint64()%10000 == 0 {
+			if needCommit {
 				// If we're exceeding limits but haven't reached a large enough memory gap,
 				// warn the user that the system is becoming unstable.
 				if chosen < lastWrite+triesInMemory && bc.gcproc >= 2*bc.cacheConfig.TrieTimeLimit {

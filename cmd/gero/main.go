@@ -118,6 +118,7 @@ var (
 		utils.AutoMergeFlag,
 		utils.ConfirmedBlockFlag,
 		utils.DeveloperFlag,
+		utils.SnapshotFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,

@@ -477,7 +477,7 @@ func (self *Exchange) GenTxWithSign(param prepare.PreTxParam) (pretx *txtool.GTx
 		return
 	}
 
-	if pretx, tx, e = self.genTx(roots, account, param.Receptions, &param.Cmds, &param.Fee, param.GasPrice); e != nil {
+	if pretx, tx, e = self.genTx(roots, account, param.RefundTo, param.Receptions, &param.Cmds, &param.Fee, param.GasPrice); e != nil {
 		log.Error("Exchange genTx", "error", e)
 		return
 	}
@@ -518,8 +518,12 @@ func (self *Exchange) ClearTxParam(txParam *txtool.GTxParam) (count int) {
 	return
 }
 
-func (self *Exchange) genTx(utxos prepare.Utxos, account *Account, receptions []prepare.Reception, cmds *prepare.Cmds, fee *assets.Token, gasPrice *big.Int) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
-	if txParam, e = self.buildTxParam(utxos, &account.mainPkr, receptions, cmds, fee, gasPrice); e != nil {
+func (self *Exchange) genTx(utxos prepare.Utxos, account *Account, refundTo *keys.PKr, receptions []prepare.Reception, cmds *prepare.Cmds, fee *assets.Token, gasPrice *big.Int) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
+	if refundTo == nil {
+		refundTo = &account.mainPkr
+	}
+
+	if txParam, e = self.buildTxParam(utxos, refundTo, receptions, cmds, fee, gasPrice); e != nil {
 		return
 	}
 
@@ -1159,6 +1163,7 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string, force bool) (coun
 		pretx, gtx, err := self.genTx(
 			mu.list.Roots(),
 			account,
+			nil,
 			receptions,
 			nil,
 			&assets.Token{
