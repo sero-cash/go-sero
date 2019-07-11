@@ -17,6 +17,8 @@
 package core
 
 import (
+	"errors"
+	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/log"
 	"math/big"
 
@@ -121,7 +123,9 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 
 	var poolId, shareId *common.Hash
 	if poolId, shareId, err = applyStake(msg.From(), tx.GetZZSTX().Desc_Cmd, statedb, tx.Hash(), header.Number.Uint64()); err != nil {
-		return nil, 0, err
+		log.Info("applyStake", "error", err)
+		poolId, shareId = nil, nil
+		failed = true
 	}
 
 	root := statedb.IntermediateRoot(true).Bytes()
@@ -158,12 +162,14 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		if stakeDesc.BuyShare.Pool != nil {
 			stakePoolId := common.BytesToHash(stakeDesc.BuyShare.Pool[:])
 			stakePool = stakeState.GetStakePool(stakePoolId)
-			if stakePool == nil {
-				log.Warn("BuyShare, not exist pool", "PoolId", stakePoolId.String())
-				return
-			}
-			if stakePool.Closed {
-				log.Warn("BuyShare, pool is closed", stakePoolId.String())
+			if stakePool == nil || stakePool.Closed {
+				asset := assets.Asset{Tkn: &assets.Token{
+					Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+					Value:    stakeDesc.BuyShare.Value,
+				},
+				}
+				statedb.GetZState().AddTxOut(from, asset)
+				err = errors.New("pool not exist or pool is closed")
 				return
 			}
 		}
@@ -219,18 +225,18 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			stakeState.UpdateStakePool(stakePool)
 			return
 		} else {
-			if poolValueThreshold.Cmp(stakeDesc.RegistPool.Value.ToInt()) != 0 {
-				log.Warn("stakeDesc.RegistPool.Value != poolValueThreshold")
+			cmd := stakeDesc.RegistPool
+			if poolValueThreshold.Cmp(stakeDesc.RegistPool.Value.ToInt()) != 0 || cmd.Vote == (keys.PKr{}) {
 				asset := assets.Asset{Tkn: &assets.Token{
 					Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 					Value:    stakeDesc.RegistPool.Value,
 				},
 				}
-				poolId = nil
 				statedb.GetZState().AddTxOut(from, asset)
+				err = errors.New("args error")
 				return
 			}
-			cmd := stakeDesc.RegistPool
+
 			pool := &stake.StakePool{PKr: pkr, Amount: cmd.Value.ToInt(), VotePKr: cmd.Vote, TransactionHash: txHash, Fee: uint16(cmd.FeeRate), Profit: big.NewInt(0)}
 			stakeState.UpdateStakePool(pool)
 		}
@@ -239,11 +245,11 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		poolId = &id
 		stakePool := stakeState.GetStakePool(id)
 		if stakePool == nil {
-			log.Warn("ClosePool, not exist pool", "PoolId", poolId.String())
+			err = errors.New("pool not exist")
 			return
 		}
 		if stakePool.BlockNumber+lockingBlockNum < number {
-			log.Warn("ClosePool, locking in", "PoolId", poolId.String())
+			err = errors.New("pool locking in")
 			return
 		}
 		if stakePool.Closed {
