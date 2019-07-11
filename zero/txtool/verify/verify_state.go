@@ -187,7 +187,7 @@ func (self *verifyWithStateCtx) Verify() (e error) {
 		return
 	}
 
-	if e = self.verifyPkg(); e != nil {
+	if e = self.verifyCmds(); e != nil {
 		return
 	}
 

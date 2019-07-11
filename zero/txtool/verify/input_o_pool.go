@@ -32,15 +32,7 @@ func (self *verify_input_o_desc) Run() error {
 		self.e = err
 		return err
 	} else {
-		asset := self.src.Out_O.Asset.ToFlatAsset()
-		asset_desc := cpt.AssetDesc{
-			Tkn_currency: asset.Tkn.Currency,
-			Tkn_value:    asset.Tkn.Value.ToUint256(),
-			Tkt_category: asset.Tkt.Category,
-			Tkt_value:    asset.Tkt.Value,
-		}
-		cpt.GenAssetCC(&asset_desc)
-		self.asset_cc = asset_desc.Asset_cc
+		self.asset_cc = self.src.Out_O.ToAssetCC()
 		return nil
 	}
 }
