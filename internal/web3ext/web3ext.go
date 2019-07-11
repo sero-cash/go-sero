@@ -162,6 +162,11 @@ web3._extend({
 			name: 'stopWS',
 			call: 'admin_stopWS'
 		}),
+		new web3._extend.Method({
+			name: 'close',
+			call: 'admin_close',
+			params: 0
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

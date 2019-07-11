@@ -205,6 +205,7 @@ func (s *PublicStakeApI) RegistStakePool(ctx context.Context, args RegistStakePo
 		return common.Hash{},err
 	}
 	fromPkr:=getStakePoolPkr(wallet.Accounts()[0])
+	log.Info("RegistStakePool","idPkr",common.BytesToAddress(fromPkr[:]).String())
 	preTx := args.toPreTxParam()
 	preTx.RefundTo=&fromPkr
 	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(preTx)
@@ -457,6 +458,7 @@ type StakePool struct {
 func newRPCStakePool(wallets []accounts.Wallet,pool stake.StakePool) map[string]interface{} {
 	result := map[string]interface{}{}
 	result["id"] = common.BytesToHash(pool.Id())
+	result["idPkr"]=common.BytesToAddress(pool.PKr[:])
 	result["own"] = getAccountAddrByPKr(wallets, pool.PKr)
 	result["voteAddress"] = getAccountAddrByPKr(wallets, pool.VotePKr)
 	result["fee"] = hexutil.Uint(pool.Fee)
@@ -578,7 +580,6 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []R
 			s := &RPCStatisticsShare{}
 			s.Address=key
 			s.Total= share.InitNum
-			s.Remaining = share.Num
 			s.Missed= share.WillVoteNum
 			if share.Status ==stake.STATUS_VALID{
 				s.Remaining =share.Num
