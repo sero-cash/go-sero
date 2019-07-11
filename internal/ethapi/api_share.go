@@ -3,6 +3,7 @@ package ethapi
 import (
 	"context"
 	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/log"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/accounts"
@@ -257,7 +258,7 @@ func (s *PublicStakeApI) CloseStakePool(ctx context.Context,from common.Address)
 	if err != nil {
 		return common.Hash{},err
 	}
-
+    log.Info("close stakepool","poolId",hexutil.Encode(poolId[:]))
 	pool := stake.NewStakeState(state).GetStakePool(poolId)
 
 	if pool == nil {

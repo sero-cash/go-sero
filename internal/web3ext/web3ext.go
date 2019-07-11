@@ -765,17 +765,17 @@ web3._extend({
        new web3._extend.Method({
 			name: 'closeStakePool',
 			call: 'stake_closeStakePool',
-			params:0 
+			params:1 
 		}),
         new web3._extend.Method({
 			name: 'modifyStakePoolFee',
 			call: 'stake_modifyStakePoolFee',
-			params:0 
+			params:2 
 		}),
         new web3._extend.Method({
 			name: 'modifyStakePoolVote',
 			call: 'stake_modifyStakePoolVote',
-			params:0 
+			params:2 
 		})
 
 	],
