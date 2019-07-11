@@ -119,7 +119,8 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 		return nil, 0, err
 	}
 
-	if err = applyStake(msg.From(), tx.GetZZSTX().Desc_Cmd, statedb, tx.Hash(), header.Number.Uint64()); err != nil {
+	var poolId, shareId *common.Hash
+	if poolId, shareId, err = applyStake(msg.From(), tx.GetZZSTX().Desc_Cmd, statedb, tx.Hash(), header.Number.Uint64()); err != nil {
 		return nil, 0, err
 	}
 
@@ -138,6 +139,8 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+	receipt.PoolId = poolId
+	receipt.ShareId = shareId
 
 	return receipt, gas, err
 }
@@ -147,21 +150,21 @@ var (
 	lockingBlockNum       = uint64(200) //uint64(1088640)
 )
 
-func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.StateDB, txHash common.Hash, number uint64) error {
+func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.StateDB, txHash common.Hash, number uint64) (poolId *common.Hash, shareId *common.Hash, err error) {
 	stakeState := stake.NewStakeState(statedb)
 	pkr := *from.ToPKr()
 	if stakeDesc.BuyShare != nil {
 		var stakePool *stake.StakePool
 		if stakeDesc.BuyShare.Pool != nil {
-			poolId := common.BytesToHash(stakeDesc.BuyShare.Pool[:])
-			stakePool = stakeState.GetStakePool(poolId)
+			stakePoolId := common.BytesToHash(stakeDesc.BuyShare.Pool[:])
+			stakePool = stakeState.GetStakePool(stakePoolId)
 			if stakePool == nil {
-				log.Warn("BuyShare, not exist pool", "PoolId", poolId.String())
-				return nil
+				log.Warn("BuyShare, not exist pool", "PoolId", stakePoolId.String())
+				return
 			}
 			if stakePool.Closed {
-				log.Warn("BuyShare, pool is closed", poolId.String())
-				return nil
+				log.Warn("BuyShare, pool is closed", stakePoolId.String())
+				return
 			}
 		}
 
@@ -186,6 +189,9 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 				share.PoolId = &hash
 				share.Fee = stakePool.Fee
 			}
+			id := common.BytesToHash(share.Id())
+			shareId = &id
+
 			stakeState.AddShare(share)
 		} else {
 			asset := assets.Asset{Tkn: &assets.Token{
@@ -196,8 +202,9 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			statedb.GetZState().AddTxOut(from, asset)
 		}
 	} else if stakeDesc.RegistPool != nil {
-		poolId := crypto.Keccak256Hash(pkr[:])
-		stakePool := stakeState.GetStakePool(poolId)
+		id := crypto.Keccak256Hash(pkr[:])
+		poolId = &id
+		stakePool := stakeState.GetStakePool(id)
 		if stakePool != nil {
 			if stakeDesc.RegistPool.Value.ToInt().Sign() > 0 {
 				asset := assets.Asset{Tkn: &assets.Token{
@@ -210,7 +217,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			stakePool.Fee = uint16(stakeDesc.RegistPool.FeeRate)
 			stakePool.VotePKr = stakeDesc.RegistPool.Vote
 			stakeState.UpdateStakePool(stakePool)
-			return nil
+			return
 		} else {
 			if poolValueThreshold.Cmp(stakeDesc.RegistPool.Value.ToInt()) != 0 {
 				log.Warn("stakeDesc.RegistPool.Value != poolValueThreshold")
@@ -220,30 +227,30 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 				},
 				}
 				statedb.GetZState().AddTxOut(from, asset)
-				return nil
+				return
 			}
 			cmd := stakeDesc.RegistPool
 			pool := &stake.StakePool{PKr: pkr, Amount: cmd.Value.ToInt(), VotePKr: cmd.Vote, TransactionHash: txHash, Fee: uint16(cmd.FeeRate), Profit: big.NewInt(0)}
 			stakeState.UpdateStakePool(pool)
 		}
-
 	} else if stakeDesc.ClosePool != nil {
-		poolId := crypto.Keccak256Hash(pkr[:])
-		stakePool := stakeState.GetStakePool(poolId)
+		id := crypto.Keccak256Hash(pkr[:])
+		poolId = &id
+		stakePool := stakeState.GetStakePool(id)
 		if stakePool == nil {
 			log.Warn("ClosePool, not exist pool", "PoolId", poolId.String())
-			return nil
+			return
 		}
 		if stakePool.BlockNumber+lockingBlockNum < number {
 			log.Warn("ClosePool, locking in", "PoolId", poolId.String())
-			return nil
+			return
 		}
 		if stakePool.Closed {
 			log.Warn("ClosePool, pool is closed", "PoolId", poolId.String())
-			return nil
+			return
 		}
 		stakePool.Closed = true
 		stakeState.UpdateStakePool(stakePool)
 	}
-	return nil
+	return
 }

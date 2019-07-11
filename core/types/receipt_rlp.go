@@ -20,8 +20,8 @@ type receiptForStorage_Version_0 struct {
 }
 
 type receiptForStorage_Version_1 struct {
-	PoolIds  []common.Hash
-	ShareIds []common.Hash
+	PoolId  *common.Hash
+	ShareId *common.Hash
 }
 
 // ReceiptForStorage is a wrapper around a Receipt that flattens and parses the
@@ -47,10 +47,10 @@ func (r *ReceiptForStorage) EncodeRLP(w io.Writer) error {
 		}
 		vs.Versions = append(vs.Versions, &v0)
 	}
-	if len(r.PoolIds) > 0 || len(r.ShareIds) > 0 {
+	if r.PoolId != nil || r.ShareId != nil {
 		v1 := &receiptForStorage_Version_1{}
-		v1.ShareIds = r.ShareIds
-		v1.PoolIds = r.PoolIds
+		v1.ShareId = r.ShareId
+		v1.PoolId = r.PoolId
 		vs.Versions = append(vs.Versions, &v1)
 	}
 	return rlp.Encode(w, &vs)
@@ -85,8 +85,8 @@ func (r *ReceiptForStorage) DecodeRLP(s *rlp.Stream) error {
 		r.GasUsed = v0.GasUsed
 	}
 	{
-		r.PoolIds = v1.PoolIds
-		r.ShareIds = v1.ShareIds
+		r.PoolId = v1.PoolId
+		r.ShareId = v1.ShareId
 	}
 
 	return nil
