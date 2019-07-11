@@ -2,6 +2,7 @@ package ethapi
 
 import (
 	"context"
+	"github.com/sero-cash/go-sero/crypto"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/accounts"
@@ -221,6 +222,194 @@ func (s *PublicStakeApI) RegistStakePool(ctx context.Context, args RegistStakePo
 	return common.BytesToHash(gtx.Hash[:]), nil
 }
 
+func getStakePoolPkr(account accounts.Account) keys.PKr{
+	randHash:=crypto.Keccak256Hash(account.Tk[:])
+	var rand keys.Uint256
+	copy(rand[:],randHash[:])
+	return keys.Addr2PKr(account.Address.ToUint512(),&rand)
+
+}
+func getStakePoolId(from keys.PKr) common.Hash{
+	return crypto.Keccak256Hash(from[:])
+}
+
+func (s *PublicStakeApI) CloseStakePool(ctx context.Context,from common.Address) (common.Hash, error) {
+	wallets:=s.b.AccountManager().Wallets()
+	var own address.AccountAddress
+	if from.IsAccountAddress(){
+		own=common.AddrToAccountAddr(from)
+	}else{
+
+		localAddr:=getLocalAccountAddressByPkr(wallets,from)
+		if localAddr==nil{
+			return common.Hash{},errors.New("can not find local account")
+		}
+		own=*localAddr
+
+	}
+	wallet,err:=s.b.AccountManager().Find(accounts.Account{Address:own})
+	if err !=nil {
+		return common.Hash{},err
+	}
+	fromPkr:=getStakePoolPkr(wallet.Accounts()[0])
+	poolId:=getStakePoolId(fromPkr)
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return common.Hash{},err
+	}
+
+	pool := stake.NewStakeState(state).GetStakePool(poolId)
+
+	if pool == nil {
+		return common.Hash{}, errors.New("stake pool not exists")
+	}
+
+	if pool.Closed {
+		return common.Hash{},errors.New("stake pool has closed")
+	}
+	preTx := prepare.PreTxParam{}
+	preTx.From = *from.ToUint512()
+	preTx.RefundTo =&fromPkr
+	preTx.Fee = assets.Token{
+		utils.CurrencyToUint256("SERO"),
+		utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(25000)),  new(big.Int).SetUint64(defaultGasPrice))),
+	}
+	preTx.GasPrice =  new(big.Int).SetUint64(defaultGasPrice)
+	preTx.Cmds = prepare.Cmds{}
+	closePoolCmd := stx.ClosePoolCmd{}
+	preTx.Cmds.ClosePool = &closePoolCmd
+
+	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(preTx)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	err = s.b.CommitTx(gtx)
+	if err != nil {
+		exchange.CurrentExchange().ClearTxParam(pretx)
+		return common.Hash{}, err
+	}
+	return common.BytesToHash(gtx.Hash[:]), nil
+}
+
+func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context,from common.Address,fee hexutil.Uint64) (common.Hash, error) {
+	wallets:=s.b.AccountManager().Wallets()
+	var own address.AccountAddress
+	if from.IsAccountAddress(){
+       own=common.AddrToAccountAddr(from)
+	}else{
+
+       localAddr:=getLocalAccountAddressByPkr(wallets,from)
+       if localAddr==nil{
+       	return common.Hash{},errors.New("can not find local account")
+	   }
+       own=*localAddr
+
+	}
+	wallet,err:=s.b.AccountManager().Find(accounts.Account{Address:own})
+	if err !=nil {
+		return common.Hash{},err
+	}
+	fromPkr:=getStakePoolPkr(wallet.Accounts()[0])
+	poolId:=getStakePoolId(fromPkr)
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return common.Hash{},err
+	}
+
+	pool := stake.NewStakeState(state).GetStakePool(poolId)
+
+	if pool == nil {
+		return common.Hash{}, errors.New("stake pool not exists")
+	}
+
+	if pool.Closed {
+		return common.Hash{},errors.New("stake pool has closed")
+	}
+	preTx := prepare.PreTxParam{}
+	preTx.From = *own.ToUint512()
+	preTx.RefundTo = &fromPkr
+	preTx.Fee = assets.Token{
+		utils.CurrencyToUint256("SERO"),
+		utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(25000)),  new(big.Int).SetUint64(defaultGasPrice))),
+	}
+	preTx.GasPrice =  new(big.Int).SetUint64(defaultGasPrice)
+	preTx.Cmds = prepare.Cmds{}
+	registPoolCmd := stx.RegistPoolCmd{}
+	registPoolCmd.Vote = pool.VotePKr
+	registPoolCmd.FeeRate = uint32(fee)*2/3 + 3334
+	preTx.Cmds.RegistPool = &registPoolCmd
+	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(preTx)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	err = s.b.CommitTx(gtx)
+	if err != nil {
+		exchange.CurrentExchange().ClearTxParam(pretx)
+		return common.Hash{}, err
+	}
+	return common.BytesToHash(gtx.Hash[:]), nil
+}
+
+func (s *PublicStakeApI) ModifyStakePoolVote(ctx context.Context,from common.Address,vote common.Address) (common.Hash, error) {
+	wallets:=s.b.AccountManager().Wallets()
+	var own address.AccountAddress
+	if from.IsAccountAddress(){
+		own=common.AddrToAccountAddr(from)
+	}else{
+
+		localAddr:=getLocalAccountAddressByPkr(wallets,from)
+		if localAddr==nil{
+			return common.Hash{},errors.New("can not find local account")
+		}
+		own=*localAddr
+
+	}
+	wallet,err:=s.b.AccountManager().Find(accounts.Account{Address:own})
+	if err !=nil {
+		return common.Hash{},err
+	}
+	fromPkr:=getStakePoolPkr(wallet.Accounts()[0])
+	poolId:=getStakePoolId(fromPkr)
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return common.Hash{},err
+	}
+
+	pool := stake.NewStakeState(state).GetStakePool(poolId)
+
+	if pool == nil {
+		return common.Hash{}, errors.New("stake pool not exists")
+	}
+
+	if pool.Closed {
+		return common.Hash{},errors.New("stake pool has closed")
+	}
+	votePkr:=common.AddrToPKr(vote)
+	preTx := prepare.PreTxParam{}
+	preTx.From = *own.ToUint512()
+	preTx.RefundTo = &fromPkr
+	preTx.Fee = assets.Token{
+		utils.CurrencyToUint256("SERO"),
+		utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(25000)),  new(big.Int).SetUint64(defaultGasPrice))),
+	}
+	preTx.GasPrice =  new(big.Int).SetUint64(defaultGasPrice)
+	preTx.Cmds = prepare.Cmds{}
+	registPoolCmd := stx.RegistPoolCmd{}
+	registPoolCmd.Vote = votePkr
+	registPoolCmd.FeeRate =uint32(pool.Fee)
+	preTx.Cmds.RegistPool = &registPoolCmd
+	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(preTx)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	err = s.b.CommitTx(gtx)
+	if err != nil {
+		exchange.CurrentExchange().ClearTxParam(pretx)
+		return common.Hash{}, err
+	}
+	return common.BytesToHash(gtx.Hash[:]), nil
+}
+
 func (s *PublicStakeApI) PoolState(ctx context.Context, pool common.Hash) (map[string]interface{}, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
@@ -276,9 +465,12 @@ func newRPCStakePool(wallets []accounts.Wallet,pool stake.StakePool) map[string]
 	result["fee"] = hexutil.Uint(pool.Fee)
 	result["shareNum"] = hexutil.Uint64(pool.CurrentShareNum)
 	result["choicedNum"] = hexutil.Uint64(pool.ChoicedShareNum)
+	result["wishVoteNum"]=hexutil.Uint64(pool.WishVoteNum)
+	result["expireNum"]=hexutil.Uint64(pool.ExpireNum)
 	result["missedNum"] = hexutil.Uint64(pool.MissedVoteNum)
 	result["lastPayTime"] = hexutil.Uint64(pool.LastPayTime)
 	result["closed"] = pool.Closed
+	result["tx"]=pool.TransactionHash
 	return result
 }
 

@@ -756,7 +756,28 @@ web3._extend({
 			name: 'getShare',
 			call: 'stake_getShare',
 			params:1 
+		}),
+       new web3._extend.Method({
+			name: 'stakePools',
+			call: 'stake_stakePools',
+			params:0 
+		}),
+       new web3._extend.Method({
+			name: 'closeStakePool',
+			call: 'stake_closeStakePool',
+			params:0 
+		}),
+        new web3._extend.Method({
+			name: 'modifyStakePoolFee',
+			call: 'stake_modifyStakePoolFee',
+			params:0 
+		}),
+        new web3._extend.Method({
+			name: 'modifyStakePoolVote',
+			call: 'stake_modifyStakePoolVote',
+			params:0 
 		})
+
 	],
     properties: [
        new web3._extend.Property({
@@ -766,10 +787,6 @@ web3._extend({
        new web3._extend.Property({
 			name: 'sharePrice',
 			getter: 'stake_sharePrice'
-		}),
-		new web3._extend.Property({
-			name: 'stakePools',
-			getter: 'stake_stakePools'
 		})
 	]
 });
