@@ -115,7 +115,7 @@ func (s *Share) CopyFrom(ret consensus.CItem) {
 	s.Status = obj.Status
 	s.ReturnAmount = new(big.Int).Set(obj.ReturnAmount)
 	s.Profit = new(big.Int).Set(obj.Profit)
-	s.LastPayTime = s.LastPayTime
+	s.LastPayTime = obj.LastPayTime
 }
 
 func (s *Share) AddProfit(profit *big.Int) {
