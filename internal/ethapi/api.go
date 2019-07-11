@@ -491,6 +491,22 @@ func (s *PrivateAccountAPI) ExportMnemonic(addr address.AccountAddress, password
 	return fetchKeystore(s.am).ExportMnemonic(accounts.Account{Address: addr}, password)
 }
 
+func (s *PrivateAccountAPI) ExportRawKey(addr address.AccountAddress, password string) (hexutil.Bytes, error) {
+	seed,err:=fetchKeystore(s.am).ExportRewKey(accounts.Account{Address: addr}, password)
+	if err !=nil{
+		return nil ,err
+	}
+	return hexutil.Bytes(seed),nil
+}
+
+func (s *PrivateAccountAPI) GenSeed() (hexutil.Bytes, error) {
+	entropy, err := bip39.NewEntropy(256)
+	if err != nil {
+		return nil, err
+	}
+	return hexutil.Bytes(entropy),nil
+}
+
 // LockAccount will lock the account associated with the given address when it's unlocked.
 func (s *PrivateAccountAPI) LockAccount(addr address.AccountAddress) bool {
 	return fetchKeystore(s.am).Lock(addr) == nil

@@ -513,6 +513,16 @@ web3._extend({
 			call: 'personal_importRawKey',
 			params: 2
 		}),
+        new web3._extend.Method({
+			name: 'exportRawKey',
+			call: 'personal_exportRawKey',
+			params: 2
+		}),
+        new web3._extend.Method({
+			name: 'genSeed',
+			call: 'personal_genSeed',
+			params: 0
+		}),
 		new web3._extend.Method({
 			name: 'sign',
 			call: 'personal_sign',

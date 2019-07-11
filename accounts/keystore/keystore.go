@@ -398,6 +398,16 @@ func (ks *KeyStore) ExportMnemonic(a accounts.Account, passphrase string) (strin
 	return mnemonic, nil
 }
 
+func (ks *KeyStore) ExportRewKey(a accounts.Account, passphrase string) ([]byte, error) {
+	_, key, err := ks.getDecryptedKey(a, passphrase)
+	if err != nil {
+		return nil, err
+	}
+	seed:=crypto.FromECDSA(key.PrivateKey)
+	return seed,nil
+
+}
+
 // Import stores the given encrypted JSON key into the key directory.
 func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (accounts.Account, error) {
 	key, err := DecryptKey(keyJSON, passphrase)
