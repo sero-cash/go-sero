@@ -199,7 +199,7 @@ func (self *Exchange) starNum(pk *keys.Uint512) uint64 {
 	if err != nil {
 		return 0
 	}
-	return prepare.DecodeNumber(value)
+	return utils.DecodeNumber(value)
 }
 
 func (self *Exchange) updateAccount() {
@@ -408,7 +408,7 @@ func (self *Exchange) GetBlocksInfo(start, end uint64) (blocks []BlockInfo, err 
 	iterator := self.db.NewIteratorWithPrefix(blockPrefix)
 	for ok := iterator.Seek(blockKey(start)); ok; ok = iterator.Next() {
 		key := iterator.Key()
-		num := prepare.DecodeNumber(key[5:13])
+		num := utils.DecodeNumber(key[5:13])
 		if num >= end {
 			break
 		}
@@ -558,7 +558,7 @@ func (self *Exchange) iteratorUtxo(PK *keys.Uint512, begin, end uint64, handler 
 	iterator := self.db.NewIteratorWithPrefix(utxoPrefix)
 	for ok := iterator.Seek(utxoKey(begin, pk)); ok; ok = iterator.Next() {
 		key := iterator.Key()
-		num := prepare.DecodeNumber(key[4:12])
+		num := utils.DecodeNumber(key[4:12])
 		if num >= end {
 			break
 		}
@@ -856,7 +856,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 	count = len(blocks)
 	num := uint64(blocks[count-1].Num) + 1
 	// "NUM"+PK  => Num
-	data := prepare.EncodeNumber(num)
+	data := utils.EncodeNumber(num)
 	for _, pk := range pks {
 		batch.Put(numKey(pk), data)
 	}
@@ -1227,7 +1227,7 @@ func txKey(txHash keys.Uint256) []byte {
 }
 
 func blockKey(number uint64) []byte {
-	return append(blockPrefix, prepare.EncodeNumber(number)...)
+	return append(blockPrefix, utils.EncodeNumber(number)...)
 }
 
 func numKey(pk keys.Uint512) []byte {
@@ -1259,7 +1259,7 @@ func utxoPkKey(pk keys.Uint512, currency []byte, root *keys.Uint256) []byte {
 }
 
 func utxoKey(number uint64, pk keys.Uint512) []byte {
-	return append(utxoPrefix, append(prepare.EncodeNumber(number), pk[:]...)...)
+	return append(utxoPrefix, append(utils.EncodeNumber(number), pk[:]...)...)
 }
 
 func AddJob(spec string, run RunFunc) *cron.Cron {

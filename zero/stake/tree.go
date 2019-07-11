@@ -2,6 +2,7 @@ package stake
 
 import (
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/common"
@@ -23,9 +24,9 @@ func (node *SNode) init(state State) *SNode {
 	total := state.GetStakeState(node.totalKey())
 	num := state.GetStakeState(node.numKey())
 	nodeNum := state.GetStakeState(node.nodeNumKey())
-	node.total = decodeNumber32(total[28:32])
-	node.num = decodeNumber32(num[28:32])
-	node.nodeNum = decodeNumber32(nodeNum[28:32])
+	node.total = utils.DecodeNumber32(total[28:32])
+	node.num = utils.DecodeNumber32(num[28:32])
+	node.nodeNum = utils.DecodeNumber32(nodeNum[28:32])
 	return node
 }
 
@@ -104,7 +105,7 @@ func (node *SNode) Print(state State) {
 	total := state.GetStakeState(node.totalKey())
 	num := state.GetStakeState(node.numKey())
 	nodeNum := state.GetStakeState(node.nodeNumKey())
-	fmt.Printf("%s, %v, %v, %v\n", common.Bytes2Hex(node.key[:]), decodeNumber32(total[28:32]), decodeNumber32(num[28:32]), decodeNumber32(nodeNum[28:32]))
+	fmt.Printf("%s, %v, %v, %v\n", common.Bytes2Hex(node.key[:]), utils.DecodeNumber32(total[28:32]), utils.DecodeNumber32(num[28:32]), utils.DecodeNumber32(nodeNum[28:32]))
 }
 
 func (node *SNode) MiddleOrder(state State) {
@@ -140,9 +141,9 @@ func (tree *STree) insert(node *SNode) {
 	hash := tree.state.GetStakeState(rootKey)
 	if hash == emptyHash {
 		tree.state.SetStakeState(rootKey, node.key)
-		tree.state.SetStakeState(node.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(node.total), 32)))
-		tree.state.SetStakeState(node.numKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(node.num), 32)))
-		tree.state.SetStakeState(node.nodeNumKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(node.nodeNum), 32)))
+		tree.state.SetStakeState(node.totalKey(), common.BytesToHash(common.LeftPadBytes(utils.EncodeNumber32(node.total), 32)))
+		tree.state.SetStakeState(node.numKey(), common.BytesToHash(common.LeftPadBytes(utils.EncodeNumber32(node.num), 32)))
+		tree.state.SetStakeState(node.nodeNumKey(), common.BytesToHash(common.LeftPadBytes(utils.EncodeNumber32(node.nodeNum), 32)))
 	} else {
 		tree.insertNode(&SNode{key: hash}, node)
 	}
@@ -152,11 +153,11 @@ func (tree *STree) insert(node *SNode) {
 func (tree *STree) insertNode(parent *SNode, children *SNode) {
 	for {
 		value := tree.state.GetStakeState(parent.totalKey())
-		totalNum := decodeNumber32(value[28:32])
-		tree.state.SetStakeState(parent.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(totalNum+children.total), 32)))
+		totalNum := utils.DecodeNumber32(value[28:32])
+		tree.state.SetStakeState(parent.totalKey(), common.BytesToHash(common.LeftPadBytes(utils.EncodeNumber32(totalNum+children.total), 32)))
 		value = tree.state.GetStakeState(parent.nodeNumKey())
-		nodeNum := decodeNumber32(value[28:32])
-		tree.state.SetStakeState(parent.nodeNumKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(nodeNum+children.nodeNum), 32)))
+		nodeNum := utils.DecodeNumber32(value[28:32])
+		tree.state.SetStakeState(parent.nodeNumKey(), common.BytesToHash(common.LeftPadBytes(utils.EncodeNumber32(nodeNum+children.nodeNum), 32)))
 
 		var hash, key common.Hash
 		if parent.key == children.key {
@@ -171,9 +172,9 @@ func (tree *STree) insertNode(parent *SNode, children *SNode) {
 		}
 		if hash == emptyHash {
 			tree.state.SetStakeState(key, children.key)
-			tree.state.SetStakeState(children.numKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(children.num), 32)))
-			tree.state.SetStakeState(children.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(children.total), 32)))
-			tree.state.SetStakeState(children.nodeNumKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(children.nodeNum), 32)))
+			tree.state.SetStakeState(children.numKey(), common.BytesToHash(common.LeftPadBytes(utils.EncodeNumber32(children.num), 32)))
+			tree.state.SetStakeState(children.totalKey(), common.BytesToHash(common.LeftPadBytes(utils.EncodeNumber32(children.total), 32)))
+			tree.state.SetStakeState(children.nodeNumKey(), common.BytesToHash(common.LeftPadBytes(utils.EncodeNumber32(children.nodeNum), 32)))
 			return
 		} else {
 			parent = &SNode{key: hash}
@@ -209,12 +210,12 @@ func (tree *STree) deleteNodeByHash(nodeHash common.Hash, num uint32) *SNode {
 
 				for _, path := range paths {
 					value := tree.state.GetStakeState(path.totalKey())
-					number := decodeNumber32(value[28:32])
-					tree.state.SetStakeState(path.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(number-num), 32)))
+					number := utils.DecodeNumber32(value[28:32])
+					tree.state.SetStakeState(path.totalKey(), common.BytesToHash(common.LeftPadBytes(utils.EncodeNumber32(number-num), 32)))
 					if num == node.num {
 						value = tree.state.GetStakeState(path.nodeNumKey())
-						nodeNum := decodeNumber32(value[28:32])
-						tree.state.SetStakeState(path.nodeNumKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(nodeNum-1), 32)))
+						nodeNum := utils.DecodeNumber32(value[28:32])
+						tree.state.SetStakeState(path.nodeNumKey(), common.BytesToHash(common.LeftPadBytes(utils.EncodeNumber32(nodeNum-1), 32)))
 					}
 				}
 				tree.deleteNode(key, node, num)
@@ -232,8 +233,8 @@ func (tree *STree) deleteNodeByHash(nodeHash common.Hash, num uint32) *SNode {
 
 func (tree *STree) deleteNode(key common.Hash, children *SNode, num uint32) *SNode {
 	number := children.num - num
-	tree.state.SetStakeState(children.numKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(number), 32)))
-	tree.state.SetStakeState(children.totalKey(), common.BytesToHash(common.LeftPadBytes(encodeNumber32(children.total-num), 32)))
+	tree.state.SetStakeState(children.numKey(), common.BytesToHash(common.LeftPadBytes(utils.EncodeNumber32(number), 32)))
+	tree.state.SetStakeState(children.totalKey(), common.BytesToHash(common.LeftPadBytes(utils.EncodeNumber32(children.total-num), 32)))
 
 	if number == 0 {
 		right := children.right(tree.state)

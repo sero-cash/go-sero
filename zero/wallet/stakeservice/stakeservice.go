@@ -1,9 +1,12 @@
 package stakeservice
 
 import (
+	"github.com/robfig/cron"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"sync"
+	"sync/atomic"
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -13,8 +16,6 @@ import (
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/stake"
-	"github.com/sero-cash/go-sero/zero/txtool/prepare"
-	"github.com/sero-cash/go-sero/zero/wallet/utils"
 )
 
 type Account struct {
@@ -71,10 +72,10 @@ func NewStakeService(dbpath string, bc *core.BlockChain, accountManager *account
 	if err != nil {
 		stakeService.nextBlockNumber = uint64(1)
 	} else {
-		stakeService.nextBlockNumber = prepare.DecodeNumber(value)
+		stakeService.nextBlockNumber = utils.DecodeNumber(value)
 	}
 
-	utils.AddJob("0/10 * * * * ?", stakeService.stakeIndex)
+	AddJob("0/10 * * * * ?", stakeService.stakeIndex)
 	return stakeService
 }
 
@@ -157,7 +158,7 @@ func (self *StakeService) stakeIndex() {
 	}
 
 	if batch.ValueSize() > 0 {
-		batch.Put(nextKey, prepare.EncodeNumber(blockNumber+1))
+		batch.Put(nextKey, utils.EncodeNumber(blockNumber+1))
 		err := batch.Write()
 		if err == nil {
 			self.nextBlockNumber = blockNumber
@@ -212,34 +213,32 @@ func (self *StakeService) initWallet(w accounts.Wallet) {
 	}
 }
 
-//
-//func (self *StakeService) updateAccount() {
-//	// Close all subscriptions when the manager terminates
-//	defer func() {
-//		self.lock.Lock()
-//		self.updater.Unsubscribe()
-//		self.updater = nil
-//		self.lock.Unlock()
-//	}()
-//
-//	// Loop until termination
-//	for {
-//		select {
-//		case event := <-self.update:
-//			// Wallet event arrived, update local cache
-//			self.lock.Lock()
-//			switch event.Kind {
-//			case accounts.WalletArrived:
-//				//wallet := event.Wallet
-//				self.initWallet(event.Wallet)
-//			case accounts.WalletDropped:
-//			}
-//			self.lock.Unlock()
-//
-//		case errc := <-self.quit:
-//			// Manager terminating, return
-//			errc <- nil
-//			return
-//		}
-//	}
-//}
+func AddJob(spec string, run RunFunc) *cron.Cron {
+	c := cron.New()
+	c.AddJob(spec, &RunJob{run: run})
+	c.Start()
+	return c
+}
+
+type (
+	RunFunc func()
+)
+
+type RunJob struct {
+	runing int32
+	run    RunFunc
+}
+
+func (r *RunJob) Run() {
+	x := atomic.LoadInt32(&r.runing)
+	if x == 1 {
+		return
+	}
+
+	atomic.StoreInt32(&r.runing, 1)
+	defer func() {
+		atomic.StoreInt32(&r.runing, 0)
+	}()
+
+	r.run()
+}

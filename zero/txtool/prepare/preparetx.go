@@ -2,7 +2,7 @@ package prepare
 
 import (
 	"bytes"
-	"encoding/binary"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
 
@@ -36,7 +36,7 @@ func IsPk(addr keys.PKr) bool {
 
 func CreatePkr(pk *keys.Uint512, index uint64) keys.PKr {
 	r := keys.Uint256{}
-	copy(r[:], common.LeftPadBytes(EncodeNumber(index), 32))
+	copy(r[:], common.LeftPadBytes(utils.EncodeNumber(index), 32))
 	if index == 0 {
 		return keys.Addr2PKr(pk, nil)
 	} else {
@@ -44,12 +44,3 @@ func CreatePkr(pk *keys.Uint512, index uint64) keys.PKr {
 	}
 }
 
-func EncodeNumber(number uint64) []byte {
-	enc := make([]byte, 8)
-	binary.BigEndian.PutUint64(enc, number)
-	return enc
-}
-
-func DecodeNumber(data []byte) uint64 {
-	return binary.BigEndian.Uint64(data)
-}

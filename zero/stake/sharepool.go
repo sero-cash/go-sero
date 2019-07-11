@@ -1,7 +1,6 @@
 package stake
 
 import (
-	"encoding/binary"
 	"errors"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -227,7 +226,7 @@ func (s *StakePool) SetProfit(profit *big.Int) {
 
 type blockChain interface {
 	GetHeader(hash common.Hash, number uint64) *types.Header
-	GetHeaderByNumber(number uint64) *types.Header
+	//GetHeaderByNumber(number uint64) *types.Header
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	StateAt(root common.Hash, number uint64) (*state.StateDB, error)
 	GetDB() serodb.Database
@@ -245,13 +244,13 @@ type StakeState struct {
 	shareObj     consensus.ObjPoint
 	stakePoolObj consensus.ObjPoint
 	missedNum    consensus.KVPoint
+	blockHash    consensus.KVPoint
 }
 
 var (
 	ShareDB      = consensus.DBObj{"STAKE$SHARE$"}
 	StakePoolDB  = consensus.DBObj{"STAKE$POOL$"}
 	missedNumKey = []byte("missednum")
-	blockVoteDB  = consensus.DBObj{"STAKE$BLOCKVOTES$"}
 )
 
 func NewStakeState(statedb *state.StateDB) *StakeState {
@@ -261,8 +260,17 @@ func NewStakeState(statedb *state.StateDB) *StakeState {
 	stakeState.sharePool = consensus.NewKVPt(cons, "STAKE$SHAREPOOL$CONS$", "")
 	stakeState.shareObj = consensus.NewObjPt(cons, "STAKE$SHAREOBJ$CONS", ShareDB.Pre, "share")
 	stakeState.stakePoolObj = consensus.NewObjPt(cons, "STAKE$POOL$CONS", StakePoolDB.Pre, "pool")
-
+	stakeState.blockHash = consensus.NewKVPt(cons, "BLOCK$BLOCKHASH$", "")
 	return stakeState
+}
+
+func (self *StakeState) setBlockHash(blockNumber uint64, blockHash common.Hash) {
+	self.blockHash.SetValue(utils.EncodeNumber(blockNumber), blockHash[:])
+}
+
+func (self *StakeState) getBlockHash(blockNumber uint64) common.Hash {
+	ret := self.blockHash.GetValue(utils.EncodeNumber(blockNumber))
+	return common.BytesToHash(ret[:])
 }
 
 func (self *StakeState) SetStakeState(key common.Hash, value common.Hash) {
@@ -300,7 +308,7 @@ func (self *StakeState) IsEffect(currentBlockNumber uint64) bool {
 	if seroparam.Is_Dev() {
 		return self.ShareSize() > 2
 	} else {
-		missedNum := decodeNumber32(self.missedNum.GetValue(missedNumKey))
+		missedNum := utils.DecodeNumber32(self.missedNum.GetValue(missedNumKey))
 		seletedNum := (currentBlockNumber - seroparam.SIP3()) * 3
 		if seletedNum == 0 {
 			return false
@@ -657,6 +665,7 @@ func (self *StakeState) verifyVote(vote types.HeaderVote, stakeHash common.Hash)
 }
 
 func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) {
+	self.setBlockHash(header.Number.Uint64()-1, header.ParentHash)
 	self.processVotedShare(header, bc)
 	self.processOutDate(header, bc)
 	self.processMissVoted(header, bc)
@@ -673,18 +682,20 @@ func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) 
 
 	preHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	prepreHeader := bc.GetHeader(preHeader.ParentHash, preHeader.Number.Uint64()-1)
-	missedNum := decodeNumber32(value) + uint32(3-len(prepreHeader.CurrentVotes)-len(preHeader.ParentVotes))
+	missedNum := utils.DecodeNumber32(value) + uint32(3-len(prepreHeader.CurrentVotes)-len(preHeader.ParentVotes))
 
 	statisticsMissWindow := getStatisticsMissWindow()
 	if prepreHeader.Number.Uint64() > statisticsMissWindow {
-		windiwHeader := bc.GetHeaderByNumber(preHeader.Number.Uint64() - statisticsMissWindow - 1)
-		preWindiwHeader := bc.GetHeaderByNumber(prepreHeader.Number.Uint64() - statisticsMissWindow - 1)
+		preNumber := preHeader.Number.Uint64() - statisticsMissWindow - 1
+		windiwHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
+		prepreNumber := prepreHeader.Number.Uint64() - statisticsMissWindow - 1
+		preWindiwHeader := bc.GetHeader(self.getBlockHash(prepreNumber), prepreNumber)
 		if missedNum >= 3 {
 			missedNum -= uint32(3 - len(preWindiwHeader.CurrentVotes) - len(windiwHeader.ParentVotes))
 		}
 	}
 	log.Info("ProcessBeforeApply: statisticsByWindow", "missedNum", missedNum)
-	self.missedNum.SetValue(missedNumKey, encodeNumber32(missedNum))
+	self.missedNum.SetValue(missedNumKey, utils.EncodeNumber32(missedNum))
 }
 
 func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) {
@@ -803,7 +814,9 @@ func (self *StakeState) processOutDate(header *types.Header, bc blockChain) (sha
 		return
 	}
 	tree := NewTree(self)
-	preHeader := bc.GetHeaderByNumber(header.Number.Uint64() - outOfDatePeriod)
+
+	preNumber := header.Number.Uint64() - outOfDatePeriod
+	preHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
 	shares = self.getShares(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64())
 	if len(shares) > 0 {
 		for _, share := range shares {
@@ -854,11 +867,12 @@ func (self *StakeState) processMissVoted(header *types.Header, bc blockChain) {
 	if header.Number.Uint64() < missVotedPeriod {
 		return
 	}
-	perHeader := bc.GetHeaderByNumber(header.Number.Uint64() - missVotedPeriod)
-	shares := self.getShares(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64())
+	preNumber := header.Number.Uint64() - missVotedPeriod
+	preHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
+	shares := self.getShares(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64())
 	if len(shares) > 0 {
 		for _, share := range shares {
-			if share.BlockNumber == perHeader.Number.Uint64() {
+			if share.BlockNumber == preHeader.Number.Uint64() {
 				if share.Status == STATUS_FINISHED {
 					continue
 				}
@@ -919,7 +933,8 @@ func (self *StakeState) payProfit(bc blockChain, header *types.Header) {
 	if header.Number.Uint64() < payPeriod {
 		return
 	}
-	preHeader := bc.GetHeaderByNumber(header.Number.Uint64() - payPeriod)
+	preNumber := header.Number.Uint64() - payPeriod
+	preHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
 	shares, pools := self.getBlockRecords(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64())
 
 	for _, share := range shares {
@@ -955,17 +970,4 @@ func (self *StakeState) payProfit(bc blockChain, header *types.Header) {
 			self.UpdateStakePool(pool)
 		}
 	}
-}
-
-func decodeNumber32(data []byte) uint32 {
-	if len(data) == 0 {
-		return 0
-	}
-	return binary.BigEndian.Uint32(data)
-}
-
-func encodeNumber32(number uint32) []byte {
-	enc := make([]byte, 4)
-	binary.BigEndian.PutUint32(enc, number)
-	return enc
 }

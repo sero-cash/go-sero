@@ -18,6 +18,7 @@ package utils
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"runtime"
@@ -79,4 +80,27 @@ func ShowStack() {
 	var buf [4096]byte
 	n := runtime.Stack(buf[:], false)
 	fmt.Printf("==> %s\n", string(buf[:n]))
+}
+
+func DecodeNumber32(data []byte) uint32 {
+	if len(data) == 0 {
+		return 0
+	}
+	return binary.BigEndian.Uint32(data)
+}
+
+func EncodeNumber32(number uint32) []byte {
+	enc := make([]byte, 4)
+	binary.BigEndian.PutUint32(enc, number)
+	return enc
+}
+
+func EncodeNumber(number uint64) []byte {
+	enc := make([]byte, 8)
+	binary.BigEndian.PutUint64(enc, number)
+	return enc
+}
+
+func DecodeNumber(data []byte) uint64 {
+	return binary.BigEndian.Uint64(data)
 }
