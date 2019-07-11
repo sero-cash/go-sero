@@ -53,7 +53,7 @@ func (r *ReceiptForStorage) EncodeRLP(w io.Writer) error {
 		v1.PoolIds = r.PoolIds
 		vs.Versions = append(vs.Versions, &v1)
 	}
-	return rlp.Encode(w, vs)
+	return rlp.Encode(w, &vs)
 }
 
 // DecodeRLP implements rlp.Decoder, and loads both consensus and implementation
