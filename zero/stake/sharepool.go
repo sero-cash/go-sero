@@ -304,6 +304,9 @@ func (self *StakeState) UpdateStakePool(pool *StakePool) {
 }
 
 func (self *StakeState) IsEffect(currentBlockNumber uint64) bool {
+	if currentBlockNumber < seroparam.SIP4() {
+		return false
+	}
 	tree := NewTree(self)
 	if seroparam.Is_Dev() {
 		return self.ShareSize() > 2
