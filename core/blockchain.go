@@ -1256,7 +1256,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 			return i, events, coalescedLogs, err
 		}
 
-		stakeState := stake.NewStakeState(state)
 
 		for _, tx := range block.Transactions() {
 			err := <-tx_results
@@ -1269,10 +1268,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 			}
 		}
 
+		stakeState := stake.NewStakeState(state)
 		stakeState.ProcessBeforeApply(bc, block.Header())
-		err = stakeState.CheckVotes(block, bc)
-		if err != nil {
-			return i, events, coalescedLogs, err
+		if seroparam.SIP4() <= block.NumberU64() {
+			err = stakeState.CheckVotes(block, bc)
+			if err != nil {
+				return i, events, coalescedLogs, err
+			}
 		}
 
 		// Process block using the parent state as reference point.

@@ -309,7 +309,7 @@ func (self *StakeState) IsEffect(currentBlockNumber uint64) bool {
 		return self.ShareSize() > 2
 	} else {
 		missedNum := utils.DecodeNumber32(self.missedNum.GetValue(missedNumKey))
-		seletedNum := (currentBlockNumber - seroparam.SIP3()) * 3
+		seletedNum := (currentBlockNumber - seroparam.SIP4()) * 3
 		if seletedNum == 0 {
 			return false
 		}
@@ -560,6 +560,7 @@ func (self *StakeState) StakeCurrentReward() (*big.Int, *big.Int) {
 }
 
 func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
+
 	header := block.Header()
 	if len(header.CurrentVotes) > 3 || len(header.ParentVotes) > 3 {
 		return errors.New("header.CurrentVotes.len > 3 or header.ParentVotes > 3")
@@ -665,13 +666,16 @@ func (self *StakeState) verifyVote(vote types.HeaderVote, stakeHash common.Hash)
 }
 
 func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) {
+	if seroparam.SIP4() > header.Number.Uint64() {
+		return
+	}
 	self.setBlockHash(header.Number.Uint64()-1, header.ParentHash)
 	self.processVotedShare(header, bc)
 	self.processOutDate(header, bc)
 	self.processMissVoted(header, bc)
 	self.processNowShares(header, bc)
 	self.payProfit(bc, header)
-	//self.statisticsByWindow(header, bc)
+	//self.ByWindow(header, bc)
 }
 
 func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) {
