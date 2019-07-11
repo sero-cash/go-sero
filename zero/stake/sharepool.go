@@ -671,7 +671,7 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 	self.processMissVoted(header, bc)
 	self.processNowShares(header, bc)
 	self.payProfit(bc, header)
-	self.statisticsByWindow(header, bc)
+	//self.statisticsByWindow(header, bc)
 }
 
 func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) {
