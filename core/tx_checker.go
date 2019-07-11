@@ -17,24 +17,91 @@
 package core
 
 import (
-	"github.com/sero-cash/go-sero/core/types"
+	"runtime"
+
 	"github.com/sero-cash/go-sero/zero/txtool/verify"
 
-	"github.com/sero-cash/go-sero/zero/utils"
-	"github.com/sero-cash/go-sero/zero/zconfig"
+	"github.com/sero-cash/go-sero/core/types"
 )
 
-var txCheckerPool = utils.NewProcsPool(func() int { return zconfig.G_v_thread_num })
-
 type CheckDesc struct {
-	tx    *types.Transaction
-	num   uint64
-	index int
+	tx            *types.Transaction
+	block         *types.Block
+	hasReceptions bool
 }
 
-func (self *CheckDesc) Run() error {
-	if e := verify.VerifyWithoutState(self.tx.Ehash().NewRef(), self.tx.GetZZSTX(), self.num); e != nil {
-		return e
+func NewTxChecker(bc *BlockChain, chain types.Blocks) (chan<- struct{}, <-chan error) {
+	txs := []CheckDesc{}
+	for _, block := range chain {
+		rpts := bc.GetReceiptsByHash(block.Hash())
+		for _, tx := range block.Transactions() {
+			cd := CheckDesc{}
+			cd.tx = tx
+			cd.block = block
+			if len(rpts) > 0 {
+				cd.hasReceptions = true
+			}
+			txs = append(txs, cd)
+		}
 	}
-	return nil
+
+	if len(txs) == 0 {
+		return make(chan struct{}), nil
+	}
+
+	// Spawn as many workers as allowed threads
+	workers := runtime.GOMAXPROCS(0)
+	if len(txs) < workers {
+		workers = len(txs)
+	}
+
+	// Create a task channel and spawn the verifiers
+	var (
+		inputs = make(chan int)
+		done   = make(chan int, workers)
+		errors = make([]error, len(txs))
+		abort  = make(chan struct{})
+	)
+	for i := 0; i < workers; i++ {
+		go func() {
+			for index := range inputs {
+				tx := txs[index]
+				if tx.hasReceptions {
+					errors[index] = nil
+				} else {
+					errors[index] = verify.VerifyWithoutState(tx.tx.Ehash().NewRef(), tx.tx.GetZZSTX(), tx.block.NumberU64())
+				}
+				done <- index
+			}
+		}()
+	}
+
+	errorsOut := make(chan error, len(txs))
+	go func() {
+		defer close(inputs)
+		var (
+			in, out = 0, 0
+			checked = make([]bool, len(txs))
+			inputs  = inputs
+		)
+		for {
+			select {
+			case inputs <- in:
+				if in++; in == len(txs) {
+					// Reached end of headers. Stop sending to workers.
+					inputs = nil
+				}
+			case index := <-done:
+				for checked[index] = true; checked[out]; out++ {
+					errorsOut <- errors[out]
+					if out == len(txs)-1 {
+						return
+					}
+				}
+			case <-abort:
+				return
+			}
+		}
+	}()
+	return abort, errorsOut
 }

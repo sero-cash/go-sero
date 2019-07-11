@@ -15,8 +15,8 @@ import (
 )
 
 func (self *Balance) MakesureEnv() {
-	if !zconfig.IsDirExists(zconfig.State2_dir()) {
-		zconfig.Init_State2()
+	if !zconfig.IsDirExists(zconfig.Balance_dir()) {
+		zconfig.Init_Balance_dir()
 		if self.db != nil {
 			self.db.DB().Close()
 			self.db = nil
@@ -24,7 +24,7 @@ func (self *Balance) MakesureEnv() {
 	}
 
 	if self.db == nil {
-		db := accounts.NewDB(zconfig.State2_dir())
+		db := accounts.NewDB(zconfig.Balance_dir())
 		self.db = &db
 	}
 }

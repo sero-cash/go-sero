@@ -230,6 +230,7 @@ func (c *cache) generate(dir string, limit int, test bool) {
 		if dir == "" {
 			c.cache = make([]uint32, size/4)
 			generateCache(c.cache, c.epoch, seed)
+			c.generateCDag()
 			return
 		}
 		// Disk storage is needed, this will get fancy
