@@ -44,11 +44,11 @@ func GetOut(root *keys.Uint256) (src *localdb.OutState) {
 
 func (self *Balance) Parse() (num uint64) {
 
+	self.MakesureEnv()
+
 	if txtool.Ref_inst.Bc == nil || !txtool.Ref_inst.Bc.IsValid() {
 		return 0
 	}
-
-	self.MakesureEnv()
 
 	tks := txtool.Ref_inst.Bc.GetTks()
 

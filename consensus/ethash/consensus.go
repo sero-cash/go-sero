@@ -20,11 +20,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/zero/stake"
 	"math/big"
 	"runtime"
 	"time"
+
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/zero/stake"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 
@@ -355,12 +356,12 @@ func (ethash *Ethash) VerifySeal(chain consensus.ChainReader, header *types.Head
 	var digest []byte
 	var result []byte
 	if number >= seroparam.SIP3() {
-		dataset := ethash.dataset_async(number)
-		if dataset.generated() {
-			digest, result = progpowFull(dataset.dataset, header.HashPow().Bytes(), header.Nonce.Uint64(), number)
-		} else {
-			digest, result = progpowLightWithoutCDag(size, cache.cache, header.HashPow().Bytes(), header.Nonce.Uint64(), number)
-		}
+		//dataset := ethash.dataset_async(number)
+		//if dataset.generated() {
+		//	digest, result = progpowFull(dataset.dataset, header.HashPow().Bytes(), header.Nonce.Uint64(), number)
+		//} else {
+		digest, result = progpowLightWithoutCDag(size, cache.cache, cache.cdag, header.HashPow().Bytes(), header.Nonce.Uint64(), number)
+		//}
 	} else {
 		digest, result = hashimotoLight(size, cache.cache, header.HashPow().Bytes(), header.Nonce.Uint64(), number)
 	}

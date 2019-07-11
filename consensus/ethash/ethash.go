@@ -203,7 +203,13 @@ type cache struct {
 	dump  *os.File  // File descriptor of the memory mapped cache
 	mmap  mmap.MMap // Memory map itself to unmap before releasing
 	cache []uint32  // The actual cache data content (may be memory mapped)
+	cdag  []uint32
 	once  sync.Once // Ensures the cache is generated only once
+}
+
+func (self *cache) generateCDag() {
+	self.cdag = make([]uint32, progpowCacheWords)
+	generateCDag(self.cdag, self.cache, self.epoch)
 }
 
 // newCache creates a new ethash verification cache and returns it as a plain Go
@@ -242,6 +248,7 @@ func (c *cache) generate(dir string, limit int, test bool) {
 		var err error
 		c.dump, c.mmap, c.cache, err = memoryMap(path)
 		if err == nil {
+			c.generateCDag()
 			logger.Debug("Loaded old ethash cache from disk")
 			return
 		}
@@ -261,6 +268,7 @@ func (c *cache) generate(dir string, limit int, test bool) {
 			path := filepath.Join(dir, fmt.Sprintf("cache-R%d-%x%s", algorithmRevision, seed[:8], endian))
 			os.Remove(path)
 		}
+		c.generateCDag()
 	})
 }
 
