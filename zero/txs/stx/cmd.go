@@ -76,7 +76,9 @@ type ContractCmd struct {
 func (self *ContractCmd) ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Asset.ToHash().NewRef()[:])
-	d.Write(self.To[:])
+	if self.To != nil {
+		d.Write(self.To[:])
+	}
 	d.Write(self.Data)
 	copy(ret[:], d.Sum(nil))
 	return

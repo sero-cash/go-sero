@@ -362,6 +362,7 @@ func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
 }
 
 func (self *Cons) ReportConItems(name string, items consItems) {
+	return
 	fmt.Printf("%v REPORT ITEMS: num=%v\n", name, self.db.Num())
 	for _, item := range items {
 		fmt.Print("  ")
@@ -371,6 +372,7 @@ func (self *Cons) ReportConItems(name string, items consItems) {
 }
 
 func (self *Cons) ReportRecords(records []*Record) {
+	return
 	fmt.Printf("BLOCK RECORDS : num=%v\n", self.db.Num())
 	for _, record := range records {
 		fmt.Print(record.Log())
