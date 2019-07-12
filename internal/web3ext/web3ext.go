@@ -748,8 +748,8 @@ web3._extend({
             params: 1
 		}),
         new web3._extend.Method({
-			name: 'signTxWithSK',
-			call: 'exchange_signTxWithSK',
+			name: 'signTxWithSk',
+			call: 'exchange_signTxWithSk',
             params: 2
 		})
 	]
