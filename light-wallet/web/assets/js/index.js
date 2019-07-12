@@ -51,7 +51,7 @@ var Index = {
                         `);
                     }
 
-                    $('.dashboard span:eq(0)').text(balance.toFixed(2));
+                    $('.dashboard span:eq(0)').text(balance.toFixed(6));
                 }
             }
         })

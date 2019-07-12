@@ -1,33 +1,33 @@
 package app
 
 import (
-	"github.com/sero-cash/go-sero/accounts"
-	"sync"
-	"github.com/sero-cash/go-sero/event"
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common"
-	"encoding/binary"
-	"github.com/sero-cash/go-sero/light-wallet/common/logex"
-	"github.com/sero-cash/go-sero/serodb"
-	"github.com/sero-cash/go-sero/accounts/keystore"
-	"github.com/robfig/cron"
-	"sync/atomic"
-	"github.com/sero-cash/go-czero-import/cpt"
-	"encoding/json"
-	"math/big"
 	"bytes"
+	"encoding/binary"
+	"encoding/json"
+	"fmt"
+	"github.com/btcsuite/btcutil/base58"
+	"github.com/robfig/cron"
+	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-sero/accounts/keystore"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/address"
+	"github.com/sero-cash/go-sero/event"
+	"github.com/sero-cash/go-sero/light-wallet/common/logex"
 	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/utils"
-	"fmt"
-	"time"
-	"net/http"
-	"github.com/sero-cash/go-sero/common/address"
-	"github.com/sero-cash/go-sero/zero/txtool/flight"
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/sero-cash/go-sero/zero/txtool"
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
+	"github.com/sero-cash/go-sero/zero/utils"
+	"math/big"
+	"net/http"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 var (
@@ -441,6 +441,7 @@ func (self *SEROLight) FetchAndIndex(start, end uint64, pk keys.Uint512) (curren
 	}
 
 	var utxoNum uint64 = 0
+	cUtxoNum := self.GetUtxoNum(pk)
 	for _, blockOut := range blockOuts {
 		outs := blockOut.Outs
 		for _, out := range outs {
@@ -456,14 +457,12 @@ func (self *SEROLight) FetchAndIndex(start, end uint64, pk keys.Uint512) (curren
 			num := uint64(0)
 			if dout.Asset.Tkn != nil {
 				currency := common.BytesToString(dout.Asset.Tkn.Currency[:])
-				cUtxoNum := self.GetUtxoNum(pk)
 				fmt.Println("cUtxoNum:", cUtxoNum)
 				num = maxUint64 - cUtxoNum[currency] - utxoNum
 			} else {
 				num = maxUint64 - out.State.Num
 			}
 			fmt.Println("num: ", num)
-
 			key := PkKey{PK: *account.pk, Num: num}
 
 			utxo := Utxo{Pkr: pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset, IsZ: out.State.OS.Out_Z != nil, Out: out}
@@ -473,7 +472,7 @@ func (self *SEROLight) FetchAndIndex(start, end uint64, pk keys.Uint512) (curren
 			} else {
 				utxosMap[key] = []Utxo{utxo}
 			}
-			utxoNum ++
+			utxoNum++
 		}
 	}
 
@@ -521,7 +520,7 @@ func (self *SEROLight) FetchAndIndex(start, end uint64, pk keys.Uint512) (curren
 				return
 			}
 
-			// utxo index + PK => [roots]
+			// utxo PK + index  => [roots]
 			batch.Put(utxoKey(key.Num, key.PK), data)
 		}
 
@@ -636,9 +635,9 @@ func (self *SEROLight) getAccountByPk(pk keys.Uint512) *Account {
 	return nil
 }
 
-// "UTXO" + number + pk
+// "UTXO" + pk + number
 func utxoKey(number uint64, pk keys.Uint512) []byte {
-	return append(utxoPrefix, append(encodeNumber(number), pk[:]...)...)
+	return append(utxoPrefix, append(pk[:], encodeNumber(number)...)...)
 }
 
 // utxoKey = PK + currency +root
@@ -728,17 +727,28 @@ func (self *SEROLight) iteratorUtxo(PK *keys.Uint512, begin, end uint64, handler
 	if PK != nil {
 		pk = *PK
 	}
-	iterator := self.db.NewIteratorWithPrefix(utxoPrefix)
-	begin = maxUint64 - begin
-	end = maxUint64 - end
 
-	for ok := iterator.Seek(utxoKey(end, pk)); ok; ok = iterator.Next() {
+	//get the first num
+	iteratorT := self.db.NewIteratorWithPrefix(append(utxoPrefix, pk[:]...))
+	firstNum := uint64(0)
+	for iteratorT.Next() {
+		key := iteratorT.Key()
+		firstNum = decodeNumber(key[68:76])
+		break
+	}
+
+	begin = begin + firstNum
+	end = end + firstNum - 1
+
+	iterator := self.db.NewIteratorWithPrefix(utxoPrefix)
+	for ok := iterator.Seek(utxoKey(begin, pk)); ok; ok = iterator.Next() {
 		key := iterator.Key()
-		num := decodeNumber(key[4:12])
-		if num > begin {
+		num := decodeNumber(key[68:76])
+		//num := decodeNumber(key[4:12])
+		if num > end {
 			break
 		}
-		copy(pk[:], key[12:76])
+		copy(pk[:], key[4:68])
 
 		if PK != nil && *PK != pk {
 			continue
@@ -879,14 +889,15 @@ func (self *SEROLight) CommitTx(from, to, currency, amountStr, gasPriceStr, pass
 		Addr:  toPkr,
 		Asset: asset,
 	}
-	//==test
-	bytes ,_ := json.Marshal(tkn)
-	fmt.Println("aaa: ",string(bytes[:]))
-
 
 	preTxParam.Receptions = []prepare.Reception{reception}
 
 	param, err := self.GenTx(preTxParam)
+
+	//==test
+	bytes, _ := json.Marshal(param)
+	fmt.Println("aaa: ", string(bytes[:]))
+
 	if err != nil {
 		return hash, err
 	}

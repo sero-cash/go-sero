@@ -24,6 +24,7 @@
                     </div>
                 </nav>
                 <div class="container-fluid" style="margin-top: 100px;">
+
                     <div class="d-sm-flex justify-content-between align-items-center mb-4">
                         <h3 class="text-dark mb-0">Account Detail</h3>
                     </div>
@@ -34,18 +35,26 @@
                                     <div class="card text-white bg-primary shadow">
                                         <div class="card-body">
                                             <div class="row">
-                                                <div class="col-lg-6 mb-4">Address (<small class="pk"></small>)</div>
-                                                <div class="col-lg-6 mb-4" style="text-align: right">
-                                                    <i class="fas fa-file-export" onclick="location.href='account-new-2.html'"></i>Export private key
+                                                <div class="col-lg-6 mb-4">Account (<small class="pk"></small>)</div>
+                                                <div class="col-lg-6 mb-4 backup" style="text-align: right;">
+                                                    <a><i class="far fa-file-code"></i>&nbsp;Backup Keystore File</a>
                                                 </div>
                                             </div>
+                                            Collection Address:
                                             <p class="text-white-50 small m-0 address"></p>
-                                            <p><i class="fas fa-copy"></i> &nbsp;&nbsp;<i class="fas fa-qrcode"></i></p>
+                                            <p><i class="fas fa-copy" data-clipboard-text=""></i> &nbsp;&nbsp;<i class="fas fa-qrcode"></i></p>
+                                            <div class="toast" id="toast1" style="position: absolute;z-index: 99999;">
+                                                <div class="toast-body alert-success">
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    <div class="d-sm-flex justify-content-between align-items-center mb-4">
+                        <h3 class="text-dark mb-0">Balance</h3>
                     </div>
                     <div class="row currency">
                     </div>
@@ -58,13 +67,23 @@
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-md-6 text-nowrap">
-                                            <div id="dataTable_length" class="dataTables_length" aria-controls="dataTable"><label>Show&nbsp;<select class="form-control form-control-sm custom-select custom-select-sm"><option value="10" selected="">10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select>&nbsp;</label></div>
+                                            <div id="dataTable_length" class="dataTables_length" aria-controls="dataTable">
+                                                <label>Type&nbsp;
+                                                    <select class="form-control form-control-sm custom-select custom-select-sm">
+                                                        <option value="all" selected="">All</option>
+                                                        <option value="in">In</option>
+                                                        <option value="out">Out</option>
+                                                    </select>&nbsp;
+                                                </label>
+                                            </div>
                                         </div>
                                         <div class="col-md-6">
-                                            <div class="text-md-right dataTables_filter" id="dataTable_filter"><label><input type="search" class="form-control form-control-sm" aria-controls="dataTable" placeholder="Search"></label></div>
+                                            <div class="text-md-right dataTables_filter" id="dataTable_filter"><label>
+                                                <input type="text" class="form-control form-control-sm" size="30" aria-controls="dataTable" placeholder="tx hash"></label>
+                                                <button class="btn btn-primary">search</button></div>
                                         </div>
                                     </div>
-                                    <div class="table-responsive table mt-2" id="dataTable" role="grid" aria-describedby="dataTable_info">
+                                    <div class="table-responsive table mt-2" role="grid" aria-describedby="dataTable_info">
                                         <table class="table dataTable my-0" id="dataTable">
                                             <thead>
                                             <tr>
@@ -88,11 +107,9 @@
                                         <div class="col-md-6">
                                             <nav class="d-lg-flex justify-content-lg-end dataTables_paginate paging_simple_numbers">
                                                 <ul class="pagination">
-                                                    <li class="page-item disabled"><a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">«</span></a></li>
-                                                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                                    <li class="page-item"><a class="page-link" href="#">2</a></li>
-                                                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                                                    <li class="page-item"><a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">»</span></a></li>
+                                                    <li class="page-item disabled"><a class="page-link" aria-label="Previous"><span aria-hidden="true">«</span></a></li>
+                                                    <li class="page-item"><a class="page-link">1</a></li>
+                                                    <li class="page-item"><a class="page-link"aria-label="Next"><span aria-hidden="true">»</span></a></li>
                                                 </ul>
                                             </nav>
                                         </div>
@@ -104,11 +121,36 @@
 
                 </div>
             </div>
-        </div><a class="border rounded d-inline scroll-to-top" href="#page-top"><i class="fas fa-angle-up"></i></a></div>
+        </div>
+        <a class="border rounded d-inline scroll-to-top" href="#page-top"><i class="fas fa-angle-up"></i></a>
+    </div>
+    <!-- Modal -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalLongTitle">Address</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body text-center">
+                    <div id="qrcode"></div>
+                    <div class="text-break"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="assets/js/jquery.min.js"></script>
     <script src="assets/bootstrap/js/bootstrap.min.js"></script>
     <script src="assets/js/theme.js"></script>
 
+    <script src="assets/js/jquery.qrcode.min.js"></script>
+    <script src="assets/js/clipboard.min.js"></script>
     <script src="assets/js/bignumber.js"></script>
     <script src="assets/js/common.js"></script>
     <script src="assets/js/account.js"></script>

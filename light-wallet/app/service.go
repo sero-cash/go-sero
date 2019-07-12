@@ -251,6 +251,11 @@ func (s *PrivateAccountAPI) TXNum(pkStr string) map[string]uint64 {
 	return s.SL.GetUtxoNum(*pk.ToUint512())
 }
 
+func renderError(w http.ResponseWriter, errcode string, code int) {
+	//w.WriteHeader(code)
+	w.Write([]byte(errcode))
+}
+
 func (s *PrivateAccountAPI) UploadKeystoreHandler() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -294,9 +299,4 @@ func (s *PrivateAccountAPI) UploadKeystoreHandler() http.HandlerFunc {
 		w.Write([]byte("SUCCESS"))
 		return
 	})
-}
-
-func renderError(w http.ResponseWriter, errcode string, code int) {
-	//w.WriteHeader(code)
-	w.Write([]byte(errcode))
 }

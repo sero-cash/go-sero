@@ -128,6 +128,13 @@ func main() {
 	)
 	http.Handle("/tx/transfer", accessControl(txTransferHandler))
 
+	keyPathandler := httptransport.NewServer(
+		app.MakeDataPathEndpoint(privateAccountApi),
+		transport.DecodeRequest,
+		transport.EncodeResponse,
+	)
+	http.Handle("/path/keystore", accessControl(keyPathandler))
+
 
 	//start file server
 	ln, err := net.Listen("tcp", "127.0.0.1:0")

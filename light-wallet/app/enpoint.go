@@ -212,6 +212,7 @@ func MakeTxListEndpoint(service Service) endpoint.Endpoint {
 			response.SetBaseResponse(errorcode.FAIL_CODE, err.Error())
 			return response, nil
 		} else {
+			response.SetPageResponse(uint8(len(records)),req.Page.PageSize,req.Page.PageNo,"")
 			response.SetBizResponse(records)
 		}
 		return response, nil
@@ -266,4 +267,20 @@ type transferReq struct {
 	Amount   string
 	GasPrice string
 	Password string
+}
+
+func MakeDataPathEndpoint(service Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+
+		req := request.(transport.Request)
+		response := transport.Response{}
+		response.SetBaseResponseSuccess()
+
+		if ok, err := validator.ValidateBaseRequestParam(req.Base); !ok {
+			response.SetBaseResponse(errorcode.InvalidBaseParameters, err.Error())
+			return response, nil
+		}
+		response.SetBizResponse(GetKeystorePath())
+		return response,nil
+	}
 }

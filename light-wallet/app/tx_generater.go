@@ -14,7 +14,7 @@ import (
 )
 
 func (self *SEROLight) GenTx(param prepare.PreTxParam) (txParam *txtool.GTxParam, e error) {
-	txParam, e = prepare.GenTxParam(&param, self)
+	txParam, e = prepare.GenTxParam(&param, self,self)
 	for _, in := range txParam.Ins {
 		self.usedFlag.Store(in.Out.Root, 1)
 	}
