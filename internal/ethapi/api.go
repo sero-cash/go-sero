@@ -1831,6 +1831,14 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB) (txParam prepare.PreTxPa
 			m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
 			feevalue = new(big.Int).Div(feevalue.Mul(feevalue, m), d)
 		}
+		txParam.Cmds = prepare.Cmds{}
+		var data []byte
+		if args.Data!=nil{
+			data=*args.Data
+		}
+		contractCmd := stx.ContractCmd{asset, nil,data}
+		txParam.Cmds.Contract = &contractCmd
+		refundPkr = keys.Addr2PKr(args.From.ToUint512(), &fromRand)
 	} else {
 		var topkr keys.PKr
 		if args.To.IsAccountAddress() {
