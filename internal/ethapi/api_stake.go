@@ -117,6 +117,25 @@ func (args *BuyShareTxArg) toPreTxParam() prepare.PreTxParam {
 }
 
 
+
+func (s *PublicStakeApI) EstimateShares(ctx context.Context, args BuyShareTxArg) (map[string]interface{}, error) {
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return nil, err
+	}
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return nil, err
+	}
+	num,avprice,baseprice:=stake.NewStakeState(state).CaleAvgPrice(args.Value.ToInt())
+
+	result:=map[string]interface{}{}
+	result["total"]=hexutil.Uint64(num)
+	result["avPrice"]=hexutil.Big(*avprice)
+	result["basePrice"]=hexutil.Big(*baseprice)
+   return result,nil
+}
+
+
 func (s *PublicStakeApI) BuyShare(ctx context.Context, args BuyShareTxArg) (common.Hash, error) {
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
@@ -134,6 +153,7 @@ func (s *PublicStakeApI) BuyShare(ctx context.Context, args BuyShareTxArg) (comm
 
 	return common.BytesToHash(gtx.Hash[:]), nil
 }
+
 
 type RegistStakePoolTxArg struct {
 	From     address.AccountAddress `json:"from"`

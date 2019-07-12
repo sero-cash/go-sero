@@ -741,6 +741,12 @@ web3._extend({
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
+        new web3._extend.Method({
+			name: 'estimateShares',
+			call: 'stake_estimateShares',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
 		new web3._extend.Method({
 			name: 'registStakePool',
 			call: 'stake_registStakePool',
