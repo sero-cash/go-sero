@@ -69,7 +69,7 @@ func (self *ClosePoolCmd) ToHash() (ret keys.Uint256) {
 
 type ContractCmd struct {
 	Asset assets.Asset
-	To    *keys.PKr
+	To    *keys.PKr `rlp:"nil"`
 	Data  []byte
 }
 

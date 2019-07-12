@@ -257,12 +257,12 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 
 func (tx *Transaction) Data() []byte {
 	if tx.GetZZSTX().Desc_Cmd.Contract != nil {
-		common.CopyBytes(tx.GetZZSTX().Desc_Cmd.Contract.Data)
+		return common.CopyBytes(tx.GetZZSTX().Desc_Cmd.Contract.Data)
 	} else {
 		return common.CopyBytes(tx.data.Payload)
 	}
-	return []byte{}
 }
+
 func (tx *Transaction) Gas() uint64 {
 	return tx.data.GasLimit
 }
@@ -275,6 +275,9 @@ func (tx *Transaction) GetZZSTX() *zstx.T {
 func (tx *Transaction) To() *common.Address {
 	if tx.GetZZSTX().Desc_Cmd.Contract != nil {
 		to := tx.GetZZSTX().Desc_Cmd.Contract.To
+		if to == nil {
+			return nil
+		}
 		addr := &common.Address{}
 		copy(addr[:], to[:])
 		return addr
@@ -291,7 +294,7 @@ func (tx *Transaction) To() *common.Address {
 }
 
 func (tx Transaction) IsOpContract() bool {
-	if len(tx.data.Stxt.Desc_O.Outs) > 0 {
+	if tx.data.Stxt.Desc_Cmd.Contract != nil {
 		return true
 	}
 	return false
