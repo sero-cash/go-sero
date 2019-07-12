@@ -30,6 +30,7 @@ import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/light/light_types"
+	"github.com/sero-cash/go-sero/zero/light"
 )
 
 type PublicExchangeAPI struct {
@@ -544,4 +545,39 @@ func (s *PublicExchangeAPI) GetBlockByNumber(ctx context.Context, blockNum *int6
 		"TxHashes":    transactions,
 	}
 	return fields, nil
+}
+
+
+func (s *PublicExchangeAPI) GenSKBySeed(ctx context.Context,seed hexutil.Bytes) (keys.Uint512,error) {
+	if len(seed) !=32{
+      return keys.Uint512{},errors.New("seed len must be 32")
+	}
+	var sd keys.Uint256
+	copy(sd[:],seed[:])
+	return keys.Seed2Sk(&sd),nil
+}
+
+func (s *PublicExchangeAPI) SignTxWithSK(param light_types.GenTxParam,SK keys.Uint512) (light_types.GTx, error) {
+	return light.SignTx(&SK,&param)
+}
+
+func (s  *PublicExchangeAPI) GenPKBySeed(ctx context.Context,seed hexutil.Bytes) (address.AccountAddress,error) {
+	if len(seed) !=32{
+		return address.AccountAddress{},errors.New("seed len must be 32")
+	}
+	var sd keys.Uint256
+	copy(sd[:],seed[:])
+	sk:=keys.Seed2Sk(&sd)
+	pk:=keys.Sk2PK(&sk)
+	return address.BytesToAccount(pk[:]),nil
+}
+
+func (s  *PublicExchangeAPI) GenTKBySeed(ctx context.Context,seed hexutil.Bytes) (address.AccountAddress,error) {
+	if len(seed) !=32{
+		return address.AccountAddress{},errors.New("seed len must be 32")
+	}
+	var sd keys.Uint256
+	copy(sd[:],seed[:])
+	tk:=keys.Seed2Tk(&sd)
+	return address.BytesToAccount(tk[:]),nil
 }

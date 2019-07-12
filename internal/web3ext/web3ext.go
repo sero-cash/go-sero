@@ -731,6 +731,26 @@ web3._extend({
 			name: 'getBlockByNumber',
 			call: 'exchange_getBlockByNumber',
             params: 1
+		}),
+        new web3._extend.Method({
+			name: 'genSKBySeed',
+			call: 'exchange_genSKBySeed',
+            params: 1
+		}),
+        new web3._extend.Method({
+			name: 'genPKBySeed',
+			call: 'exchange_genPKBySeed',
+            params: 1
+		}),
+        new web3._extend.Method({
+			name: 'genTKBySeed',
+			call: 'exchange_genTKBySeed',
+            params: 1
+		}),
+        new web3._extend.Method({
+			name: 'signTxWithSK',
+			call: 'exchange_signTxWithSK',
+            params: 2
 		})
 	]
 });
