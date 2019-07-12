@@ -1836,7 +1836,7 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB) (txParam prepare.PreTxPa
 		if args.Data!=nil{
 			data=*args.Data
 		}
-		contractCmd := stx.ContractCmd{asset, nil,data}
+		contractCmd := stx.ContractCmd{asset, args.To.ToPKr(),data}
 		txParam.Cmds.Contract = &contractCmd
 		refundPkr = keys.Addr2PKr(args.From.ToUint512(), &fromRand)
 	} else {
