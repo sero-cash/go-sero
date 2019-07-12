@@ -548,7 +548,7 @@ func (s *PublicExchangeAPI) GetBlockByNumber(ctx context.Context, blockNum *int6
 }
 
 
-func (s *PublicExchangeAPI) GenSKBySeed(ctx context.Context,seed hexutil.Bytes) (keys.Uint512,error) {
+func (s *PublicExchangeAPI) Seed2Sk(ctx context.Context,seed hexutil.Bytes) (keys.Uint512,error) {
 	if len(seed) !=32{
       return keys.Uint512{},errors.New("seed len must be 32")
 	}
@@ -557,27 +557,16 @@ func (s *PublicExchangeAPI) GenSKBySeed(ctx context.Context,seed hexutil.Bytes) 
 	return keys.Seed2Sk(&sd),nil
 }
 
-func (s *PublicExchangeAPI) SignTxWithSK(param light_types.GenTxParam,SK keys.Uint512) (light_types.GTx, error) {
+func (s *PublicExchangeAPI) SignTxWithSk(param light_types.GenTxParam,SK keys.Uint512) (light_types.GTx, error) {
 	return light.SignTx(&SK,&param)
 }
 
-func (s  *PublicExchangeAPI) GenPKBySeed(ctx context.Context,seed hexutil.Bytes) (address.AccountAddress,error) {
-	if len(seed) !=32{
-		return address.AccountAddress{},errors.New("seed len must be 32")
-	}
-	var sd keys.Uint256
-	copy(sd[:],seed[:])
-	sk:=keys.Seed2Sk(&sd)
-	pk:=keys.Sk2PK(&sk)
-	return address.BytesToAccount(pk[:]),nil
+func (s  *PublicExchangeAPI) Sk2Tk(ctx context.Context,sk keys.Uint512) (address.AccountAddress,error) {
+	tk:=keys.Sk2Tk(&sk)
+	return address.BytesToAccount(tk[:]),nil
 }
 
-func (s  *PublicExchangeAPI) GenTKBySeed(ctx context.Context,seed hexutil.Bytes) (address.AccountAddress,error) {
-	if len(seed) !=32{
-		return address.AccountAddress{},errors.New("seed len must be 32")
-	}
-	var sd keys.Uint256
-	copy(sd[:],seed[:])
-	tk:=keys.Seed2Tk(&sd)
-	return address.BytesToAccount(tk[:]),nil
+func (s  *PublicExchangeAPI) Tk2Pk(ctx context.Context,tk TKAddress) (address.AccountAddress,error) {
+	 pk:= keys.Tk2Pk(tk.ToUint512().NewRef())
+	return address.BytesToAccount(pk[:]),nil
 }

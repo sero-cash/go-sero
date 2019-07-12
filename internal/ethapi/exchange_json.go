@@ -167,6 +167,53 @@ func (b *PKAddress) UnmarshalText(input []byte) error {
 	}
 }
 
+
+type TKAddress [64]byte
+
+func (b TKAddress) ToUint512() keys.Uint512 {
+	result := keys.Uint512{}
+	copy(result[:], b[:])
+
+	return result
+}
+
+func (b TKAddress) MarshalText() ([]byte, error) {
+	return []byte(base58.Encode(b[:])), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (b *TKAddress) UnmarshalText(input []byte) error {
+
+	if len(input) == 0 {
+		return nil
+	}
+	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
+
+		out := base58.Decode(string(input))
+		if len(out) == 64 {
+			copy(b[:], out[:])
+		} else {
+			return errors.New("ivalid PK")
+		}
+		return nil
+	} else {
+		raw, err := checkText(input, true)
+		if err != nil {
+			return err
+		}
+		dec := make([]byte, len(raw)/2)
+		if _, err = hex.Decode(dec, raw); err != nil {
+			err = mapError(err)
+		} else {
+			if len(dec) != 64 {
+				return errors.New("PKAddress must be length 64 ")
+			}
+			copy(b[:], dec)
+		}
+		return err
+	}
+}
+
 type PKrAddress [96]byte
 
 func (b PKrAddress) ToPKr() *keys.PKr {

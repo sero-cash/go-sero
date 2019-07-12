@@ -733,18 +733,18 @@ web3._extend({
             params: 1
 		}),
         new web3._extend.Method({
-			name: 'genSKBySeed',
-			call: 'exchange_genSKBySeed',
+			name: 'seed2Sk',
+			call: 'exchange_seed2Sk',
             params: 1
 		}),
         new web3._extend.Method({
-			name: 'genPKBySeed',
-			call: 'exchange_genPKBySeed',
+			name: 'sk2Tk',
+			call: 'exchange_sk2Tk',
             params: 1
 		}),
         new web3._extend.Method({
-			name: 'genTKBySeed',
-			call: 'exchange_genTKBySeed',
+			name: 'tk2Pk',
+			call: 'exchange_tk2Pk',
             params: 1
 		}),
         new web3._extend.Method({
