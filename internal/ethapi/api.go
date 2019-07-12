@@ -1821,7 +1821,7 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB) (txParam prepare.PreTxPa
 		refundPkr = keys.Addr2PKr(args.From.ToUint512(), &fromRand)
 	} else if state.IsContract(common.BytesToAddress(args.To[:])) {
 		fromRand := keys.Uint256{}
-		copy(fromRand[:16], (*args.Data)[:16])
+		copy(fromRand[:16], args.To[:16])
 		if args.Dynamic {
 			refundPkr = keys.Addr2PKr(args.From.ToUint512(), nil)
 		} else {
