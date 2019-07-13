@@ -37,20 +37,17 @@ func (self *verifyWithoutStateCtx) ProcessVerifyProof() {
 
 func (self *verifyWithoutStateCtx) WaitVerifyProof() (e error) {
 	if self.zin_proof_proc.HasProc() {
-		if e = self.zin_proof_proc.End(); e == nil {
-		} else {
+		if e = self.zin_proof_proc.End(); e != nil {
 			return
 		}
 	}
 	if self.zout_proof_proc.HasProc() {
-		if e = self.zout_proof_proc.End(); e == nil {
-		} else {
+		if e = self.zout_proof_proc.End(); e != nil {
 			return
 		}
 	}
 	if self.pkg_proof_proc.HasProc() {
-		if e = self.pkg_proof_proc.End(); e == nil {
-		} else {
+		if e = self.pkg_proof_proc.End(); e != nil {
 			return
 		}
 	}

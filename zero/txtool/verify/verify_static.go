@@ -70,6 +70,12 @@ func (self *verifyWithoutStateCtx) verifyFrom() (e error) {
 }
 
 func (self *verifyWithoutStateCtx) verifyOs() (e error) {
+	if self.num >= seroparam.SIP4() {
+		if len(self.tx.Desc_O.Outs) > 0 {
+			e = ReportError("after SIP4, o_outs can not used", self.tx)
+			return
+		}
+	}
 	for i, out := range self.tx.Desc_O.Outs {
 		self.oout_count++
 		if out.Asset.Tkn != nil {
@@ -121,10 +127,10 @@ func (self *verifyWithoutStateCtx) verifyPkg() (e error) {
 
 func (self *verifyWithoutStateCtx) verifyCmds() (e error) {
 	if self.num < seroparam.SIP4() {
-		if self.tx.Desc_Cmd.Valid() {
+		if self.tx.Desc_Cmd.Count() > 0 {
 			e = ReportError("can not use tx cmd until SIP4", self.tx)
-			return
 		}
+		return
 	}
 	if !self.tx.Desc_Cmd.Valid() {
 		e = ReportError("cmd desc is invalid", self.tx)
@@ -141,11 +147,9 @@ func (self *verifyWithoutStateCtx) verifyCmds() (e error) {
 		self.tx.Desc_Cmd.ToAssetCC()
 	}
 	if pkr := self.tx.Desc_Cmd.ToPkr(); pkr != nil {
-		if pkr != nil {
-			if !keys.PKrValid(pkr) {
-				e = ReportError("cmd pkr invalid", self.tx)
-				return
-			}
+		if !keys.PKrValid(pkr) {
+			e = ReportError("cmd pkr invalid", self.tx)
+			return
 		}
 	}
 	if self.tx.Desc_Cmd.RegistPool != nil {
