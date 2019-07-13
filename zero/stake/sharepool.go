@@ -317,7 +317,7 @@ func (self *StakeState) IsEffect(currentBlockNumber uint64) bool {
 			return false
 		}
 		ratio := float64(missedNum) / float64(seletedNum)
-		if ratio > 0.3 || tree.size() < 20000 {
+		if ratio > 0.3 || tree.size() < 2000 {
 			return false
 		}
 		return true
