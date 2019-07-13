@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 )
 
@@ -47,11 +49,15 @@ func (self *Procs) StartProc(run Proc) {
 	} else {
 		self.wait.Add(1)
 		go func(run Proc) {
-			self.ch <- 0
 			defer func() {
+				if r := recover(); r != nil {
+					self.E = errors.Errorf("process panic: %v", r)
+					self.ERun = run
+				}
 				<-self.ch
 				self.wait.Done()
 			}()
+			self.ch <- 0
 			if self.E == nil {
 				if e := run.Run(); e != nil {
 					self.E = e
