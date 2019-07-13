@@ -33,6 +33,12 @@
 			"revisionTime": "2018-07-12T00:56:34Z"
 		},
 		{
+			"checksumSHA1": "24keHdh9pzKuv0WZiTvuAEMGTUw=",
+			"path": "github.com/Sirupsen/logrus",
+			"revision": "07a84ee7412e7a28663d92930a1d46f81b124ee1",
+			"revisionTime": "2019-07-01T14:35:06Z"
+		},
+		{
 			"checksumSHA1": "QC55lHNOv1+UAL2xtIHw17MJ8J8=",
 			"path": "github.com/StackExchange/wmi",
 			"revision": "5d049714c4a64225c3c79a7cf7d02f7fb5b96338",
@@ -290,6 +296,12 @@
 			"revision": "f00545f9f3748e591590be3732d913c77525b10f",
 			"revisionTime": "2017-08-21T10:38:37Z",
 			"tree": true
+		},
+		{
+			"checksumSHA1": "Aulh7C5SVOA4Jzt5eHNH6197Mbk=",
+			"path": "github.com/konsorten/go-windows-terminal-sequences",
+			"revision": "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e",
+			"revisionTime": "2019-02-26T22:47:05Z"
 		},
 		{
 			"checksumSHA1": "7hln62oZPZmyqEmgXaybf9WxQ7A=",
@@ -662,6 +674,12 @@
 			"path": "github.com/uber/jaeger-lib/metrics",
 			"revision": "a51202d6f4a7e5a219e3841a43614ff7187ae7f1",
 			"revisionTime": "2018-06-15T20:27:29Z"
+		},
+		{
+			"checksumSHA1": "QEPMChSXT0Lpw3ER36AZ+NHCb1g=",
+			"path": "github.com/zserge/lorca",
+			"revision": "de29b2b46deca1fa1d13132745c74b8290fcd582",
+			"revisionTime": "2019-05-22T19:15:26Z"
 		},
 		{
 			"checksumSHA1": "TT1rac6kpQp2vz24m5yDGUNQ/QQ=",
