@@ -678,11 +678,12 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 	self.processMissVoted(header, bc)
 	self.processNowShares(header, bc)
 	self.payProfit(bc, header)
-	//self.ByWindow(header, bc)
+	self.statisticsByWindow(header, bc)
 }
 
 func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) {
-	if header.Number.Uint64() < 2 || !self.IsEffect(header.Number.Uint64()) {
+	statisticsMissWindow := getStatisticsMissWindow()
+	if header.Number.Uint64() < 2 || !self.IsEffect(header.Number.Uint64()) || header.Number.Uint64() - 2 < seroparam.SIP4() {
 		return
 	}
 	value := self.missedNum.GetValue(missedNumKey)
@@ -691,8 +692,8 @@ func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) 
 	prepreHeader := bc.GetHeader(preHeader.ParentHash, preHeader.Number.Uint64()-1)
 	missedNum := utils.DecodeNumber32(value) + uint32(3-len(prepreHeader.CurrentVotes)-len(preHeader.ParentVotes))
 
-	statisticsMissWindow := getStatisticsMissWindow()
-	if prepreHeader.Number.Uint64() > statisticsMissWindow {
+
+	if prepreHeader.Number.Uint64() > statisticsMissWindow && prepreHeader.Number.Uint64() - statisticsMissWindow -1 >= seroparam.SIP4() {
 		preNumber := preHeader.Number.Uint64() - statisticsMissWindow - 1
 		windiwHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
 		prepreNumber := prepreHeader.Number.Uint64() - statisticsMissWindow - 1
@@ -707,11 +708,10 @@ func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) 
 
 func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) {
 	log.Info("ProcessBeforeApply: processVotedShare", "blockNumber", header.Number.Uint64())
-	if header.Number.Uint64() == 1 {
+	if header.Number.Uint64() == 1 || header.Number.Uint64()-1 < seroparam.SIP4() {
 		return
 	}
 	preHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-
 	tree := NewTree(self)
 	poshash := preHeader.HashPos()
 	indexs, err := FindShareIdxs(tree.size(), 3, NewHash256PRNG(poshash[:]))
@@ -817,15 +817,19 @@ func (self *StakeState) rewardVote(vote types.HeaderVote, soloReware, reward *bi
 
 func (self *StakeState) processOutDate(header *types.Header, bc blockChain) (shares []*Share) {
 	outOfDatePeriod := getOutOfDateWindow()
-	if header.Number.Uint64() < outOfDatePeriod {
+	if header.Number.Uint64() < outOfDatePeriod || header.Number.Uint64() - outOfDatePeriod < seroparam.SIP4() {
 		return
 	}
-	tree := NewTree(self)
 
 	preNumber := header.Number.Uint64() - outOfDatePeriod
+	if preNumber < seroparam.SIP4() {
+		return
+	}
+
 	preHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
 	shares = self.getShares(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64())
 	if len(shares) > 0 {
+		tree := NewTree(self)
 		for _, share := range shares {
 			if share.BlockNumber == preHeader.Number.Uint64() {
 				if share.Status == STATUS_OUTOFDATE {
@@ -875,6 +879,9 @@ func (self *StakeState) processMissVoted(header *types.Header, bc blockChain) {
 		return
 	}
 	preNumber := header.Number.Uint64() - missVotedPeriod
+	if preNumber < seroparam.SIP4() {
+		return
+	}
 	preHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
 	shares := self.getShares(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64())
 	if len(shares) > 0 {
@@ -934,13 +941,15 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) {
 		}
 	}
 }
-
-func (self *StakeState) payProfit(bc blockChain, header *types.Header) {
+	func (self *StakeState) payProfit(bc blockChain, header *types.Header) {
 	payPeriod := getPayPeriod()
 	if header.Number.Uint64() < payPeriod {
 		return
 	}
 	preNumber := header.Number.Uint64() - payPeriod
+	if preNumber < seroparam.SIP4() {
+		return
+	}
 	preHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
 	shares, pools := self.getBlockRecords(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64())
 
