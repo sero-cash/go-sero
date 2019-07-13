@@ -4,12 +4,26 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"sync/atomic"
 	"testing"
+
+	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/rlp"
 )
+
+func TestLoad(t *testing.T) {
+	h := atomic.Value{}
+
+	v, ok := h.Load().(keys.Uint256)
+	fmt.Println(v, ok)
+
+	h.Store(keys.RandUint256())
+	v, ok = h.Load().(keys.Uint256)
+	fmt.Println(v, ok)
+}
 
 func TestRLP(t *testing.T) {
 	buf := bytes.Buffer{}

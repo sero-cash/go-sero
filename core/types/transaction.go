@@ -296,6 +296,10 @@ func (tx *Transaction) To() *common.Address {
 func (tx Transaction) IsOpContract() bool {
 	if tx.data.Stxt.Desc_Cmd.Contract != nil {
 		return true
+	} else {
+		if len(tx.data.Stxt.Desc_O.Outs) > 0 {
+			return true
+		}
 	}
 	return false
 }

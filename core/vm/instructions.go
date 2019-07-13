@@ -993,9 +993,9 @@ func handleIssueToken(d []byte, evm *EVM, contract *Contract, mem []byte) (bool,
 				},
 				}
 				if evm.BlockNumber.Uint64() >= 300000 {
-					evm.StateDB.GetZState().AddTxOut(foundationAccount2, asset)
+					evm.StateDB.NextZState().AddTxOut(foundationAccount2, asset)
 				} else {
-					evm.StateDB.GetZState().AddTxOut(foundationAccount1, asset)
+					evm.StateDB.NextZState().AddTxOut(foundationAccount1, asset)
 				}
 			}
 		} else {
@@ -1189,7 +1189,7 @@ func makeLog(size int) executionFunc {
 
 			key := keys.Uint256{}
 			copy(key[:], d[32:64])
-			pkg, err := interpreter.evm.StateDB.GetPkgState().Close(&id, contract.Address().ToPKr(), &key)
+			pkg, err := interpreter.evm.StateDB.NextZState().Pkgs.Close(&id, contract.Address().ToPKr(), &key)
 			if err != nil {
 				memory.Set(mStart.Uint64(), 256, make([]byte, 256))
 			} else {
@@ -1230,7 +1230,7 @@ func makeLog(size int) executionFunc {
 			if toAddr == (common.Address{}) {
 				return nil, ErrToAddressError
 			}
-			if err := interpreter.evm.StateDB.GetPkgState().Transfer(&id, contract.Address().ToPKr(), toAddr.ToPKr()); err != nil {
+			if err := interpreter.evm.StateDB.NextZState().Pkgs.Transfer(&id, contract.Address().ToPKr(), toAddr.ToPKr()); err != nil {
 				memory.Set(mStart.Uint64()+length-32, 32, hashFalse)
 			} else {
 				memory.Set(mStart.Uint64()+length-32, 32, hashTrue)

@@ -46,13 +46,17 @@ func (self *ZState) Num() uint64 {
 	return self.num
 }
 
-func NewState(tri0 tri.Tri, num uint64) (state *ZState) {
+func CurrentState(tri0 tri.Tri, num uint64) (state *ZState) {
 	state = &ZState{}
 	state.Tri = tri0
 	state.num = num
 	state.State = txstate.NewState(tri0, num)
 	state.Pkgs = pkgstate.NewPkgState(tri0, num)
 	return
+}
+
+func NextState(tri0 tri.Tri, num int64) (state *ZState) {
+	return CurrentState(tri0, uint64(num+1))
 }
 
 func (self *ZState) Copy() *ZState {

@@ -100,7 +100,7 @@ type Backend interface {
 
 	//Light node api
 	GetOutByPKr(pkrs []keys.PKr, start,end uint64) (br light.BlockOutResp, e error)
-	CheckNil(Nils []keys.Uint256, start,end uint64) (delNils []light.BlockDelNil, e error)
+	CheckNil(Nils []keys.Uint256) (nilResps []light.NilValue, e error)
 
 }
 

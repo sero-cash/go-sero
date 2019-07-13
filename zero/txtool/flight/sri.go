@@ -27,7 +27,7 @@ func GetOut(root *keys.Uint256, num uint64) (out *localdb.RootState) {
 	if rs != nil {
 		return rs
 	} else {
-		zst := txtool.Ref_inst.GetState()
+		zst := txtool.Ref_inst.CurrentState()
 		if os := zst.State.GetOut(root); os == nil {
 			return nil
 		} else {
@@ -86,7 +86,7 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []txtool.Bloc
 }
 
 func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []txtool.Witness, e error) {
-	state := txtool.Ref_inst.GetState()
+	state := txtool.Ref_inst.CurrentState()
 	if state != nil {
 		for _, root := range roots {
 			wit := txtool.Witness{}

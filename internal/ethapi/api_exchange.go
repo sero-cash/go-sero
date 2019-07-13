@@ -6,6 +6,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
 	"github.com/sero-cash/go-sero/common/address"
@@ -32,8 +33,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/hexutil"
-	"github.com/sero-cash/go-sero/zero/light/light_types"
-	"github.com/sero-cash/go-sero/zero/light"
 )
 
 type PublicExchangeAPI struct {
@@ -566,26 +565,25 @@ func (s *PublicExchangeAPI) GetBlockByNumber(ctx context.Context, blockNum *int6
 	return fields, nil
 }
 
-
-func (s *PublicExchangeAPI) Seed2Sk(ctx context.Context,seed hexutil.Bytes) (keys.Uint512,error) {
-	if len(seed) !=32{
-      return keys.Uint512{},errors.New("seed len must be 32")
+func (s *PublicExchangeAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes) (keys.Uint512, error) {
+	if len(seed) != 32 {
+		return keys.Uint512{}, errors.New("seed len must be 32")
 	}
 	var sd keys.Uint256
-	copy(sd[:],seed[:])
-	return keys.Seed2Sk(&sd),nil
+	copy(sd[:], seed[:])
+	return keys.Seed2Sk(&sd), nil
 }
 
-func (s *PublicExchangeAPI) SignTxWithSk(param light_types.GenTxParam,SK keys.Uint512) (light_types.GTx, error) {
-	return light.SignTx(&SK,&param)
+func (s *PublicExchangeAPI) SignTxWithSk(param txtool.GTxParam, SK keys.Uint512) (txtool.GTx, error) {
+	return flight.SignTx(&SK, &param)
 }
 
-func (s  *PublicExchangeAPI) Sk2Tk(ctx context.Context,sk keys.Uint512) (address.AccountAddress,error) {
-	tk:=keys.Sk2Tk(&sk)
-	return address.BytesToAccount(tk[:]),nil
+func (s *PublicExchangeAPI) Sk2Tk(ctx context.Context, sk keys.Uint512) (address.AccountAddress, error) {
+	tk := keys.Sk2Tk(&sk)
+	return address.BytesToAccount(tk[:]), nil
 }
 
-func (s  *PublicExchangeAPI) Tk2Pk(ctx context.Context,tk TKAddress) (address.AccountAddress,error) {
-	 pk:= keys.Tk2Pk(tk.ToUint512().NewRef())
-	return address.BytesToAccount(pk[:]),nil
+func (s *PublicExchangeAPI) Tk2Pk(ctx context.Context, tk TKAddress) (address.AccountAddress, error) {
+	pk := keys.Tk2Pk(tk.ToUint512().NewRef())
+	return address.BytesToAccount(pk[:]), nil
 }

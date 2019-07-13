@@ -60,7 +60,6 @@ var (
 	// Chain index prefixes (use `i` + single byte to avoid mixing data types).
 	BloomBitsIndexPrefix = []byte("iB") // BloomBitsIndexPrefix is the data table of a chain indexer to track its progress
 
-	blockVotesPrefix   = []byte("STAKE$BLOCKVOTES$")
 	preimageCounter    = metrics.NewRegisteredCounter("db/preimage/total", nil)
 	preimageHitCounter = metrics.NewRegisteredCounter("db/preimage/hits", nil)
 )
@@ -127,10 +126,6 @@ func bloomBitsKey(bit uint, section uint64, hash common.Hash) []byte {
 	binary.BigEndian.PutUint64(key[3:], section)
 
 	return key
-}
-
-func blockVotesKey(hash common.Hash) []byte {
-	return append(blockVotesPrefix, hash[:]...)
 }
 
 // preimageKey = preimagePrefix + hash

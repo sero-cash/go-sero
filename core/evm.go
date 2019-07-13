@@ -137,7 +137,7 @@ func Transfer(db vm.StateDB, sender, recipient common.Address, asset *assets.Ass
 			db.AddTicket(recipient, category, common.BytesToHash(asset.Tkt.Value[:]))
 		}
 	} else {
-		alarm = db.GetZState().AddTxOutWithCheck(recipient, *asset)
+		alarm = db.NextZState().AddTxOutWithCheck(recipient, *asset)
 	}
 	return
 }

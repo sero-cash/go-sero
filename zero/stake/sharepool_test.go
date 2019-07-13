@@ -2,18 +2,19 @@ package stake
 
 import (
 	"fmt"
+	"math/big"
+	"testing"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/serodb"
-	"math/big"
-	"testing"
 )
 
 func newState() (*StakeState, *state.StateDB) {
 	db := serodb.NewMemDatabase()
-	state, _ := state.New(common.Hash{}, state.NewDatabase(db), 0)
+	state, _ := state.New(state.NewDatabase(db), nil)
 	//state.GetZState()
 	//return state
 	//db := consensus.NewFakeDB()
@@ -69,8 +70,45 @@ func TestSeleteShare(t *testing.T) {
 	fmt.Println(ints, err)
 
 	for _, i := range ints {
-		node := tree.findByIndex(uint32(i))
+		node, _ := tree.findByIndex(uint32(i))
 		fmt.Println(common.Bytes2Hex(node.key[:]), node.num)
 	}
 
+}
+
+func TestPosRewad(t *testing.T) {
+	state, _ := newState()
+
+	var pkr keys.PKr
+	copy(pkr[:], crypto.Keccak512([]byte("123")))
+	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 326592, Num: 326592}
+	//state.AddShare(share)
+	//fmt.Println("root:", root.String())
+
+	tree := NewTree(state)
+	tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num + 10, total: share.Num + 10})
+	fmt.Println(state.ShareSize())
+	fmt.Println(maxReware)
+	fmt.Println(state.StakeCurrentReward(big.NewInt(3057599 + 8294400 + 1)))
+}
+
+func TestPosDif(t *testing.T) {
+	state, _ := newState()
+
+	var pkr keys.PKr
+	copy(pkr[:], crypto.Keccak512([]byte("123")))
+	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 10000, Num: 10000}
+	//state.AddShare(share)
+	//fmt.Println("root:", root.String())
+
+	tree := NewTree(state)
+	tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num})
+	fmt.Println(state.ShareSize())
+	price := state.CurrentPrice()
+	fmt.Println(price)
+	//basePrice = big.NewInt(2000000000000000000)
+
+	amount := sum(price, addition, 10000)
+	fmt.Println(amount)
+	fmt.Println(state.CaleAvgPrice(amount))
 }

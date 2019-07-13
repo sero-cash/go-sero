@@ -21,3 +21,9 @@ func TestConsRecord2(t *testing.T) {
 	a := tm[0].t.Load().(int)
 	fmt.Println(a)
 }
+
+func TestConsRecord3(t *testing.T) {
+	h := atomic.Value{}
+	a := h.Load().(int)
+	fmt.Println(a)
+}

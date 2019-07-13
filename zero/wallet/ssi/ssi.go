@@ -99,6 +99,10 @@ func (self *SSI) GenTx(param *GenTxParam) (hash keys.Uint256, e error) {
 	p := txtool.GTxParam{}
 	p.Gas = param.Gas
 	p.GasPrice = *big.NewInt(0).SetUint64(param.GasPrice)
+	p.Fee = assets.Token{
+		utils.CurrencyToUint256("SERO"),
+		utils.U256(*new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), new(big.Int).SetUint64(param.GasPrice))),
+	}
 	p.From = param.From
 	p.Outs = param.Outs
 
@@ -160,14 +164,13 @@ func (self *SSI) GenTx(param *GenTxParam) (hash keys.Uint256, e error) {
 		}
 	}
 
-	fee := new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), new(big.Int).SetUint64(param.GasPrice))
-	if amount, ok := amounts["SERO"]; !ok || amount.Cmp(fee) < 0 {
+	if amount, ok := amounts[utils.Uint256ToCurrency(&p.Fee.Currency)]; !ok || amount.Cmp(p.Fee.Value.ToInt()) < 0 {
 		e = fmt.Errorf("SSI GenTx Error: sero amount < Fee")
 		return
 	} else {
-		amount.Sub(amount, fee)
+		amount.Sub(amount, p.Fee.Value.ToInt())
 		if amount.Sign() == 0 {
-			delete(amounts, "SERO")
+			delete(amounts, utils.Uint256ToCurrency(&p.Fee.Currency))
 		}
 	}
 

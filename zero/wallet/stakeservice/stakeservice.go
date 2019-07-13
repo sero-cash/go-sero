@@ -4,6 +4,7 @@ import (
 	"github.com/robfig/cron"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/zero/utils"
 	"sync"
 	"sync/atomic"
@@ -28,9 +29,8 @@ type StakeService struct {
 	accountManager *accounts.Manager
 	db             *serodb.LDBDatabase
 
-	nextBlockNumber uint64
-
 	accounts sync.Map
+	numbers  sync.Map
 
 	feed    event.Feed
 	updater event.Subscription        // Wallet update subscriptions for all backends
@@ -63,19 +63,14 @@ func NewStakeService(dbpath string, bc *core.BlockChain, accountManager *account
 	}
 	stakeService.db = db
 
+	stakeService.numbers = sync.Map{}
 	stakeService.accounts = sync.Map{}
 	for _, w := range accountManager.Wallets() {
 		stakeService.initWallet(w)
 	}
 
-	value, err := db.Get(nextKey)
-	if err != nil {
-		stakeService.nextBlockNumber = uint64(1)
-	} else {
-		stakeService.nextBlockNumber = utils.DecodeNumber(value)
-	}
-
 	AddJob("0/10 * * * * ?", stakeService.stakeIndex)
+	go stakeService.updateAccount()
 	return stakeService
 }
 
@@ -132,15 +127,25 @@ func (self *StakeService) GetBlockRecords(blockNumber uint64) (shares []*stake.S
 }
 
 func (self *StakeService) stakeIndex() {
+	start := uint64(math.MaxUint64)
+	self.numbers.Range(func(key, value interface{}) bool {
+		num := value.(uint64)
+		if start > num {
+			start = num
+		}
+		return true
+	})
+	if start == uint64(math.MaxUint64) {
+		return
+	}
+
 	header := self.bc.CurrentHeader()
-
-	blockNumber := self.nextBlockNumber
-
 	sharesCount := 0
 	poolsCount := 0
 	batch := self.db.NewBatch()
-	for blockNumber+seroparam.DefaultConfirmedBlock() < header.Number.Uint64() {
-		shares, pools := self.GetBlockRecords(blockNumber + 1)
+	blocNumber := start
+	for blocNumber+seroparam.DefaultConfirmedBlock() <= header.Number.Uint64() {
+		shares, pools := self.GetBlockRecords(blocNumber)
 		for _, share := range shares {
 			batch.Put(sharekey(share.Id()), share.State())
 			if pk, ok := self.ownPkr(share.PKr); ok {
@@ -149,23 +154,30 @@ func (self *StakeService) stakeIndex() {
 		}
 
 		for _, pool := range pools {
-			log.Info("indexpool","id",hexutil.Encode(pool.Id()), "hash",hexutil.Encode(pool.State()))
+			log.Info("indexpool", "id", hexutil.Encode(pool.Id()), "hash", hexutil.Encode(pool.State()))
 			batch.Put(poolKey(pool.Id()), pool.State())
 		}
 		sharesCount += len(shares)
 		poolsCount += len(pools)
-		blockNumber += 1
+		blocNumber++
+	}
+	if blocNumber == start {
+		return
 	}
 
-	if batch.ValueSize() > 0 {
-		batch.Put(nextKey, utils.EncodeNumber(blockNumber+1))
-		err := batch.Write()
-		if err == nil {
-			self.nextBlockNumber = blockNumber
-			log.Info("StakeIndex", "blockNumber", blockNumber, "sharesCount", sharesCount, "poolsCount", poolsCount)
-		}
-	} else {
-		self.nextBlockNumber = blockNumber
+	self.numbers.Range(func(key, value interface{}) bool {
+		pk := key.(keys.Uint512)
+		batch.Put(numKey(pk), utils.EncodeNumber(blocNumber))
+		return true
+	})
+	err := batch.Write()
+	if err == nil {
+		self.numbers.Range(func(key, value interface{}) bool {
+			pk := key.(keys.Uint512)
+			self.numbers.Store(pk, blocNumber)
+			return true
+		})
+		log.Info("StakeIndex", "blockNumber", blocNumber, "sharesCount", sharesCount, "poolsCount", poolsCount)
 	}
 }
 
@@ -185,10 +197,66 @@ func (self *StakeService) ownPkr(pkr keys.PKr) (pk *keys.Uint512, ok bool) {
 	return
 }
 
+func (self *StakeService) updateAccount() {
+	// Close all subscriptions when the manager terminates
+	defer func() {
+		self.lock.Lock()
+		self.updater.Unsubscribe()
+		self.updater = nil
+		self.lock.Unlock()
+	}()
+
+	// Loop until termination
+	for {
+		select {
+		case event := <-self.update:
+			// Wallet event arrived, update local cache
+			self.lock.Lock()
+			switch event.Kind {
+			case accounts.WalletArrived:
+				self.initWallet(event.Wallet)
+			case accounts.WalletDropped:
+				pk := *event.Wallet.Accounts()[0].Address.ToUint512()
+				self.numbers.Delete(pk)
+			}
+			self.lock.Unlock()
+
+		case errc := <-self.quit:
+			// Manager terminating, return
+			errc <- nil
+			return
+		}
+	}
+}
+
+func (self *StakeService) initWallet(w accounts.Wallet) {
+	if _, ok := self.accounts.Load(*w.Accounts()[0].Address.ToUint512()); !ok {
+		account := Account{}
+		account.pk = w.Accounts()[0].Address.ToUint512()
+		account.tk = w.Accounts()[0].Tk.ToUint512()
+		self.accounts.Store(*account.pk, &account)
+
+		var num uint64
+		if num = self.starNum(account.pk); num < w.Accounts()[0].At {
+			num = w.Accounts()[0].At
+		}
+		self.numbers.Store(*account.pk, num)
+		log.Info("Add PK", "address", w.Accounts()[0].Address, "At", num)
+	}
+}
+
+func (self *StakeService) starNum(pk *keys.Uint512) uint64 {
+	value, err := self.db.Get(numKey(*pk))
+	if err != nil {
+		return 0
+	}
+	return utils.DecodeNumber(value)
+}
+
 var (
+	numPrefix   = []byte("NUM")
 	sharePrefix = []byte("SHARE")
 	poolPrefix  = []byte("POOL")
-	nextKey     = []byte("NEXT")
 )
 
 func pkShareKey(pk *keys.Uint512, key []byte) []byte {
@@ -203,14 +271,8 @@ func poolKey(key []byte) []byte {
 	return append(poolPrefix, key[:]...)
 }
 
-func (self *StakeService) initWallet(w accounts.Wallet) {
-
-	if _, ok := self.accounts.Load(*w.Accounts()[0].Address.ToUint512()); !ok {
-		account := Account{}
-		account.pk = w.Accounts()[0].Address.ToUint512()
-		account.tk = w.Accounts()[0].Tk.ToUint512()
-		self.accounts.Store(*account.pk, &account)
-	}
+func numKey(pk keys.Uint512) []byte {
+	return append(numPrefix, pk[:]...)
 }
 
 func AddJob(spec string, run RunFunc) *cron.Cron {

@@ -1,11 +1,11 @@
 package light
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
-	"fmt"
 	"bytes"
-	"github.com/sero-cash/go-sero/rlp"
+	"fmt"
+	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txtool"
 )
 
@@ -16,18 +16,17 @@ func (self *LightNode) CurrentLight() *LightNode {
 }
 
 func (self *LightNode) GetOutsByPKr(pkrs []keys.PKr, start, end uint64) (br BlockOutResp, e error) {
-	fmt.Printf("start=[%d],end=[%d]\n", start, end)
-	br.CurrencyNum = self.getLastNumber()
+	br.CurrentNum = self.getLastNumber()
 	blockOuts := []BlockOut{}
 	for _, pkr := range pkrs {
-		uPKr := pkr.ToUint512()
-		prefix := append(pkrPrefix, uPKr[:]...)
+		//uPKr := pkr.ToUint512()
+		prefix := append(pkrPrefix, pkr[:]...)
 		iterator := self.db.NewIteratorWithPrefix(prefix)
 
-		for ok := iterator.Seek(pkrKey(pkr.ToUint512(), start)); ok; ok = iterator.Next() {
+		for ok := iterator.Seek(pkrKey(pkr, start)); ok; ok = iterator.Next() {
 
 			key := iterator.Key()
-			num := bytesToUint64(key[len(key)-8:])
+			num := bytesToUint64(key[99:107])
 			fmt.Println("getOutsByPKr:", num)
 			if num > end {
 				break
@@ -46,35 +45,30 @@ func (self *LightNode) GetOutsByPKr(pkrs []keys.PKr, start, end uint64) (br Bloc
 	return br, nil
 }
 
-func (self *LightNode) CheckNil(Nils []keys.Uint256, start uint64, end uint64) (delNils []BlockDelNil, e error) {
+func (self *LightNode) CheckNil(Nils []keys.Uint256) (nilResps []NilValue, e error) {
 	if len(Nils) == 0 {
 		return
 	}
 	for _, Nil := range Nils {
-		prefix := append(nilPrefix, Nil[:]...)
-		iterator := self.db.NewIteratorWithPrefix(prefix)
-		for ok := iterator.Seek(nilKey(Nil, start)); ok; ok = iterator.Next() {
-			delNil := BlockDelNil{}
-			key := iterator.Key()
-			num := bytesToUint64(key[len(key)-8:])
-			if num > end {
-				break
-			}
-			fmt.Println("getOutsByNil:", num)
-			value := bytesToUint64(iterator.Value())
-			if value == 1 {
-				delNil.Num = num
-				delNil.Nil = Nil
-				delNils = append(delNils, delNil)
+		if data, err := self.db.Get(nilKey(Nil)); err != nil {
+			continue
+		} else {
+
+			nilResp := NilValue{}
+			if err:=rlp.DecodeBytes(data,&nilResp);err!=nil{
+				continue
+			}else{
+				nilResp.Nil = Nil
+				nilResps = append(nilResps, nilResp)
 			}
 		}
 	}
-	return delNils, nil
+	return nilResps, nil
 }
 
 type BlockOutResp struct {
-	CurrencyNum uint64
-	BlockOuts   []BlockOut
+	CurrentNum uint64
+	BlockOuts  []BlockOut
 }
 
 type BlockOut struct {
@@ -82,7 +76,3 @@ type BlockOut struct {
 	Outs []txtool.Out
 }
 
-type BlockDelNil struct {
-	Num uint64
-	Nil keys.Uint256
-}

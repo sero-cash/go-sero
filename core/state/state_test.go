@@ -88,7 +88,7 @@ func (s *StateSuite) TestDump(c *checker.C) {
 
 func (s *StateSuite) SetUpTest(c *checker.C) {
 	s.db = serodb.NewMemDatabase()
-	s.state, _ = New(common.Hash{}, NewDatabase(s.db), 0)
+	s.state, _ = New(NewDatabase(s.db), nil)
 }
 
 func (s *StateSuite) TestNull(c *checker.C) {
@@ -133,7 +133,7 @@ func (s *StateSuite) TestSnapshotEmpty(c *checker.C) {
 // use testing instead of checker because checker does not support
 // printing/logging in tests (-check.vv does not work)
 func TestSnapshot2(t *testing.T) {
-	state, _ := New(common.Hash{}, NewDatabase(serodb.NewMemDatabase()), 0)
+	state, _ := New(NewDatabase(serodb.NewMemDatabase()), nil)
 
 	stateobjaddr0 := toAddr([]byte("so0"))
 	stateobjaddr1 := toAddr([]byte("so1"))
@@ -193,7 +193,7 @@ func compareStateObjects(so0, so1 *stateObject, t *testing.T) {
 	if so0.Balance("sero").Cmp(so1.Balance("sero")) != 0 {
 		t.Fatalf("Balance mismatch: have %v, want %v", so0.Balance("sero"), so1.Balance("sero"))
 	}
-	
+
 	if so0.data.Root != so1.data.Root {
 		t.Errorf("Root mismatch: have %x, want %x", so0.data.Root[:], so1.data.Root[:])
 	}

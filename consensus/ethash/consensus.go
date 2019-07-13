@@ -24,9 +24,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/zero/stake"
-
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/crypto"
@@ -236,7 +233,11 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 // the difficulty that a new block should have when created at time
 // given the parent block's time and difficulty.
 func (ethash *Ethash) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	return CalcDifficulty(chain.Config(), time, parent)
+	if parent.Number.Uint64() == seroparam.Dev_diff() {
+		return big.NewInt(100000)
+	} else {
+		return CalcDifficulty(chain.Config(), time, parent)
+	}
 }
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns
@@ -407,7 +408,7 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), stateDB, header, gasReward)
 
-	stateDB.GetZState().PreGenerateRoot(header, chain)
+	stateDB.NextZState().PreGenerateRoot(header, chain)
 
 	header.Root = stateDB.IntermediateRoot(true)
 
@@ -428,8 +429,9 @@ var (
 	difficultyL3 = big.NewInt(4000000000)
 	difficultyL4 = big.NewInt(17000000000)
 
-	lReward = new(big.Int).Mul(big.NewInt(176), base)
-	hReward = new(big.Int).Mul(big.NewInt(445), base)
+	lReward   = new(big.Int).Mul(big.NewInt(176), base)
+	hReward   = new(big.Int).Mul(big.NewInt(445), base)
+	hRewardV4 = new(big.Int).Mul(big.NewInt(356), base)
 
 	argA, _ = new(big.Int).SetString("985347985347985", 10)
 	argB, _ = new(big.Int).SetString("16910256410256400000", 10)
@@ -441,12 +443,19 @@ var (
 	communityAddress = common.Base58ToAddress("ZkVB2f8H1usYBSeViS7wPqSSFseXnCYXEbT2XxCSuRhfFg9KbBKbTvpTBj7dmSZxEKTp6rsqS3EX9js6StgRijZQBkaok2U5Fy8oLuGFrt1C5jwdAYB4Nqn8KNRniiQyCeb")
 )
 
+func Halve(blockNumber *big.Int) *big.Int {
+	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(blockNumber, halveNimber), interval), big1)
+	return new(big.Int).Exp(big2, i, nil)
+}
+
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward .
 func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, header *types.Header, gasReward uint64) {
 
 	var reward *big.Int
-	if header.Number.Uint64() >= seroparam.SIP3() {
+	if header.Number.Uint64() >= seroparam.SIP4() {
+		reward = accumulateRewardsV4(statedb, header)
+	} else if header.Number.Uint64() >= seroparam.SIP3() {
 		reward = accumulateRewardsV3(statedb, header)
 	} else if header.Number.Uint64() >= seroparam.SIP1() {
 		reward = accumulateRewardsV2(statedb, header)
@@ -457,25 +466,12 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 	//log.Info(fmt.Sprintf("BlockNumber = %v, gasLimie = %v, gasUsed = %v, reward = %v", header.Number.Uint64(), header.GasLimit, header.GasUsed, reward))
 	reward.Add(reward, new(big.Int).SetUint64(gasReward))
 
-	//pos
-	if len(header.ParentVotes) > 0 {
-		soloReware, reward := stake.NewStakeState(statedb).StakeCurrentReward()
-		log.Info("accumulateRewards: currentReward", "soloReware", soloReware, "reward", reward, "header.ParentVotes", len(header.ParentVotes))
-		for _, vote := range header.ParentVotes {
-			if vote.IsPool {
-				reward.Add(reward, new(big.Int).Div(reward, big.NewInt(3)))
-			} else {
-				reward.Add(reward, new(big.Int).Div(soloReware, big.NewInt(3)))
-			}
-		}
-	}
-
 	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 		Value:    utils.U256(*reward),
 	},
 	}
-	statedb.GetZState().AddTxOut(header.Coinbase, asset)
+	statedb.NextZState().AddTxOut(header.Coinbase, asset)
 }
 
 func accumulateRewardsV1(config *params.ChainConfig, statedb *state.StateDB, header *types.Header) *big.Int {
@@ -559,7 +555,7 @@ func accumulateRewardsV2(statedb *state.StateDB, header *types.Header) *big.Int 
 			Value:    utils.U256(*balance),
 		},
 		}
-		statedb.GetZState().AddTxOut(teamAddress, assetTeam)
+		statedb.NextZState().AddTxOut(teamAddress, assetTeam)
 
 		balance = statedb.GetBalance(communityRewardPool, "SERO")
 		statedb.SubBalance(communityRewardPool, "SERO", balance)
@@ -568,7 +564,7 @@ func accumulateRewardsV2(statedb *state.StateDB, header *types.Header) *big.Int 
 			Value:    utils.U256(*balance),
 		},
 		}
-		statedb.GetZState().AddTxOut(communityAddress, assetCommunity)
+		statedb.NextZState().AddTxOut(communityAddress, assetCommunity)
 	}
 	return reward
 }
@@ -603,7 +599,7 @@ func accumulateRewardsV3(statedb *state.StateDB, header *types.Header) *big.Int 
 			Value:    utils.U256(*balance),
 		},
 		}
-		statedb.GetZState().AddTxOut(teamAddress, assetTeam)
+		statedb.NextZState().AddTxOut(teamAddress, assetTeam)
 
 		balance = statedb.GetBalance(communityRewardPool, "SERO")
 		if balance.Sign() > 0 {
@@ -613,8 +609,47 @@ func accumulateRewardsV3(statedb *state.StateDB, header *types.Header) *big.Int 
 				Value:    utils.U256(*balance),
 			},
 			}
-			statedb.GetZState().AddTxOut(communityAddress, assetCommunity)
+			statedb.NextZState().AddTxOut(communityAddress, assetCommunity)
 		}
+	}
+	return reward
+}
+
+func accumulateRewardsV4(statedb *state.StateDB, header *types.Header) *big.Int {
+	diff := new(big.Int).Div(header.Difficulty, big.NewInt(1000000000))
+	reward := new(big.Int).Add(new(big.Int).Mul(argA, diff), argB)
+
+	if reward.Cmp(lReward) < 0 {
+		reward = new(big.Int).Set(lReward)
+	} else if reward.Cmp(hRewardV4) > 0 {
+		reward = new(big.Int).Set(hRewardV4)
+	}
+
+	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(header.Number, halveNimber), interval), big1)
+	reward.Div(reward, new(big.Int).Exp(big2, i, nil))
+
+
+
+	if header.Licr.C != 0 {
+		reward = new(big.Int)
+	}
+
+	if statedb == nil {
+		return reward
+	}
+
+	teamReward := new(big.Int).Div(hRewardV4, new(big.Int).Exp(big2, i, nil))
+	statedb.AddBalance(teamRewardPool, "SERO", teamReward)
+
+	if header.Number.Uint64()%5000 == 0 {
+		balance := statedb.GetBalance(teamRewardPool, "SERO")
+		statedb.SubBalance(teamRewardPool, "SERO", balance)
+		assetTeam := assets.Asset{Tkn: &assets.Token{
+			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+			Value:    utils.U256(*balance),
+		},
+		}
+		statedb.NextZState().AddTxOut(teamAddress, assetTeam)
 	}
 	return reward
 }

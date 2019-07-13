@@ -102,5 +102,8 @@ func EncodeNumber(number uint64) []byte {
 }
 
 func DecodeNumber(data []byte) uint64 {
+	if len(data) == 0 {
+		return 0
+	}
 	return binary.BigEndian.Uint64(data)
 }

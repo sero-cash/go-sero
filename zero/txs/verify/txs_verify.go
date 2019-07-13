@@ -239,7 +239,7 @@ func Verify(s *stx.T, state *zstate.ZState) (e error) {
 	}
 
 	t.Renter("Miner-Verify-----z_ins")
-	for _, in_z := range s.Desc_Z.Ins {
+	for _, in_z := range s.Desc_Z.Ins { //state.verifyZs
 		if ok := state.State.HasIn(&in_z.Nil); ok {
 			e = errors.New("txs.verify in already in nils")
 			return

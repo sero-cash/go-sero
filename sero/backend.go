@@ -205,9 +205,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	stakeservice.NewStakeService(zconfig.Stake_dir(), sero.blockchain, sero.accountManager)
 
 
+
 	//init light
 	if config.StartLight {
-		sero.lightNode = light.NewLightNode(zconfig.Light_dir(), sero.txPool)
+		sero.lightNode = light.NewLightNode(zconfig.Light_dir(), sero.txPool,sero.blockchain.GetDB())
 	}
 
 	return sero, nil

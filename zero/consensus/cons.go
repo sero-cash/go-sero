@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/sero-cash/go-sero/core/types"
+
 	"github.com/pkg/errors"
-	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
@@ -83,9 +84,13 @@ func (self *consItem) Log() string {
 }
 
 func (self *consItem) CopyRef() (ret *consItem) {
+	var item_copy CItem
+	if self.item!=nil {
+		item_copy=self.item.CopyTo()
+	}
 	ret = &consItem{
 		self.key.CopyTo(),
-		self.item.CopyTo(),
+		item_copy,
 		self.index,
 		self.inCons,
 		self.inBlock.CopyRef(),
@@ -121,6 +126,26 @@ func NewCons(db DB, pre string) (ret Cons) {
 	ret.db = db
 	ret.ver = -1
 	ret.updateVer = -1
+	return
+}
+
+func (self *Cons) Copy(db DB) (ret *Cons) {
+	ret=&Cons{}
+	ret.db = db
+	ret.pre = self.pre
+	ret.content = make(map[string]*consItem)
+	ret.ver = self.ver
+	ret.updateVer = self.updateVer
+	for _,log:=range self.cls {
+		temp:=log
+		if log.old!=nil {
+			temp.old = log.old.CopyTo()
+		}
+		ret.cls=append(ret.cls,temp)
+	}
+	for k,v:=range self.content {
+		ret.content[k]=v.CopyRef()
+	}
 	return
 }
 
@@ -361,9 +386,9 @@ func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
 	return
 }
 
-func (self *Cons) ReportConItems(name string, items consItems) {
-	return
-	fmt.Printf("%v REPORT ITEMS: num=%v\n", name, self.db.Num())
+func (self *Cons) ReportConItems(name string, items consItems, num uint64) {
+    return
+	fmt.Printf("%v REPORT ITEMS: num=%v\n", name, num)
 	for _, item := range items {
 		fmt.Print("  ")
 		fmt.Println(item.Log())
@@ -371,9 +396,9 @@ func (self *Cons) ReportConItems(name string, items consItems) {
 	fmt.Print("\n")
 }
 
-func (self *Cons) ReportRecords(records []*Record) {
+func (self *Cons) ReportRecords(records []*Record, num uint64) {
 	return
-	fmt.Printf("BLOCK RECORDS : num=%v\n", self.db.Num())
+	fmt.Printf("BLOCK RECORDS : num=%v\n", num)
 	for _, record := range records {
 		fmt.Print(record.Log())
 	}
@@ -382,7 +407,7 @@ func (self *Cons) ReportRecords(records []*Record) {
 
 func (self *Cons) Update() {
 	self.updateVer = self.ver
-	self.ReportConItems("CONS", self.fetchConsPairs(true))
+	self.ReportConItems("CONS", self.fetchConsPairs(true), 0)
 	conslist := self.fetchConsPairs(false)
 	for _, v := range conslist {
 		if v.item == nil {
@@ -406,16 +431,17 @@ type DPutter interface {
 	serodb.Deleter
 }
 
-func (self *Cons) Record(hash *common.Hash, batch DPutter) {
-	self.ReportRecords(self.fetchBlockRecords(true))
+func (self *Cons) Record(header *types.Header, batch DPutter) {
+	self.ReportRecords(self.fetchBlockRecords(true), header.Number.Uint64())
 	recordlist := self.fetchBlockRecords(false)
 
 	if len(recordlist) > 0 {
-		DBObj{self.pre}.setBlockRecords(batch, self.db.Num(), hash, recordlist)
+		hash := header.Hash()
+		DBObj{self.pre}.setBlockRecords(batch, header.Number.Uint64(), &hash, recordlist)
 	}
 
 	dblist := self.fetchDBPairs(false)
-	self.ReportConItems("DB", dblist)
+	self.ReportConItems("DB", dblist, header.Number.Uint64())
 	for _, v := range dblist {
 		if v.item == nil {
 			if err := batch.Delete([]byte(v.key.k())); err != nil {

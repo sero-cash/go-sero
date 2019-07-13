@@ -17,7 +17,9 @@ func TestProgpow(t *testing.T) {
 	generateCache(cache, 0, seed)
 	header, _ := hexutil.Decode("0x5ffee07b6b16bc6f364c45b84d412138a0b1588edb74e4123e419384435e1691")
 
-	d, r := progpowLightWithoutCDag(data_size, cache, header, 15017396847274520746, 50)
+	cDag := make([]uint32, progpowCacheWords)
+
+	d, r := progpowLightWithoutCDag(data_size, cache,cDag, header, 15017396847274520746, 50)
 	fmt.Printf("d: %v,r: %v", hexutil.Encode(d), hexutil.Encode(r))
 }
 

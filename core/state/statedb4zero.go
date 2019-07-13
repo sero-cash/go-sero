@@ -1,12 +1,12 @@
 package state
 
 import (
+	"github.com/pkg/errors"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/consensus"
 	"github.com/sero-cash/go-sero/zero/txs/zstate"
-	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
 )
 
 type StateDbPut interface {
@@ -48,7 +48,11 @@ func (self *StateTri) GlobalGetter() serodb.Getter {
 	return self.Dbget
 }
 
-func (self *StateDB) GetZState() *zstate.ZState {
+func (self *StateDB) CurrentZState() *zstate.ZState {
+	if self.number < 0 {
+		panic(errors.New("Current ZState height num must >= 0"))
+	}
+
 	if self.zstate == nil {
 		st := StateTri{
 			self,
@@ -56,21 +60,29 @@ func (self *StateDB) GetZState() *zstate.ZState {
 			self.db.TrieDB().DiskDB(),
 			self.db.TrieDB().WDiskDB(),
 		}
-		self.zstate = zstate.NewState(&st, self.number)
+		self.zstate = zstate.CurrentState(&st, uint64(self.number))
 	}
 	return self.zstate
 }
 
-func (self *StateDB) GetPkgState() *pkgstate.PkgState {
-	return &self.GetZState().Pkgs
+func (self *StateDB) NextZState() *zstate.ZState {
+	if self.number < -1 {
+		panic(errors.New("Next ZState height num must >= -1"))
+	}
+	if self.zstate == nil {
+		st := StateTri{
+			self,
+			self.trie,
+			self.db.TrieDB().DiskDB(),
+			self.db.TrieDB().WDiskDB(),
+		}
+		self.zstate = zstate.NextState(&st, self.number)
+	}
+	return self.zstate
 }
 
 type zeroDB struct {
 	db *StateDB
-}
-
-func (self *zeroDB) Num() uint64 {
-	return self.db.number
 }
 
 func (self *zeroDB) CurrentTri() serodb.Tri {
@@ -80,6 +92,7 @@ func (self *zeroDB) CurrentTri() serodb.Tri {
 func (self *zeroDB) GlobalGetter() serodb.Getter {
 	return self.db.db.TrieDB().DiskDB()
 }
+
 
 var StakeDB = consensus.DBObj{"STAKE$BLOCK$INDEX"}
 
