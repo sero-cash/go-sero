@@ -22,6 +22,7 @@ var Transaction = {
             that.calculate();
         });
 
+        $('.toast').toast({animation: true, autohide: true, delay: 2000})
 
     },
 
@@ -129,9 +130,11 @@ var Transaction = {
 
 
     subTx: function () {
+        var that = this;
 
         var from = $(".address").val();
-        var currency = $(".currency").val();
+        var currency =$('.currency').find("option:selected").text();
+
         var amount = $("#amount").val();
         var to = $("#address").val();
         var gasprice = $("#gasprice").val();
@@ -143,9 +146,9 @@ var Transaction = {
 
         $(".modal-body ul li:eq(0) div div:eq(1)").text(from);
         $(".modal-body ul li:eq(1) div div:eq(1)").text(to);
-        $(".modal-body ul li:eq(2) div div:eq(1)").text(amount.toFixed(6));
-        $(".modal-body ul li:eq(3) div div:eq(1)").text(0);
-        $(".modal-body ul li:eq(4) div div:eq(1)").text(0);
+        $(".modal-body ul li:eq(2) div div:eq(1)").text(amount.dividedBy(Common.baseDecimal).toFixed(6) + ' ' + currency);
+        $(".modal-body ul li:eq(3) div div:eq(1)").text(fee.dividedBy(Common.baseDecimal).toFixed(6) + ' ' + currency);
+        $(".modal-body ul li:eq(4) div div:eq(1)").text(total.dividedBy(Common.baseDecimal).toFixed(6) + ' ' + currency);
 
         $('#myModal').modal('show');
 
@@ -154,22 +157,40 @@ var Transaction = {
         });
 
         $('.modal-footer button:eq(1)').bind('click', function () {
-            var biz = {
-                From: from,
-                To: to,
-                Currency: currency,
-                Amount: amount.toString(10),
-                GasPrice: gasprice.toString(10),
-            }
-            Common.post('tx/transfer', biz, {}, function (res) {
-                if (res.base.code === 'SUCCESS') {
 
-                } else {
-                    alert(res.base.desc);
+            $('.modal-footer button:eq(1)').attr('disabled', true);
+            var password = $("#password").val();
+            if(password === ''){
+                $('.toast div:eq(0)').text('Please Enter Your Password!');
+                $('.toast').toast('show')
+                $('.modal-footer button:eq(1)').attr('disabled', false);
+            }else{
+                var biz = {
+                    From: from,
+                    To: to,
+                    Currency: currency,
+                    Amount: amount.toString(10),
+                    GasPrice: gasprice.toString(10),
+                    Password:password,
                 }
-            })
+                Common.post('tx/transfer', biz, {}, function (res) {
+                    if (res.base.code === 'SUCCESS') {
+                        $('.toast-body').removeClass('alert-danger').addClass('alert-success');
+                        $('.toast div:eq(0)').text('Send Transaction Successful!');
+                        $('.toast').toast('show')
+                        setTimeout(function () {
+                            $('.modal-footer button:eq(1)').attr('disabled', false);
+                            $('#myModal').modal('hide');
+                            that.init()
+                        },2000);
+                    } else {
+                        $('.toast div:eq(0)').text(res.base.desc);
+                        $('.toast').toast('show')
+                    }
+                    $('.modal-footer button:eq(1)').attr('disabled', false);
+                })
+            }
         });
-
     }
 
 

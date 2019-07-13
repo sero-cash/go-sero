@@ -1,9 +1,8 @@
 package timer
 
 import (
-	"time"
 	"github.com/sero-cash/go-sero/light-wallet/common/logex"
-	"github.com/sero-cash/go-sero/light-wallet/common/utils"
+	"time"
 )
 
 type Timer struct {
@@ -16,7 +15,7 @@ type Timer struct {
 type Run func()
 
 func (t *Timer) Start() {
-	t.TId = utils.UUID()
+	//t.TId = utils.UUID()
 	timer := time.NewTicker(t.Second * time.Second)
 	for {
 		select {

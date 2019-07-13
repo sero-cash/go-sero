@@ -478,52 +478,10 @@ func (self *SEROLight) FetchAndIndex(start, end uint64, pk keys.Uint512) (curren
 
 	batch := self.db.NewBatch()
 	if len(utxosMap) > 0 {
-		ops := map[string]string{}
-		for key, list := range utxosMap {
-			roots := []keys.Uint256{}
-			for _, utxo := range list {
-				data, err := rlp.EncodeToBytes(utxo)
-				if err != nil {
-					return
-				}
-
-				// "ROOT" + root
-				batch.Put(rootKey(utxo.Root), data)
-				//nil => root
-				batch.Put(nilToRootKey(utxo.Nil), utxo.Root[:])
-
-				var pkKey []byte
-				if utxo.Asset.Tkn != nil {
-					// "PK" + PK + currency + root
-					pkKey = utxoPkKey(key.PK, utxo.Asset.Tkn.Currency[:], &utxo.Root)
-
-				} else if utxo.Asset.Tkt != nil {
-					// "PK" + PK + tkt + root
-					pkKey = utxoPkKey(key.PK, utxo.Asset.Tkt.Value[:], &utxo.Root)
-				}
-				// "PK" + PK + currency + root => 0
-				ops[common.Bytes2Hex(pkKey)] = common.Bytes2Hex([]byte{0})
-
-				// "NIL" + PK + tkt + root => "PK" + PK + currency + root
-				nilkey := nilKey(utxo.Nil)
-				rootkey := nilKey(utxo.Root)
-
-				// "NIL" +nil/root => pkKey
-				ops[common.Bytes2Hex(nilkey)] = common.Bytes2Hex(pkKey)
-				ops[common.Bytes2Hex(rootkey)] = common.Bytes2Hex(pkKey)
-
-				roots = append(roots, utxo.Root)
-				//log.Info("Index add", "PK", base58.Encode(key.PK[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "root", common.Bytes2Hex(utxo.Root[:]), "Value", utxo.Asset.Tkn.Value)
-			}
-			data, err := rlp.EncodeToBytes(roots)
-			if err != nil {
-				return
-			}
-
-			// utxo PK + index  => [roots]
-			batch.Put(utxoKey(key.Num, key.PK), data)
+		ops,err := self.indexUtxo(utxosMap, batch)
+		if err !=nil{
+			return
 		}
-
 		for key, value := range ops {
 			batch.Put(common.Hex2Bytes(key), common.Hex2Bytes(value))
 		}
@@ -546,6 +504,55 @@ func (self *SEROLight) FetchAndIndex(start, end uint64, pk keys.Uint512) (curren
 	return
 }
 
+func (self *SEROLight) indexUtxo(utxosMap map[PkKey][]Utxo, batch serodb.Batch) (opsReturn map[string]string ,err error) {
+	ops := map[string]string{}
+	for key, list := range utxosMap {
+		roots := []keys.Uint256{}
+		for _, utxo := range list {
+			data, err := rlp.EncodeToBytes(utxo)
+			if err != nil {
+				return nil,err
+			}
+
+			// "ROOT" + root
+			batch.Put(rootKey(utxo.Root), data)
+			//nil => root
+			batch.Put(nilToRootKey(utxo.Nil), utxo.Root[:])
+
+			var pkKey []byte
+			if utxo.Asset.Tkn != nil {
+				// "PK" + PK + currency + root
+				pkKey = utxoPkKey(key.PK, utxo.Asset.Tkn.Currency[:], &utxo.Root)
+
+			} else if utxo.Asset.Tkt != nil {
+				// "PK" + PK + tkt + root
+				pkKey = utxoPkKey(key.PK, utxo.Asset.Tkt.Value[:], &utxo.Root)
+			}
+			// "PK" + PK + currency + root => 0
+			ops[common.Bytes2Hex(pkKey)] = common.Bytes2Hex([]byte{0})
+
+			// "NIL" + PK + tkt + root => "PK" + PK + currency + root
+			nilkey := nilKey(utxo.Nil)
+			rootkey := nilKey(utxo.Root)
+
+			// "NIL" +nil/root => pkKey
+			ops[common.Bytes2Hex(nilkey)] = common.Bytes2Hex(pkKey)
+			ops[common.Bytes2Hex(rootkey)] = common.Bytes2Hex(pkKey)
+
+			roots = append(roots, utxo.Root)
+			//log.Info("Index add", "PK", base58.Encode(key.PK[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "root", common.Bytes2Hex(utxo.Root[:]), "Value", utxo.Asset.Tkn.Value)
+		}
+		data, err := rlp.EncodeToBytes(roots)
+		if err != nil {
+			return nil,err
+		}
+
+		// utxo PK + index  => [roots]
+		batch.Put(utxoKey(key.Num, key.PK), data)
+	}
+	return ops,nil
+}
+
 type BlockDelNil struct {
 	Num uint64
 	Nil keys.Uint256
@@ -559,7 +566,7 @@ func (self *SEROLight) CheckNil() {
 	if len(nilNum) > 0 {
 		start = decodeNumber(nilNum)
 	}
-	start = start + 1
+	//start = start + 1
 
 	end := minNum
 	if start >= minNum {
@@ -603,17 +610,21 @@ func (self *SEROLight) CheckNil() {
 			Nil := bdn.Nil
 			value, _ := self.db.Get(nilKey(Nil))
 			if value != nil {
+				if len(value) == 130 {
+					batch.Delete(value)
+				} else {
+					batch.Delete(value[0:130])
+					batch.Delete(value[130:260])
+				}
+				batch.Delete(nilKey(Nil))
+
 				var root keys.Uint256
 				copy(root[:], value[98:130])
-				copy(pk[:], value[2:66])
-
-				batch.Delete(value)
-				batch.Delete(nilKey(Nil))
 				batch.Delete(nilKey(root))
-
 				self.usedFlag.Delete(root)
+				copy(pk[:], value[2:66])
+				logex.Info("delete :", root)
 			}
-
 			if account := self.getAccountByPk(pk); account != nil {
 				account.isChanged = true
 			}
@@ -622,9 +633,7 @@ func (self *SEROLight) CheckNil() {
 			}
 		}
 	}
-
 	batch.Put(syncNilKEY, encodeNumber(maxNilNum))
-
 	batch.Write()
 }
 
@@ -779,7 +788,7 @@ func (self *SEROLight) getUtxo(root keys.Uint256) (utxo Utxo, e error) {
 		return
 	}
 	if err := rlp.Decode(bytes.NewReader(data), &utxo); err != nil {
-		logex.Error("Exchange Invalid utxo RLP", "root", common.Bytes2Hex(root[:]), "err", err)
+		logex.Error("Light Invalid utxo RLP", "root", common.Bytes2Hex(root[:]), "err", err)
 		e = err
 		return
 	}
@@ -848,23 +857,7 @@ func NewBigIntFromString(s string, base int) (*big.Int, error) {
 	return val, nil
 }
 
-func (self *SEROLight) CommitTx(from, to, currency, amountStr, gasPriceStr, passwd string) (hash string, err error) {
-
-	amount, err := NewBigIntFromString(amountStr, 10)
-	if err != nil {
-		return hash, err
-	}
-	if amount.Sign() < 0 {
-		return hash, fmt.Errorf("amount < 0 ")
-	}
-
-	gasprice, err := NewBigIntFromString(gasPriceStr, 10)
-	if err != nil {
-		return hash, err
-	}
-	if gasprice.Sign() < 0 {
-		return hash, fmt.Errorf("gasprice < 0 ")
-	}
+func (self *SEROLight) CommitTx(from, to, currency, passwd string, amount, gasprice *big.Int) (hash keys.Uint256, err error) {
 
 	fee := new(big.Int).Mul(big.NewInt(25000), gasprice)
 	fromPk := address.Base58ToAccount(from).ToUint512()
@@ -891,12 +884,7 @@ func (self *SEROLight) CommitTx(from, to, currency, amountStr, gasPriceStr, pass
 	}
 
 	preTxParam.Receptions = []prepare.Reception{reception}
-
 	param, err := self.GenTx(preTxParam)
-
-	//==test
-	bytes, _ := json.Marshal(param)
-	fmt.Println("aaa: ", string(bytes[:]))
 
 	if err != nil {
 		return hash, err
@@ -918,6 +906,8 @@ func (self *SEROLight) CommitTx(from, to, currency, amountStr, gasPriceStr, pass
 	if err != nil {
 		return hash, err
 	}
+
+	hash = gtx.Hash
 
 	sync := Sync{RpcHost: "http://127.0.0.1:8545", Method: "sero_commitTx", Params: []interface{}{gtx}}
 	if _, err := sync.Do(); err != nil {
