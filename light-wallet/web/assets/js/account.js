@@ -190,7 +190,7 @@ var Detail = {
 
     txPageNo: 1,
 
-    txPageSize: 5,
+    txPageSize: 10,
 
     txCount: 0,
 

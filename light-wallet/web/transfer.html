@@ -42,7 +42,7 @@
                                                 </select>
                                             </div>
                                             <div class="col-sm-3 mb-3 mb-sm-0"><label>Currency</label>
-                                                <select class="form-control currency">
+                                                <select class="form-control currency" id="currency">
                                                 </select>
                                             </div>
                                         </div>
@@ -105,6 +105,10 @@
                 </button>
             </div>
             <div class="modal-body">
+                <div class="toast" style="position: absolute;right:30%;z-index: 99999;">
+                    <div class="toast-body alert-danger">
+                    </div>
+                </div>
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item">
                         <div class="row">
@@ -129,6 +133,11 @@
                     <li class="list-group-item">
                         <div class="row">
                             <div class="col-lg-3">Total</div><div class="col-lg-9 total"></div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="row">
+                            <div class="col-lg-3">Password</div><div class="col-lg-9 total"><input type="password" autofocus class="form-control" placeholder="Please Enter Your Password" id="password" autocomplete="off" required/></div>
                         </div>
                     </li>
                 </ul>

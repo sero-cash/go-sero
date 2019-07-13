@@ -1,20 +1,21 @@
 package app
 
 import (
+	"errors"
+	"fmt"
+	"github.com/btcsuite/btcutil/base58"
+	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/accounts/keystore"
-	"net/http"
-	"io/ioutil"
-	"github.com/sero-cash/go-sero/light-wallet/common/logex"
-	"github.com/tyler-smith/go-bip39"
-	"errors"
-	"github.com/sero-cash/go-sero/crypto"
-	"github.com/sero-cash/go-sero/common/address"
-	"math/big"
-	"github.com/sero-cash/go-sero/light-wallet/common/transport"
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/btcsuite/btcutil/base58"
+	"github.com/sero-cash/go-sero/common/address"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/light-wallet/common/logex"
+	"github.com/sero-cash/go-sero/light-wallet/common/transport"
+	"github.com/tyler-smith/go-bip39"
+	"io/ioutil"
+	"math/big"
+	"net/http"
 	"sort"
 )
 
@@ -33,7 +34,7 @@ type Service interface {
 	TXNum(pkStr string) map[string]uint64
 	TXList(pkStr string, request transport.PageRequest) (utxosResp, error)
 
-	Transfer(from, to, currency, amount, gasPrice,pwd string) (hash string, err error)
+	Transfer(from, to, currency, amount, gasPrice, pwd string) (hash string, err error)
 }
 
 func NewPrivateAccountAPI() Service {
@@ -141,7 +142,7 @@ func (s *PrivateAccountAPI) AccountList() (accountListResps accountResps) {
 		}
 		balance := s.SL.GetBalances(pk)
 
-		accountListResp := accountResp{PK: base58.Encode(pk[:]), MainPKr: base58.Encode(account.mainPkr[:]), Balance: balance, UtxoNums: account.utxoNums, PkrBase58: pkrs,index:account.index}
+		accountListResp := accountResp{PK: base58.Encode(pk[:]), MainPKr: base58.Encode(account.mainPkr[:]), Balance: balance, UtxoNums: account.utxoNums, PkrBase58: pkrs, index: account.index}
 		accountListResps = append(accountListResps, accountListResp)
 		return true
 	})
@@ -242,8 +243,33 @@ func (s *PrivateAccountAPI) TXList(pkStr string, request transport.PageRequest) 
 	return
 }
 
-func (s *PrivateAccountAPI) Transfer(from, to, currency, amount, gasPrice ,password string) (hash string, err error) {
-	return s.SL.CommitTx(from, to, currency, amount, gasPrice,password)
+func (s *PrivateAccountAPI) Transfer(from, to, currency, amountStr, gasPriceStr, password string) (hash string, err error) {
+
+	amount, err := NewBigIntFromString(amountStr, 10);
+	if err != nil {
+		return hash, err
+	} else {
+		if amount.Sign() < 0 {
+			return hash, fmt.Errorf("amount < 0")
+		}
+	}
+
+	gasPrice, err := NewBigIntFromString(gasPriceStr, 10);
+	if err != nil {
+		return hash, err
+	} else {
+		if gasPrice.Sign() < 0 {
+			return hash, fmt.Errorf("gasPrice < 0")
+		}
+	}
+	if toBytes := base58.Decode(to); len(toBytes) != 96 {
+		return hash, fmt.Errorf("Invalid colleaction address ")
+	}
+	h, err := s.SL.CommitTx(from, to, currency, password, amount, gasPrice)
+	if err != nil {
+		return hash, err
+	}
+	return string(h[:]), nil
 }
 
 func (s *PrivateAccountAPI) TXNum(pkStr string) map[string]uint64 {

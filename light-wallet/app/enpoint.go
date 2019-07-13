@@ -250,7 +250,12 @@ func MakeTxSendEndpoint(service Service) endpoint.Endpoint {
 		transferReq := transferReq{}
 		utils.Convert(req.Biz, &transferReq)
 
-		hash, err := service.Transfer(transferReq.From, transferReq.To, transferReq.Currency, transferReq.Amount, transferReq.GasPrice, "12345678")
+		if transferReq.Password  == ""{
+			response.SetBaseResponse(errorcode.FAIL_CODE, "password can not be nil ")
+			return response, nil
+		}
+
+		hash, err := service.Transfer(transferReq.From, transferReq.To, transferReq.Currency, transferReq.Amount, transferReq.GasPrice, transferReq.Password)
 		if err != nil {
 			response.SetBaseResponse(errorcode.FAIL_CODE, err.Error())
 			return response, nil
