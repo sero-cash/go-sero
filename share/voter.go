@@ -29,7 +29,7 @@ const (
 	chainLotterySize = 300
 	lifeTime         = 30 * time.Minute
 
-	delayNum         = 6
+	delayNum         = 1
 	lotteryQueueSize = 12
 )
 
@@ -128,22 +128,19 @@ func (self *Voter) lotteryTaskLoop() {
 		case lottery := <-self.lotteryCh:
 			current := self.chain.CurrentBlock().NumberU64()
 			log.Info(">>>>>>>lotteryTaskLoop new lottery", "poshash", lottery.PosHash, "block", lottery.ParentNum+1, "localBlock", current)
-			if current+delayNum >= lottery.ParentNum {
-				parentBlock := self.chain.GetBlock(lottery.ParentHash,lottery.ParentNum)
-				if parentBlock == nil {
-					log.Info(">>>>>lotteryTaskLoop can not find parentblokc", "parent block", lottery.ParentNum)
-					self.lotteryQueue.PushItem(lottery.PosHash, &lotteryItem{Lottery: lottery, Attempts: uint8(0)}, lottery.ParentNum+1)
+			parentBlock := self.chain.GetBlock(lottery.ParentHash,lottery.ParentNum)
+			if parentBlock == nil {
+				log.Info(">>>>>lotteryTaskLoop can not find parentblokc", "parent block", lottery.ParentNum)
+				self.lotteryQueue.PushItem(lottery.PosHash, &lotteryItem{Lottery: lottery, Attempts: uint8(0)}, lottery.ParentNum+1)
+			} else {
+				selfShares, err := self.SelfShares(lottery.PosHash, lottery.ParentHash, parentBlock.Number())
+				if err != nil {
+					log.Info("lotteryTaskLoop", "selfShare error ", err)
 				} else {
-					selfShares, err := self.SelfShares(lottery.PosHash, lottery.ParentHash, parentBlock.Number())
-					if err != nil {
-						log.Info("lotteryTaskLoop", "selfShare error ", err)
-					} else {
-						for _, s := range selfShares {
-							go self.sign(s)
-						}
+					for _, s := range selfShares {
+						go self.sign(s)
 					}
 				}
-
 			}
 		}
 	}
@@ -159,13 +156,13 @@ func (self *Voter) voteLoop() {
 			for item := self.lotteryQueue.Pop(); item != nil; item = self.lotteryQueue.Pop() {
 				lItem := item.Value.(*lotteryItem)
 				log.Info(">>>>>voteLoop get Vote Item", "poshash", lItem.Lottery.PosHash, "block", lItem.Lottery.ParentNum+1)
-				if lItem.Lottery.ParentNum+delayNum < current {
+				if current>lItem.Lottery.ParentNum+delayNum {
 					log.Info(">>>>>>not need vote", "current", current, "vote block", lItem.Lottery.ParentNum+1)
 					continue
 				}
 				parentBlock := self.chain.GetBlock(lItem.Lottery.ParentHash,lItem.Lottery.ParentNum)
 				if parentBlock == nil {
-					log.Info(">>>>>voteLoop get parent is nil")
+					log.Info(">>>>>voteLoop get parent is nil","hash",lItem.Lottery.ParentHash,"block",lItem.Lottery.ParentNum)
 					self.lotteryQueue.PushItem(lItem.Lottery.PosHash, lItem, item.Block)
 					break
 				}
@@ -340,18 +337,20 @@ func (self *Voter) SendVoteEvent(vote *types.Vote) {
 }
 
 func (self *Voter) AddLottery(lottery *types.Lottery) {
-	log.Info("AddLottery", "poshas", lottery.PosHash, "block", lottery.ParentNum+1)
 	self.lotteryMu.Lock()
 	defer self.lotteryMu.Unlock()
+	current := self.chain.CurrentBlock().Number().Uint64()
+	if current > lottery.ParentNum+delayNum {
+		log.Info("AddLottery droped","current" ,current,"voteBlock",lottery.ParentNum+1)
+		return
+	}
 	_, exits := self.lotterys[lottery.PosHash]
-	if exits {
-		self.SendLotteryEvent(lottery)
-	} else {
+	if !exits {
+		log.Info("AddLottery", "poshas", lottery.PosHash, "block", lottery.ParentNum+1)
 		self.lotterys[lottery.PosHash] = time.Now()
 		self.lotteryCh <- lottery
 		self.SendLotteryEvent(lottery)
 	}
-
 }
 
 func (self *Voter) getStakeHashByParentHash(posHash common.Hash, parentHash common.Hash) common.Hash {
@@ -385,16 +384,17 @@ func (self *Voter) getStateByNumber(num uint64) (*state.StateDB, error) {
 }
 
 func (self *Voter) AddVote(vote *types.Vote) {
-	log.Info("AddVote", "hashpos", vote.PosHash, "block", vote.ParentNum+1)
 	self.voteMu.Lock()
 	defer self.voteMu.Unlock()
 
 	current := self.chain.CurrentBlock().Number().Uint64()
 	if current > vote.ParentNum+delayNum {
+		log.Info("AddVote droped","current" ,current,"voteBlock",vote.ParentNum+1)
 		return
 	}
 	_, exits := self.votes[vote.Hash()]
 	if !exits {
+		log.Info("AddVote", "hashpos", vote.PosHash, "block", vote.ParentNum+1)
 		go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
 		self.SendVoteEvent(vote)
 		self.votes[vote.Hash()] = time.Now()

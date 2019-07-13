@@ -237,7 +237,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 // given the parent block's time and difficulty.
 func (ethash *Ethash) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
 	if parent.Number.Uint64()>= seroparam.Dev_diff() {
-		return  big.NewInt(1)
+		return  big.NewInt(100000)
 	}else{
 		return CalcDifficulty(chain.Config(), time, parent)
 	}
