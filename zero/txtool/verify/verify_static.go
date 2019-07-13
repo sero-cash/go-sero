@@ -120,6 +120,12 @@ func (self *verifyWithoutStateCtx) verifyPkg() (e error) {
 }
 
 func (self *verifyWithoutStateCtx) verifyCmds() (e error) {
+	if self.num < seroparam.SIP4() {
+		if self.tx.Desc_Cmd.Valid() {
+			e = ReportError("can not use tx cmd until SIP4", self.tx)
+			return
+		}
+	}
 	if !self.tx.Desc_Cmd.Valid() {
 		e = ReportError("cmd desc is invalid", self.tx)
 		return
@@ -189,7 +195,7 @@ func (self *verifyWithoutStateCtx) Verify() (e error) {
 		return
 	}
 
-	if e = self.verifyPkg(); e != nil {
+	if e = self.verifyCmds(); e != nil {
 		return
 	}
 
