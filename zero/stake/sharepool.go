@@ -681,9 +681,9 @@ func (self *StakeState) processRemedyRewards(bc blockChain,header *types.Header)
 		parentHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 		if len(parentHeader.ParentVotes) > 0 {
 			soloReware, totalReward := self.StakeCurrentReward()
-			log.Info("accumulateRewards: currentReward", "soloReware", soloReware, "totalReward", totalReward, "header.ParentVotes", len(header.ParentVotes))
+			log.Info("accumulateRewards: currentReward", "soloReware", soloReware, "totalReward", totalReward, "header.ParentVotes", len(parentHeader.ParentVotes))
 			reward:=new(big.Int)
-			for _, vote := range header.ParentVotes {
+			for _, vote := range parentHeader.ParentVotes {
 				if vote.IsPool {
 					reward.Add(reward, new(big.Int).Div(totalReward, big.NewInt(3)))
 				} else {
@@ -697,6 +697,7 @@ func (self *StakeState) processRemedyRewards(bc blockChain,header *types.Header)
 				},
 				nil,
 			}
+			log.Info("pos to pow reward:","coinbase",parentHeader.Coinbase.String(),"value",reward, "at",parentHeader.Number.Uint64())
 			self.statedb.GetZState().AddTxOut(parentHeader.Coinbase,asset)
 		}
 	}
@@ -789,26 +790,26 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) {
 
 	soloReware, reward := self.StakeCurrentReward()
 	if len(preHeader.CurrentVotes) > 0 {
-		log.Info("ProcessBeforeApply: process vote CurrentVotes", "size", len(preHeader.CurrentVotes), "blockNumber", preHeader.Number.Uint64())
+		//log.Info("ProcessBeforeApply: process vote CurrentVotes", "size", len(preHeader.CurrentVotes), "blockNumber", preHeader.Number.Uint64())
 		log.Info("ProcessBeforeApply: currentReward", "soloReware", soloReware, "reward", reward)
 		for _, vote := range preHeader.CurrentVotes {
-			self.rewardVote(vote, soloReware, reward)
+			self.rewardVote(vote, soloReware, reward,preHeader.Number.Uint64())
 		}
 	}
 
 	if len(preHeader.ParentVotes) > 0 {
-		log.Info("ProcessBeforeApply: process vote ParentVotes", "size", len(preHeader.ParentVotes), "blockNumber", preHeader.Number.Uint64())
+		//log.Info("ProcessBeforeApply: process vote ParentVotes", "size", len(preHeader.ParentVotes), "blockNumber", preHeader.Number.Uint64())
 		reward = new(big.Int).Sub(reward, new(big.Int).Div(reward, big.NewInt(3)))
 		soloReware = new(big.Int).Sub(soloReware, new(big.Int).Div(soloReware, big.NewInt(3)))
-		log.Info("ProcessBeforeApply: currentReward", "soloReware", soloReware, "reward", reward)
+		log.Info("ProcessBeforeApply for ParentVotes currentReward", "soloReware", soloReware, "reward", reward)
 		for _, vote := range preHeader.ParentVotes {
-			self.rewardVote(vote, soloReware, reward)
+			self.rewardVote(vote, soloReware, reward,preHeader.Number.Uint64())
 		}
 	}
 
 }
 
-func (self *StakeState) rewardVote(vote types.HeaderVote, soloReware, reward *big.Int) {
+func (self *StakeState) rewardVote(vote types.HeaderVote, soloReware, reward *big.Int,block uint64) {
 
 	share := self.getShare(vote.Id)
 	if share.WillVoteNum > 0 {
@@ -839,12 +840,15 @@ func (self *StakeState) rewardVote(vote types.HeaderVote, soloReware, reward *bi
 			log.Crit("ProcessBeforeApply: process vote err", "poolId", share.PoolId, "error", "pool.MissedVoteNum=0")
 		}
 		poolProfit := new(big.Int).Div(new(big.Int).Mul(reward, big.NewInt(int64(share.Fee))), big.NewInt(10000))
+		log.Info("pos to pool fee","pool",common.BytesToHash(pool.Id()),"reward",poolProfit,"at",block)
 		pool.AddProfit(poolProfit)
 		share.AddProfit(new(big.Int).Add(share.Value, new(big.Int).Sub(reward, poolProfit)))
+		log.Info("pos to share reward","pool",common.BytesToHash(pool.Id()),"share",common.BytesToHash(share.Id()),"reward",new(big.Int).Sub(reward, poolProfit),"at",block)
 		self.UpdateStakePool(pool)
 	} else {
 		share.AddProfit(new(big.Int).Add(share.Value, soloReware))
-		log.Info("processVotedShare rewardVote", "shareId", common.Bytes2Hex(share.Id()), "share.Value", share.Value, "soloReware", soloReware, "Profit", share.Profit)
+		log.Info("pos to share reward","share",common.BytesToHash(share.Id()),"reward",soloReware,"at",block)
+		//log.Info("processVotedShare rewardVote", "shareId", common.Bytes2Hex(share.Id()), "share.Value", share.Value, "soloReware", soloReware, "Profit", share.Profit)
 	}
 	self.updateShare(share)
 }

@@ -313,7 +313,10 @@ func (self *worker) update() {
 			parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 
 			self.pendingVoteMu.Lock()
-			self.pendingVote[voteKey{block.Block.NumberU64(), block.Block.Header().HashPos()}] = newVoteSet()
+			parentVoteKey:=voteKey{block.Block.NumberU64(), block.Block.Header().HashPos()}
+			if _,ok:=self.pendingVote[parentVoteKey];!ok{
+				self.pendingVote[parentVoteKey] = newVoteSet()
+			}
 			delKeys := []voteKey{}
 			for key := range self.pendingVote {
 				if key.headerNumber <= parentHeader.Number.Uint64() {
@@ -414,7 +417,7 @@ func (self *worker) powResultLoop() {
 					for _, vote := range currentVotes {
 						log.Info("pos currentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 						CurrentVotes = append(CurrentVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
-						if len(CurrentVotes) == 3 {
+						if len(CurrentVotes) == 2 {
 							break
 						}
 					}
