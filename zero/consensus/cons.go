@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/sero-cash/go-sero/core/types"
+
 	"github.com/pkg/errors"
-	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
@@ -361,9 +362,9 @@ func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
 	return
 }
 
-func (self *Cons) ReportConItems(name string, items consItems) {
+func (self *Cons) ReportConItems(name string, items consItems, num uint64) {
 	return
-	fmt.Printf("%v REPORT ITEMS: num=%v\n", name, self.db.Num())
+	fmt.Printf("%v REPORT ITEMS: num=%v\n", name, num)
 	for _, item := range items {
 		fmt.Print("  ")
 		fmt.Println(item.Log())
@@ -371,9 +372,9 @@ func (self *Cons) ReportConItems(name string, items consItems) {
 	fmt.Print("\n")
 }
 
-func (self *Cons) ReportRecords(records []*Record) {
+func (self *Cons) ReportRecords(records []*Record, num uint64) {
 	return
-	fmt.Printf("BLOCK RECORDS : num=%v\n", self.db.Num())
+	fmt.Printf("BLOCK RECORDS : num=%v\n", num)
 	for _, record := range records {
 		fmt.Print(record.Log())
 	}
@@ -382,7 +383,7 @@ func (self *Cons) ReportRecords(records []*Record) {
 
 func (self *Cons) Update() {
 	self.updateVer = self.ver
-	self.ReportConItems("CONS", self.fetchConsPairs(true))
+	self.ReportConItems("CONS", self.fetchConsPairs(true), 0)
 	conslist := self.fetchConsPairs(false)
 	for _, v := range conslist {
 		if v.item == nil {
@@ -406,16 +407,17 @@ type DPutter interface {
 	serodb.Deleter
 }
 
-func (self *Cons) Record(hash *common.Hash, batch DPutter) {
-	self.ReportRecords(self.fetchBlockRecords(true))
+func (self *Cons) Record(header *types.Header, batch DPutter) {
+	self.ReportRecords(self.fetchBlockRecords(true), header.Number.Uint64())
 	recordlist := self.fetchBlockRecords(false)
 
 	if len(recordlist) > 0 {
-		DBObj{self.pre}.setBlockRecords(batch, self.db.Num(), hash, recordlist)
+		hash := header.Hash()
+		DBObj{self.pre}.setBlockRecords(batch, header.Number.Uint64(), &hash, recordlist)
 	}
 
 	dblist := self.fetchDBPairs(false)
-	self.ReportConItems("DB", dblist)
+	self.ReportConItems("DB", dblist, header.Number.Uint64())
 	for _, v := range dblist {
 		if v.item == nil {
 			if err := batch.Delete([]byte(v.key.k())); err != nil {

@@ -5,7 +5,6 @@ import (
 )
 
 type DB interface {
-	Num() uint64
 	CurrentTri() serodb.Tri
 	GlobalGetter() serodb.Getter
 }

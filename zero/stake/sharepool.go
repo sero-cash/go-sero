@@ -2,6 +2,8 @@ package stake
 
 import (
 	"errors"
+	"math/big"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
@@ -17,7 +19,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/consensus"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"math/big"
 )
 
 type Status int8
@@ -228,7 +229,7 @@ type blockChain interface {
 	GetHeader(hash common.Hash, number uint64) *types.Header
 	//GetHeaderByNumber(number uint64) *types.Header
 	GetBlock(hash common.Hash, number uint64) *types.Block
-	StateAt(root common.Hash, number uint64) (*state.StateDB, error)
+	StateAt(header *types.Header) (*state.StateDB, error)
 	GetDB() serodb.Database
 }
 
@@ -683,7 +684,7 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 
 func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) {
 	statisticsMissWindow := getStatisticsMissWindow()
-	if header.Number.Uint64() < 2 || !self.IsEffect(header.Number.Uint64()) || header.Number.Uint64() - 2 < seroparam.SIP4() {
+	if header.Number.Uint64() < 2 || !self.IsEffect(header.Number.Uint64()) || header.Number.Uint64()-2 < seroparam.SIP4() {
 		return
 	}
 	value := self.missedNum.GetValue(missedNumKey)
@@ -692,8 +693,7 @@ func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) 
 	prepreHeader := bc.GetHeader(preHeader.ParentHash, preHeader.Number.Uint64()-1)
 	missedNum := utils.DecodeNumber32(value) + uint32(3-len(prepreHeader.CurrentVotes)-len(preHeader.ParentVotes))
 
-
-	if prepreHeader.Number.Uint64() > statisticsMissWindow && prepreHeader.Number.Uint64() - statisticsMissWindow -1 >= seroparam.SIP4() {
+	if prepreHeader.Number.Uint64() > statisticsMissWindow && prepreHeader.Number.Uint64()-statisticsMissWindow-1 >= seroparam.SIP4() {
 		preNumber := preHeader.Number.Uint64() - statisticsMissWindow - 1
 		windiwHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
 		prepreNumber := prepreHeader.Number.Uint64() - statisticsMissWindow - 1
@@ -817,7 +817,7 @@ func (self *StakeState) rewardVote(vote types.HeaderVote, soloReware, reward *bi
 
 func (self *StakeState) processOutDate(header *types.Header, bc blockChain) (shares []*Share) {
 	outOfDatePeriod := getOutOfDateWindow()
-	if header.Number.Uint64() < outOfDatePeriod || header.Number.Uint64() - outOfDatePeriod < seroparam.SIP4() {
+	if header.Number.Uint64() < outOfDatePeriod || header.Number.Uint64()-outOfDatePeriod < seroparam.SIP4() {
 		return
 	}
 
@@ -941,7 +941,7 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) {
 		}
 	}
 }
-	func (self *StakeState) payProfit(bc blockChain, header *types.Header) {
+func (self *StakeState) payProfit(bc blockChain, header *types.Header) {
 	payPeriod := getPayPeriod()
 	if header.Number.Uint64() < payPeriod {
 		return
@@ -967,7 +967,7 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) {
 			log.Info("ProcessBeforeApply: payProfit rewardVote", "shareId", common.Bytes2Hex(share.Id()), "Profit", share.Profit)
 			share.LastPayTime = header.Number.Uint64()
 			share.SetProfit(big.NewInt(0))
-			self.statedb.GetZState().AddTxOutWithCheck(addr, asset)
+			self.statedb.NextZState().AddTxOutWithCheck(addr, asset)
 			self.updateShare(share)
 		}
 	}
@@ -982,7 +982,7 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) {
 			}
 			pool.LastPayTime = header.Number.Uint64()
 			pool.SetProfit(big.NewInt(0))
-			self.statedb.GetZState().AddTxOutWithCheck(addr, asset)
+			self.statedb.NextZState().AddTxOutWithCheck(addr, asset)
 			self.UpdateStakePool(pool)
 		}
 	}

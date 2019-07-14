@@ -17,7 +17,6 @@
 package vm
 
 import (
-	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate"
 	"math/big"
 
 	"github.com/sero-cash/go-sero/common"
@@ -28,8 +27,9 @@ import (
 // StateDB is an EVM database for full state querying.
 type StateDB interface {
 	CreateAccount(common.Address)
-	GetZState() *zstate.ZState
-	GetPkgState() *pkgstate.PkgState
+
+	CurrentZState() *zstate.ZState
+	NextZState() *zstate.ZState
 
 	SubBalance(common.Address, string, *big.Int)
 	AddBalance(common.Address, string, *big.Int)

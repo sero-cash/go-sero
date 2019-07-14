@@ -2,18 +2,19 @@ package stake
 
 import (
 	"fmt"
+	"math/big"
+	"testing"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/serodb"
-	"math/big"
-	"testing"
 )
 
 func newState() (*StakeState, *state.StateDB) {
 	db := serodb.NewMemDatabase()
-	state, _ := state.New(common.Hash{}, state.NewDatabase(db), 0)
+	state, _ := state.New(state.NewDatabase(db), nil)
 	//state.GetZState()
 	//return state
 	//db := consensus.NewFakeDB()

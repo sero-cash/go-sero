@@ -16,8 +16,8 @@ type LState struct {
 	b *balance.Balance
 }
 
-func (self *LState) ZState() *zstate.ZState {
-	return txtool.Ref_inst.GetState()
+func (self *LState) CurrentZState() *zstate.ZState {
+	return txtool.Ref_inst.CurrentState()
 }
 
 func (self *LState) GetOut(root *keys.Uint256) (src *lstate_types.OutState, e error) {

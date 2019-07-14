@@ -103,7 +103,7 @@ type StateDB struct {
 	nextRevisionId int
 
 	//seeds  []keys.Uint512
-	number uint64
+	number int64
 	lock   sync.Mutex
 }
 
@@ -126,33 +126,25 @@ func (self *StateDB) IsContract(addr common.Address) bool {
 	return self.getStateObject(addr) != nil
 }
 
-func NewGenesis(root common.Hash, db Database) (*StateDB, error) {
-	tr, err := db.OpenTrie(root)
+/*func New(db Database, root common.Hash, num uint64) (*StateDB, error) {
 
-	if err != nil {
-		return nil, err
-	}
-
-	return &StateDB{
-		root:              root,
-		db:                db,
-		trie:              tr,
-		stateObjects:      make(map[common.Address]*stateObject),
-		stateObjectsDirty: make(map[common.Address]struct{}),
-		logs:              make(map[common.Hash][]*types.Log),
-		preimages:         make(map[common.Hash][]byte),
-		journal:           newJournal(),
-	}, nil
-}
+}*/
 
 // Create a new state from a given trie.
-func New(root common.Hash, db Database, number uint64) (*StateDB, error) {
+func New(db Database, header *types.Header) (*StateDB, error) {
+	var root common.Hash
+	var num int64
+	if header == nil {
+		root = common.Hash{}
+		num = -1
+	} else {
+		root = header.Root
+		num = header.Number.Int64()
+	}
 	tr, err := db.OpenTrie(root)
-
 	if err != nil {
 		return nil, err
 	}
-
 	return &StateDB{
 		root:              root,
 		db:                db,
@@ -162,7 +154,7 @@ func New(root common.Hash, db Database, number uint64) (*StateDB, error) {
 		logs:              make(map[common.Hash][]*types.Log),
 		preimages:         make(map[common.Hash][]byte),
 		journal:           newJournal(),
-		number:            number + 1,
+		number:            num,
 	}, nil
 }
 
@@ -803,7 +795,7 @@ func (self *StateDB) Snapshot() int {
 	self.nextRevisionId++
 	self.validRevisions = append(self.validRevisions, revision{id, self.journal.length()})
 	self.GetStakeCons().CreateSnapshot(id)
-	self.GetZState().Snapshot(id)
+	self.NextZState().Snapshot(id)
 	return id
 }
 
@@ -823,7 +815,7 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 	self.validRevisions = self.validRevisions[:idx]
 
 	self.GetStakeCons().RevertToSnapshot(revid)
-	self.GetZState().Revert(revid)
+	self.NextZState().Revert(revid)
 }
 
 // GetRefund returns the current value of the refund counter.
@@ -862,7 +854,7 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 // It is called in between transactions to get the root hash that
 // goes into transaction receipts.
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
-	s.GetZState().Update()
+	s.NextZState().Update()
 	s.GetStakeCons().Update()
 	s.Finalise(deleteEmptyObjects)
 	return s.trie.Hash()

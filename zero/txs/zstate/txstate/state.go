@@ -61,15 +61,11 @@ func (self *State) Tri() tri.Tri {
 	return self.tri
 }
 
-func (self *State) Num() uint64 {
-	return self.num
-}
-
 func NewState(tri tri.Tri, num uint64) (state State) {
 	state = State{tri: tri, num: num}
 	state.rw = new(sync.RWMutex)
 	state.MTree = NewMerkleTree(tri)
-	if num >= seroparam.SIP2() {
+	if state.num >= seroparam.SIP2() {
 		state.data = data_v1.NewData(num)
 	} else {
 		state.data = data.NewData(num)

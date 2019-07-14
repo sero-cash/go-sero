@@ -18,10 +18,11 @@ package core
 
 import (
 	"errors"
-	"github.com/sero-cash/go-czero-import/seroparam"
 	"math"
 	"math/big"
 	"strings"
+
+	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -212,7 +213,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 			return nil, 0, false, vmerr
 		}
 		if msg.Asset() != nil {
-			st.state.GetZState().AddTxOut(msg.From(), *msg.Asset())
+			st.state.NextZState().AddTxOut(msg.From(), *msg.Asset())
 		}
 	}
 
@@ -250,7 +251,7 @@ func (st *StateTransition) refundGas() {
 					Value:    utils.U256(*remainToken),
 				},
 				}
-				st.state.GetZState().AddTxOut(st.msg.From(), asset)
+				st.state.NextZState().AddTxOut(st.msg.From(), asset)
 				st.state.SubBalance(*st.msg.To(), curency, remainToken)
 			}
 		} else {
@@ -259,7 +260,7 @@ func (st *StateTransition) refundGas() {
 				Value:    utils.U256(*remaining),
 			},
 			}
-			st.state.GetZState().AddTxOut(st.msg.From(), asset)
+			st.state.NextZState().AddTxOut(st.msg.From(), asset)
 		}
 	}
 

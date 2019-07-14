@@ -106,7 +106,7 @@ func preGen(ts *tx.T) (p preTx, e error) {
 	}
 
 	if ts.PkgClose != nil {
-		if zpkg := lstate.CurrentLState().ZState().Pkgs.GetPkgById(&ts.PkgClose.Id); zpkg == nil || zpkg.Closed {
+		if zpkg := lstate.CurrentLState().CurrentZState().Pkgs.GetPkgById(&ts.PkgClose.Id); zpkg == nil || zpkg.Closed {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgClose.Id[:]))
 			return
 		} else {
@@ -145,7 +145,7 @@ func preGen(ts *tx.T) (p preTx, e error) {
 	}
 
 	if ts.PkgCreate != nil {
-		if zpkg := lstate.CurrentLState().ZState().Pkgs.GetPkgById(&ts.PkgCreate.Id); zpkg != nil {
+		if zpkg := lstate.CurrentLState().CurrentZState().Pkgs.GetPkgById(&ts.PkgCreate.Id); zpkg != nil {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgCreate.Id[:]))
 		} else {
 			if _, err := ck_state.AddOut(&ts.PkgCreate.Pkg.Asset); err != nil {
@@ -159,7 +159,7 @@ func preGen(ts *tx.T) (p preTx, e error) {
 	}
 
 	if ts.PkgTransfer != nil {
-		if zpkg := lstate.CurrentLState().ZState().Pkgs.GetPkgById(&ts.PkgTransfer.Id); zpkg == nil || zpkg.Closed {
+		if zpkg := lstate.CurrentLState().CurrentZState().Pkgs.GetPkgById(&ts.PkgTransfer.Id); zpkg == nil || zpkg.Closed {
 			e = fmt.Errorf("Get Pkg error %v", hex.EncodeToString(ts.PkgTransfer.Id[:]))
 			return
 		} else {

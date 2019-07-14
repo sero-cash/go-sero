@@ -121,7 +121,7 @@ func (b *SeroAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc
 	if header == nil || err != nil {
 		return nil, nil, err
 	}
-	stateDb, err := b.sero.BlockChain().StateAt(header.Root, header.Number.Uint64())
+	stateDb, err := b.sero.BlockChain().StateAt(header)
 	return stateDb, header, err
 }
 
@@ -336,12 +336,12 @@ func (b *SeroAPIBackend) GetRecordsByTxHash(txHash keys.Uint256) (records []exch
 	return b.sero.exchange.GetRecordsByTxHash(txHash)
 }
 
-func (b *SeroAPIBackend) GetOutByPKr(pkrs []keys.PKr, start,end uint64) (br light.BlockOutResp, e error) {
+func (b *SeroAPIBackend) GetOutByPKr(pkrs []keys.PKr, start, end uint64) (br light.BlockOutResp, e error) {
 	if b.sero.lightNode == nil {
 		e = errors.New("not start light")
 		return
 	}
-	return b.sero.lightNode.GetOutsByPKr(pkrs,start,end)
+	return b.sero.lightNode.GetOutsByPKr(pkrs, start, end)
 }
 
 func (b *SeroAPIBackend) CheckNil(Nils []keys.Uint256, start uint64, end uint64) (delNil []light.BlockDelNil, e error) {
@@ -349,5 +349,5 @@ func (b *SeroAPIBackend) CheckNil(Nils []keys.Uint256, start uint64, end uint64)
 		e = errors.New("not start light")
 		return
 	}
-	return b.sero.lightNode.CheckNil(Nils,start,end)
+	return b.sero.lightNode.CheckNil(Nils, start, end)
 }

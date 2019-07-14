@@ -33,7 +33,7 @@ func GetOut(root *keys.Uint256) (src *localdb.OutState) {
 	db := txtool.Ref_inst.Bc.GetDB()
 	rt := localdb.GetRoot(db, root)
 	if rt == nil {
-		zst := txtool.Ref_inst.GetState()
+		zst := txtool.Ref_inst.CurrentState()
 		os := zst.State.GetOut(root)
 		return os
 	} else {
@@ -84,7 +84,7 @@ func (self *Balance) Parse() (num uint64) {
 		next_hash := next_header.Hash()
 		block := localdb.GetBlock(txtool.Ref_inst.Bc.GetDB(), next_num, next_hash.HashToUint256())
 		if block == nil {
-			temp_state := txtool.Ref_inst.Bc.NewState(&next_hash)
+			temp_state := txtool.Ref_inst.Bc.CurrentState(&next_hash)
 			if temp_state == nil {
 				panic(fmt.Sprintf("new zstate error: %v:%v !", next_num, next_hash))
 			} else {

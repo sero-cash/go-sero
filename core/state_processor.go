@@ -18,10 +18,11 @@ package core
 
 import (
 	"errors"
+	"math/big"
+
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/log"
-	"math/big"
 
 	"github.com/sero-cash/go-sero/zero/stake"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -101,7 +102,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 		return nil, 0, err
 	}
 
-	err = statedb.GetZState().AddStx(tx.GetZZSTX())
+	err = statedb.NextZState().AddStx(tx.GetZZSTX())
 	if err != nil {
 		return nil, 0, err
 	}
@@ -191,7 +192,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 					Value:    utils.U256(*refund),
 				},
 				}
-				statedb.GetZState().AddTxOut(from, asset)
+				statedb.NextZState().AddTxOut(from, asset)
 			}
 
 			share := &stake.Share{PKr: pkr, VotePKr: stakeDesc.BuyShare.Vote, Value: avgPrice, TransactionHash: txHash, BlockNumber: number, InitNum: num}
@@ -210,7 +211,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 				Value:    stakeDesc.BuyShare.Value,
 			},
 			}
-			statedb.GetZState().AddTxOut(from, asset)
+			statedb.NextZState().AddTxOut(from, asset)
 		}
 	} else if stakeDesc.RegistPool != nil {
 		flag = true
@@ -224,7 +225,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 					Value:    stakeDesc.RegistPool.Value,
 				},
 				}
-				statedb.GetZState().AddTxOut(from, asset)
+				statedb.NextZState().AddTxOut(from, asset)
 			}
 			stakePool.Fee = uint16(stakeDesc.RegistPool.FeeRate)
 			stakePool.VotePKr = stakeDesc.RegistPool.Vote

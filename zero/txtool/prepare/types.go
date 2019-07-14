@@ -27,7 +27,7 @@ type PkgCloseCmd struct {
 }
 
 func (self *PkgCloseCmd) Asset() (ret assets.Asset, e error) {
-	if p := txtool.Ref_inst.GetState().Pkgs.GetPkgById(&self.Id); p == nil {
+	if p := txtool.Ref_inst.CurrentState().Pkgs.GetPkgById(&self.Id); p == nil {
 		e = errors.New("close pkg but not find the pkg")
 		return
 	} else {
@@ -179,7 +179,7 @@ func (self *DefaultTxParamState) GetOut(root *keys.Uint256) (out *localdb.RootSt
 }
 
 func (self *DefaultTxParamState) GetPkgById(id *keys.Uint256) (ret *localdb.ZPkg) {
-	return txtool.Ref_inst.GetState().Pkgs.GetPkgById(id)
+	return txtool.Ref_inst.CurrentState().Pkgs.GetPkgById(id)
 }
 
 func (self *DefaultTxParamState) GetSeroGasLimit(to *common.Address, tfee *assets.Token, gasPrice *big.Int) (gaslimit uint64, e error) {

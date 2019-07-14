@@ -145,7 +145,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 			return nil, fmt.Errorf("parent block #%d not found", number-1)
 		}
 	}
-	statedb, err := state.New(start.Root(), database, start.NumberU64())
+	statedb, err := state.New(database, start.Header())
 	if err != nil {
 		// If the starting state is missing, allow some number of blocks to be reexecuted
 		reexec := defaultTraceReexec
@@ -158,7 +158,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 			if start == nil {
 				break
 			}
-			if statedb, err = state.New(start.Root(), database, start.NumberU64()); err == nil {
+			if statedb, err = state.New(database, start.Header()); err == nil {
 				break
 			}
 		}
@@ -474,7 +474,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 // attempted to be reexecuted to generate the desired state.
 func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*state.StateDB, error) {
 	// If we have the state fully available, use that
-	statedb, err := api.eth.blockchain.StateAt(block.Root(), block.NumberU64())
+	statedb, err := api.eth.blockchain.StateAt(block.Header())
 	if err == nil {
 		return statedb, nil
 	}
@@ -487,7 +487,7 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 		if block == nil {
 			break
 		}
-		if statedb, err = state.New(block.Root(), database, block.NumberU64()); err == nil {
+		if statedb, err = state.New(database, block.Header()); err == nil {
 			break
 		}
 	}

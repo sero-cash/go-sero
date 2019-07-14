@@ -166,7 +166,7 @@ func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {
 
 func MakePreState(db serodb.Database, accounts core.GenesisAlloc) *state.StateDB {
 	sdb := state.NewDatabase(db)
-	statedb, _ := state.New(common.Hash{}, sdb, 0)
+	statedb, _ := state.New(sdb, nil)
 	for addr, a := range accounts {
 		statedb.SetCode(addr, a.Code)
 		//statedb.SetNonce(addr, a.Nonce)
