@@ -24,9 +24,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/zero/stake"
-
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/crypto"
@@ -461,19 +458,6 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 
 	//log.Info(fmt.Sprintf("BlockNumber = %v, gasLimie = %v, gasUsed = %v, reward = %v", header.Number.Uint64(), header.GasLimit, header.GasUsed, reward))
 	reward.Add(reward, new(big.Int).SetUint64(gasReward))
-
-	//pos
-	if len(header.ParentVotes) > 0 {
-		soloReware, reward := stake.NewStakeState(statedb).StakeCurrentReward()
-		log.Info("accumulateRewards: currentReward", "soloReware", soloReware, "reward", reward, "header.ParentVotes", len(header.ParentVotes))
-		for _, vote := range header.ParentVotes {
-			if vote.IsPool {
-				reward.Add(reward, new(big.Int).Div(reward, big.NewInt(3)))
-			} else {
-				reward.Add(reward, new(big.Int).Div(soloReware, big.NewInt(3)))
-			}
-		}
-	}
 
 	asset := assets.Asset{Tkn: &assets.Token{
 		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),

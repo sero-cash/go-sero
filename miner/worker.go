@@ -18,6 +18,7 @@ package miner
 
 import (
 	"fmt"
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -113,12 +114,16 @@ func (vs voteSet) copy() voteSet {
 	return ret
 }
 
-func (vs voteSet) add(item types.Vote) bool {
+func (vs voteSet) add(item types.Vote) {
 	if len(vs) > 2 {
-		return true
+		return
 	}
-	vs[item.Idx] = item
-	return true
+	if _,ok:=vs[item.Idx];ok {
+		return
+	} else {
+		vs[item.Idx] = item
+		return
+	}
 }
 
 // worker is the main object which takes care of applying messages to the new state
@@ -304,23 +309,22 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case block := <-self.chainHeadCh:
-			self.pendingVoteMu.Lock()
-			self.pendingVote[voteKey{block.Block.NumberU64(), block.Block.Header().HashPos()}] = newVoteSet()
 			header := block.Block.Header()
 			parentHeader := self.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 
+			self.pendingVoteMu.Lock()
+			self.pendingVote[voteKey{block.Block.NumberU64(), block.Block.Header().HashPos()}] = newVoteSet()
 			delKeys := []voteKey{}
 			for key := range self.pendingVote {
 				if key.headerNumber <= parentHeader.Number.Uint64() {
 					delKeys = append(delKeys, key)
 				}
 			}
-
 			for _, key := range delKeys {
 				delete(self.pendingVote, key)
 			}
-
 			self.pendingVoteMu.Unlock()
+
 			self.commitNewWork()
 
 			// Handle ChainSideEvent
@@ -365,15 +369,18 @@ func (self *worker) powResultLoop() {
 			header := result.Block.Header()
 			hashPos := header.HashPos()
 			key := voteKey{header.Number.Uint64(), hashPos}
+
 			self.pendingVoteMu.Lock()
 			self.pendingVote[key] = map[uint32]types.Vote{}
 			self.pendingVoteMu.Unlock()
+
 			self.voter.AddLottery(&types.Lottery{header.ParentHash, header.Number.Uint64() - 1, hashPos})
-			log.Info("Brodcast Lottery", "poshash", hashPos, "block", header.Number.Uint64())
+			log.Info("Broadcast Lottery", "poshash", hashPos, "block", header.Number.Uint64())
 
-			stakeState := stake.NewStakeState(self.snapshotState)
-
+			workState:=result.Work.state.Copy()
+			stakeState := stake.NewStakeState(workState)
 			isEffect := stakeState.IsEffect(header.Number.Uint64())
+
 			go func() {
 				parentBlock := self.chain.GetBlockByHash(header.ParentHash)
 				if parentBlock == nil {
@@ -383,12 +390,12 @@ func (self *worker) powResultLoop() {
 				var currentVotes map[uint32]types.Vote
 				var parentVotes map[uint32]types.Vote
 				currentHeader := self.chain.CurrentHeader()
-				for currentHeader.Hash() == header.ParentHash {
+				startTime := time.Now()
+				for (currentHeader.Hash() == header.ParentHash) && (time.Since(startTime)<5*time.Minute) {
 					self.pendingVoteMu.Lock()
 					if votes, ok := self.pendingVote[key]; ok {
 						currentVotes = votes.copy()
 					}
-
 					parentSet := self.pendingVote[parentVoteKey]
 					if parentSet != nil {
 						parentVotes = parentSet.copy()
@@ -475,17 +482,24 @@ func (self *worker) voteLoop() {
 		case voteResult := <-self.voteCh:
 			vote := voteResult.Vote
 			log.Info("voteLoop", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
-
 			key := voteKey{vote.ParentNum + 1, vote.PosHash}
+
 			self.pendingVoteMu.Lock()
-			if votes, ok := self.pendingVote[key]; ok {
-				if self.checkVote(vote) {
-					votes.add(*vote)
-				}
-			} else {
-				self.voter.SendVoteEvent(vote)
-			}
+			_, ok := self.pendingVote[key]
 			self.pendingVoteMu.Unlock()
+
+			if !ok {
+				self.voter.SendVoteEvent(vote)
+			} else {
+				if self.checkVote(vote) {
+					self.pendingVoteMu.Lock()
+					votes, ok := self.pendingVote[key]
+					if ok {
+						votes.add(*vote)
+					}
+					self.pendingVoteMu.Unlock()
+				}
+			}
 		case <-self.voteSub.Err():
 			return
 
@@ -638,8 +652,10 @@ func (self *worker) commitNewWork() {
 	}
 	txs := types.NewTransactionsByPrice(pending)
 
-	stakeState := stake.NewStakeState(work.state)
-	stakeState.ProcessBeforeApply(self.chain, header)
+	if header.Number.Uint64()>=seroparam.SIP4() {
+		stakeState := stake.NewStakeState(work.state)
+		stakeState.ProcessBeforeApply(self.chain, header)
+	}
 
 	work.commitTransactions(self.mux, txs, self.chain, header.Coinbase)
 

@@ -304,6 +304,7 @@ func (self *StakeState) UpdateStakePool(pool *StakePool) {
 }
 
 func (self *StakeState) IsEffect(currentBlockNumber uint64) bool {
+	self.statedb.GetZState()
 	if currentBlockNumber < seroparam.SIP4() {
 		return false
 	}
@@ -548,7 +549,13 @@ func (self *StakeState) CaleAvgPrice(amount *big.Int) (uint32, *big.Int, *big.In
 	return uint32(left), new(big.Int).Div(sumAmount, big.NewInt(left)), basePrice
 }
 
-func (self *StakeState) StakeCurrentReward() (*big.Int, *big.Int) {
+const (
+	SOLO_RATE=2
+	TOTAL_RATE=3
+)
+
+
+func (self *StakeState) StakeCurrentReward() (soloRewards *big.Int,totalRewards *big.Int) {
 	if seroparam.Is_Dev() {
 		return big.NewInt(600000000000000000), big.NewInt(900000000000000000)
 	}
@@ -559,7 +566,7 @@ func (self *StakeState) StakeCurrentReward() (*big.Int, *big.Int) {
 	if soleAmount.Cmp(maxPrice) > 1 {
 		soleAmount = new(big.Int).Set(maxPrice)
 	}
-	return soleAmount, new(big.Int).Div(new(big.Int).Mul(soleAmount, big.NewInt(3)), big.NewInt(2))
+	return soleAmount, new(big.Int).Div(new(big.Int).Mul(soleAmount, big.NewInt(TOTAL_RATE)), big.NewInt(SOLO_RATE))
 }
 
 func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
@@ -668,10 +675,37 @@ func (self *StakeState) verifyVote(vote types.HeaderVote, stakeHash common.Hash)
 
 }
 
+func (self *StakeState) processRemedyRewards(bc blockChain,header *types.Header) {
+	if header.Number.Uint64()>0 {
+		parentHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+		if len(parentHeader.ParentVotes) > 0 {
+			soloReware, totalReward := self.StakeCurrentReward()
+			log.Info("accumulateRewards: currentReward", "soloReware", soloReware, "totalReward", totalReward, "header.ParentVotes", len(header.ParentVotes))
+			reward:=new(big.Int)
+			for _, vote := range header.ParentVotes {
+				if vote.IsPool {
+					reward.Add(reward, new(big.Int).Div(totalReward, big.NewInt(3)))
+				} else {
+					reward.Add(reward, new(big.Int).Div(soloReware, big.NewInt(3)))
+				}
+			}
+			asset:=assets.Asset{
+				&assets.Token{
+					utils.CurrencyToUint256("SERO"),
+					utils.U256(*reward),
+				},
+				nil,
+			}
+			self.statedb.GetZState().AddTxOut(parentHeader.Coinbase,asset)
+		}
+	}
+}
+
 func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) {
 	if seroparam.SIP4() > header.Number.Uint64() {
 		return
 	}
+	self.processRemedyRewards(bc,header)
 	self.setBlockHash(header.Number.Uint64()-1, header.ParentHash)
 	self.processVotedShare(header, bc)
 	self.processOutDate(header, bc)
