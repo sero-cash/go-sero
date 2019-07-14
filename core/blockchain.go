@@ -1262,9 +1262,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 			}
 		}
 
-		stakeState := stake.NewStakeState(state)
-		stakeState.ProcessBeforeApply(bc, block.Header())
 		if seroparam.SIP4() <= block.NumberU64() {
+			stakeState := stake.NewStakeState(state)
+			stakeState.ProcessBeforeApply(bc, block.Header())
+
 			err = stakeState.CheckVotes(block, bc)
 			if err != nil {
 				return i, events, coalescedLogs, err

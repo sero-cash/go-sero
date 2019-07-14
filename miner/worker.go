@@ -19,6 +19,7 @@ package miner
 import (
 	"fmt"
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-sero/core/rawdb"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -118,7 +119,7 @@ func (vs voteSet) add(item types.Vote) {
 	if len(vs) > 2 {
 		return
 	}
-	if _,ok:=vs[item.Idx];ok {
+	if _, ok := vs[item.Idx]; ok {
 		return
 	} else {
 		vs[item.Idx] = item
@@ -380,7 +381,7 @@ func (self *worker) powResultLoop() {
 			self.voter.AddLottery(&types.Lottery{header.ParentHash, header.Number.Uint64() - 1, hashPos})
 			log.Info("Broadcast Lottery", "poshash", hashPos, "block", header.Number.Uint64())
 
-			workState:=result.Work.state.Copy()
+			workState := result.Work.state.Copy()
 			stakeState := stake.NewStakeState(workState)
 			isEffect := stakeState.IsEffect(header.Number.Uint64())
 
@@ -392,9 +393,13 @@ func (self *worker) powResultLoop() {
 				parentVoteKey := voteKey{parentBlock.NumberU64(), parentBlock.HashPos()}
 				var currentVotes map[uint32]types.Vote
 				var parentVotes map[uint32]types.Vote
-				currentHeader := self.chain.CurrentHeader()
 				startTime := time.Now()
-				for (currentHeader.Hash() == header.ParentHash) && (time.Since(startTime)<5*time.Minute) {
+				for {
+					currentHeader := self.chain.CurrentHeader()
+					if currentHeader.Hash() != header.ParentHash {
+						break
+					}
+
 					self.pendingVoteMu.Lock()
 					if votes, ok := self.pendingVote[key]; ok {
 						currentVotes = votes.copy()
@@ -408,8 +413,11 @@ func (self *worker) powResultLoop() {
 					if len(currentVotes) >= 2 || !isEffect {
 						break
 					}
+
+					if time.Since(startTime) > 5*time.Minute {
+						break
+					}
 					time.Sleep(100 * time.Millisecond)
-					currentHeader = self.chain.CurrentHeader()
 				}
 
 				if len(currentVotes) >= 2 || !isEffect {
@@ -424,17 +432,27 @@ func (self *worker) powResultLoop() {
 
 					ParentVotes := []types.HeaderVote{}
 					if len(parentVotes) > 0 {
+						voteIds := rawdb.ReadBlockVotes(self.chain.GetDB(), header.ParentHash)
+						voteNumMap := map[common.Hash]int{}
+						for _, hash := range voteIds {
+							voteNumMap[hash] += 1
+						}
+
 						voteMap := map[keys.Uint512]types.HeaderVote{}
 						for _, vote := range parentBlock.Header().CurrentVotes {
 							voteMap[vote.Sign] = vote
+							voteNumMap[vote.Id] -= 1
 						}
 						for _, vote := range parentVotes {
 							if _, ok := voteMap[vote.Sign]; !ok {
+								continue
+							}
+							if voteNumMap[vote.ShareId] == 0 {
+								continue
+							} else {
 								log.Info("pos parentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 								ParentVotes = append(ParentVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
-								if len(ParentVotes) == 3 {
-									break
-								}
+								voteNumMap[vote.ShareId] -= 1
 							}
 						}
 					}
@@ -655,7 +673,7 @@ func (self *worker) commitNewWork() {
 	}
 	txs := types.NewTransactionsByPrice(pending)
 
-	if header.Number.Uint64()>=seroparam.SIP4() {
+	if header.Number.Uint64() >= seroparam.SIP4() {
 		stakeState := stake.NewStakeState(work.state)
 		stakeState.ProcessBeforeApply(self.chain, header)
 	}

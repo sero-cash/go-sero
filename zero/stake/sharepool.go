@@ -568,6 +568,29 @@ func (self *StakeState) StakeCurrentReward() (soloRewards *big.Int, totalRewards
 	return soleAmount, new(big.Int).Div(new(big.Int).Mul(soleAmount, big.NewInt(TOTAL_RATE)), big.NewInt(SOLO_RATE))
 }
 
+func (self *StakeState) checkShareRepeated(header *types.Header) error {
+	tree := NewTree(self)
+	seed := header.HashPos()
+	indexs, err := FindShareIdxs(tree.size(), 3, NewHash256PRNG(seed[:]))
+	if err != nil {
+		return err
+	}
+
+	voteNumMap := map[common.Hash]int{}
+	for _, index := range indexs {
+		sndoe := tree.findByIndex(index)
+		voteNumMap[sndoe.key] += 1
+	}
+	for _, vote := range header.CurrentVotes {
+		if num, ok := voteNumMap[vote.Id]; ok && num > 0 {
+			voteNumMap[vote.Id] -= 1
+		} else {
+			return errors.New("vote repeated")
+		}
+	}
+	return nil
+}
+
 func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 
 	header := block.Header()
@@ -583,46 +606,31 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 	parentblock := bc.GetBlock(header.ParentHash, header.Number.Uint64()-1)
 	if len(header.CurrentVotes) > 0 {
 		// check repeated vote
-		voteMap := map[keys.Uint512]types.HeaderVote{}
-
 		parentPosHash := parentblock.HashPos()
 		blockPosHash := block.HashPos()
 		ret := types.StakeHash(&blockPosHash, &parentPosHash)
+		voteNumMap := map[keys.Uint512]bool{}
 		for _, vote := range header.CurrentVotes {
 			if err := self.verifyVote(vote, ret); err != nil {
 				return err
 			}
-			voteMap[vote.Sign] = vote
+			voteNumMap[vote.Sign] = true
 		}
-		if len(voteMap) != len(header.CurrentVotes) {
+
+		if len(voteNumMap) != len(header.CurrentVotes) {
 			return errors.New("vote sign repeated")
 		}
 
-		//check shareIds
-		shareMapNum := map[common.Hash]uint8{}
-		tree := NewTree(self)
-		seed := header.HashPos()
-		indexs, err := FindShareIdxs(tree.size(), 3, NewHash256PRNG(seed[:]))
-		if err == nil {
-			for _, index := range indexs {
-				sndoe := tree.findByIndex(index)
-				shareMapNum[sndoe.key] += 1
-			}
-		}
-
-		for _, vote := range header.CurrentVotes {
-			if shareMapNum[vote.Id] != 0 {
-				shareMapNum[vote.Id] -= 1
-			} else {
-				return errors.New("vote error")
-			}
+		if err := self.checkShareRepeated(header); err != nil {
+			return err
 		}
 	}
 
 	if len(header.ParentVotes) > 0 {
 		preHeader := parentblock.Header()
-		shareMapNum := map[common.Hash]uint8{}
+		shareMapNum := map[common.Hash]int{}
 		voteHashs := rawdb.ReadBlockVotes(bc.GetDB(), header.ParentHash)
+		log.Info("parent voteHashs", voteHashs)
 		for _, key := range voteHashs {
 			shareMapNum[key] += 1
 		}
@@ -696,7 +704,7 @@ func (self *StakeState) processRemedyRewards(bc blockChain, header *types.Header
 				nil,
 			}
 			log.Info("pos to pow reward:","coinbase",parentHeader.Coinbase.String(),"value",reward, "at",parentHeader.Number.Uint64())
-			self.statedb.GetZState().AddTxOut(parentHeader.Coinbase,asset)
+			self.statedb.NextZState().AddTxOut(parentHeader.Coinbase,asset)
 		}
 	}
 }
@@ -717,7 +725,7 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 
 func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) {
 	statisticsMissWindow := getStatisticsMissWindow()
-	if header.Number.Uint64() < 2 || !self.IsEffect(header.Number.Uint64()) || header.Number.Uint64()-2 < seroparam.SIP4() {
+	if header.Number.Uint64() < 2 || header.Number.Uint64() < seroparam.SIP4()+2 {
 		return
 	}
 	value := self.missedNum.GetValue(missedNumKey)
@@ -726,13 +734,16 @@ func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) 
 	prepreHeader := bc.GetHeader(preHeader.ParentHash, preHeader.Number.Uint64()-1)
 	missedNum := utils.DecodeNumber32(value) + uint32(3-len(prepreHeader.CurrentVotes)-len(preHeader.ParentVotes))
 
-	if prepreHeader.Number.Uint64() > statisticsMissWindow && prepreHeader.Number.Uint64()-statisticsMissWindow-1 >= seroparam.SIP4() {
-		preNumber := preHeader.Number.Uint64() - statisticsMissWindow - 1
+	if prepreHeader.Number.Uint64() >= seroparam.SIP4()+statisticsMissWindow {
+		preNumber := preHeader.Number.Uint64() - statisticsMissWindow
 		windiwHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
-		prepreNumber := prepreHeader.Number.Uint64() - statisticsMissWindow - 1
+		prepreNumber := prepreHeader.Number.Uint64() - statisticsMissWindow
 		preWindiwHeader := bc.GetHeader(self.getBlockHash(prepreNumber), prepreNumber)
-		if missedNum >= 3 {
-			missedNum -= uint32(3 - len(preWindiwHeader.CurrentVotes) - len(windiwHeader.ParentVotes))
+		delNum := uint32(3 - len(preWindiwHeader.CurrentVotes) - len(windiwHeader.ParentVotes))
+		if missedNum < delNum {
+			log.Crit("ProcessBeforeApply: statisticsByWindow err", "missedNum", missedNum)
+		} else {
+			missedNum -= delNum
 		}
 	}
 	log.Info("ProcessBeforeApply: statisticsByWindow", "missedNum", missedNum)
