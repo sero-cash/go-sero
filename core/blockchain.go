@@ -975,7 +975,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	rawdb.WriteBlock(batch, block)
 	blockhash := block.Hash()
 
-	if block.Header().Number.Uint64() < seroparam.SIP4() {
+	if block.Header().Number.Uint64() >= seroparam.SIP4() {
 		state.GetStakeCons().Record(block.Header(), batch)
 		stakeState := stake.NewStakeState(state)
 		err = stakeState.RecordVotes(batch, block)
