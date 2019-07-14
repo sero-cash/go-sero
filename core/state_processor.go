@@ -108,13 +108,14 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	}
 
 	var poolId, shareId *common.Hash
-	if poolId, shareId, err = applyStake(msg.From(), tx.GetZZSTX().Desc_Cmd, statedb, tx.Hash(), header.Number.Uint64()); err != nil {
-		log.Info("applyStake", "error", err)
-		return nil, 0, err
+	if header.Number.Uint64() >= seroparam.SIP4() {
+		if poolId, shareId, err = applyStake(msg.From(), tx.GetZZSTX().Desc_Cmd, statedb, tx.Hash(), header.Number.Uint64()); err != nil {
+			log.Info("applyStake", "error", err)
+			return nil, 0, err
+		}
 	}
 
-	to := msg.To()
-	if header.Number.Uint64() < seroparam.SIP4() || (to != nil && statedb.IsContract(*to)) {
+	if header.Number.Uint64() < seroparam.SIP4() || (tx.GetZZSTX().Desc_Cmd.Contract != nil) {
 		key := header.Coinbase.ToCaddr()
 		statedb.AddNonceAddress(key[:], header.Coinbase)
 	}
@@ -161,20 +162,12 @@ var (
 func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.StateDB, txHash common.Hash, number uint64) (poolId *common.Hash, shareId *common.Hash, err error) {
 	stakeState := stake.NewStakeState(statedb)
 	pkr := *from.ToPKr()
-	flag := false
 	if stakeDesc.BuyShare != nil {
-		flag = true
 		var stakePool *stake.StakePool
 		if stakeDesc.BuyShare.Pool != nil {
 			stakePoolId := common.BytesToHash(stakeDesc.BuyShare.Pool[:])
 			stakePool = stakeState.GetStakePool(stakePoolId)
 			if stakePool == nil || stakePool.Closed {
-				//asset := assets.Asset{Tkn: &assets.Token{
-				//	Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
-				//	Value:    stakeDesc.BuyShare.Value,
-				//},
-				//}
-				//statedb.GetZState().AddTxOut(from, asset)
 				err = errors.New("pool not exist or pool is closed")
 				return
 			}
@@ -214,7 +207,6 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			statedb.NextZState().AddTxOut(from, asset)
 		}
 	} else if stakeDesc.RegistPool != nil {
-		flag = true
 		id := crypto.Keccak256Hash(pkr[:])
 		poolId = &id
 		stakePool := stakeState.GetStakePool(id)
@@ -234,12 +226,6 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		} else {
 			cmd := stakeDesc.RegistPool
 			if poolValueThreshold.Cmp(stakeDesc.RegistPool.Value.ToInt()) != 0 || cmd.Vote == (keys.PKr{}) {
-				//asset := assets.Asset{Tkn: &assets.Token{
-				//	Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
-				//	Value:    stakeDesc.RegistPool.Value,
-				//},
-				//}
-				//statedb.GetZState().AddTxOut(from, asset)
 				err = errors.New("args error")
 				return
 			}
@@ -248,7 +234,6 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			stakeState.UpdateStakePool(pool)
 		}
 	} else if stakeDesc.ClosePool != nil {
-		flag = true
 		id := crypto.Keccak256Hash(pkr[:])
 		poolId = &id
 		stakePool := stakeState.GetStakePool(id)
@@ -266,10 +251,6 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		}
 		stakePool.Closed = true
 		stakeState.UpdateStakePool(stakePool)
-	}
-
-	if flag && number < seroparam.SIP4() {
-		err = errors.New("stake not start")
 	}
 	return
 }

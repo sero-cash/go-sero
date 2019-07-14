@@ -974,16 +974,13 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
 	blockhash := block.Hash()
-	state.GetStakeCons().Record(block.Header(), batch)
-	state.NextZState().RecordBlock(batch, blockhash.HashToUint256())
 
-	stakeState := stake.NewStakeState(state)
-	_, shares, _ := stakeState.SeleteShare(block.Header().HashPos())
-	voteHashs := []common.Hash{}
-	for _, share := range shares {
-		voteHashs = append(voteHashs, common.BytesToHash(share.Id()))
+	if block.Header().Number.Uint64() < seroparam.SIP4() {
+		state.GetStakeCons().Record(block.Header(), batch)
+		stakeState := stake.NewStakeState(state)
+		stakeState.RecordVotes(batch, block)
 	}
-	rawdb.WriteBlockVotes(batch, block.Hash(), voteHashs)
+	state.NextZState().RecordBlock(batch, blockhash.HashToUint256())
 
 	root, err := state.Commit(true)
 	if root != block.Root() {
