@@ -250,6 +250,14 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			return
 		}
 		stakePool.Closed = true
+
+		asset := assets.Asset{Tkn: &assets.Token{
+			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+			Value:    utils.U256(*stakePool.Amount),
+		},
+		}
+		statedb.NextZState().AddTxOut(from, asset)
+		stakePool.Amount = new(big.Int)
 		stakeState.UpdateStakePool(stakePool)
 	}
 	return

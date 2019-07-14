@@ -247,11 +247,15 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 			ParentHash: parent,
 			Number:     new(big.Int).Add(parentNumber, common.Big1),
 		}
-		stakeState.ProcessBeforeApply(self.chain, header)
+		err := stakeState.ProcessBeforeApply(self.chain, header)
+		if err != nil {
+			log.Error("lotteryTaskLoop", "err", err)
+			return nil, nil
+		}
 		if stakeState.ShareSize() == 0 {
 			return nil, nil
 		}
-		ints, shares, err := stakeState.SeleteShare(poshash)
+		ints, shares, err:= stakeState.SeleteShare(poshash)
 		log.Info("SelfShares selete share", "poshash", poshash, "blockNumber", header.Number.Uint64(), "indexs", ints, "pool size", stakeState.ShareSize())
 		if err != nil {
 			log.Info("lotteryTaskLoop", "SeleteShare", poshash, "err", err)

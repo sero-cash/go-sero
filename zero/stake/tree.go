@@ -1,6 +1,7 @@
 package stake
 
 import (
+	"errors"
 	"fmt"
 	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
@@ -264,7 +265,7 @@ func (tree *STree) deleteNode(key common.Hash, children *SNode, num uint32) *SNo
 	return children
 }
 
-func (tree *STree) findByIndex(index uint32) *SNode {
+func (tree *STree) findByIndex(index uint32) (*SNode, error) {
 	root := tree.state.GetStakeState(rootKey)
 	node := &SNode{key: root}
 	node.init(tree.state)
@@ -280,7 +281,7 @@ func (tree *STree) findByIndex(index uint32) *SNode {
 		}
 
 		if index < node.num {
-			return node
+			return node, nil
 		}
 		index -= node.num
 
@@ -289,6 +290,6 @@ func (tree *STree) findByIndex(index uint32) *SNode {
 			node = right
 			continue
 		}
-		panic("not found node by index")
+		return nil, errors.New("not found node by index")
 	}
 }

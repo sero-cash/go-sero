@@ -520,7 +520,11 @@ func (self *worker) commitNewWork() {
 
 	if header.Number.Uint64() >= seroparam.SIP4() {
 		stakeState := stake.NewStakeState(work.state)
-		stakeState.ProcessBeforeApply(self.chain, header)
+		err := stakeState.ProcessBeforeApply(self.chain, header)
+		if err != nil {
+			log.Error("ProcessBeforeApply", "err", err)
+			return
+		}
 	}
 
 	work.commitTransactions(self.mux, txs, self.chain, header.Coinbase)

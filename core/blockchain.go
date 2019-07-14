@@ -978,7 +978,10 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	if block.Header().Number.Uint64() < seroparam.SIP4() {
 		state.GetStakeCons().Record(block.Header(), batch)
 		stakeState := stake.NewStakeState(state)
-		stakeState.RecordVotes(batch, block)
+		err = stakeState.RecordVotes(batch, block)
+		if err != nil {
+			return NonStatTy, err
+		}
 	}
 	state.NextZState().RecordBlock(batch, blockhash.HashToUint256())
 
@@ -1261,7 +1264,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 
 		if seroparam.SIP4() <= block.NumberU64() {
 			stakeState := stake.NewStakeState(state)
-			stakeState.ProcessBeforeApply(bc, block.Header())
+			err = stakeState.ProcessBeforeApply(bc, block.Header())
+			if err != nil {
+				return i, events, coalescedLogs, err
+			}
 
 			err = stakeState.CheckVotes(block, bc)
 			if err != nil {

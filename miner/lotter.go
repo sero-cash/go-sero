@@ -118,7 +118,11 @@ func (self *Lotter) wait() bool {
 	self.parentBlock = self.worker.chain.GetBlockByHash(self.header.ParentHash)
 	startTime := time.Now()
 
-	idx, shares := self.stake.SeleteShare(self.hashPos)
+	idx, shares, err := self.stake.SeleteShare(self.hashPos)
+	if err != nil {
+		log.Error("Lotter wait ", "error", err)
+		return false
+	}
 	filter := self.NewFilter(idx, shares)
 	for {
 		currentHeader := self.worker.chain.CurrentHeader()
