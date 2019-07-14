@@ -242,7 +242,7 @@ func (self *State1BlockChain) IsValid() bool {
 	if header.Number.Uint64() < seroparam.DefaultConfirmedBlock() {
 		return false
 	}
-	if _, e := state.New(header.Root, self.Bc.stateCache, header.Number.Uint64()); e != nil {
+	if _, e := state.New(self.Bc.stateCache, header); e != nil {
 		return false
 	}
 	return true
@@ -257,20 +257,15 @@ func (self *State1BlockChain) GetSeroGasLimit(to *common.Address, tfee *assets.T
 	}
 }
 
-func (self *State1BlockChain) NewState(hash *common.Hash) *zstate.ZState {
+func (self *State1BlockChain) CurrentState(hash *common.Hash) *zstate.ZState {
 	header := self.Bc.GetHeaderByHash(*hash)
-	num := header.Number.Uint64()
 	var st *state.StateDB
 	var e error
-	if num == 0 {
-		st, e = state.NewGenesis(header.Root, self.Bc.stateCache)
-	} else {
-		st, e = state.New(header.Root, self.Bc.stateCache, num-1)
-	}
+	st, e = state.New(self.Bc.stateCache, header)
 	if e != nil {
 		panic(e)
 	}
-	return st.GetZState()
+	return st.CurrentZState()
 }
 func (self *State1BlockChain) GetTks() []keys.Uint512 {
 	tks := []keys.Uint512{}
@@ -311,7 +306,7 @@ func (bc *BlockChain) loadLastState() error {
 		return bc.Reset()
 	}
 	// Make sure the state associated with the block is available
-	if _, err := state.New(currentBlock.Root(), bc.stateCache, currentBlock.NumberU64()); err != nil {
+	if _, err := state.New(bc.stateCache, currentBlock.Header()); err != nil {
 		// Dangling block without a state associated, init from scratch
 		log.Warn("Head state missing, repairing chain", "number", currentBlock.Number(), "hash", currentBlock.Hash())
 		if err := bc.repair(&currentBlock); err != nil {
@@ -378,7 +373,7 @@ func (bc *BlockChain) SetHead(head uint64, delFn DeleteCallback) error {
 		bc.currentBlock.Store(bc.GetBlock(currentHeader.Hash(), currentHeader.Number.Uint64()))
 	}
 	if currentBlock := bc.CurrentBlock(); currentBlock != nil {
-		if _, err := state.New(currentBlock.Root(), bc.stateCache, currentBlock.NumberU64()); err != nil {
+		if _, err := state.New(bc.stateCache, currentBlock.Header()); err != nil {
 			// Rewound state missing, rolled back to before pivot, reset to genesis
 			bc.currentBlock.Store(bc.genesisBlock)
 		}
@@ -471,12 +466,12 @@ func (bc *BlockChain) Processor() Processor {
 // State returns a new mutable state based on the current HEAD block.
 func (bc *BlockChain) State() (*state.StateDB, error) {
 	block := bc.CurrentBlock()
-	return bc.StateAt(block.Root(), block.NumberU64())
+	return bc.StateAt(block.Header())
 }
 
 // StateAt returns a new mutable state based on a particular point in time.
-func (bc *BlockChain) StateAt(root common.Hash, number uint64) (*state.StateDB, error) {
-	return state.New(root, bc.stateCache, number)
+func (bc *BlockChain) StateAt(header *types.Header) (*state.StateDB, error) {
+	return state.New(bc.stateCache, header)
 }
 
 // Reset purges the entire blockchain, restoring it to its genesis state.
@@ -520,7 +515,7 @@ func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
 func (bc *BlockChain) repair(head **types.Block) error {
 	for {
 		// Abort if we've rewound to a head block that does have associated state
-		if _, err := state.New((*head).Root(), bc.stateCache, (*head).NumberU64()); err == nil {
+		if _, err := state.New(bc.stateCache, (*head).Header()); err == nil {
 			log.Info("Rewound blockchain to past state", "number", (*head).Number(), "hash", (*head).Hash())
 			return nil
 		}
@@ -979,8 +974,8 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
 	blockhash := block.Hash()
-	state.GetStakeCons().Record(&blockhash, batch)
-	state.GetZState().RecordBlock(batch, blockhash.HashToUint256())
+	state.GetStakeCons().Record(block.Header(), batch)
+	state.NextZState().RecordBlock(batch, blockhash.HashToUint256())
 
 	stakeState := stake.NewStakeState(state)
 	_, shares, _ := stakeState.SeleteShare(block.Header().HashPos())
@@ -1250,17 +1245,16 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		} else {
 			parent = chain[i-1]
 		}
-		state, err := state.New(parent.Root(), bc.stateCache, parent.NumberU64())
+		state, err := state.New(bc.stateCache, parent.Header())
 
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
 
-
 		for _, tx := range block.Transactions() {
 			err := <-tx_results
 			if err == nil {
-				err = verify.VerifyWithState(tx.GetZZSTX(), state.GetZState())
+				err = verify.VerifyWithState(tx.GetZZSTX(), state.NextZState())
 			}
 			//err := verify.Verify(tx.GetZZSTX(), state.GetZState())
 			if err != nil {

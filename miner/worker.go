@@ -573,7 +573,7 @@ func (self *worker) push(work *Work) {
 
 // makeCurrent creates a new environment for the current cycle.
 func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error {
-	state, err := self.chain.StateAt(parent.Root(), parent.NumberU64())
+	state, err := self.chain.StateAt(parent.Header())
 	if err != nil {
 		return err
 	}
@@ -705,7 +705,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		if tx == nil {
 			break
 		}
-		
+
 		// Start executing the transaction
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 

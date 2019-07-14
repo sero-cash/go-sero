@@ -233,9 +233,9 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 // the difficulty that a new block should have when created at time
 // given the parent block's time and difficulty.
 func (ethash *Ethash) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	if parent.Number.Uint64()>= seroparam.Dev_diff() {
-		return  big.NewInt(100000)
-	}else{
+	if parent.Number.Uint64() >= seroparam.Dev_diff() {
+		return big.NewInt(100000)
+	} else {
 		return CalcDifficulty(chain.Config(), time, parent)
 	}
 
@@ -409,7 +409,7 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), stateDB, header, gasReward)
 
-	stateDB.GetZState().PreGenerateRoot(header, chain)
+	stateDB.NextZState().PreGenerateRoot(header, chain)
 
 	header.Root = stateDB.IntermediateRoot(true)
 
@@ -464,7 +464,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 		Value:    utils.U256(*reward),
 	},
 	}
-	statedb.GetZState().AddTxOut(header.Coinbase, asset)
+	statedb.NextZState().AddTxOut(header.Coinbase, asset)
 }
 
 func accumulateRewardsV1(config *params.ChainConfig, statedb *state.StateDB, header *types.Header) *big.Int {
@@ -548,7 +548,7 @@ func accumulateRewardsV2(statedb *state.StateDB, header *types.Header) *big.Int 
 			Value:    utils.U256(*balance),
 		},
 		}
-		statedb.GetZState().AddTxOut(teamAddress, assetTeam)
+		statedb.NextZState().AddTxOut(teamAddress, assetTeam)
 
 		balance = statedb.GetBalance(communityRewardPool, "SERO")
 		statedb.SubBalance(communityRewardPool, "SERO", balance)
@@ -557,7 +557,7 @@ func accumulateRewardsV2(statedb *state.StateDB, header *types.Header) *big.Int 
 			Value:    utils.U256(*balance),
 		},
 		}
-		statedb.GetZState().AddTxOut(communityAddress, assetCommunity)
+		statedb.NextZState().AddTxOut(communityAddress, assetCommunity)
 	}
 	return reward
 }
@@ -592,7 +592,7 @@ func accumulateRewardsV3(statedb *state.StateDB, header *types.Header) *big.Int 
 			Value:    utils.U256(*balance),
 		},
 		}
-		statedb.GetZState().AddTxOut(teamAddress, assetTeam)
+		statedb.NextZState().AddTxOut(teamAddress, assetTeam)
 
 		balance = statedb.GetBalance(communityRewardPool, "SERO")
 		if balance.Sign() > 0 {
@@ -602,7 +602,7 @@ func accumulateRewardsV3(statedb *state.StateDB, header *types.Header) *big.Int 
 				Value:    utils.U256(*balance),
 			},
 			}
-			statedb.GetZState().AddTxOut(communityAddress, assetCommunity)
+			statedb.NextZState().AddTxOut(communityAddress, assetCommunity)
 		}
 	}
 	return reward

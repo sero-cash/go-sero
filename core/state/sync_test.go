@@ -39,7 +39,7 @@ type testAccount struct {
 func makeTestState() (Database, common.Hash, []*testAccount) {
 	// Create an empty state
 	db := NewDatabase(serodb.NewMemDatabase())
-	state, _ := New(common.Hash{}, db, 0)
+	state, _ := New(db, nil)
 
 	// Fill it with some arbitrary data
 	accounts := []*testAccount{}
@@ -47,7 +47,7 @@ func makeTestState() (Database, common.Hash, []*testAccount) {
 		obj := state.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		acc := &testAccount{address: common.BytesToAddress([]byte{i})}
 
-		obj.AddBalance("sero", big.NewInt(int64(11 * i)))
+		obj.AddBalance("sero", big.NewInt(int64(11*i)))
 		acc.balance = big.NewInt(int64(11 * i))
 
 		acc.nonce = uint64(42 * i)
@@ -69,7 +69,7 @@ func makeTestState() (Database, common.Hash, []*testAccount) {
 // account array.
 func checkStateAccounts(t *testing.T, db serodb.Database, root common.Hash, accounts []*testAccount) {
 	// Check root availability and state contents
-	state, err := New(root, NewDatabase(db), 0)
+	state, err := New(NewDatabase(db), nil)
 	if err != nil {
 		t.Fatalf("failed to create state trie at %x: %v", root, err)
 	}
@@ -108,7 +108,7 @@ func checkStateConsistency(db serodb.Database, root common.Hash) error {
 	if _, err := db.Get(root.Bytes()); err != nil {
 		return nil // Consider a non existent state consistent.
 	}
-	state, err := New(root, NewDatabase(db), 0)
+	state, err := New(NewDatabase(db), nil)
 	if err != nil {
 		return err
 	}

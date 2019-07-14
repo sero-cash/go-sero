@@ -7,15 +7,13 @@ import (
 )
 
 type Data struct {
-	Num      uint64
 	Id2Hash  utils.H2Hash
 	IdDirtys utils.Dirtys
 	Hash2Pkg map[keys.Uint256]localdb.ZPkg
 }
 
-func NewData(num uint64) (ret *Data) {
+func NewData() (ret *Data) {
 	return &Data{
-		Num:     num,
 		Id2Hash: utils.NewH2Hash("$ZState0$Pkg$Id2Hash$"),
 	}
 }

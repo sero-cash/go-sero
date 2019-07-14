@@ -226,7 +226,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 	if db == nil {
 		db = serodb.NewMemDatabase()
 	}
-	statedb, _ := state.NewGenesis(common.Hash{}, state.NewDatabase(db))
+	statedb, _ := state.New(state.NewDatabase(db), nil)
 	statedb.RegisterToken(state.EmptyAddress, "SERO")
 	statedb.AddBalance(state.EmptyAddress, "SERO", new(big.Int).Mul(big.NewInt(250000000), big.NewInt(1e+18)))
 
@@ -251,7 +251,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 					Value:    utils.U256(*account.Balance),
 				},
 				}
-				statedb.GetZState().AddTxOut(addr, asset)
+				statedb.NextZState().AddTxOut(addr, asset)
 			}
 		}
 		for key, value := range account.Storage {
@@ -285,8 +285,8 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 
 	block := types.NewBlock(head, nil, nil)
 	blockhash := block.Hash()
-	statedb.GetStakeCons().Record(&blockhash, db)
-	statedb.GetZState().RecordBlock(db, blockhash.HashToUint256())
+	statedb.GetStakeCons().Record(block.Header(), db)
+	statedb.NextZState().RecordBlock(db, blockhash.HashToUint256())
 
 	return block
 }

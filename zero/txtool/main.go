@@ -17,7 +17,7 @@ type BlockChain interface {
 	IsValid() bool
 	GetCurrenHeader() *types.Header
 	GetHeader(hash *common.Hash) *types.Header
-	NewState(hash *common.Hash) *zstate.ZState
+	CurrentState(hash *common.Hash) *zstate.ZState
 	GetSeroGasLimit(to *common.Address, tfee *assets.Token, gasPrice *big.Int) (gaslimit uint64, e error)
 	GetTks() []keys.Uint512
 	GetTkAt(tk *keys.Uint512) uint64
@@ -44,11 +44,11 @@ func (self *Ref) GetDelayedNum(delay uint64) (ret uint64) {
 	return
 }
 
-func (self *Ref) GetState() (ret *zstate.ZState) {
+func (self *Ref) CurrentState() (ret *zstate.ZState) {
 	num := self.GetDelayedNum(seroparam.DefaultConfirmedBlock())
 	block := self.Bc.GetBlockByNumber(num)
 	hash := block.Hash()
-	return self.Bc.NewState(&hash)
+	return self.Bc.CurrentState(&hash)
 }
 
 func GetDelayNumber(current uint64, delay uint64) (num uint64) {

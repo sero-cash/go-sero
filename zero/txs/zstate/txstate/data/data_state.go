@@ -58,21 +58,23 @@ func (self *Data) RecordState(putter serodb.Putter, root *keys.Uint256) {
 }
 
 func (self *Data) LoadState(tr tri.Tri) {
-	get := CurrentGet{}
-	tri.GetObj(
-		tr,
-		LAST_OUTSTATE0_NAME.Bytes(),
-		&get,
-	)
-	self.Cur = get.Out
+	if self.Num >= 0 {
+		get := CurrentGet{}
+		tri.GetObj(
+			tr,
+			LAST_OUTSTATE0_NAME.Bytes(),
+			&get,
+		)
+		self.Cur = get.Out
 
-	blockget := State0BlockGet{}
-	tri.GetObj(
-		tr,
-		Name2BKey(BLOCK_NAME, self.Num),
-		&blockget,
-	)
-	self.Block = blockget.Out
+		blockget := State0BlockGet{}
+		tri.GetObj(
+			tr,
+			Name2BKey(BLOCK_NAME, uint64(self.Num)),
+			&blockget,
+		)
+		self.Block = blockget.Out
+	}
 	return
 }
 
