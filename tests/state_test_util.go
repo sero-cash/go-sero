@@ -177,7 +177,7 @@ func MakePreState(db serodb.Database, accounts core.GenesisAlloc) *state.StateDB
 	}
 	// Commit and re-open to start with a clean state.
 	root, _ := statedb.Commit(false)
-	statedb, _ = state.New(root, sdb, 0)
+	statedb, _ = state.New(sdb, &types.Header{Root: root})
 	return statedb
 }
 

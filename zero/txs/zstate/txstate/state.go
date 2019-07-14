@@ -57,6 +57,10 @@ type State struct {
 	revisions []data.Revision
 }
 
+func (self *State) Num() uint64 {
+	return self.num
+}
+
 func (self *State) Tri() tri.Tri {
 	return self.tri
 }
