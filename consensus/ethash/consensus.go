@@ -238,7 +238,6 @@ func (ethash *Ethash) CalcDifficulty(chain consensus.ChainReader, time uint64, p
 	} else {
 		return CalcDifficulty(chain.Config(), time, parent)
 	}
-
 }
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns
