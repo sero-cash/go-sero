@@ -120,21 +120,21 @@ func (s *Share) CopyFrom(ret consensus.CItem) {
 	s.LastPayTime = obj.LastPayTime
 }
 
-func (s *Share) AddProfit(profit *big.Int) {
+func (s *Share) addProfit(profit *big.Int) {
 	if s.Profit == nil {
 		s.Profit = new(big.Int)
 	}
 	s.Profit.Add(s.Profit, profit)
 }
 
-func (s *Share) AddIncome(income *big.Int) {
+func (s *Share) addIncome(income *big.Int) {
 	if s.Income == nil {
 		s.Income = new(big.Int)
 	}
 	s.Income.Add(s.Income, income)
 }
 
-func (s *Share) SetIncome(income *big.Int) {
+func (s *Share) setIncome(income *big.Int) {
 	s.Income = income
 }
 
@@ -237,29 +237,27 @@ func (s *StakePool) CopyFrom(ret consensus.CItem) {
 	s.Closed = obj.Closed
 }
 
-func (s *StakePool) AddProfit(profit *big.Int) {
+func (s *StakePool) addProfit(profit *big.Int) {
 	if s.Profit == nil {
 		s.Profit = new(big.Int)
 	}
 	s.Profit.Add(s.Profit, profit)
 }
 
-func (s *StakePool) AddIncome(income *big.Int) {
+func (s *StakePool) addIncome(income *big.Int) {
 	if s.Income == nil {
 		s.Income = new(big.Int)
 	}
 	s.Income.Add(s.Income, income)
 }
 
-func (s *StakePool) SetIncome(income *big.Int) {
+func (s *StakePool) setIncome(income *big.Int) {
 	s.Income = income
 }
 
 type blockChain interface {
 	GetHeader(hash common.Hash, number uint64) *types.Header
-	//GetHeaderByNumber(number uint64) *types.Header
 	GetBlock(hash common.Hash, number uint64) *types.Block
-	StateAt(header *types.Header) (*state.StateDB, error)
 	GetDB() serodb.Database
 }
 
@@ -960,7 +958,7 @@ func (self *StakeState) rewardVote(vote types.HeaderVote, soloReware, reward *bi
 		if pool.WishVoteNum > 0 {
 			pool.WishVoteNum -= 1
 			if pool.Closed && pool.CurrentShareNum == 0 && pool.WishVoteNum == 0 {
-				pool.AddIncome(pool.Amount)
+				pool.addIncome(pool.Amount)
 				pool.Amount = new(big.Int)
 			}
 		} else {
@@ -984,16 +982,16 @@ func (self *StakeState) rewardVote(vote types.HeaderVote, soloReware, reward *bi
 
 		poolReward := new(big.Int).Div(new(big.Int).Mul(reward, big.NewInt(int64(share.Fee))), big.NewInt(10000))
 		log.Info("pos to pool fee", "pool", common.BytesToHash(pool.Id()), "reward", poolReward, "at", block)
-		pool.AddProfit(poolReward)
-		pool.AddIncome(poolReward)
+		pool.addProfit(poolReward)
+		pool.addIncome(poolReward)
 
-		share.AddProfit(new(big.Int).Sub(reward, poolReward))
-		share.AddIncome(new(big.Int).Add(share.Value, new(big.Int).Sub(reward, poolReward)))
+		share.addProfit(new(big.Int).Sub(reward, poolReward))
+		share.addIncome(new(big.Int).Add(share.Value, new(big.Int).Sub(reward, poolReward)))
 		log.Info("pos to share reward", "pool", common.BytesToHash(pool.Id()), "share", common.BytesToHash(share.Id()), "reward", new(big.Int).Sub(reward, poolReward), "at", block)
 		self.updateStakePool(pool)
 	} else {
-		share.AddProfit(soloReware)
-		share.AddIncome(new(big.Int).Add(share.Value, soloReware))
+		share.addProfit(soloReware)
+		share.addIncome(new(big.Int).Add(share.Value, soloReware))
 		log.Info("pos to share reward", "share", common.BytesToHash(share.Id()), "reward", soloReware, "at", block)
 		//log.Info("processVotedShare rewardVote", "shareId", common.Bytes2Hex(share.Id()), "share.Value", share.Value, "soloReware", soloReware, "Income", share.Income)
 	}
@@ -1055,7 +1053,7 @@ func (self *StakeState) processOutDate(header *types.Header, bc blockChain) (err
 						//log.Crit("ProcessBeforeApply: processOutDate err", "pool.CurrentShareNum", pool.CurrentShareNum, "share.num", share.Num)
 					}
 					if pool.Closed && pool.CurrentShareNum == 0 && pool.WishVoteNum == 0 {
-						pool.AddIncome(pool.Amount)
+						pool.addIncome(pool.Amount)
 						pool.Amount = new(big.Int)
 						log.Info("ProcessBeforeApply: processOutDate close pool", "poolId", common.Bytes2Hex(share.Id()))
 					}
@@ -1063,7 +1061,7 @@ func (self *StakeState) processOutDate(header *types.Header, bc blockChain) (err
 				}
 
 				log.Info("ProcessBeforeApply: processOutDate set share.Num = 0", "shareId", common.Bytes2Hex(share.Id()), "share.num", share.Num)
-				share.AddIncome(new(big.Int).Mul(share.Value, big.NewInt(int64(share.Num))))
+				share.addIncome(new(big.Int).Mul(share.Value, big.NewInt(int64(share.Num))))
 				share.Status = STATUS_OUTOFDATE
 				self.updateShare(share)
 			}
@@ -1115,14 +1113,14 @@ func (self *StakeState) processMissVoted(header *types.Header, bc blockChain) (e
 					}
 					pool.WishVoteNum -= share.WillVoteNum
 					if pool.Closed && pool.CurrentShareNum == 0 && pool.WishVoteNum == 0 {
-						pool.AddIncome(pool.Amount)
+						pool.addIncome(pool.Amount)
 						pool.Amount = new(big.Int)
 						log.Info("ProcessBeforeApply: processMissVoted close pool", "poolId", common.Bytes2Hex(share.Id()))
 					}
 					self.updateStakePool(pool)
 				}
 
-				share.AddIncome(new(big.Int).Mul(share.Value, big.NewInt(int64(share.WillVoteNum))))
+				share.addIncome(new(big.Int).Mul(share.Value, big.NewInt(int64(share.WillVoteNum))))
 				log.Info("ProcessBeforeApply: processMissVoted set share.Statue = STATUS_FINISHED", "shareId", common.Bytes2Hex(share.Id()), "share.WillVoteNum", share.WillVoteNum)
 				share.Status = STATUS_FINISHED
 				self.updateShare(share)
@@ -1183,7 +1181,7 @@ func (self *StakeState) payIncome(bc blockChain, header *types.Header) (err erro
 			}
 
 			share.LastPayTime = header.Number.Uint64()
-			share.SetIncome(big.NewInt(0))
+			share.setIncome(big.NewInt(0))
 			self.statedb.NextZState().AddTxOut(addr, asset)
 			self.updateShare(share)
 			log.Info("ProcessBeforeApply: payIncome rewardVote", "shareId", common.Bytes2Hex(share.Id()), "Income", share.Income)
@@ -1199,7 +1197,7 @@ func (self *StakeState) payIncome(bc blockChain, header *types.Header) (err erro
 			},
 			}
 			pool.LastPayTime = header.Number.Uint64()
-			pool.SetIncome(big.NewInt(0))
+			pool.setIncome(big.NewInt(0))
 			self.statedb.NextZState().AddTxOut(addr, asset)
 			self.updateStakePool(pool)
 			log.Info("ProcessBeforeApply: payIncome rewardVote", "poolId", common.Bytes2Hex(pool.Id()), "Income", pool.Income)
