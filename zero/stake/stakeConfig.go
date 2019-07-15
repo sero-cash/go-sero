@@ -6,6 +6,9 @@ import (
 )
 
 var (
+	poolValueThreshold, _ = new(big.Int).SetString("200000000000000000000000", 10)
+	lockingBlockNum       = uint64(1088640)
+
 	basePrice = big.NewInt(2000000000000000000)
 	addition  = big.NewInt(759357240838722)
 
@@ -25,6 +28,20 @@ var (
 	payWindow            = uint64(5)
 	statisticsMissWindow = uint64(10)
 )
+
+func GetPoolValueThreshold() *big.Int {
+	if seroparam.Is_Dev() {
+		return big.NewInt(1000000000000000000)
+	}
+	return poolValueThreshold
+}
+
+func GetLockingBlockNum() uint64 {
+	if seroparam.Is_Dev() {
+		return 10
+	}
+	return lockingBlockNum
+}
 
 func getStatisticsMissWindow() uint64 {
 	if seroparam.Is_Dev() {

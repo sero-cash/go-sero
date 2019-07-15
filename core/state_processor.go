@@ -154,11 +154,6 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	return receipt, gas, err
 }
 
-var (
-	poolValueThreshold, _ = new(big.Int).SetString("1000000000000000000", 10)
-	lockingBlockNum       = uint64(200) //uint64(1088640)
-)
-
 func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.StateDB, txHash common.Hash, number uint64) (poolId *common.Hash, shareId *common.Hash, err error) {
 	stakeState := stake.NewStakeState(statedb)
 	pkr := *from.ToPKr()
@@ -236,7 +231,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			return
 		} else {
 			cmd := stakeDesc.RegistPool
-			if poolValueThreshold.Cmp(stakeDesc.RegistPool.Value.ToInt()) != 0 || cmd.Vote == (keys.PKr{}) {
+			if stake.GetPoolValueThreshold().Cmp(stakeDesc.RegistPool.Value.ToInt()) != 0 || cmd.Vote == (keys.PKr{}) {
 				err = errors.New("args error")
 				return
 			}
@@ -252,7 +247,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			err = errors.New("pool not exist")
 			return
 		}
-		if stakePool.BlockNumber+lockingBlockNum < number {
+		if stakePool.BlockNumber+stake.GetLockingBlockNum() > number {
 			err = errors.New("pool locking in")
 			return
 		}

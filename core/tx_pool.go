@@ -19,6 +19,10 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/zero/stake"
+	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"math"
 	"math/big"
 	"runtime/debug"
@@ -476,6 +480,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 		return ErrGasLimit
 	}
 
+	if err := pool.checkDescCmd(tx.GetZZSTX()); err != nil {
+		return err
+	}
+
 	state := pool.currentState.Copy().NextZState()
 	if err := verify.VerifyWithoutState(tx.Ehash().NewRef(), tx.GetZZSTX(), state.Num()); err != nil {
 		log.Error("validateTx verify without state error", "hash", tx.Hash().Hex(), "verify stx err", err)
@@ -510,6 +518,45 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 		return ErrIntrinsicGas
 	}
 	return nil
+}
+
+func (pool *TxPool) checkDescCmd(tx *stx.T) (err error) {
+	cmd := tx.Desc_Cmd
+	stakeState := stake.NewStakeState(pool.currentState)
+	if cmd.BuyShare != nil {
+		if cmd.BuyShare.Pool != nil {
+			stakePool := stakeState.GetStakePool(common.BytesToHash(cmd.BuyShare.Pool[:]))
+			if stakePool == nil || stakePool.Closed {
+				err = errors.New("pool is not exist or closed")
+				return
+			}
+		}
+	} else if cmd.RegistPool != nil {
+		if cmd.RegistPool.Value.ToInt().Cmp(stake.GetPoolValueThreshold()) != 0 {
+			err = errors.New("registPool value error")
+			return
+		}
+		if cmd.RegistPool.Vote == (keys.PKr{}) {
+			err = errors.New("registPool Vote is empty")
+			return
+		}
+	} else if cmd.ClosePool != nil {
+		id := crypto.Keccak256Hash(tx.From[:])
+		stakePool := stakeState.GetStakePool(id)
+		if stakePool == nil {
+			err = errors.New("pool is not exist")
+			return
+		}
+		if stakePool.BlockNumber+stake.GetLockingBlockNum() > pool.chain.CurrentBlock().NumberU64() {
+			err = errors.New("pool locking in")
+			return
+		}
+		if stakePool.Closed {
+			err = errors.New("pool is closed")
+			return
+		}
+	}
+	return
 }
 
 // add validates a transaction and inserts it into the non-executable queue for
