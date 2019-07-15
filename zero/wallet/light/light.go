@@ -1,21 +1,28 @@
 package light
 
 import (
-	"github.com/sero-cash/go-sero/serodb"
-	"github.com/sero-cash/go-sero/core"
-	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-czero-import/keys"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
-	"github.com/sero-cash/go-sero/rlp"
-	"sync/atomic"
 	"github.com/robfig/cron"
-	"github.com/sero-cash/go-sero/zero/txtool/flight"
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-sero/core"
+	"github.com/sero-cash/go-sero/core/rawdb"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/txtool"
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
+	"math/big"
+	"sync/atomic"
 )
 
 type LightNode struct {
-	db     *serodb.LDBDatabase
+	db   *serodb.LDBDatabase
+	bcDB serodb.Database
+
 	txPool *core.TxPool
 
 	sri flight.SRI
@@ -28,7 +35,7 @@ var (
 	nilPrefix = []byte("NIL")
 )
 
-func NewLightNode(dbPath string, txPool *core.TxPool) (lightNode *LightNode) {
+func NewLightNode(dbPath string, txPool *core.TxPool, bcDB serodb.Database) (lightNode *LightNode) {
 
 	db, err := serodb.NewLDBDatabase(dbPath, 1024, 1024)
 	if err != nil {
@@ -38,6 +45,7 @@ func NewLightNode(dbPath string, txPool *core.TxPool) (lightNode *LightNode) {
 		txPool: txPool,
 		sri:    flight.SRI_Inst,
 		db:     db,
+		bcDB:   bcDB,
 	}
 	current_light = lightNode
 
@@ -56,6 +64,9 @@ func (self *LightNode) getLastNumber() (num uint64) {
 			return 0
 		}
 		self.lastNumber = bytesToUint64(value)
+		if self.lastNumber == 0 {
+			//self.lastNumber = 1200000
+		}
 	}
 	return self.lastNumber
 
@@ -69,17 +80,11 @@ func (self *LightNode) fetchBlockInfo() {
 	if txtool.Ref_inst.Bc == nil || !txtool.Ref_inst.Bc.IsValid() {
 		return
 	}
-
-	fmt.Println("fetchBlockInfo begin")
 	start := self.getLastNumber()
-	fmt.Println("fetchBlockInfo ,start=", start)
-	fmt.Println("fetchBlockInfo ,GetBlocksInfo=", start+1, fetchCount)
 	blocks, err := self.sri.GetBlocksInfo(start+1, fetchCount)
 	if err != nil {
 		log.Error("light GetBlocksInfo err:", err.Error())
-
 	}
-	fmt.Println("fereturntchBlockInfo ,GetBlocksInfo, len(blocks=", len(blocks))
 	if len(blocks) == 0 {
 		return
 	}
@@ -88,7 +93,6 @@ func (self *LightNode) fetchBlockInfo() {
 	for _, block := range blocks {
 		// PKR -> Outs
 		outs := block.Outs
-
 		pkrMap := make(map[keys.PKr][]txtool.Out)
 
 		for _, out := range outs {
@@ -99,30 +103,61 @@ func (self *LightNode) fetchBlockInfo() {
 			if out.State.OS.Out_O != nil {
 				pkr = out.State.OS.Out_O.Addr
 			}
-			if value,ok := pkrMap[pkr];ok {
-				v:=value
-				v = append(v,out)
-				pkrMap[pkr]= v
-			}else{
-				pkrMap[pkr]= []txtool.Out{out}
+			if value, ok := pkrMap[pkr]; ok {
+				v := value
+				v = append(v, out)
+				pkrMap[pkr] = v
+			} else {
+				pkrMap[pkr] = []txtool.Out{out}
 			}
-
 		}
-		for pkr,v := range pkrMap{
+		for pkr, v := range pkrMap {
 			data, err := rlp.EncodeToBytes(v)
 			if err != nil {
 				return
 			}
-			batch.Put(pkrKey(pkr.ToUint512(), uint64(block.Num)), data)
+			batch.Put(pkrKey(pkr, uint64(block.Num)), data)
 		}
 
-		nils := block.Nils
-		if len(nils) > 0 {
-			for _, Nil := range nils {
-				batch.Put(nilKey(Nil,uint64(block.Num)), uint64ToBytes(1))
+		blockHash := common.Hash{}
+		blockNum := uint64(block.Num)
+		copy(blockHash[:], block.Hash[:])
+		body := rawdb.ReadBody(self.bcDB, blockHash, blockNum)
+		for _, tx := range body.Transactions {
+
+			hash :=tx.Hash()
+			txHash := keys.Uint256{}
+			copy(txHash[:],hash[:])
+			nilValue := NilValue{
+				Num: blockNum,
+				TxHash: txHash,
+				TxFee: *big.NewInt(0).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas()))),
+			}
+			pb,_:=json.Marshal(nilValue)
+			if nilValue, err := rlp.EncodeToBytes(nilValue); err != nil {
+				return
+			} else {
+				for _, in := range tx.Stxt().Desc_O.Ins {
+					fmt.Println("Desc_O.Ins: ",hexutil.Encode(in.Nil[:]), string(pb[:]))
+					fmt.Println("Desc_O.Ins: ",hexutil.Encode(in.Root[:]), string(pb[:]))
+					batch.Put(nilKey(in.Nil), nilValue)
+					batch.Put(nilKey(in.Root), nilValue)
+				}
+				for _, in := range tx.Stxt().Desc_Z.Ins {
+					fmt.Println("Desc_Z.Ins: ",hexutil.Encode(in.Nil[:]), string(pb[:]))
+					fmt.Println("Desc_Z.Ins: ",hexutil.Encode(in.Trace[:]), string(pb[:]))
+					batch.Put(nilKey(in.Trace), nilValue)
+					batch.Put(nilKey(in.Nil), nilValue)
+				}
 			}
 		}
-		count ++
+		//nils := block.Nils
+		//if len(nils) > 0 {
+		//	for _, Nil := range nils {
+		//		batch.Put(nilKey(Nil, uint64(block.Num)), uint64ToBytes(1))
+		//	}
+		//}
+		count++
 	}
 	if count == 0 {
 		return
@@ -142,6 +177,13 @@ func (self *LightNode) fetchBlockInfo() {
 	return
 }
 
+type NilValue struct {
+	Nil    keys.Uint256
+	Num    uint64
+	TxHash keys.Uint256
+	TxFee  big.Int
+}
+
 func uint64ToBytes(i uint64) []byte {
 	var buf = make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, uint64(i))
@@ -152,12 +194,11 @@ func bytesToUint64(data []byte) uint64 {
 	return binary.BigEndian.Uint64(data)
 }
 
-func nilKey(Nil keys.Uint256, num uint64) []byte {
-	key := append(nilPrefix, Nil[:]...)
-	return append(key, uint64ToBytes(num)...)
+func nilKey(Nil keys.Uint256) []byte {
+	return append(nilPrefix, Nil[:]...)
 }
 
-func pkrKey(pkr keys.Uint512, num uint64) []byte {
+func pkrKey(pkr keys.PKr, num uint64) []byte {
 	key := append(pkrPrefix, pkr[:]...)
 	return append(key, uint64ToBytes(num)...)
 }

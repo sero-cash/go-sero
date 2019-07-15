@@ -28,7 +28,7 @@ func (plna PublicLightNodeApi) GetOutsByPKr(ctx context.Context, addresses [] *M
 	return plna.b.GetOutByPKr(pkrs, start, end)
 }
 
-func (plna PublicLightNodeApi) CheckNil(Nils []keys.Uint256, start ,end uint64) (delNils []light.BlockDelNil, e error) {
+func (plna PublicLightNodeApi) CheckNil(Nils []keys.Uint256) (nilResps []light.NilValue, e error) {
 
-	return plna.b.CheckNil(Nils, start,end)
+	return plna.b.CheckNil(Nils)
 }

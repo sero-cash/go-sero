@@ -344,10 +344,10 @@ func (b *SeroAPIBackend) GetOutByPKr(pkrs []keys.PKr, start, end uint64) (br lig
 	return b.sero.lightNode.GetOutsByPKr(pkrs, start, end)
 }
 
-func (b *SeroAPIBackend) CheckNil(Nils []keys.Uint256, start uint64, end uint64) (delNil []light.BlockDelNil, e error) {
+func (b *SeroAPIBackend) CheckNil(Nils []keys.Uint256)  (nilResps []light.NilValue, e error){
 	if b.sero.lightNode == nil {
 		e = errors.New("not start light")
 		return
 	}
-	return b.sero.lightNode.CheckNil(Nils, start, end)
+	return b.sero.lightNode.CheckNil(Nils)
 }

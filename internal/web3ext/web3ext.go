@@ -846,7 +846,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'checkNil',
 			call: 'light_checkNil',
-			params: 2
+			params: 1
 		}),
 	]
 });
