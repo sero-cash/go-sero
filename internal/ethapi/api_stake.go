@@ -210,7 +210,7 @@ func (args *RegistStakePoolTxArg) toPreTxParam() prepare.PreTxParam {
 	registPoolCmd := stx.RegistPoolCmd{}
 	registPoolCmd.Value = utils.U256(*args.Value.ToInt())
 	registPoolCmd.Vote = common.AddrToPKr(*args.Vote)
-	registPoolCmd.FeeRate = uint32(*args.Fee)*2/3 + 3334
+	registPoolCmd.FeeRate = uint32(*args.Fee)*4/5 +2000
 	preTx.Cmds.RegistPool = &registPoolCmd
 	return preTx
 
@@ -366,7 +366,7 @@ func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context,from common.Addr
 	preTx.Cmds = prepare.Cmds{}
 	registPoolCmd := stx.RegistPoolCmd{}
 	registPoolCmd.Vote = pool.VotePKr
-	registPoolCmd.FeeRate = uint32(fee)*2/3 + 3334
+	registPoolCmd.FeeRate = uint32(fee)*4/5 +2000
 	preTx.Cmds.RegistPool = &registPoolCmd
 	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(preTx)
 	if err != nil {
