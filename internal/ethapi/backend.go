@@ -52,6 +52,7 @@ type Backend interface {
 	// General Ethereum API
 	Downloader() *downloader.Downloader
 	ProtocolVersion() int
+	PeerCount() uint
 	SuggestPrice(ctx context.Context) (*big.Int, error)
 	ChainDb() serodb.Database
 	EventMux() *event.TypeMux

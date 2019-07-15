@@ -2,6 +2,7 @@ package ethapi
 
 import (
 	"context"
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/log"
 	"math/big"
@@ -213,6 +214,14 @@ func (args *RegistStakePoolTxArg) toPreTxParam() prepare.PreTxParam {
 }
 
 func (s *PublicStakeApI) RegistStakePool(ctx context.Context, args RegistStakePoolTxArg) (common.Hash, error) {
+
+
+    if !seroparam.Is_Dev() {
+		peerCount :=s.b.PeerCount()
+		if peerCount <10{
+			return common.Hash{},errors.New("connected peer < 10")
+		}
+	}
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
@@ -529,16 +538,39 @@ func newRPCShare(wallets []accounts.Wallet, share stake.Share) map[string]interf
 	s["id"] = common.BytesToHash(share.Id())
 	s["addr"] = getAccountAddrByPKr(wallets, share.PKr)
 	s["voteAddr"] = getAccountAddrByPKr(wallets, share.VotePKr)
-	s["total"] = share.InitNum
-	s["num"] = share.Num
-	s["missed"] = share.WillVoteNum
-	s["price"] = share.Value
-	s["status"] = share.Status
+	s["total"] = hexutil.Uint64(share.InitNum)
+	s["missed"] = hexutil.Uint64(share.WillVoteNum)
+	if share.Value != nil{
+		s["price"] = hexutil.Big(*share.Value)
+	}
+	if share.Status == stake.STATUS_VALID {
+		s["remaining"] = hexutil.Uint64(share.Num)
+	} else {
+		s["expired"] = hexutil.Uint64(share.Num)
+	}
+	s["status"] = hexutil.Uint64(share.Status)
 	if share.PoolId != nil {
 		s["pool"] = share.PoolId
 	}
-	s["profit"] = share.Profit
+	if share.Profit!=nil {
+		s["profit"] = hexutil.Big(*share.Profit)
+	}
+
 	s["tx"] = share.TransactionHash
+	return s
+}
+
+func newRPCStaticsShareMap( rs RPCStatisticsShare)map[string]interface{} {
+	s := map[string]interface{}{}
+	s["addr"] = rs.Address
+	s["voteAddr"] = rs.VoteAddress
+	s["total"] = hexutil.Uint64(rs.Total)
+	s["missed"] = hexutil.Uint64(rs.Missed)
+	s["remaining"] = hexutil.Uint64(rs.Remaining)
+	s["expired"] = hexutil.Uint64(rs.Expired)
+	s["shareIds"]=rs.ShareIds
+	s["profit"] = hexutil.Big(*rs.Profit)
+	s["pools"]=rs.Pools
 	return s
 }
 
@@ -551,6 +583,7 @@ type RPCStatisticsShare struct {
 	Expired     uint32        `json:"expired"`
 	ShareIds    []common.Hash `json:"shareIds"`
 	Pools       []common.Hash `json:"pools"`
+	Profit      *big.Int       `json:"profit"`
 }
 
 func containsVoteAddr(vas []interface{}, item interface{}) bool {
@@ -571,7 +604,7 @@ func containsHash(vas []common.Hash, item common.Hash) bool {
 	return false
 }
 
-func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []RPCStatisticsShare {
+func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share)[]map[string]interface{} {
 	result := map[string]*RPCStatisticsShare{}
 	var key interface{}
 	for _, share := range shares {
@@ -603,6 +636,9 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []R
 					s.Pools = append(s.Pools, *share.PoolId)
 				}
 			}
+			if share.Profit!=nil {
+				s.Profit=big.NewInt(0).Add(s.Profit,share.Profit)
+			}
 		} else {
 			s := &RPCStatisticsShare{}
 			s.Address = key
@@ -617,19 +653,20 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []R
 			if share.PoolId != nil {
 				s.Pools = append(s.Pools, *share.PoolId)
 			}
+			s.Profit=big.NewInt(0)
 			s.ShareIds = append(s.ShareIds, common.BytesToHash(share.Id()))
 			result[keystr] = s
 		}
 	}
-	statistics := []RPCStatisticsShare{}
+	statistics := []map[string]interface{}{}
 	for _, v := range result {
-		statistics = append(statistics, *v)
+		statistics = append(statistics, newRPCStaticsShareMap(*v))
 	}
 	return statistics
 
 }
 
-func (s *PublicStakeApI) MyShare(ctx context.Context, addr common.Address) []RPCStatisticsShare {
+func (s *PublicStakeApI) MyShare(ctx context.Context, addr common.Address) []map[string]interface{} {
 	var pk keys.Uint512
 	wallets := s.b.AccountManager().Wallets()
 	if addr.IsAccountAddress() {
