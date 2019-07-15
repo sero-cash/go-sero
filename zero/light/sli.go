@@ -2,6 +2,7 @@ package light
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -106,9 +107,21 @@ func (self *SLI) GenTx(param *light_types.GenTxParam) (gtx light_types.GTx, e er
 }
 
 func SignTx(sk *keys.Uint512, paramTx *light_types.GenTxParam) (tx light_types.GTx, err error) {
+	tk := keys.Sk2Tk(sk)
 	copy(paramTx.From.SKr[:], sk[:])
 	for i := range paramTx.Ins {
-		copy(paramTx.Ins[i].SKr[:], sk[:])
+		out := paramTx.Ins[i]
+		if pkr := paramTx.Ins[i].Out.State.OS.ToPKr(); pkr != nil {
+			if keys.IsMyPKr(&tk, pkr) {
+				copy(paramTx.Ins[i].SKr[:], sk[:])
+			} else {
+				err = fmt.Errorf("Sign Tx Error:  sk not match the out(%s) pkr(%s) is nil", hexutil.Encode(out.Out.Root[:]), hexutil.Encode(pkr[:]))
+				return
+			}
+		} else {
+			err = fmt.Errorf("Sign Tx Error: out(%s) pkr is nil", hexutil.Encode(out.Out.Root[:]))
+			return
+		}
 	}
 	if gtx, e := SLI_Inst.GenTx(paramTx); e != nil {
 		err = e

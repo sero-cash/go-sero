@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-sero/log"
 )
 
 type Proc interface {
@@ -45,13 +46,19 @@ func (self *Procs) StartProc(run Proc) {
 	} else {
 		self.wait.Add(1)
 		go func(run Proc) {
-			self.ch <- 0
 			defer func() {
+				if r := recover(); r != nil {
+					log.Error("START PROC ERROR : ", "err", r)
+					self.succ = false
+				}
 				<-self.ch
 				self.wait.Done()
 			}()
-			if !run.Run() {
-				self.succ = false
+			self.ch <- 0
+			if self.succ {
+				if !run.Run() {
+					self.succ = false
+				}
 			}
 		}(run)
 	}
