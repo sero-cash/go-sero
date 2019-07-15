@@ -980,6 +980,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		stakeState := stake.NewStakeState(state)
 		err = stakeState.RecordVotes(batch, block)
 		if err != nil {
+			log.Info("write block with pos","err",err)
 			return NonStatTy, err
 		}
 	}

@@ -46,22 +46,22 @@ func selKey(idx uint32, sid []byte) string {
 
 func (self *Lotter) verify(vote *types.Vote, share *stake.Share) bool {
 
-	var pkr *keys.PKr
+	var votePkr *keys.PKr
 	if vote.IsPool {
 		if share.PoolId != nil {
 			pool := self.stake.GetStakePool(*share.PoolId)
 			if pool != nil && pool.Valid() {
-				pkr = &pool.PKr
+				votePkr = &pool.VotePKr
 			}
 		}
 	} else {
-		pkr = &share.PKr
+		votePkr = &share.VotePKr
 	}
 
-	if pkr != nil {
+	if votePkr != nil {
 		parentPosHash := self.parentBlock.HashPos()
 		stakHash := types.StakeHash(&vote.PosHash, &parentPosHash)
-		if keys.VerifyPKr(stakHash.HashToUint256(), &vote.Sign, pkr) {
+		if keys.VerifyPKr(stakHash.HashToUint256(), &vote.Sign, votePkr) {
 			return true
 		}
 	}

@@ -758,6 +758,9 @@ func (self *StateDB) Copy() *StateDB {
 		journal:           newJournal(),
 		number:            self.number,
 	}
+	if self.stakeState!=nil {
+		state.stakeState = self.stakeState.Copy(&zeroDB{state})
+	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range self.journal.dirties {
 		// As documented [here](https://github.com/sero-cash/go-sero/pull/16485#issuecomment-380438527),

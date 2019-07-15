@@ -84,9 +84,13 @@ func (self *consItem) Log() string {
 }
 
 func (self *consItem) CopyRef() (ret *consItem) {
+	var item_copy CItem
+	if self.item!=nil {
+		item_copy=self.item.CopyTo()
+	}
 	ret = &consItem{
 		self.key.CopyTo(),
-		self.item.CopyTo(),
+		item_copy,
 		self.index,
 		self.inCons,
 		self.inBlock.CopyRef(),
@@ -122,6 +126,26 @@ func NewCons(db DB, pre string) (ret Cons) {
 	ret.db = db
 	ret.ver = -1
 	ret.updateVer = -1
+	return
+}
+
+func (self *Cons) Copy(db DB) (ret *Cons) {
+	ret=&Cons{}
+	ret.db = db
+	ret.pre = self.pre
+	ret.content = make(map[string]*consItem)
+	ret.ver = self.ver
+	ret.updateVer = self.updateVer
+	for _,log:=range self.cls {
+		temp:=log
+		if log.old!=nil {
+			temp.old = log.old.CopyTo()
+		}
+		ret.cls=append(ret.cls,temp)
+	}
+	for k,v:=range self.content {
+		ret.content[k]=v.CopyRef()
+	}
 	return
 }
 
@@ -363,7 +387,7 @@ func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
 }
 
 func (self *Cons) ReportConItems(name string, items consItems, num uint64) {
-	return
+    return
 	fmt.Printf("%v REPORT ITEMS: num=%v\n", name, num)
 	for _, item := range items {
 		fmt.Print("  ")

@@ -93,6 +93,7 @@ func (self *zeroDB) GlobalGetter() serodb.Getter {
 	return self.db.db.TrieDB().DiskDB()
 }
 
+
 var StakeDB = consensus.DBObj{"STAKE$BLOCK$INDEX"}
 
 func (self *StateDB) GetStakeCons() *consensus.Cons {

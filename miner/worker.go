@@ -362,7 +362,7 @@ func (self *worker) voteLoop() {
 				continue
 			}
 
-			log.Info("voteLoop", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
+			log.Info("worker voteLoop", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 
 			self.pendingVote.add(vote)
 

@@ -1,6 +1,7 @@
 package miner
 
 import (
+	"github.com/sero-cash/go-sero/log"
 	"sync"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -45,6 +46,7 @@ func (self *pendingVote) add(vote *types.Vote) {
 	defer self.pendingVoteMu.Unlock()
 
 	key := voteKey{vote.ParentNum + 1, vote.PosHash}
+	log.Info("pendingVote add vote","poshash" ,vote.PosHash,"block" ,vote.ParentNum+1,"idx",vote.Idx,"sign",common.BytesToHash(vote.Sign[:]))
 	var vs voteSet
 	if _, ok := self.pendingVote[key]; !ok {
 		vs = make(voteSet)
@@ -90,12 +92,12 @@ func (self *pendingVote) deleteBefore(num uint64) {
 	}
 }
 
-func (self *pendingVote) getMyPending(key voteKey) (votes voteSet) {
+func (self *pendingVote) getMyPending(key voteKey) (ret voteSet) {
 	self.pendingVoteMu.Lock()
 	defer self.pendingVoteMu.Unlock()
 
 	if votes, ok := self.pendingVote[key]; ok {
-		votes = votes.copy()
+		ret = votes.copy()
 	}
 	return
 }
