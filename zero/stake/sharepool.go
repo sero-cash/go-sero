@@ -553,10 +553,16 @@ var (
 
 	maxPrice = big.NewInt(5930000000000000000)
 
-	outOfDateWindow      = uint64(544320)
-	missVotedWindow      = uint64(725760)
-	payWindow            = uint64(42336)
-	statisticsMissWindow = uint64(6048)
+	//outOfDateWindow      = uint64(544320)
+	//missVotedWindow      = uint64(725760)
+	//payWindow            = uint64(42336)
+	//statisticsMissWindow = uint64(6048)
+
+	//test
+	outOfDateWindow      = uint64(200)
+	missVotedWindow      = uint64(300)
+	payWindow            = uint64(5)
+	statisticsMissWindow = uint64(10)
 )
 
 func getStatisticsMissWindow() uint64 {

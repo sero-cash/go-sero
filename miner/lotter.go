@@ -157,7 +157,7 @@ func (self *Lotter) wait() bool {
 	for _, vote := range filter.result() {
 		log.Info("pos currentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 		self.currentHeaderVotes = append(self.currentHeaderVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
-		if len(self.currentHeaderVotes) == 2 {
+		if len(self.currentHeaderVotes) == 3 {
 			break
 		}
 	}
