@@ -177,10 +177,14 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		num, avgPrice, currentPrice := stakeState.CaleAvgPrice(value)
 		log.Info("BuyShare", "num", num, "price", avgPrice, "currentPrice", currentPrice)
 		if num > 0 {
-			//if num > 1000 {
-			//	stake.SumAmount()
-			//}
-			amount := new(big.Int).Mul(avgPrice, big.NewInt(int64(num)))
+			var amount *big.Int
+			if num > 1000 {
+				num = 1000
+				amount = stakeState.SumAmount(1000)
+			} else {
+				amount = new(big.Int).Mul(avgPrice, big.NewInt(int64(num)))
+			}
+
 			refund := new(big.Int).Sub(new(big.Int).Set(stakeDesc.BuyShare.Value.ToInt()), amount)
 			if refund.Sign() > 0 {
 				asset := assets.Asset{Tkn: &assets.Token{
@@ -228,7 +232,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			}
 			stakePool.Fee = uint16(stakeDesc.RegistPool.FeeRate)
 			stakePool.VotePKr = stakeDesc.RegistPool.Vote
-			stakeState.UpdateStakePool(stakePool)
+			stakeState.AddStakePool(stakePool)
 			return
 		} else {
 			cmd := stakeDesc.RegistPool
@@ -237,8 +241,8 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 				return
 			}
 
-			pool := &stake.StakePool{PKr: pkr, Amount: cmd.Value.ToInt(), VotePKr: cmd.Vote, TransactionHash: txHash, Fee: uint16(cmd.FeeRate), Profit: big.NewInt(0)}
-			stakeState.UpdateStakePool(pool)
+			pool := &stake.StakePool{PKr: pkr, Amount: cmd.Value.ToInt(), VotePKr: cmd.Vote, TransactionHash: txHash, Fee: uint16(cmd.FeeRate), BlockNumber: number, Income: big.NewInt(0)}
+			stakeState.AddStakePool(pool)
 		}
 	} else if stakeDesc.ClosePool != nil {
 		id := crypto.Keccak256Hash(pkr[:])
@@ -265,7 +269,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		}
 		statedb.NextZState().AddTxOut(from, asset)
 		stakePool.Amount = new(big.Int)
-		stakeState.UpdateStakePool(stakePool)
+		stakeState.AddStakePool(stakePool)
 	}
 	return
 }

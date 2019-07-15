@@ -540,7 +540,7 @@ func newRPCShare(wallets []accounts.Wallet, share stake.Share) map[string]interf
 	if share.PoolId != nil {
 		s["pool"] = share.PoolId
 	}
-	s["returnAmount"]=share.ReturnAmount
+	s["profit"]=share.Profit
 	s["tx"] = share.TransactionHash
 	return s
 }

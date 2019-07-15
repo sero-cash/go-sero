@@ -52,7 +52,7 @@ func TestCaleAvePrice(t *testing.T) {
 
 	amount, _ := big.NewInt(0).SetString("98000000000000000000", 10)
 	n, price, _ := state.CaleAvgPrice(amount)
-	sum := SumAmount(basePrice, addition, int64(n))
+	sum := sumAmount(basePrice, addition, int64(n))
 	fmt.Println(n, price, sum)
 	fmt.Println(new(big.Int).Mul(big.NewInt(int64(n)), price))
 }
@@ -107,5 +107,5 @@ func TestPosDif(t *testing.T) {
 	price := state.CurrentPrice()
 	fmt.Println(price)
 	basePrice = big.NewInt(2000000000000000000)
-	fmt.Println(SumAmount(price, addition, 10000))
+	fmt.Println(sumAmount(price, addition, 10000))
 }
