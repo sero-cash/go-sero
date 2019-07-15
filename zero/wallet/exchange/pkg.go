@@ -40,7 +40,7 @@ func id_2_pkg_key(id *keys.Uint256) []byte {
 	return ret
 }
 
-func (self *Exchange) findPkgs(pk *keys.Uint512, from bool) (pkgs []Pkg) {
+func (self *Exchange) FindPkgs(pk *keys.Uint512, from bool) (pkgs []Pkg) {
 	prefix := pk_from_id_2_id_Key(pk, &from, nil)
 	iterator := self.db.NewIteratorWithPrefix(prefix)
 	for iterator.Next() {

@@ -59,7 +59,7 @@ const (
 	SOLO_RATE  = 2
 	TOTAL_RATE = 3
 	minSharePoolSize =200
-	minMissRate      =0.25
+	minMissRate      =0.4
 	MaxVoteCount = 3
 	ValidVoteCount = 2
 )

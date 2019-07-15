@@ -988,9 +988,11 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 	root, err := state.Commit(true)
 	if root != block.Root() {
-		panic("root not eq")
+		log.Info("WiriteBlockWithState root not equal Error","root",root,"block.root",block.Root())
+		return NonStatTy, err
 	}
-	if err != nil {
+	if err!=nil {
+		log.Error("WriteBlockWithState.Commit Error:","root",root,"err",err)
 		return NonStatTy, err
 	}
 	triedb := bc.stateCache.TrieDB()
@@ -1267,11 +1269,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 			stakeState := stake.NewStakeState(state)
 			err = stakeState.ProcessBeforeApply(bc, block.Header())
 			if err != nil {
+				log.Error("insert chain pos block processBeforeApply","err",err)
 				return i, events, coalescedLogs, err
 			}
 
 			err = stakeState.CheckVotes(block, bc)
 			if err != nil {
+				log.Error("insert chain pos block checkVote","err",err)
 				return i, events, coalescedLogs, err
 			}
 		}

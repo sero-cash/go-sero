@@ -795,15 +795,20 @@ func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) 
 	value := self.missedNum.GetValue(missedNumKey)
 
 	preHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-	prepreHeader := bc.GetHeader(preHeader.ParentHash, preHeader.Number.Uint64()-1)
-	missedNum := utils.DecodeNumber32(value) + uint32(3-len(prepreHeader.CurrentVotes)-len(preHeader.ParentVotes))
+	totalVote := len(preHeader.CurrentVotes) + len(preHeader.ParentVotes)
+	missedNum := utils.DecodeNumber32(value)
+	if totalVote < 3 {
+		missedNum += uint32(3 - totalVote)
+	}
 
-	if prepreHeader.Number.Uint64() >= seroparam.SIP4()+statisticsMissWindow {
+	if preHeader.Number.Uint64() >= seroparam.SIP4()+statisticsMissWindow {
 		preNumber := preHeader.Number.Uint64() - statisticsMissWindow
 		windiwHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
-		prepreNumber := prepreHeader.Number.Uint64() - statisticsMissWindow
-		preWindiwHeader := bc.GetHeader(self.getBlockHash(prepreNumber), prepreNumber)
-		delNum := uint32(3 - len(preWindiwHeader.CurrentVotes) - len(windiwHeader.ParentVotes))
+		totalWVote := len(windiwHeader.CurrentVotes) + len(windiwHeader.ParentVotes)
+		var delNum uint32
+		if totalWVote < 3 {
+			delNum = uint32(3 - totalWVote)
+		}
 		if missedNum < delNum {
 			log.Crit("ProcessBeforeApply: statisticsByWindow err", "missedNum", missedNum)
 		} else {
