@@ -50,7 +50,7 @@ func (self *Lotter) verify(vote *types.Vote, share *stake.Share) bool {
 	if vote.IsPool {
 		if share.PoolId != nil {
 			pool := self.stake.GetStakePool(*share.PoolId)
-			if pool != nil && pool.Valid() {
+			if pool != nil && pool.CanBeVote() {
 				votePkr = &pool.VotePKr
 			}
 		}
@@ -102,7 +102,7 @@ func (self *Lotter) RunFilter(filter map[string]*shareFilter, votes voteSet) (de
 				if s, ok := filter[k]; ok {
 					if s.vote == nil {
 						if self.verify(&vote, s.share) {
-							copy_vote:=vote
+							copy_vote := vote
 							filter[k].vote = &copy_vote
 						}
 					}
@@ -116,7 +116,7 @@ func (self *Lotter) RunFilter(filter map[string]*shareFilter, votes voteSet) (de
 }
 func (self *Lotter) wait() bool {
 	needWait := self.stake.NeedTwoVote(self.header.Number.Uint64())
-	if !needWait{
+	if !needWait {
 		log.Info("not need pos")
 	}
 
@@ -129,7 +129,7 @@ func (self *Lotter) wait() bool {
 		return false
 	}
 	filter := self.NewFilter(idx, shares)
-	count:=0
+	count := 0
 	for {
 		currentHeader := self.worker.chain.CurrentHeader()
 		if currentHeader.Hash() != self.header.ParentHash {
@@ -140,12 +140,12 @@ func (self *Lotter) wait() bool {
 			return false
 		}
 
-		if count ==0{
+		if count == 0 {
 			time.Sleep(1 * time.Second)
-		}else{
+		} else {
 			time.Sleep(100 * time.Millisecond)
 		}
-        count++
+		count++
 
 		votes := self.worker.pendingVote.getMyPending(self.key)
 

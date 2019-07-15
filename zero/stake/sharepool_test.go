@@ -50,7 +50,7 @@ func TestCaleAvePrice(t *testing.T) {
 	//fmt.Println("root:", root.String())
 	//fmt.Println(state.ShareSize())
 
-	amount, _ := big.NewInt(0).SetString("98000000000000000000", 10)
+	amount, _ := big.NewInt(0).SetString("6100000000000000000000", 10)
 	n, price, _ := state.CaleAvgPrice(amount)
 	sum := sum(basePrice, addition, int64(n))
 	fmt.Println(n, price, sum)

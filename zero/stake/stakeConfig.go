@@ -1,32 +1,46 @@
 package stake
 
 import (
-	"github.com/sero-cash/go-czero-import/seroparam"
 	"math/big"
+
+	"github.com/sero-cash/go-czero-import/seroparam"
 )
 
 var (
-	poolValueThreshold, _ = new(big.Int).SetString("200000000000000000000000", 10)
-	lockingBlockNum       = uint64(1088640)
+	poolValueThreshold, _ = new(big.Int).SetString("200000000000000000000000", 10) //200K SERO
+	lockingBlockNum       = uint64(198720)                                         // 1 month 30*24*60*4.6
 
-	basePrice = big.NewInt(2000000000000000000)
+	basePrice = big.NewInt(2000000000000000000) //2 SERO
 	addition  = big.NewInt(759357240838722)
 
-	baseReware, _ = new(big.Int).SetString("10500000000000000000", 10)
+	baseReware, _ = new(big.Int).SetString("10500000000000000000", 10) // 10.5 SERO
 	rewareStep    = big.NewInt(76854301391338)
 
-	maxReware, _ = new(big.Int).SetString("35600000000000000000", 10)
+	maxReware, _ = new(big.Int).SetString("35600000000000000000", 10) //35.6 SERO
 
-	//outOfDateWindow      = uint64(544320)
-	//missVotedWindow      = uint64(725760)
-	//payWindow            = uint64(42336)
-	//statisticsMissWindow = uint64(6048)
+	//outOfDateWindow      = uint64(198720)   // 1 month 30*24*60*4.6
+	//missVotedWindow      = uint64(596160)   // 3 month 3*30*24*60*4.6
+	//payWindow            = uint64(42336)    // 1 week 7*24*60*4.6
+	//statisticsMissWindow = uint64(6048)     // 1 day 24*60*4.6
 
 	//test
 	outOfDateWindow      = uint64(100)
 	missVotedWindow      = uint64(120)
 	payWindow            = uint64(5)
 	statisticsMissWindow = uint64(10)
+)
+
+const (
+	SOLO_RATE  = 3
+	TOTAL_RATE = 4
+
+	//minSharePoolSize = 20000  // 20K
+	//test
+	minSharePoolSize = 20
+
+	minMissRate    = 0.2
+	MaxVoteCount   = 3
+	ValidVoteCount = 2
 )
 
 func GetPoolValueThreshold() *big.Int {
@@ -70,12 +84,3 @@ func getPayPeriod() uint64 {
 	}
 	return payWindow
 }
-
-const (
-	SOLO_RATE        = 3
-	TOTAL_RATE       = 4
-	minSharePoolSize = 20
-	minMissRate      = 0.4
-	MaxVoteCount     = 3
-	ValidVoteCount   = 2
-)

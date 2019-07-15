@@ -628,16 +628,6 @@ func accumulateRewardsV4(statedb *state.StateDB, header *types.Header) *big.Int 
 	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(header.Number, halveNimber), interval), big1)
 	reward.Div(reward, new(big.Int).Exp(big2, i, nil))
 
-
-
-	if header.Licr.C != 0 {
-		reward = new(big.Int)
-	}
-
-	if statedb == nil {
-		return reward
-	}
-
 	teamReward := new(big.Int).Div(hRewardV4, new(big.Int).Exp(big2, i, nil))
 	statedb.AddBalance(teamRewardPool, "SERO", teamReward)
 

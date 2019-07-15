@@ -176,6 +176,8 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			if num > 1000 {
 				num = 1000
 				amount = stakeState.SumAmount(1000)
+				avgPrice = big.NewInt(0).Div(amount, big.NewInt(1000))
+				amount = new(big.Int).Mul(avgPrice, big.NewInt(1000))
 			} else {
 				amount = new(big.Int).Mul(avgPrice, big.NewInt(int64(num)))
 			}
@@ -257,13 +259,15 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		}
 		stakePool.Closed = true
 
-		asset := assets.Asset{Tkn: &assets.Token{
-			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
-			Value:    utils.U256(*stakePool.Amount),
-		},
+		if stakePool.Closed && stakePool.CurrentShareNum == 0 && stakePool.WishVoteNum == 0 {
+			asset := assets.Asset{Tkn: &assets.Token{
+				Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+				Value:    utils.U256(*stakePool.Amount),
+			},
+			}
+			statedb.NextZState().AddTxOut(from, asset)
+			stakePool.Amount = new(big.Int)
 		}
-		statedb.NextZState().AddTxOut(from, asset)
-		stakePool.Amount = new(big.Int)
 		stakeState.AddStakePool(stakePool)
 	}
 	return
