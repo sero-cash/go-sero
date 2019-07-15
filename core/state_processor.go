@@ -210,6 +210,10 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		id := crypto.Keccak256Hash(pkr[:])
 		poolId = &id
 		stakePool := stakeState.GetStakePool(id)
+		if stakePool.Closed {
+			err = errors.New("pool is closed")
+			return
+		}
 		if stakePool != nil {
 			if stakeDesc.RegistPool.Value.ToInt().Sign() > 0 {
 				asset := assets.Asset{Tkn: &assets.Token{
