@@ -870,9 +870,9 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) (
 	if e == nil {
 		ndoes := []*SNode{}
 		for _, index := range indexs {
-			sndoe, e := tree.findByIndex(index)
-			if e != nil {
-				err = e
+			sndoe, e1 := tree.findByIndex(index)
+			if e1 != nil {
+				err = e1
 				return
 			}
 			ndoes = append(ndoes, sndoe)
@@ -1021,8 +1021,9 @@ func (self *StakeState) processOutDate(header *types.Header, bc blockChain) (err
 	}
 
 	preHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
-	shares, err := self.getShares(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64())
-	if err != nil {
+	shares, e := self.getShares(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64())
+	if e != nil {
+		err = e
 		return
 	}
 	if len(shares) > 0 {
@@ -1090,8 +1091,9 @@ func (self *StakeState) processMissVoted(header *types.Header, bc blockChain) (e
 		return
 	}
 	preHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
-	shares, err := self.getShares(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64())
-	if err != nil {
+	shares, e := self.getShares(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64())
+	if e != nil {
+		err = e
 		return
 	}
 	if len(shares) > 0 {
@@ -1175,8 +1177,9 @@ func (self *StakeState) payIncome(bc blockChain, header *types.Header) (err erro
 		return
 	}
 	preHeader := bc.GetHeader(self.getBlockHash(preNumber), preNumber)
-	shares, pools, err := self.getBlockRecords(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64())
-	if err != nil {
+	shares, pools, e := self.getBlockRecords(bc.GetDB(), preHeader.Hash(), preHeader.Number.Uint64())
+	if e != nil {
+		err = e
 		return
 	}
 
