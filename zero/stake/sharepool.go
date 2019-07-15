@@ -453,12 +453,7 @@ func (self *StakeState) GetStakePool(poolId common.Hash) *StakePool {
 }*/
 
 func GetBlockRecords(getter serodb.Getter, blockHash common.Hash, blockNumber uint64) (shares []*Share, pools []*StakePool) {
-	if blockNumber == 52 {
-		i := 0
-		i++
-	}
 	records := state.StakeDB.GetBlockRecords(getter, blockNumber, &blockHash)
-
 	for _, record := range records {
 		if record.Name == "share" {
 			for _, each := range record.Pairs {
