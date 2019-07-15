@@ -430,8 +430,9 @@ var (
 	difficultyL3 = big.NewInt(4000000000)
 	difficultyL4 = big.NewInt(17000000000)
 
-	lReward = new(big.Int).Mul(big.NewInt(176), base)
-	hReward = new(big.Int).Mul(big.NewInt(445), base)
+	lReward   = new(big.Int).Mul(big.NewInt(176), base)
+	hReward   = new(big.Int).Mul(big.NewInt(445), base)
+	hRewardV4 = new(big.Int).Mul(big.NewInt(356), base)
 
 	argA, _ = new(big.Int).SetString("985347985347985", 10)
 	argB, _ = new(big.Int).SetString("16910256410256400000", 10)
@@ -442,6 +443,11 @@ var (
 	teamAddress      = common.Base58ToAddress("RnRpAdXWaS2BnUzrUuzR8WPRfFackV65CzyqWU8mK4Np2aCgDUvrhYciDJoQZpMzWpaaKqsicf1u8fRd4ZKXeSUF2pMLHXXaiCX8XzHw3VRyX2Q7ko4BrRj9xTrNaErnTkg")
 	communityAddress = common.Base58ToAddress("ZkVB2f8H1usYBSeViS7wPqSSFseXnCYXEbT2XxCSuRhfFg9KbBKbTvpTBj7dmSZxEKTp6rsqS3EX9js6StgRijZQBkaok2U5Fy8oLuGFrt1C5jwdAYB4Nqn8KNRniiQyCeb")
 )
+
+func Halve(blockNumber *big.Int) *big.Int {
+	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(blockNumber, halveNimber), interval), big1)
+	return new(big.Int).Exp(big2, i, nil)
+}
 
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward .
@@ -610,19 +616,20 @@ func accumulateRewardsV3(statedb *state.StateDB, header *types.Header) *big.Int 
 	return reward
 }
 
-
 func accumulateRewardsV4(statedb *state.StateDB, header *types.Header) *big.Int {
 	diff := new(big.Int).Div(header.Difficulty, big.NewInt(1000000000))
 	reward := new(big.Int).Add(new(big.Int).Mul(argA, diff), argB)
 
 	if reward.Cmp(lReward) < 0 {
 		reward = new(big.Int).Set(lReward)
-	} else if reward.Cmp(hReward) > 0 {
-		reward = new(big.Int).Set(hReward)
+	} else if reward.Cmp(hRewardV4) > 0 {
+		reward = new(big.Int).Set(hRewardV4)
 	}
 
 	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(header.Number, halveNimber), interval), big1)
 	reward.Div(reward, new(big.Int).Exp(big2, i, nil))
+
+
 
 	if header.Licr.C != 0 {
 		reward = new(big.Int)
@@ -631,7 +638,9 @@ func accumulateRewardsV4(statedb *state.StateDB, header *types.Header) *big.Int 
 	if statedb == nil {
 		return reward
 	}
-	statedb.AddBalance(teamRewardPool, "SERO", new(big.Int).Div(reward, big.NewInt(5)))
+
+	teamReward := new(big.Int).Div(hRewardV4, new(big.Int).Exp(big2, i, nil))
+	statedb.AddBalance(teamRewardPool, "SERO", teamReward)
 
 	if header.Number.Uint64()%5000 == 0 {
 		balance := statedb.GetBalance(teamRewardPool, "SERO")

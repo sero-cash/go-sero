@@ -177,6 +177,9 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		num, avgPrice, currentPrice := stakeState.CaleAvgPrice(value)
 		log.Info("BuyShare", "num", num, "price", avgPrice, "currentPrice", currentPrice)
 		if num > 0 {
+			//if num > 1000 {
+			//	stake.SumAmount()
+			//}
 			amount := new(big.Int).Mul(avgPrice, big.NewInt(int64(num)))
 			refund := new(big.Int).Sub(new(big.Int).Set(stakeDesc.BuyShare.Value.ToInt()), amount)
 			if refund.Sign() > 0 {

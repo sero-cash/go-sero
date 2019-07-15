@@ -7,12 +7,12 @@ import (
 
 var (
 	basePrice = big.NewInt(2000000000000000000)
-	addition  = big.NewInt(368891382302157)
+	addition  = big.NewInt(759357240838722)
 
-	baseReware = big.NewInt(2330000000000000000)
-	rewareStep = big.NewInt(11022927689594)
+	baseReware, _ = new(big.Int).SetString("10500000000000000000", 10)
+	rewareStep    = big.NewInt(76854301391338)
 
-	maxPrice = big.NewInt(5930000000000000000)
+	maxReware, _ = new(big.Int).SetString("35600000000000000000", 10)
 
 	//outOfDateWindow      = uint64(544320)
 	//missVotedWindow      = uint64(725760)
@@ -25,7 +25,6 @@ var (
 	payWindow            = uint64(5)
 	statisticsMissWindow = uint64(10)
 )
-
 
 func getStatisticsMissWindow() uint64 {
 	if seroparam.Is_Dev() {
@@ -56,12 +55,10 @@ func getPayPeriod() uint64 {
 }
 
 const (
-	SOLO_RATE  = 2
-	TOTAL_RATE = 3
-	minSharePoolSize =20
-	minMissRate      =0.4
-	MaxVoteCount = 3
-	ValidVoteCount = 2
+	SOLO_RATE        = 3
+	TOTAL_RATE       = 4
+	minSharePoolSize = 20
+	minMissRate      = 0.4
+	MaxVoteCount     = 3
+	ValidVoteCount   = 2
 )
-
-

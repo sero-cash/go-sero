@@ -52,7 +52,7 @@ func TestCaleAvePrice(t *testing.T) {
 
 	amount, _ := big.NewInt(0).SetString("98000000000000000000", 10)
 	n, price, _ := state.CaleAvgPrice(amount)
-	sum := sum(basePrice, addition, int64(n))
+	sum := SumAmount(basePrice, addition, int64(n))
 	fmt.Println(n, price, sum)
 	fmt.Println(new(big.Int).Mul(big.NewInt(int64(n)), price))
 }
@@ -74,4 +74,38 @@ func TestSeleteShare(t *testing.T) {
 		fmt.Println(common.Bytes2Hex(node.key[:]), node.num)
 	}
 
+}
+
+func TestPosRewad(t *testing.T) {
+	state, _ := newState()
+
+	var pkr keys.PKr
+	copy(pkr[:], crypto.Keccak512([]byte("123")))
+	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 326592, Num: 326592}
+	//state.AddShare(share)
+	//fmt.Println("root:", root.String())
+
+	tree := NewTree(state)
+	tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num + 10, total: share.Num + 10})
+	fmt.Println(state.ShareSize())
+	fmt.Println(maxReware)
+	fmt.Println(state.StakeCurrentReward(big.NewInt(3057599 + 8294400 + 1)))
+}
+
+func TestPosDif(t *testing.T) {
+	state, _ := newState()
+
+	var pkr keys.PKr
+	copy(pkr[:], crypto.Keccak512([]byte("123")))
+	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 10000, Num: 10000}
+	//state.AddShare(share)
+	//fmt.Println("root:", root.String())
+
+	tree := NewTree(state)
+	tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num})
+	fmt.Println(state.ShareSize())
+	price := state.CurrentPrice()
+	fmt.Println(price)
+	basePrice = big.NewInt(2000000000000000000)
+	fmt.Println(SumAmount(price, addition, 10000))
 }

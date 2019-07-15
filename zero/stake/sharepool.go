@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/consensus/ethash"
 	"math/big"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -544,7 +545,7 @@ func (self *StakeState) CurrentPrice() *big.Int {
 	return new(big.Int).Add(basePrice, new(big.Int).Mul(addition, big.NewInt(int64(tree.size()))))
 }
 
-func sum(basePrice, addition *big.Int, n int64) *big.Int {
+func SumAmount(basePrice, addition *big.Int, n int64) *big.Int {
 	return new(big.Int).Add(new(big.Int).Mul(basePrice, big.NewInt(n)), new(big.Int).Div(new(big.Int).Mul(new(big.Int).Mul(big.NewInt(n), big.NewInt(n-1)), addition), big.NewInt(2)))
 }
 
@@ -562,7 +563,7 @@ func (self *StakeState) CaleAvgPrice(amount *big.Int) (uint32, *big.Int, *big.In
 			break
 		}
 		mid := (left + right) / 2
-		sumAmount := sum(basePrice, addition, mid)
+		sumAmount := SumAmount(basePrice, addition, mid)
 		sub := new(big.Int).Sub(amount, sumAmount)
 		abs := new(big.Int).Abs(sub)
 
@@ -577,26 +578,30 @@ func (self *StakeState) CaleAvgPrice(amount *big.Int) (uint32, *big.Int, *big.In
 			left = mid + 1
 		}
 	}
-	sumAmount := sum(basePrice, addition, left)
+	sumAmount := SumAmount(basePrice, addition, left)
 	if sumAmount.Cmp(amount) > 0 {
 		left -= 1
-		sumAmount = sum(basePrice, addition, left)
+		sumAmount = SumAmount(basePrice, addition, left)
 	}
 	return uint32(left), new(big.Int).Div(sumAmount, big.NewInt(left)), basePrice
 }
 
-func (self *StakeState) StakeCurrentReward() (soloRewards *big.Int, totalRewards *big.Int) {
+func (self *StakeState) StakeCurrentReward(blockNumber *big.Int) (soloRewards *big.Int, totalRewards *big.Int) {
 	if seroparam.Is_Dev() {
 		return big.NewInt(600000000000000000), big.NewInt(900000000000000000)
 	}
 
 	size := NewTree(self).size()
-	soleAmount := new(big.Int).Add(baseReware, new(big.Int).Mul(rewareStep, big.NewInt(int64(size))))
+	totalReward := new(big.Int).Add(baseReware, new(big.Int).Mul(rewareStep, big.NewInt(int64(size))))
 
-	if soleAmount.Cmp(maxPrice) > 1 {
-		soleAmount = new(big.Int).Set(maxPrice)
+	if totalReward.Cmp(maxReware) > 0 {
+		totalReward = new(big.Int).Set(maxReware)
 	}
-	return soleAmount, new(big.Int).Div(new(big.Int).Mul(soleAmount, big.NewInt(TOTAL_RATE)), big.NewInt(SOLO_RATE))
+	halve := ethash.Halve(blockNumber)
+	fmt.Println(halve)
+
+	soleAmount := new(big.Int).Div(new(big.Int).Mul(totalReward, big.NewInt(SOLO_RATE)), big.NewInt(TOTAL_RATE))
+	return new(big.Int).Div(soleAmount, halve), new(big.Int).Div(totalReward, halve)
 }
 
 func (self *StakeState) checkShareRepeated(header *types.Header) error {
@@ -725,7 +730,7 @@ func (self *StakeState) processRemedyRewards(bc blockChain, header *types.Header
 	if header.Number.Uint64() > 0 {
 		parentHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 		if len(parentHeader.ParentVotes) > 0 {
-			soloReware, totalReward := self.StakeCurrentReward()
+			soloReware, totalReward := self.StakeCurrentReward(parentHeader.Number)
 			log.Info("accumulateRewards: currentReward", "soloReware", soloReware, "totalReward", totalReward, "header.ParentVotes", len(parentHeader.ParentVotes))
 			reward := new(big.Int)
 			for _, vote := range parentHeader.ParentVotes {
@@ -874,7 +879,7 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) (
 		}
 	}
 
-	soloReware, reward := self.StakeCurrentReward()
+	soloReware, reward := self.StakeCurrentReward(preHeader.Number)
 	if len(preHeader.CurrentVotes) > 0 {
 		//log.Info("ProcessBeforeApply: process vote CurrentVotes", "size", len(preHeader.CurrentVotes), "blockNumber", preHeader.Number.Uint64())
 		log.Info("ProcessBeforeApply: currentReward", "soloReware", soloReware, "reward", reward)
