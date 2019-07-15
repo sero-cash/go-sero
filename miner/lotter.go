@@ -102,7 +102,8 @@ func (self *Lotter) RunFilter(filter map[string]*shareFilter, votes voteSet) (de
 				if s, ok := filter[k]; ok {
 					if s.vote == nil {
 						if self.verify(&vote, s.share) {
-							filter[k].vote = &vote
+							copy_vote:=vote
+							filter[k].vote = &copy_vote
 						}
 					}
 				}

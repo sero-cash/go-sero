@@ -852,7 +852,7 @@ func getAccountAddress(addr common.Address, b Backend) *address.AccountAddress {
 	}
 	return nil
 }
-
+/**
 func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, addr common.Address, packed bool, id *keys.Uint256) (interface{}, error) {
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
@@ -923,7 +923,7 @@ func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, addr common.Address, p
 	}
 	return nil, nil
 }
-
+**/
 func (s *PublicBlockChainAPI) WatchPkg(ctx context.Context, id keys.Uint256, key keys.Uint256) (map[string]interface{}, error) {
 
 	pkg_o, pkr, err := txs.WatchPkg(&id, &key)
@@ -2091,6 +2091,7 @@ func (s *PublicTransactionPoolAPI) ReSendTransaction(ctx context.Context, txhash
 	return submitTransaction(ctx, s.b, tx, nil)
 }
 
+/**
 func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 	s.nonceLock.mu.Lock()
 	defer s.nonceLock.mu.Unlock()
@@ -2144,7 +2145,7 @@ func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArg
 	}
 
 }
-
+**/
 type ClosePkgArgs struct {
 	From     *address.AccountAddress `json:"from"`
 	Gas      *hexutil.Uint64         `json:"gas"`

@@ -20,10 +20,10 @@ var (
 	//statisticsMissWindow = uint64(6048)
 
 	//test
-	outOfDateWindow      = uint64(200)
-	missVotedWindow      = uint64(300)
+	outOfDateWindow      = uint64(100)
+	missVotedWindow      = uint64(120)
 	payWindow            = uint64(5)
-	statisticsMissWindow = uint64(1000)
+	statisticsMissWindow = uint64(10)
 )
 
 
@@ -58,7 +58,7 @@ func getPayPeriod() uint64 {
 const (
 	SOLO_RATE  = 2
 	TOTAL_RATE = 3
-	minSharePoolSize =200
+	minSharePoolSize =20
 	minMissRate      =0.4
 	MaxVoteCount = 3
 	ValidVoteCount = 2
