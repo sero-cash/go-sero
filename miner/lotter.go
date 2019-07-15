@@ -115,6 +115,10 @@ func (self *Lotter) RunFilter(filter map[string]*shareFilter, votes voteSet) (de
 }
 func (self *Lotter) wait() bool {
 	needWait := self.stake.NeedTwoVote(self.header.Number.Uint64())
+	if !needWait{
+		log.Info("not need pos")
+	}
+
 	self.parentBlock = self.worker.chain.GetBlockByHash(self.header.ParentHash)
 	startTime := time.Now()
 

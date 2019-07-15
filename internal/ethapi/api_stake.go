@@ -225,6 +225,18 @@ func (s *PublicStakeApI) RegistStakePool(ctx context.Context, args RegistStakePo
 		return common.Hash{},err
 	}
 	fromPkr:=getStakePoolPkr(wallet.Accounts()[0])
+
+	poolId:=getStakePoolId(fromPkr)
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return common.Hash{},err
+	}
+	pool := stake.NewStakeState(state).GetStakePool(poolId)
+
+	if pool != nil {
+		return common.Hash{}, errors.New("stake pool has exists poolId="+poolId.String())
+	}
+
 	log.Info("RegistStakePool","idPkr",common.BytesToAddress(fromPkr[:]).String())
 	preTx := args.toPreTxParam()
 	preTx.RefundTo=&fromPkr
@@ -490,6 +502,7 @@ func newRPCStakePool(wallets []accounts.Wallet,pool stake.StakePool) map[string]
 	result["lastPayTime"] = hexutil.Uint64(pool.LastPayTime)
 	result["closed"] = pool.Closed
 	result["tx"]=pool.TransactionHash
+	result["createAt"]=hexutil.Uint64(pool.BlockNumber)
 	return result
 }
 

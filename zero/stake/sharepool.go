@@ -370,14 +370,14 @@ func (self *StakeState) UpdateStakePool(pool *StakePool) {
 
 func (self *StakeState) NeedTwoVote(num uint64) bool {
 	if seroparam.Is_Dev() {
-		return self.ShareSize() > 2
+		return self.ShareSize() > ValidVoteCount
 	} else {
 		window_size := getStatisticsMissWindow()
 		if num > seroparam.SIP4()+window_size {
 			missedNum := utils.DecodeNumber32(self.missedNum.GetValue(missedNumKey))
-			seletedNum := window_size * 3
+			seletedNum := window_size * MaxVoteCount
 			ratio := float64(missedNum) / float64(seletedNum)
-			if ratio > 0.25 || self.ShareSize() < 2000 {
+			if ratio > minMissRate || self.ShareSize() < minSharePoolSize {
 				return false
 			}
 			return true
@@ -544,54 +544,7 @@ func (self *StakeState) getShares(getter serodb.Getter, blockHash common.Hash, b
 	return
 }
 
-var (
-	basePrice = big.NewInt(2000000000000000000)
-	addition  = big.NewInt(368891382302157)
 
-	baseReware = big.NewInt(2330000000000000000)
-	rewareStep = big.NewInt(11022927689594)
-
-	maxPrice = big.NewInt(5930000000000000000)
-
-	//outOfDateWindow      = uint64(544320)
-	//missVotedWindow      = uint64(725760)
-	//payWindow            = uint64(42336)
-	//statisticsMissWindow = uint64(6048)
-
-	//test
-	outOfDateWindow      = uint64(200)
-	missVotedWindow      = uint64(300)
-	payWindow            = uint64(5)
-	statisticsMissWindow = uint64(10)
-)
-
-func getStatisticsMissWindow() uint64 {
-	if seroparam.Is_Dev() {
-		return 10
-	}
-	return statisticsMissWindow
-}
-
-func getOutOfDateWindow() uint64 {
-	if seroparam.Is_Dev() {
-		return 100
-	}
-	return outOfDateWindow
-}
-
-func getMissVotedWindow() uint64 {
-	if seroparam.Is_Dev() {
-		return 105
-	}
-	return missVotedWindow
-}
-
-func getPayPeriod() uint64 {
-	if seroparam.Is_Dev() {
-		return 5
-	}
-	return payWindow
-}
 
 func (self *StakeState) CurrentPrice() *big.Int {
 	tree := NewTree(self)
@@ -638,11 +591,6 @@ func (self *StakeState) CaleAvgPrice(amount *big.Int) (uint32, *big.Int, *big.In
 	}
 	return uint32(left), new(big.Int).Div(sumAmount, big.NewInt(left)), basePrice
 }
-
-const (
-	SOLO_RATE  = 2
-	TOTAL_RATE = 3
-)
 
 func (self *StakeState) StakeCurrentReward() (soloRewards *big.Int, totalRewards *big.Int) {
 	if seroparam.Is_Dev() {
