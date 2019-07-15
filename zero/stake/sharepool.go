@@ -539,8 +539,6 @@ func (self *StakeState) getShares(getter serodb.Getter, blockHash common.Hash, b
 	return
 }
 
-
-
 func (self *StakeState) CurrentPrice() *big.Int {
 	tree := NewTree(self)
 	return new(big.Int).Add(basePrice, new(big.Int).Mul(addition, big.NewInt(int64(tree.size()))))
@@ -784,7 +782,7 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 
 func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) {
 	statisticsMissWindow := getStatisticsMissWindow()
-	if header.Number.Uint64() < 2 || header.Number.Uint64() < seroparam.SIP4()+2 {
+	if header.Number.Uint64() < 1 || header.Number.Uint64()-1 < seroparam.SIP4() {
 		return
 	}
 	value := self.missedNum.GetValue(missedNumKey)
