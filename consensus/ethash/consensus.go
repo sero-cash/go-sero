@@ -448,7 +448,9 @@ var (
 func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, header *types.Header, gasReward uint64) {
 
 	var reward *big.Int
-	if header.Number.Uint64() >= seroparam.SIP3() {
+	if header.Number.Uint64() >= seroparam.SIP4() {
+		reward = accumulateRewardsV4(statedb, header)
+	} else if header.Number.Uint64() >= seroparam.SIP3() {
 		reward = accumulateRewardsV3(statedb, header)
 	} else if header.Number.Uint64() >= seroparam.SIP1() {
 		reward = accumulateRewardsV2(statedb, header)
@@ -604,6 +606,42 @@ func accumulateRewardsV3(statedb *state.StateDB, header *types.Header) *big.Int 
 			}
 			statedb.NextZState().AddTxOut(communityAddress, assetCommunity)
 		}
+	}
+	return reward
+}
+
+
+func accumulateRewardsV4(statedb *state.StateDB, header *types.Header) *big.Int {
+	diff := new(big.Int).Div(header.Difficulty, big.NewInt(1000000000))
+	reward := new(big.Int).Add(new(big.Int).Mul(argA, diff), argB)
+
+	if reward.Cmp(lReward) < 0 {
+		reward = new(big.Int).Set(lReward)
+	} else if reward.Cmp(hReward) > 0 {
+		reward = new(big.Int).Set(hReward)
+	}
+
+	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(header.Number, halveNimber), interval), big1)
+	reward.Div(reward, new(big.Int).Exp(big2, i, nil))
+
+	if header.Licr.C != 0 {
+		reward = new(big.Int)
+	}
+
+	if statedb == nil {
+		return reward
+	}
+	statedb.AddBalance(teamRewardPool, "SERO", new(big.Int).Div(reward, big.NewInt(5)))
+
+	if header.Number.Uint64()%5000 == 0 {
+		balance := statedb.GetBalance(teamRewardPool, "SERO")
+		statedb.SubBalance(teamRewardPool, "SERO", balance)
+		assetTeam := assets.Asset{Tkn: &assets.Token{
+			Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
+			Value:    utils.U256(*balance),
+		},
+		}
+		statedb.NextZState().AddTxOut(teamAddress, assetTeam)
 	}
 	return reward
 }
