@@ -70,7 +70,7 @@ func TestSeleteShare(t *testing.T) {
 	fmt.Println(ints, err)
 
 	for _, i := range ints {
-		node := tree.findByIndex(uint32(i))
+		node, _ := tree.findByIndex(uint32(i))
 		fmt.Println(common.Bytes2Hex(node.key[:]), node.num)
 	}
 

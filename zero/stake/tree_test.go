@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"math/rand"
 	"testing"
 )
 
 func (node *SNode) println() {
-	fmt.Printf("%s, %v, %v\n", common.Bytes2Hex(node.key[:]), node.total, node.num)
+	fmt.Printf("%s, %v, %v, %v\n", common.Bytes2Hex(node.key[:]), node.total, node.num, node.nodeNum)
 }
 
 //func newState() (State, *state.StateDB) {
@@ -30,20 +32,26 @@ func TestTree(t *testing.T) {
 	fmt.Println(tree.size())
 }
 
+func initNode(seed uint64, num uint32, all map[common.Hash]uint32) *SNode {
+	hash := crypto.Keccak256Hash(utils.EncodeNumber(seed))
+	//for all[hash] > 0 {
+	//	u = uint64(rand.Intn(1000000))
+	//	hash = crypto.Keccak256Hash(append(utils.EncodeNumber(u), uint8(i)))
+	//}
+
+	all[hash] = num
+
+	return &SNode{key: hash, total: num, num: num, nodeNum: 1}
+}
+
 func initTree(state State) (*STree, map[common.Hash]uint32) {
 	all := map[common.Hash]uint32{}
 	tree := NewTree(state)
-	for i := 1; i <= 100; i++ {
-		u := uint8(rand.Intn(100))
-		hash := crypto.Keccak256Hash([]byte{u, uint8(i)})
-		for all[hash] > 0 || u == 0 {
-			u = uint8(rand.Intn(100))
-			hash = crypto.Keccak256Hash([]byte{u})
-		}
-		all[hash] = uint32(u)
-		num := uint32(u)
-		//num := uint32(1)
-		tree.insert(&SNode{key: hash, total: num, num: num, nodeNum: 1})
+	for i := 1; i <= 1000; i++ {
+
+		u := uint64(rand.Intn(100))
+		num := uint32(u%10 + 1)
+		tree.insert(initNode(uint64(i), num, all))
 	}
 	hash := state.GetStakeState(rootKey)
 	root := &SNode{key: hash}
@@ -116,16 +124,32 @@ func TestDelByHash(t *testing.T) {
 	state, _ := newState()
 	tree, all := initTree(state)
 
+	start := uint64(100000 + 1)
 	fmt.Println()
 	for {
 		var key common.Hash
-		for hash, _ := range all {
-			key = hash
-			fmt.Println("delete ", common.Bytes2Hex(hash[:]))
+		var num uint32
+		for key, num = range all {
+			if num == 0 {
+				log.Error("error", num)
+				return
+			}
+			fmt.Println("delete ", common.Bytes2Hex(key[:]))
 
+			if num >= 5 {
+				num = 5
+			} else {
+				num = 1
+			}
 			//snapshot := stateDB.Snapshot()
 			//fmt.Println("snapshot : ", snapshot)
-			tree.deleteNodeByHash(hash, 1)
+			tree.deleteNodeByHash(key, num)
+
+			if num != 1 {
+				start++
+				tree.insert(initNode(start, 1, all))
+			}
+
 			//if index == 2 {
 			//	root := stateDB.IntermediateRoot(true)
 			//	fmt.Println("root : ", root.String())
@@ -134,17 +158,20 @@ func TestDelByHash(t *testing.T) {
 			//}
 
 			rootNode := &SNode{key: state.GetStakeState(rootKey)}
-			rootNode.MiddleOrder(state)
+			rootNode.init(state)
+			rootNode.println()
+			//rootNode.MiddleOrder(state)
 			fmt.Println()
 			break
 		}
-		all[key] -= 1
+		all[key] -= num
 		if all[key] == 0 {
 			delete(all, key)
 		}
 		if len(all) == 0 {
 			break
 		}
+
 	}
 
 	hash := state.GetStakeState(rootKey)
