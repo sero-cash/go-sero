@@ -128,6 +128,7 @@ func (self *Lotter) wait() bool {
 		return false
 	}
 	filter := self.NewFilter(idx, shares)
+	count:=0
 	for {
 		currentHeader := self.worker.chain.CurrentHeader()
 		if currentHeader.Hash() != self.header.ParentHash {
@@ -138,7 +139,12 @@ func (self *Lotter) wait() bool {
 			return false
 		}
 
-		time.Sleep(100 * time.Millisecond)
+		if count ==0{
+			time.Sleep(1 * time.Second)
+		}else{
+			time.Sleep(100 * time.Millisecond)
+		}
+        count++
 
 		votes := self.worker.pendingVote.getMyPending(self.key)
 
