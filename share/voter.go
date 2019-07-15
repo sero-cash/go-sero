@@ -1,10 +1,11 @@
 package share
 
 import (
-	"github.com/sero-cash/go-sero/accounts"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/sero-cash/go-sero/accounts"
 
 	"github.com/sero-cash/go-sero/serodb"
 
@@ -46,7 +47,6 @@ type blockChain interface {
 }
 
 type Voter struct {
-	chainconfig  *params.ChainConfig
 	chain        blockChain
 	sero         Backend
 	lotteryCh    chan *types.Lottery
@@ -69,7 +69,6 @@ func NewVoter(chainconfig *params.ChainConfig, chain blockChain, sero Backend) *
 
 	// Create the transaction pool with its initial settings
 	voter := &Voter{
-		chainconfig:  chainconfig,
 		sero:         sero,
 		chain:        chain,
 		lotteryCh:    make(chan *types.Lottery, chainLotterySize),
@@ -123,11 +122,25 @@ func (self *Voter) loop() {
 	}
 }
 
+func (self *Voter) IsLotteryValid(lottery *types.Lottery) bool {
+	current := self.chain.CurrentBlock().NumberU64()
+	if (lottery.ParentNum + 1) < current-1 {
+		return false
+	}
+	if (lottery.ParentNum + 1) > current+2 {
+		return false
+	}
+	return true
+}
+
 func (self *Voter) lotteryTaskLoop() {
 	for {
 		select {
 		case lottery := <-self.lotteryCh:
 			current := self.chain.CurrentBlock().NumberU64()
+			if !self.IsLotteryValid(lottery) {
+				continue
+			}
 			log.Info(">>>>>>>lotteryTaskLoop new lottery", "poshash", lottery.PosHash, "block", lottery.ParentNum+1, "localBlock", current)
 			parentBlock := self.chain.GetBlock(lottery.ParentHash, lottery.ParentNum)
 			if parentBlock == nil {
@@ -192,9 +205,9 @@ type voteInfo struct {
 	seed       address.Seed
 }
 
-func cotainsVoteInfo(voteInfos []voteInfo, item voteInfo,pool *stake.StakePool) bool {
-	if pool!=nil && !pool.Closed{
-		return false;
+func cotainsVoteInfo(voteInfos []voteInfo, item voteInfo, pool *stake.StakePool) bool {
+	if pool != nil && !pool.Closed {
+		return false
 	}
 	for _, v := range voteInfos {
 		if v.seed == item.seed && v.index == item.index &&
@@ -212,14 +225,14 @@ func pkrToAddress(pkr keys.PKr) common.Address {
 	return addr
 }
 
-func GetSeedByVotePkr(wallets []accounts.Wallet,pkr keys.PKr) (*address.Seed){
+func GetSeedByVotePkr(wallets []accounts.Wallet, pkr keys.PKr) *address.Seed {
 	for _, w := range wallets {
 		if w.IsMine(pkrToAddress(pkr)) {
 			seed, err := w.GetSeed()
 			if err != nil {
-				log.Info("GetSeedByVotePkr" ,"err",err)
-			    return nil
-			}else{
+				log.Info("GetSeedByVotePkr", "err", err)
+				return nil
+			} else {
 				return seed
 			}
 		}
@@ -255,7 +268,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 		if stakeState.ShareSize() == 0 {
 			return nil, nil
 		}
-		ints, shares, err:= stakeState.SeleteShare(poshash)
+		ints, shares, err := stakeState.SeleteShare(poshash)
 		log.Info("SelfShares selete share", "poshash", poshash, "blockNumber", header.Number.Uint64(), "indexs", ints, "pool size", stakeState.ShareSize())
 		if err != nil {
 			log.Info("lotteryTaskLoop", "SeleteShare", poshash, "err", err)
@@ -263,49 +276,51 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 		}
 
 		var voteInfos []voteInfo
-		parentPos := parentHeader.HashPos()
-		stakeHash := types.StakeHash(&poshash, &parentPos)
-		for i, share := range shares {
+		if len(ints) > 0 {
+			parentPos := parentHeader.HashPos()
+			stakeHash := types.StakeHash(&poshash, &parentPos)
 			wallets := self.sero.AccountManager().Wallets()
-			var pool *stake.StakePool
-			if share.PoolId!=nil {
-				pool = stakeState.GetStakePool(*share.PoolId)
-				if pool == nil {
-					log.Info("lotteryTaskLoop", "GetStakePool", share.PoolId, "note exist")
+			for i, share := range shares {
+				var pool *stake.StakePool
+				if share.PoolId != nil {
+					pool = stakeState.GetStakePool(*share.PoolId)
+					if pool == nil {
+						log.Info("lotteryTaskLoop", "GetStakePool", share.PoolId, "note exist")
+					}
 				}
-			}
-			if pool!=nil {
-				seed:=GetSeedByVotePkr(wallets,pool.VotePKr)
-				if seed!=nil {
-					voteInfos = append(voteInfos, voteInfo{
+				if pool != nil {
+					seed := GetSeedByVotePkr(wallets, pool.VotePKr)
+					if seed != nil {
+						voteInfos = append(voteInfos, voteInfo{
+							ints[i],
+							parentNumber.Uint64(),
+							common.BytesToHash(share.Id()),
+							poshash,
+							stakeHash,
+							pool.VotePKr,
+							true,
+							*seed})
+					}
+				}
+				shareVoteSeed := GetSeedByVotePkr(wallets, share.VotePKr)
+				if shareVoteSeed != nil {
+					info := voteInfo{
 						ints[i],
 						parentNumber.Uint64(),
 						common.BytesToHash(share.Id()),
 						poshash,
 						stakeHash,
-						pool.VotePKr,
-						true,
-						*seed})
+						share.VotePKr,
+						false,
+						*shareVoteSeed}
+					if cotainsVoteInfo(voteInfos, info, pool) {
+						continue
+					} else {
+						voteInfos = append(voteInfos, info)
+					}
 				}
-			}
-			shareVoteSeed:=GetSeedByVotePkr(wallets,share.VotePKr)
-			if shareVoteSeed!=nil{
-				info:=voteInfo{
-					ints[i],
-					parentNumber.Uint64(),
-					common.BytesToHash(share.Id()),
-					poshash,
-					stakeHash,
-					share.VotePKr,
-					false,
-					*shareVoteSeed}
-				if cotainsVoteInfo(voteInfos, info,pool) {
-					continue
-				} else {
-					voteInfos = append(voteInfos, info)
-				}
-			}
 
+			}
 		}
 		return voteInfos, nil
 	}
@@ -320,7 +335,7 @@ func (self *Voter) sign(info voteInfo) {
 		log.Info("voter sign", "sign err", err)
 		return
 	}
-	log.Info(">>>>>>>>>>>>>sign vote", "poshas", info.poshash, "block", info.parentNum+1, "share", info.shareHash, "idx", info.index,"isPool",info.isPool)
+	log.Info(">>>>>>>>>>>>>sign vote", "poshas", info.poshash, "block", info.parentNum+1, "share", info.shareHash, "idx", info.index, "isPool", info.isPool)
 	vote := &types.Vote{info.index, info.parentNum, info.shareHash, info.poshash, info.isPool, sign}
 	//go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
 	self.AddVote(vote)
