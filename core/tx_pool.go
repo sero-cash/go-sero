@@ -19,15 +19,16 @@ package core
 import (
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/crypto"
-	"github.com/sero-cash/go-sero/zero/stake"
-	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"math"
 	"math/big"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/zero/stake"
+	"github.com/sero-cash/go-sero/zero/txs/stx"
 
 	"github.com/sero-cash/go-sero/zero/txtool/verify"
 
@@ -480,11 +481,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 		return ErrGasLimit
 	}
 
-	if err := pool.checkDescCmd(tx.GetZZSTX()); err != nil {
+	copyState := pool.currentState.Copy()
+	if err := pool.checkDescCmd(tx.GetZZSTX(), copyState); err != nil {
 		return err
 	}
 
-	state := pool.currentState.Copy().NextZState()
+	state := copyState.NextZState()
 	if err := verify.VerifyWithoutState(tx.Ehash().NewRef(), tx.GetZZSTX(), state.Num()); err != nil {
 		log.Error("validateTx verify without state error", "hash", tx.Hash().Hex(), "verify stx err", err)
 		pool.faileds[tx.Hash()] = time.Now()
@@ -520,9 +522,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	return nil
 }
 
-func (pool *TxPool) checkDescCmd(tx *stx.T) (err error) {
+func (pool *TxPool) checkDescCmd(tx *stx.T, state *state.StateDB) (err error) {
 	cmd := tx.Desc_Cmd
-	stakeState := stake.NewStakeState(pool.currentState)
+	stakeState := stake.NewStakeState(state)
 	if cmd.BuyShare != nil {
 		if cmd.BuyShare.Pool != nil {
 			stakePool := stakeState.GetStakePool(common.BytesToHash(cmd.BuyShare.Pool[:]))
@@ -532,12 +534,29 @@ func (pool *TxPool) checkDescCmd(tx *stx.T) (err error) {
 			}
 		}
 	} else if cmd.RegistPool != nil {
-		if cmd.RegistPool.Value.ToInt().Cmp(stake.GetPoolValueThreshold()) != 0 {
-			err = errors.New("registPool value error")
+		id := crypto.Keccak256Hash(tx.From[:])
+		stakePool := stakeState.GetStakePool(id)
+		if stakePool == nil {
+			if cmd.RegistPool.Value.ToInt().Cmp(stake.GetPoolValueThreshold()) != 0 {
+				err = errors.New("registPool value error")
+				return
+			}
+		} else {
+			if stakePool.Closed {
+				err = errors.New("registPool but stakePool is closed")
+				return
+			}
+		}
+		if !keys.PKrValid(&cmd.RegistPool.Vote) {
+			err = errors.New("registPool Vote is invalid")
 			return
 		}
-		if cmd.RegistPool.Vote == (keys.PKr{}) {
-			err = errors.New("registPool Vote is empty")
+		if cmd.RegistPool.FeeRate > seroparam.HIGHEST_STAKING_NODE_FEE_RATE {
+			err = fmt.Errorf("registPool Vote fee must <= %v%%", seroparam.HIGHEST_STAKING_NODE_FEE_RATE/100)
+			return
+		}
+		if cmd.RegistPool.FeeRate < seroparam.LOWEST_STAKING_NODE_FEE_RATE {
+			err = fmt.Errorf("registPool Vote fee must >= %v%%", seroparam.LOWEST_STAKING_NODE_FEE_RATE/100)
 			return
 		}
 	} else if cmd.ClosePool != nil {
@@ -547,12 +566,12 @@ func (pool *TxPool) checkDescCmd(tx *stx.T) (err error) {
 			err = errors.New("pool is not exist")
 			return
 		}
-		if stakePool.BlockNumber+stake.GetLockingBlockNum() > pool.chain.CurrentBlock().NumberU64() {
-			err = errors.New("pool locking in")
-			return
-		}
 		if stakePool.Closed {
 			err = errors.New("pool is closed")
+			return
+		}
+		if stakePool.BlockNumber+stake.GetLockingBlockNum() > pool.chain.CurrentBlock().NumberU64() {
+			err = errors.New("pool locking in")
 			return
 		}
 	}

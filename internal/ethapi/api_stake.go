@@ -2,6 +2,8 @@ package ethapi
 
 import (
 	"context"
+	"fmt"
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/log"
 	"math/big"
@@ -184,8 +186,12 @@ func (args *RegistStakePoolTxArg) setDefaults(ctx context.Context, b Backend) er
 			return errors.New(`gasPrice can not be zero`)
 		}
 	}
-	if uint32(*args.Fee) > 10000 {
-		return errors.New("fee rate can not large then %100")
+	
+	if uint32(*args.Fee) < seroparam.LOWEST_STAKING_NODE_FEE_RATE{
+		return errors.New(fmt.Sprintf("fee rate can not less then %v",seroparam.LOWEST_STAKING_NODE_FEE_RATE))
+	}
+	if uint32(*args.Fee) > seroparam.HIGHEST_STAKING_NODE_FEE_RATE {
+		return errors.New(fmt.Sprintf("fee rate can not large then  %v",seroparam.HIGHEST_STAKING_NODE_FEE_RATE))
 	}
 
 	if args.Value == nil {
@@ -206,13 +212,25 @@ func (args *RegistStakePoolTxArg) toPreTxParam() prepare.PreTxParam {
 	registPoolCmd := stx.RegistPoolCmd{}
 	registPoolCmd.Value = utils.U256(*args.Value.ToInt())
 	registPoolCmd.Vote = common.AddrToPKr(*args.Vote)
-	registPoolCmd.FeeRate = uint32(*args.Fee)*4/5 + 2000
+	registPoolCmd.FeeRate = uint32(*args.Fee)
 	preTx.Cmds.RegistPool = &registPoolCmd
 	return preTx
-
 }
 
+const (
+	MinFee=2500
+	MaxFee=7500
+)
+
 func (s *PublicStakeApI) RegistStakePool(ctx context.Context, args RegistStakePoolTxArg) (common.Hash, error) {
+
+
+    if !seroparam.Is_Dev() {
+		peerCount :=s.b.PeerCount()
+		if peerCount <10{
+			return common.Hash{},errors.New("connected peer < 10")
+		}
+	}
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
@@ -318,6 +336,14 @@ func (s *PublicStakeApI) CloseStakePool(ctx context.Context, from common.Address
 }
 
 func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from common.Address, fee hexutil.Uint64) (common.Hash, error) {
+
+	if uint32(fee) < seroparam.LOWEST_STAKING_NODE_FEE_RATE {
+		return common.Hash{},errors.New(fmt.Sprintf("fee rate can not less then %v",seroparam.LOWEST_STAKING_NODE_FEE_RATE))
+	}
+	if uint32(fee) > seroparam.HIGHEST_STAKING_NODE_FEE_RATE {
+		return common.Hash{},errors.New(fmt.Sprintf("fee rate can not large then  %v",seroparam.HIGHEST_STAKING_NODE_FEE_RATE))
+	}
+
 	wallets := s.b.AccountManager().Wallets()
 	var own address.AccountAddress
 	if from.IsAccountAddress() {
@@ -352,7 +378,7 @@ func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from common.Add
 		return common.Hash{}, errors.New("stake pool has closed")
 	}
 	preTx := prepare.PreTxParam{}
-	preTx.From = *own.ToUint512()
+	preTx.From =*(own.ToUint512())
 	preTx.RefundTo = &fromPkr
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
@@ -362,7 +388,7 @@ func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from common.Add
 	preTx.Cmds = prepare.Cmds{}
 	registPoolCmd := stx.RegistPoolCmd{}
 	registPoolCmd.Vote = pool.VotePKr
-	registPoolCmd.FeeRate = uint32(fee)*4/5 + 2000
+	registPoolCmd.FeeRate = uint32(fee)
 	preTx.Cmds.RegistPool = &registPoolCmd
 	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(preTx)
 	if err != nil {
@@ -529,16 +555,40 @@ func newRPCShare(wallets []accounts.Wallet, share stake.Share) map[string]interf
 	s["id"] = common.BytesToHash(share.Id())
 	s["addr"] = getAccountAddrByPKr(wallets, share.PKr)
 	s["voteAddr"] = getAccountAddrByPKr(wallets, share.VotePKr)
-	s["total"] = share.InitNum
-	s["num"] = share.Num
-	s["missed"] = share.WillVoteNum
-	s["price"] = share.Value
-	s["status"] = share.Status
+	s["total"] = hexutil.Uint64(share.InitNum)
+	s["missed"] = hexutil.Uint64(share.WillVoteNum)
+	if share.Value != nil{
+		s["price"] = hexutil.Big(*share.Value)
+	}
+	if share.Status == stake.STATUS_VALID {
+		s["remaining"] = hexutil.Uint64(share.Num)
+	} else {
+		s["expired"] = hexutil.Uint64(share.Num)
+	}
+	s["status"] = hexutil.Uint64(share.Status)
 	if share.PoolId != nil {
 		s["pool"] = share.PoolId
 	}
-	s["profit"] = share.Profit
+	if share.Profit!=nil {
+		s["profit"] = hexutil.Big(*share.Profit)
+	}
+	s["fee"]=hexutil.Uint64(share.Fee)
+
 	s["tx"] = share.TransactionHash
+	return s
+}
+
+func newRPCStaticsShareMap( rs RPCStatisticsShare)map[string]interface{} {
+	s := map[string]interface{}{}
+	s["addr"] = rs.Address
+	s["voteAddr"] = rs.VoteAddress
+	s["total"] = hexutil.Uint64(rs.Total)
+	s["missed"] = hexutil.Uint64(rs.Missed)
+	s["remaining"] = hexutil.Uint64(rs.Remaining)
+	s["expired"] = hexutil.Uint64(rs.Expired)
+	s["shareIds"]=rs.ShareIds
+	s["profit"] = hexutil.Big(*rs.Profit)
+	s["pools"]=rs.Pools
 	return s
 }
 
@@ -551,6 +601,7 @@ type RPCStatisticsShare struct {
 	Expired     uint32        `json:"expired"`
 	ShareIds    []common.Hash `json:"shareIds"`
 	Pools       []common.Hash `json:"pools"`
+	Profit      *big.Int       `json:"profit"`
 }
 
 func containsVoteAddr(vas []interface{}, item interface{}) bool {
@@ -571,7 +622,7 @@ func containsHash(vas []common.Hash, item common.Hash) bool {
 	return false
 }
 
-func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []RPCStatisticsShare {
+func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share)[]map[string]interface{} {
 	result := map[string]*RPCStatisticsShare{}
 	var key interface{}
 	for _, share := range shares {
@@ -603,6 +654,9 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []R
 					s.Pools = append(s.Pools, *share.PoolId)
 				}
 			}
+			if share.Profit!=nil {
+				s.Profit=big.NewInt(0).Add(s.Profit,share.Profit)
+			}
 		} else {
 			s := &RPCStatisticsShare{}
 			s.Address = key
@@ -617,19 +671,20 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []R
 			if share.PoolId != nil {
 				s.Pools = append(s.Pools, *share.PoolId)
 			}
+			s.Profit=big.NewInt(0)
 			s.ShareIds = append(s.ShareIds, common.BytesToHash(share.Id()))
 			result[keystr] = s
 		}
 	}
-	statistics := []RPCStatisticsShare{}
+	statistics := []map[string]interface{}{}
 	for _, v := range result {
-		statistics = append(statistics, *v)
+		statistics = append(statistics, newRPCStaticsShareMap(*v))
 	}
 	return statistics
 
 }
 
-func (s *PublicStakeApI) MyShare(ctx context.Context, addr common.Address) []RPCStatisticsShare {
+func (s *PublicStakeApI) MyShare(ctx context.Context, addr common.Address) []map[string]interface{} {
 	var pk keys.Uint512
 	wallets := s.b.AccountManager().Wallets()
 	if addr.IsAccountAddress() {

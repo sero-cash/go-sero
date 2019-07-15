@@ -153,12 +153,12 @@ func (self *verifyWithoutStateCtx) verifyCmds() (e error) {
 		}
 	}
 	if self.tx.Desc_Cmd.RegistPool != nil {
-		if self.tx.Desc_Cmd.RegistPool.FeeRate > 8000 {
-			e = ReportError("regist pool the fee rate must < 80%", self.tx)
+		if self.tx.Desc_Cmd.RegistPool.FeeRate > seroparam.HIGHEST_STAKING_NODE_FEE_RATE {
+			e = ReportError(fmt.Sprintf("regist pool the fee rate must < %v%%", seroparam.HIGHEST_STAKING_NODE_FEE_RATE), self.tx)
 			return
 		}
-		if self.tx.Desc_Cmd.RegistPool.FeeRate < 2000 {
-			e = ReportError("regist pool the fee rate must > 20%", self.tx)
+		if self.tx.Desc_Cmd.RegistPool.FeeRate < seroparam.LOWEST_STAKING_NODE_FEE_RATE {
+			e = ReportError(fmt.Sprintf("regist pool fee must >= %v%%", seroparam.LOWEST_STAKING_NODE_FEE_RATE/100), self.tx)
 			return
 		}
 	}

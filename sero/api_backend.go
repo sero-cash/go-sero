@@ -224,6 +224,10 @@ func (b *SeroAPIBackend) ProtocolVersion() int {
 	return b.sero.EthVersion()
 }
 
+func (b*SeroAPIBackend) PeerCount() uint{
+	return uint( b.sero.netRPCService.PeerCount())
+}
+
 func (b *SeroAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
 }

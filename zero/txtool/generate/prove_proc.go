@@ -58,7 +58,7 @@ type gen_input_desc struct {
 func (self *gen_input_desc) Run() error {
 	tk := keys.Sk2Tk(&self.desc.Sk)
 	if !keys.IsMyPKr(&tk, &self.desc.Pkr) {
-		return fmt.Errorf("Generate zin proof: sk can not match the PKr (%v)", hexutil.Encode(self.desc.Pkr[:]))
+		return fmt.Errorf("generate zin proof: sk unmatch the PKr (%v)", hexutil.Encode(self.desc.Pkr[:]))
 	}
 	if err := cpt.GenInputProofBySk(&self.desc); err != nil {
 		self.e = err

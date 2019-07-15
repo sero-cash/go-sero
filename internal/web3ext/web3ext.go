@@ -782,27 +782,31 @@ web3._extend({
 			name: 'registStakePool',
 			call: 'stake_registStakePool',
 			params: 1,
-			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+			inputFormatter: [web3._extend.formatters.inputRegistPoolFormatter]
 		}),
         new web3._extend.Method({
 			name: 'poolState',
 			call: 'stake_poolState',
-			params: 1
+			params: 1,
+			outputFormatter: web3._extend.formatters.outputStakePoolFormatter
 		}),
         new web3._extend.Method({
 			name: 'myShare',
 			call: 'stake_myShare',
-			params:1 
+			params:1,
+            outputFormatter: web3._extend.formatters.outputStakeShareFormatter
 		}),
         new web3._extend.Method({
 			name: 'getShare',
 			call: 'stake_getShare',
-			params:1 
+			params:1,
+            outputFormatter: web3._extend.formatters.outputStakeShareFormatter
 		}),
        new web3._extend.Method({
 			name: 'stakePools',
 			call: 'stake_stakePools',
-			params:0 
+			params:0,
+            outputFormatter: web3._extend.formatters.outputStakePoolFormatter
 		}),
        new web3._extend.Method({
 			name: 'closeStakePool',
@@ -812,7 +816,8 @@ web3._extend({
         new web3._extend.Method({
 			name: 'modifyStakePoolFee',
 			call: 'stake_modifyStakePoolFee',
-			params:2 
+			params:2,
+			inputFormatter: [null, web3._extend.utils.toHex]
 		}),
         new web3._extend.Method({
 			name: 'modifyStakePoolVote',
@@ -824,11 +829,13 @@ web3._extend({
     properties: [
        new web3._extend.Property({
 			name: 'sharePoolSize',
-			getter: 'stake_sharePoolSize'
+			getter: 'stake_sharePoolSize',
+            outputFormatter: web3._extend.utils.toDecimal
 		}),
        new web3._extend.Property({
 			name: 'sharePrice',
-			getter: 'stake_sharePrice'
+			getter: 'stake_sharePrice',
+            outputFormatter: web3._extend.utils.toDecimal
 		})
 	]
 });

@@ -12,7 +12,7 @@ set k=%2
 if "%k%" neq "" (
    set KEYSTORE=--keystore  %k%
 )
-start /b bin\gero.exe --config geroConfig.toml %DATADIR% %KEYSTORE%
+start /b bin\gero.exe --config geroConfig.toml --exchange --mineMode %DATADIR% %KEYSTORE%
 
 pause
 

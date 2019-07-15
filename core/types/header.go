@@ -6,8 +6,6 @@ import (
 	"math/big"
 	"unsafe"
 
-	"github.com/sero-cash/go-czero-import/seroparam"
-
 	"github.com/sero-cash/go-sero/core/types/vserial"
 
 	"github.com/sero-cash/go-czero-import/keys"
@@ -82,9 +80,6 @@ type headerMarshaling struct {
 }
 
 func (h *Header) Valid() bool {
-	if !seroparam.NeedLic() {
-		return true
-	}
 	if h.Licr.H == 0 {
 		return h.Number.Uint64() >= h.Licr.L
 	} else {
@@ -125,19 +120,19 @@ func (h *Header) HashPos() (ret common.Hash) {
 	return
 }
 
-func StakeHash(currentHashPos *common.Hash, parentHashPos *common.Hash) (ret common.Hash) {
+func StakeHash(currentHashPos *common.Hash, parentHashPos *common.Hash,isPool bool) (ret common.Hash) {
 	m := sha3.NewKeccak256()
 	m.Write(currentHashPos[:])
 	m.Write(parentHashPos[:])
+	if isPool {
+		m.Write([]byte{1})
+	}
 	sh := m.Sum(nil)
 	copy(ret[:], sh)
 	return
 }
 
 func (h *Header) ActualDifficulty() *big.Int {
-	if !seroparam.NeedLic() {
-		return h.Difficulty
-	}
 	if h.Valid() {
 		c := new(big.Int).SetUint64(h.Licr.C)
 		if h.Difficulty.Cmp(c) > 0 {

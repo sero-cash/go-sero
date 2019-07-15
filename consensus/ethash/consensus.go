@@ -233,11 +233,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 // the difficulty that a new block should have when created at time
 // given the parent block's time and difficulty.
 func (ethash *Ethash) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	if parent.Number.Uint64() == seroparam.Dev_diff() {
-		return big.NewInt(100000)
-	} else {
-		return CalcDifficulty(chain.Config(), time, parent)
-	}
+	return CalcDifficulty(chain.Config(), time, parent)
 }
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns
@@ -628,17 +624,8 @@ func accumulateRewardsV4(statedb *state.StateDB, header *types.Header) *big.Int 
 	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(header.Number, halveNimber), interval), big1)
 	reward.Div(reward, new(big.Int).Exp(big2, i, nil))
 
-
-
-	if header.Licr.C != 0 {
-		reward = new(big.Int)
-	}
-
-	if statedb == nil {
-		return reward
-	}
-
-	teamReward := new(big.Int).Div(hRewardV4, new(big.Int).Exp(big2, i, nil))
+	teamReward := new(big.Int).Div(hRewardV4, big.NewInt(4))
+	teamReward = new(big.Int).Div(teamReward, new(big.Int).Exp(big2, i, nil))
 	statedb.AddBalance(teamRewardPool, "SERO", teamReward)
 
 	if header.Number.Uint64()%5000 == 0 {

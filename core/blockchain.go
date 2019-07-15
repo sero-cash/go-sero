@@ -1063,10 +1063,22 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		// Split same-difficulty blocks by number, then at random
 		reorg = block.NumberU64() < currentBlock.NumberU64()
 		if !reorg && block.NumberU64() == currentBlock.NumberU64() {
-			if block.Transactions().Len() == currentBlock.Transactions().Len() {
-				reorg = mrand.Float64() < 0.5
+			if block.NumberU64() < seroparam.SIP4() {
+				if block.Transactions().Len() == currentBlock.Transactions().Len() {
+					reorg = mrand.Float64() < 0.5
+				} else {
+					reorg = block.Transactions().Len() > currentBlock.Transactions().Len()
+				}
 			} else {
-				reorg = block.Transactions().Len() > currentBlock.Transactions().Len()
+				if len(block.Header().CurrentVotes) == len(currentBlock.Header().CurrentVotes) {
+					if block.Transactions().Len() == currentBlock.Transactions().Len() {
+						reorg = mrand.Float64() < 0.5
+					} else {
+						reorg = block.Transactions().Len() > currentBlock.Transactions().Len()
+					}
+				} else {
+					reorg = len(block.Header().CurrentVotes) > len(currentBlock.Header().CurrentVotes)
+				}
 			}
 		}
 	}

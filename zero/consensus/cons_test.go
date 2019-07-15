@@ -3,10 +3,10 @@ package consensus
 import (
 	"bytes"
 	"fmt"
+	"math/big"
 	"testing"
 
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/core/types"
 )
 
 func s2u(str string) (ret []byte) {
@@ -240,8 +240,8 @@ func TestConsRecord(t *testing.T) {
 	}
 	fmt.Println(v)
 
-	blockhash := common.Hash(keys.RandUint256())
-	cmap.Record(&blockhash, &db.db)
+	header := types.Header{Number: big.NewInt(0)}
+	cmap.Record(&header, &db.db)
 
 	testObj := TestObj{}
 	v = dbobj.GetObject(db.GlobalGetter(), []byte("1"), &testObj)
@@ -260,7 +260,8 @@ func TestConsRecord(t *testing.T) {
 		t.FailNow()
 	}
 
-	records := dbcons.GetBlockRecords(db.GlobalGetter(), 0, &blockhash)
+	hash := header.Hash()
+	records := dbcons.GetBlockRecords(db.GlobalGetter(), 0, &hash)
 	if len(records) != 1 && len(records[0].Pairs) != 2 {
 		t.FailNow()
 	}
@@ -285,9 +286,10 @@ func TestConsRecord(t *testing.T) {
 func TestConsRecord2(t *testing.T) {
 	db := NewFakeDB()
 	dbcons := DBObj{"BLOCK$CONS$INDEX$"}
-	cmap := NewCons(&db, dbcons.Pre)
+	c := NewCons(&db, dbcons.Pre)
+	cmap := &c
 	dbobj := DBObj{"treestate$"}
-	tree := NewObjPt(&cmap, "tree$", dbobj.Pre, "test")
+	tree := NewObjPt(cmap, "tree$", dbobj.Pre, "test")
 
 	cmap.CreateSnapshot(0)
 
@@ -331,8 +333,10 @@ func TestConsRecord2(t *testing.T) {
 		t.FailNow()
 	}
 
-	blockhash := common.Hash(keys.RandUint256())
-	cmap.Record(&blockhash, &db.db)
+	cmap = cmap.Copy(cmap.db)
+
+	header := types.Header{Number: big.NewInt(0)}
+	cmap.Record(&header, &db.db)
 
 	testObj := TestObj{}
 	v = dbobj.GetObject(db.GlobalGetter(), []byte("13"), &testObj)
@@ -369,7 +373,8 @@ func TestConsRecord2(t *testing.T) {
 		t.FailNow()
 	}
 
-	records := dbcons.GetBlockRecords(db.GlobalGetter(), 0, &blockhash)
+	hash := header.Hash()
+	records := dbcons.GetBlockRecords(db.GlobalGetter(), 0, &hash)
 	if len(records) != 1 && len(records[0].Pairs) != 3 {
 		t.FailNow()
 	}
