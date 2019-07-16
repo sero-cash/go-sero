@@ -1,8 +1,6 @@
 package verify
 
 import (
-	"errors"
-
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 )
@@ -55,25 +53,22 @@ func verifyDesc_Zs(tx *stx.T, balance_desc *cpt.BalanceDesc, height uint64) (e e
 	}
 
 	if verify_pkg_procs.HasProc() {
-		if p_runs := verify_pkg_procs.Wait(); p_runs != nil {
+		if e = verify_pkg_procs.End(); e == nil {
 		} else {
-			e = errors.New("verify pkg desc_z failed!!!")
 			return
 		}
 	}
 
 	if verify_output_procs.HasProc() {
-		if o_runs := verify_output_procs.Wait(); o_runs != nil {
+		if e = verify_output_procs.End(); e == nil {
 		} else {
-			e = errors.New("verify output desc_z failed!!!")
 			return
 		}
 	}
 
 	if verify_input_procs.HasProc() {
-		if i_runs := verify_input_procs.Wait(); i_runs != nil {
+		if e = verify_input_procs.End(); e == nil {
 		} else {
-			e = errors.New("verify input desc_z failed!!!")
 			return
 		}
 	}

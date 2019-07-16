@@ -20,19 +20,21 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"math/rand"
 	"reflect"
 	"strings"
 
+	"github.com/pkg/errors"
+
+	"github.com/btcsuite/btcutil/base58"
+
 	"github.com/sero-cash/go-sero/common/addrutil"
 
 	"github.com/sero-cash/go-sero/crypto/sha3"
 
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common/base58"
 	"github.com/sero-cash/go-sero/common/hexutil"
 )
 
@@ -246,30 +248,8 @@ func BigToContractAddress(b *big.Int) ContractAddress { return BytesToContractAd
 //func HexToAddress(s string) Data { return BytesToAddress(FromHex(s)) }
 
 func Base58ToAddress(s string) Address {
-	out := [AddressLength]byte{}
-	addrutil.FromBase58(s, out[:])
+	out := base58.Decode(s)
 	return BytesToAddress(out[:])
-}
-
-// IsBase58Address verifies whether a string can represent a valid hex-encoded
-// Ethereum Data or not.
-func IsBase58Address(s string) bool {
-	if base58.IsBase58Str(s) {
-		address := Base58ToAddress(s)
-		if keys.PKrValid(address.ToPKr()) {
-			temp := Base58ToAddress(s).Base58()
-			if temp == s {
-				return true
-			} else {
-				return false
-			}
-		} else {
-			return false
-		}
-	}
-	return false
-
-	return base58.IsBase58Str(s)
 }
 
 // Bytes gets the string representation of the underlying Data.
@@ -292,20 +272,26 @@ func (a Address) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
 
 // Base58 returns base58 string representation of the Data.
 func (a Address) Base58() string {
-	return base58.EncodeToString(a[:])
+	return base58.Encode(a[:])
 }
 
 // String implements fmt.Stringer.
 func (a Address) String() string {
+	if a.IsAccountAddress() {
+		return base58.Encode(a[:64])
+	} else {
+		return a.Base58()
+	}
+}
+
+func (a Address) IsAccountAddress() bool {
 	zerobytes := [32]byte{}
 	var suffix [32]byte
 	copy(suffix[:], a[64:])
 	if suffix == zerobytes {
-		return base58.EncodeToString(a[:64])
-	} else {
-		return a.Base58()
+		return true
 	}
-
+	return false
 }
 
 // Format implements fmt.Formatter, forcing the byte slice to be formatted as is,
@@ -331,20 +317,22 @@ func (a Address) MarshalText() ([]byte, error) {
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *Address) UnmarshalText(input []byte) error {
-	err := hexutil.UnmarshalFixedBase58Text(input, a[:])
+	out, err := addrutil.IsValidBase58Address(input)
 	if err != nil {
 		return err
 	}
-	_, err = IsPkr(a)
-	if err != nil {
-		return err
-	}
+	copy(a[:], out)
 	return nil
 }
 
 // UnmarshalJSON parses a hash in hex syntax.
 func (a *Address) UnmarshalJSON(input []byte) error {
-	return hexutil.UnmarshalFixedBase58JSON(addressT, input, a[:])
+	if !addrutil.IsString(input) {
+		return errors.New("not string")
+	} else {
+		return a.UnmarshalText(input[1 : len(input)-1])
+
+	}
 }
 
 // Scan implements Scanner for database/sql.
@@ -386,69 +374,18 @@ type UnprefixedAddress Address
 
 // UnmarshalText decodes the Data from hex. The 0x prefix is optional.
 func (a *UnprefixedAddress) UnmarshalText(input []byte) error {
-	return hexutil.UnmarshalFixedUnprefixedBase58Text("UnprefixedAddress", input, a[:])
+	if addrutil.IsBase58Str(string(input)) {
+		out := base58.Decode(string(input))
+		copy(a[:], out[:])
+		return nil
+	} else {
+		return errors.New("invalid Address")
+	}
 }
 
 // MarshalText encodes the Data as hex.
 func (a UnprefixedAddress) MarshalText() ([]byte, error) {
-	return []byte(base58.EncodeToString(a[:])), nil
-}
-
-// MixedcaseAddress retains the original string, which may or may not be
-// correctly checksummed
-type MixedcaseAddress struct {
-	addr     Address
-	original string
-}
-
-// NewMixedcaseAddress constructor (mainly for testing)
-func NewMixedcaseAddress(addr Address) MixedcaseAddress {
-	return MixedcaseAddress{addr: addr, original: addr.Base58()}
-}
-
-// NewMixedcaseAddressFromString is mainly meant for unit-testing
-func NewMixedcaseAddressFromString(hexaddr string) (*MixedcaseAddress, error) {
-	if !IsBase58Address(hexaddr) {
-		return nil, fmt.Errorf("Invalid Data")
-	}
-	a := FromHex(hexaddr)
-	return &MixedcaseAddress{addr: BytesToAddress(a), original: hexaddr}, nil
-}
-
-// UnmarshalJSON parses MixedcaseAddress
-func (ma *MixedcaseAddress) UnmarshalJSON(input []byte) error {
-	if err := hexutil.UnmarshalFixedBase58JSON(addressT, input, ma.addr[:]); err != nil {
-		return err
-	}
-	return json.Unmarshal(input, &ma.original)
-}
-
-// MarshalJSON marshals the original value
-func (ma *MixedcaseAddress) MarshalJSON() ([]byte, error) {
-	return json.Marshal(ma.original)
-}
-
-// Data returns the Data
-func (ma *MixedcaseAddress) Address() Address {
-	return ma.addr
-}
-
-// String implements fmt.Stringer
-func (ma *MixedcaseAddress) String() string {
-	if ma.ValidChecksum() {
-		return fmt.Sprintf("%s [chksum ok]", ma.original)
-	}
-	return fmt.Sprintf("%s [chksum INVALID]", ma.original)
-}
-
-// ValidChecksum returns true if the Data has valid checksum
-func (ma *MixedcaseAddress) ValidChecksum() bool {
-	return ma.original == ma.addr.Base58()
-}
-
-// Original returns the mixed-case input string
-func (ma *MixedcaseAddress) Original() string {
-	return ma.original
+	return []byte(base58.Encode(a[:])), nil
 }
 
 func ByteSliceEqual(a, b []byte) bool {

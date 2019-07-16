@@ -30,7 +30,7 @@ type PkgState struct {
 
 func NewPkgState(tri tri.Tri, num uint64) (state PkgState) {
 	state = PkgState{tri: tri, num: num}
-	state.data = *data.NewData(num)
+	state.data = *data.NewData()
 	state.rw = new(sync.RWMutex)
 	state.data.Clear()
 	state.load()

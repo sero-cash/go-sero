@@ -1,9 +1,13 @@
 package types
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"math/big"
 	"testing"
+
+	"github.com/sero-cash/go-sero/rlp"
 )
 
 type Uint256 [32]byte
@@ -50,4 +54,22 @@ func TestEhash(t *testing.T) {
 	fmt.Printf("%v\n", h1)
 	fmt.Printf("%v\n", h2)
 	fmt.Printf("%v\n", h3)
+}
+
+func TestHeader(t *testing.T) {
+	hs := []Header{}
+	hs = append(hs, Header{})
+
+	buf := bytes.Buffer{}
+	w := bufio.NewWriter(&buf)
+	e := rlp.Encode(w, &hs)
+	fmt.Println(e)
+	w.Flush()
+
+	hs_d := []Header{}
+	stream := rlp.NewStream(&buf, uint64(buf.Len()))
+	_, size, _ := stream.Kind()
+	fmt.Println(size)
+	e = stream.Decode(&hs_d)
+	fmt.Println(e)
 }

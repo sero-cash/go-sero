@@ -1,6 +1,9 @@
 package ethapi
 
 import (
+	"github.com/sero-cash/go-sero/core/types"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -20,6 +23,7 @@ var (
 
 	lReward = new(big.Int).Mul(big.NewInt(176), base)
 	hReward = new(big.Int).Mul(big.NewInt(445), base)
+	hRewardV4 = new(big.Int).Mul(big.NewInt(356), base)
 
 	argA, _ = new(big.Int).SetString("985347985347985", 10)
 	argB, _ = new(big.Int).SetString("16910256410256400000", 10)
@@ -116,13 +120,44 @@ func accumulateRewardsV3(number, bdiff *big.Int) [3]*big.Int {
 	return res
 }
 
+
+func accumulateRewardsV4(number, bdiff *big.Int) [3]*big.Int  {
+	var res [3]*big.Int
+	diff := new(big.Int).Div(bdiff, big.NewInt(1000000000))
+	reward := new(big.Int).Add(new(big.Int).Mul(argA, diff), argB)
+
+	if reward.Cmp(lReward) < 0 {
+		reward = new(big.Int).Set(lReward)
+	} else if reward.Cmp(hRewardV4) > 0 {
+		reward = new(big.Int).Set(hRewardV4)
+	}
+
+	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(number, halveNimber), interval), big1)
+	reward.Div(reward, new(big.Int).Exp(big2, i, nil))
+
+	teamReward := new(big.Int).Div(hRewardV4, big.NewInt(4))
+	teamReward = new(big.Int).Div(teamReward, new(big.Int).Exp(big2, i, nil))
+	res[0] = reward
+	res[1] = big.NewInt(0)
+	res[2] = teamReward
+	return res
+
+
+}
+
 /**
   [0] block reward
   [1] community reward
   [2] team reward
 */
-func GetBlockReward(number, diff *big.Int, gasUsed, gasLimit uint64) [3]*big.Int {
-	if number.Uint64() >= seroparam.SIP3() {
+func GetBlockReward(block *types.Block) [3]*big.Int {
+	number:=block.Number()
+	diff:=block.Difficulty()
+	gasUsed:=block.GasUsed()
+	gasLimit:=block.GasLimit()
+	if (number.Uint64()>=seroparam.SIP4()){
+		return accumulateRewardsV4(number, diff)
+	}else if number.Uint64() >= seroparam.SIP3() {
 		return accumulateRewardsV3(number, diff)
 	} else if number.Uint64() >= seroparam.SIP1() {
 		return accumulateRewardsV2(number, diff)

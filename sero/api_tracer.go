@@ -145,7 +145,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 			return nil, fmt.Errorf("parent block #%d not found", number-1)
 		}
 	}
-	statedb, err := state.New(start.Root(), database, start.NumberU64())
+	statedb, err := state.New(database, start.Header())
 	if err != nil {
 		// If the starting state is missing, allow some number of blocks to be reexecuted
 		reexec := defaultTraceReexec
@@ -158,7 +158,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 			if start == nil {
 				break
 			}
-			if statedb, err = state.New(start.Root(), database, start.NumberU64()); err == nil {
+			if statedb, err = state.New(database, start.Header()); err == nil {
 				break
 			}
 		}
@@ -474,7 +474,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 // attempted to be reexecuted to generate the desired state.
 func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*state.StateDB, error) {
 	// If we have the state fully available, use that
-	statedb, err := api.eth.blockchain.StateAt(block.Root(), block.NumberU64())
+	statedb, err := api.eth.blockchain.StateAt(block.Header())
 	if err == nil {
 		return statedb, nil
 	}
@@ -487,7 +487,7 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 		if block == nil {
 			break
 		}
-		if statedb, err = state.New(block.Root(), database, block.NumberU64()); err == nil {
+		if statedb, err = state.New(database, block.Header()); err == nil {
 			break
 		}
 	}
@@ -642,9 +642,15 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 		if idx == txIndex {
 			return msg, context, statedb, nil
 		}
+		var gaslimit uint64
+		if gas, e := statedb.GetTxGasLimit(tx); e != nil {
+			return nil, vm.Context{}, nil, e
+		} else {
+			gaslimit = gas
+		}
 		// Not yet the searched for transaction, execute on top of the current state
 		vmenv := vm.NewEVM(context, statedb, api.config, vm.Config{})
-		if _, _, _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas())); err != nil {
+		if _, _, _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(gaslimit)); err != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("tx %x failed: %v", tx.Hash(), err)
 		}
 		// Ensure any modifications are committed to the state

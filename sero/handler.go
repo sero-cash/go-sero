@@ -47,7 +47,9 @@ const (
 
 	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
-	txChanSize = 4096
+	txChanSize       = 4096
+	voteChainSize    = 1000
+	lotteryChainSize = 1000
 )
 
 // errIncompatibleConfig is returned if the requested protocols and configs are
@@ -65,6 +67,7 @@ type ProtocolManager struct {
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
 	txpool      txPool
+	voter       voter
 	blockchain  *core.BlockChain
 	chainconfig *params.ChainConfig
 	maxPeers    int
@@ -78,7 +81,11 @@ type ProtocolManager struct {
 	eventMux      *event.TypeMux
 	txsCh         chan core.NewTxsEvent
 	txsSub        event.Subscription
+	voteCh        chan core.NewVoteEvent
+	voteSub       event.Subscription
 	minedBlockSub *event.TypeMuxSubscription
+	lotteryCh     chan core.NewLotteryEvent
+	lotterySub    event.Subscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *peer
@@ -93,12 +100,13 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new Sero sub protocol manager. The Sero sub protocol manages peers capable
 // with the Sero network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb serodb.Database) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, voter voter, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb serodb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:   networkID,
 		eventMux:    mux,
 		txpool:      txpool,
+		voter:       voter,
 		blockchain:  blockchain,
 		chainconfig: config,
 		peers:       newPeerSet(),
@@ -202,6 +210,13 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.txsCh = make(chan core.NewTxsEvent, txChanSize)
 	pm.txsSub = pm.txpool.SubscribeNewTxsEvent(pm.txsCh)
 	go pm.txBroadcastLoop()
+
+	pm.voteCh = make(chan core.NewVoteEvent, voteChainSize)
+	pm.voteSub = pm.voter.SubscribeNewVoteEvent(pm.voteCh)
+	go pm.voteBroadLoop()
+	pm.lotteryCh = make(chan core.NewLotteryEvent, lotteryChainSize)
+	pm.lotterySub = pm.voter.SubscribeNewLotteryEvent(pm.lotteryCh)
+	go pm.lotteryBroadLoop()
 
 	// broadcast mined blocks
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
@@ -622,6 +637,25 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		pm.txpool.AddRemotes(txs)
 
+	case msg.Code == NewVoteMsg:
+		var vote types.Vote
+
+		if err := msg.Decode(&vote); err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		p.MarkVote(vote.Hash())
+		pm.voter.AddVote(&vote)
+
+	case msg.Code == NewLotteryMsg:
+
+		var lottery types.Lottery
+
+		if err := msg.Decode(&lottery); err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		p.MarkLottery(lottery.PosHash)
+		pm.voter.AddLottery(&lottery)
+
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -680,6 +714,22 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	}
 }
 
+func (pm *ProtocolManager) BroadcastVote(vote *types.Vote) {
+
+	peers := pm.peers.PeersWithoutVote(vote.Hash())
+	for _, peer := range peers {
+		peer.AsyncSendNewVote(vote)
+	}
+}
+
+func (pm *ProtocolManager) BroadcastLottery(lottery *types.Lottery) {
+
+	peers := pm.peers.PeersWithoutLottery(lottery.PosHash)
+	for _, peer := range peers {
+		peer.AsyncSendNewLottery(lottery)
+	}
+}
+
 // Mined broadcast loop
 func (pm *ProtocolManager) minedBroadcastLoop() {
 	// automatically stops if unsubscribe
@@ -699,6 +749,33 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 
 		// Err() channel will be closed when unsubscribing.
 		case <-pm.txsSub.Err():
+			return
+		}
+	}
+}
+
+func (pm *ProtocolManager) voteBroadLoop() {
+	for {
+		select {
+		case event := <-pm.voteCh:
+			pm.BroadcastVote(event.Vote)
+
+			// Err() channel will be closed when unsubscribing.
+		case <-pm.voteSub.Err():
+			return
+		}
+	}
+}
+
+func (pm *ProtocolManager) lotteryBroadLoop() {
+	for {
+		select {
+		case event := <-pm.lotteryCh:
+			pm.BroadcastLottery(event.Lottery)
+
+			// Err() channel will be closed when unsubscribing.
+		case e := <-pm.lotterySub.Err():
+			log.Error("lotteryBroadLoop ", "err", e)
 			return
 		}
 	}

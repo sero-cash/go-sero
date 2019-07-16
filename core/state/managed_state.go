@@ -20,7 +20,6 @@ import (
 	"sync"
 
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/zero/txs/zstate"
 )
 
 type account struct {
@@ -59,20 +58,6 @@ func ManageState(statedb *StateDB) *ManagedState {
 		StateDB:  statedb.Copy(),
 		accounts: make(map[common.Address]*account),
 	}
-}
-
-func (ms *ManagedState) GetZState() *zstate.ZState {
-	if ms.StateDB == nil {
-		return nil
-	}
-	return ms.StateDB.GetZState()
-}
-
-// SetState sets the backing layer of the managed state
-func (ms *ManagedState) SetState(statedb *StateDB) {
-	ms.mu.Lock()
-	defer ms.mu.Unlock()
-	ms.StateDB = statedb
 }
 
 func GetAndIndNonce() uint64 {

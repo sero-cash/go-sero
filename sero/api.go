@@ -304,6 +304,10 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 	return true, nil
 }
 
+func (api *PrivateAdminAPI) Close() {
+	api.eth.Stop()
+}
+
 // PublicDebugAPI is the collection of Sero full node APIs exposed
 // over the public debugging endpoint.
 type PublicDebugAPI struct {
@@ -334,7 +338,7 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 	if block == nil {
 		return state.Dump{}, fmt.Errorf("block #%d not found", blockNr)
 	}
-	stateDb, err := api.sero.BlockChain().StateAt(block.Root(), block.NumberU64())
+	stateDb, err := api.sero.BlockChain().StateAt(block.Header())
 	if err != nil {
 		return state.Dump{}, err
 	}

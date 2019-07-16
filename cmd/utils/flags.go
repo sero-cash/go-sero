@@ -28,13 +28,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-sero/common/addrutil"
+
 	"github.com/sero-cash/go-sero/rpc"
+	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common/address"
-
-	"github.com/sero-cash/go-sero/zero/txs/generate"
-	"github.com/sero-cash/go-sero/zero/txs/verify"
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/accounts/keystore"
@@ -144,6 +144,10 @@ var (
 	DeveloperFlag = cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Dev network: pre-configured proof-of-work in development network",
+	}
+	SnapshotFlag = cli.Uint64Flag{
+		Name:  "snapshot",
+		Usage: "Use for create chaindata snapshot",
 	}
 
 	DeveloperPasswordFlag = cli.StringFlag{
@@ -305,6 +309,11 @@ var (
 	AutoMergeFlag = cli.BoolFlag{
 		Name:  "autoMerge",
 		Usage: "autoMerge outs",
+	}
+
+	LightNodeFlag = cli.BoolFlag{
+		Name:  "lightNode",
+		Usage: "start light node",
 	}
 
 	ConfirmedBlockFlag = cli.Uint64Flag{
@@ -816,7 +825,8 @@ func makeDatabaseHandles() int {
 // a key index in the key store to an internal account representation.
 func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
 	// If the specified account is a valid address, return it
-	if address.IsBase58AccountButNotContract(account) {
+	_, err := addrutil.IsValidAccountAddress([]byte(account))
+	if err == nil {
 		return accounts.Account{Address: address.Base58ToAccount(account)}, nil
 	}
 	// Otherwise try to interpret the account as a keystore index
@@ -946,6 +956,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
 		seroparam.Init_Dev(true)
+	}
+	if ctx.GlobalIsSet(SnapshotFlag.Name) {
+		snapshot := ctx.GlobalUint64(SnapshotFlag.Name)
+		zconfig.Init_Snapshot(snapshot)
 	}
 }
 
@@ -1094,8 +1108,8 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
 	}
 
-	generate.G_p_thread_num = ctx.GlobalInt(PThreadsFlag.Name)
-	verify.G_v_thread_num = ctx.GlobalInt(VThreadsFlag.Name)
+	zconfig.G_p_thread_num = ctx.GlobalInt(PThreadsFlag.Name)
+	zconfig.G_v_thread_num = ctx.GlobalInt(VThreadsFlag.Name)
 
 	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
 		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)
@@ -1128,6 +1142,10 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 
 	if ctx.GlobalIsSet(ExchangeValueStrFlag.Name) {
 		seroparam.InitExchangeValueStr(true)
+	}
+
+	if ctx.GlobalIsSet(LightNodeFlag.Name) {
+		cfg.StartLight = true
 	}
 
 	// Override any default configs for hard coded networks.

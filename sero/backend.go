@@ -21,19 +21,20 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
 	"math/big"
 	"runtime"
 	"sync"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-sero/share"
+	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
-	"github.com/sero-cash/go-sero/zero/lstate"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate"
 
 	"github.com/sero-cash/go-sero/internal/ethapi"
-	"github.com/sero-cash/go-sero/zero/exchange"
-
-	"github.com/sero-cash/go-sero/zero/light/light_ref"
+	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
 	"github.com/sero-cash/go-czero-import/keys"
 
@@ -60,6 +61,7 @@ import (
 	"github.com/sero-cash/go-sero/sero/filters"
 	"github.com/sero-cash/go-sero/sero/gasprice"
 	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/zero/wallet/light"
 )
 
 type LesServer interface {
@@ -79,8 +81,10 @@ type Sero struct {
 
 	// Handlers
 	txPool          *core.TxPool
+	voter           *share.Voter
 	blockchain      *core.BlockChain
 	exchange        *exchange.Exchange
+	lightNode           *light.LightNode
 	protocolManager *ProtocolManager
 	lesServer       LesServer
 
@@ -160,7 +164,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	)
 	sero.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, sero.chainConfig, sero.engine, vmConfig, sero.accountManager)
 
-	light_ref.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain})
+	txtool.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain})
 	if !config.MineMode {
 		lstate.InitLState()
 	}
@@ -178,10 +182,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	//}
 	sero.txPool = core.NewTxPool(config.TxPool, sero.chainConfig, sero.blockchain)
 
-	if sero.protocolManager, err = NewProtocolManager(sero.chainConfig, config.SyncMode, config.NetworkId, sero.eventMux, sero.txPool, sero.engine, sero.blockchain, chainDb); err != nil {
+	sero.voter = share.NewVoter(sero.chainConfig, sero.blockchain, sero)
+
+	if sero.protocolManager, err = NewProtocolManager(sero.chainConfig, config.SyncMode, config.NetworkId, sero.eventMux, sero.voter, sero.txPool, sero.engine, sero.blockchain, chainDb); err != nil {
 		return nil, err
 	}
-	sero.miner = miner.New(sero, sero.chainConfig, sero.EventMux(), sero.engine)
+	sero.miner = miner.New(sero, sero.chainConfig, sero.EventMux(), sero.voter, sero.engine)
 	sero.miner.SetExtra(makeExtraData(config.ExtraData))
 
 	sero.APIBackend = &SeroAPIBackend{sero, nil}
@@ -195,6 +201,16 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	if config.StartExchange {
 		sero.exchange = exchange.NewExchange(zconfig.Exchange_dir(), sero.txPool, sero.accountManager, config.AutoMerge)
 	}
+
+	stakeservice.NewStakeService(zconfig.Stake_dir(), sero.blockchain, sero.accountManager)
+
+
+
+	//init light
+	if config.StartLight {
+		sero.lightNode = light.NewLightNode(zconfig.Light_dir(), sero.txPool,sero.blockchain.GetDB())
+	}
+
 	return sero, nil
 }
 
@@ -385,6 +401,7 @@ func (s *Sero) Miner() *miner.Miner { return s.miner }
 func (s *Sero) AccountManager() *accounts.Manager  { return s.accountManager }
 func (s *Sero) BlockChain() *core.BlockChain       { return s.blockchain }
 func (s *Sero) TxPool() *core.TxPool               { return s.txPool }
+func (s *Sero) Voter() *share.Voter                { return s.voter }
 func (s *Sero) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *Sero) Engine() consensus.Engine           { return s.engine }
 func (s *Sero) ChainDb() serodb.Database           { return s.chainDb }

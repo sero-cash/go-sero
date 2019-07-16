@@ -25,6 +25,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/zero/stake"
+	"github.com/sero-cash/go-sero/zero/txs/stx"
+
+	"github.com/sero-cash/go-sero/zero/txtool/verify"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/common"
@@ -34,7 +41,6 @@ import (
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/metrics"
 	"github.com/sero-cash/go-sero/params"
-	"github.com/sero-cash/go-sero/zero/txs/verify"
 )
 
 const (
@@ -90,7 +96,7 @@ const (
 type blockChain interface {
 	CurrentBlock() *types.Block
 	GetBlock(hash common.Hash, number uint64) *types.Block
-	StateAt(root common.Hash, number uint64) (*state.StateDB, error)
+	StateAt(header *types.Header) (*state.StateDB, error)
 
 	SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription
 }
@@ -342,7 +348,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	if newHead == nil {
 		newHead = pool.chain.CurrentBlock().Header() // Special case during testing
 	}
-	statedb, err := pool.chain.StateAt(newHead.Root, newHead.Number.Uint64())
+	statedb, err := pool.chain.StateAt(newHead)
 	if err != nil {
 		log.Error("Failed to reset txpool state", "err", err)
 		return
@@ -467,11 +473,28 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	}
 
 	// Ensure the transaction doesn't exceed the current block limit gas.
-	if pool.currentMaxGas < tx.Gas() {
+	var gaslimit uint64
+	if gaslimit, e = pool.currentState.GetTxGasLimit(tx); e != nil {
+		return
+	}
+	if pool.currentMaxGas < gaslimit {
 		return ErrGasLimit
 	}
 
-	err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
+	copyState := pool.currentState.Copy()
+	if err := pool.checkDescCmd(tx.GetZZSTX(), copyState); err != nil {
+		return err
+	}
+
+	state := copyState.NextZState()
+	if err := verify.VerifyWithoutState(tx.Ehash().NewRef(), tx.GetZZSTX(), state.Num()); err != nil {
+		log.Error("validateTx verify without state error", "hash", tx.Hash().Hex(), "verify stx err", err)
+		pool.faileds[tx.Hash()] = time.Now()
+		return ErrVerifyError
+	}
+
+	err := verify.VerifyWithState(tx.GetZZSTX(), state)
+	//err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
 	if err != nil {
 		log.Error("validateTx error", "hash", tx.Hash().Hex(), "verify stx err", err)
 		pool.faileds[tx.Hash()] = time.Now()
@@ -493,10 +516,66 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	if err != nil {
 		return err
 	}
-	if tx.Gas() < intrGas {
+	if gaslimit < intrGas {
 		return ErrIntrinsicGas
 	}
 	return nil
+}
+
+func (pool *TxPool) checkDescCmd(tx *stx.T, state *state.StateDB) (err error) {
+	cmd := tx.Desc_Cmd
+	stakeState := stake.NewStakeState(state)
+	if cmd.BuyShare != nil {
+		if cmd.BuyShare.Pool != nil {
+			stakePool := stakeState.GetStakePool(common.BytesToHash(cmd.BuyShare.Pool[:]))
+			if stakePool == nil || stakePool.Closed {
+				err = errors.New("pool is not exist or closed")
+				return
+			}
+		}
+	} else if cmd.RegistPool != nil {
+		id := crypto.Keccak256Hash(tx.From[:])
+		stakePool := stakeState.GetStakePool(id)
+		if stakePool == nil {
+			if cmd.RegistPool.Value.ToInt().Cmp(stake.GetPoolValueThreshold()) != 0 {
+				err = errors.New("registPool value error")
+				return
+			}
+		} else {
+			if stakePool.Closed {
+				err = errors.New("registPool but stakePool is closed")
+				return
+			}
+		}
+		if !keys.PKrValid(&cmd.RegistPool.Vote) {
+			err = errors.New("registPool Vote is invalid")
+			return
+		}
+		if cmd.RegistPool.FeeRate > seroparam.HIGHEST_STAKING_NODE_FEE_RATE {
+			err = fmt.Errorf("registPool Vote fee must <= %v%%", seroparam.HIGHEST_STAKING_NODE_FEE_RATE/100)
+			return
+		}
+		if cmd.RegistPool.FeeRate < seroparam.LOWEST_STAKING_NODE_FEE_RATE {
+			err = fmt.Errorf("registPool Vote fee must >= %v%%", seroparam.LOWEST_STAKING_NODE_FEE_RATE/100)
+			return
+		}
+	} else if cmd.ClosePool != nil {
+		id := crypto.Keccak256Hash(tx.From[:])
+		stakePool := stakeState.GetStakePool(id)
+		if stakePool == nil {
+			err = errors.New("pool is not exist")
+			return
+		}
+		if stakePool.Closed {
+			err = errors.New("pool is closed")
+			return
+		}
+		if stakePool.BlockNumber+stake.GetLockingBlockNum() > pool.chain.CurrentBlock().NumberU64() {
+			err = errors.New("pool locking in")
+			return
+		}
+	}
+	return
 }
 
 // add validates a transaction and inserts it into the non-executable queue for

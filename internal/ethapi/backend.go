@@ -21,9 +21,11 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/zero/exchange"
+	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
-	"github.com/sero-cash/go-sero/zero/light/light_types"
+	"github.com/sero-cash/go-sero/zero/txtool"
+
+	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
 	"github.com/sero-cash/go-czero-import/keys"
 
@@ -41,6 +43,7 @@ import (
 	"github.com/sero-cash/go-sero/rpc"
 	"github.com/sero-cash/go-sero/sero/downloader"
 	"github.com/sero-cash/go-sero/serodb"
+	"github.com/sero-cash/go-sero/zero/wallet/light"
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -49,6 +52,7 @@ type Backend interface {
 	// General Ethereum API
 	Downloader() *downloader.Downloader
 	ProtocolVersion() int
+	PeerCount() uint
 	SuggestPrice(ctx context.Context) (*big.Int, error)
 	ChainDb() serodb.Database
 	EventMux() *event.TypeMux
@@ -81,24 +85,41 @@ type Backend interface {
 	GetEngin() consensus.Engine
 	GetMiner() *miner.Miner
 
-	GetBlocksInfo(start uint64, count uint64) ([]light_types.Block, error)
-	GetAnchor(roots []keys.Uint256) ([]light_types.Witness, error)
-	CommitTx(tx *light_types.GTx) error
+	GetBlocksInfo(start uint64, count uint64) ([]txtool.Block, error)
+	GetAnchor(roots []keys.Uint256) ([]txtool.Witness, error)
+	CommitTx(tx *txtool.GTx) error
 
 	GetPkNumber(pk keys.Uint512) (number uint64, e error)
 	GetPkr(address *keys.Uint512, index *keys.Uint256) (keys.PKr, error)
 	GetBalances(address keys.Uint512) (balances map[string]*big.Int)
-	GenTx(param exchange.TxParam) (*light_types.GenTxParam, error)
+	GenTx(param prepare.PreTxParam) (*txtool.GTxParam, error)
 	GetRecordsByPk(pk *keys.Uint512, begin, end uint64) (records []exchange.Utxo, err error)
 	GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records []exchange.Utxo, err error)
 	GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int)
 	GetMaxAvailable(pk keys.Uint512, currency string) (amount *big.Int)
 	GetRecordsByTxHash(txHash keys.Uint256) (records []exchange.Utxo, err error)
+
+	//Light node api
+	GetOutByPKr(pkrs []keys.PKr, start,end uint64) (br light.BlockOutResp, e error)
+	CheckNil(Nils []keys.Uint256) (nilResps []light.NilValue, e error)
+
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
 	nonceLock := new(AddrLocker)
 	return []rpc.API{
+		{
+			Namespace: "stake",
+			Version:   "1.0",
+			Service:   NewPublicStakeApI(apiBackend, nonceLock),
+			Public:    true,
+		},
+		{
+			Namespace: "light",
+			Version:   "1.0",
+			Service:   &PublicLightNodeApi{apiBackend},
+			Public:    true,
+		},
 		{
 			Namespace: "ssi",
 			Version:   "1.0",

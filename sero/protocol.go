@@ -41,7 +41,7 @@ var ProtocolName = "sero"
 var ProtocolVersions = []uint{sero63, sero62}
 
 // ProtocolLengths are the number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17, 8}
+var ProtocolLengths = []uint64{24, 8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
@@ -62,6 +62,9 @@ const (
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
+
+	NewVoteMsg    = 0x16
+	NewLotteryMsg = 0x17
 )
 
 type errCode int
@@ -106,6 +109,13 @@ type txPool interface {
 	// SubscribeNewTxsEvent should return an event subscription of
 	// NewTxsEvent and send events to the given channel.
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
+}
+
+type voter interface {
+	SubscribeNewVoteEvent(chan<- core.NewVoteEvent) event.Subscription
+	SubscribeNewLotteryEvent(chan<- core.NewLotteryEvent) event.Subscription
+	AddLottery(lottery *types.Lottery)
+	AddVote(vote *types.Vote)
 }
 
 // statusData is the network packet for the status message.

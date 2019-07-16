@@ -46,13 +46,17 @@ func (self *ZState) Num() uint64 {
 	return self.num
 }
 
-func NewState(tri0 tri.Tri, num uint64) (state *ZState) {
+func CurrentState(tri0 tri.Tri, num uint64) (state *ZState) {
 	state = &ZState{}
 	state.Tri = tri0
 	state.num = num
 	state.State = txstate.NewState(tri0, num)
 	state.Pkgs = pkgstate.NewPkgState(tri0, num)
 	return
+}
+
+func NextState(tri0 tri.Tri, num int64) (state *ZState) {
+	return CurrentState(tri0, uint64(num+1))
 }
 
 func (self *ZState) Copy() *ZState {
@@ -131,8 +135,8 @@ func (state *ZState) AddTxOutWithCheck(addr common.Address, asset assets.Asset) 
 	alarm = false
 	if state.Num() >= seroparam.VP0() {
 		count := state.State.AddTxOut_Log(addr.ToPKr())
-		if count > seroparam.MAX_TX_OUT_COUNT_LENGTH {
-			log.Error("[ALARM] ZState AddTxOut Overflow", "MAX_TX_OUT_COUNT_LENGTH", seroparam.MAX_TX_OUT_COUNT_LENGTH)
+		if count > seroparam.MAX_CONTRACT_OUT_COUNT_LENGTH {
+			log.Error("[ALARM] ZState AddTxOut Overflow", "MAX_CONTRACT_OUT_COUNT_LENGTH", seroparam.MAX_CONTRACT_OUT_COUNT_LENGTH)
 			alarm = true
 		}
 	}
@@ -160,7 +164,7 @@ func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset) {
 		}
 	}
 	if need_add {
-		o := stx.Out_O{*addr.ToPKr(), asset, keys.Uint512{}}
+		o := stx.Out_O{Addr: *addr.ToPKr(), Asset: asset, Memo: keys.Uint512{}}
 		state.AddOut_O(&o)
 	}
 	t.Leave()

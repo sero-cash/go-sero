@@ -29,12 +29,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btcutil/base58"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"gopkg.in/urfave/cli.v1"
-
-	"github.com/sero-cash/go-sero/common/base58"
 
 	"github.com/elastic/gosigar"
 	"github.com/sero-cash/go-sero/accounts"
@@ -117,7 +117,10 @@ var (
 		utils.ExchangeValueStrFlag,
 		utils.AutoMergeFlag,
 		utils.ConfirmedBlockFlag,
+		utils.LightNodeFlag,
+
 		utils.DeveloperFlag,
+		utils.SnapshotFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
@@ -375,7 +378,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		for _, wallet := range ks.Wallets() {
 			err := ks.Unlock(wallet.Accounts()[0], ctx.GlobalString(utils.DeveloperPasswordFlag.Name))
 			if err != nil {
-				fmt.Printf("unclock %v failed,%v", base58.EncodeToString(wallet.Accounts()[0].Address.Bytes()), err)
+				fmt.Printf("unclock %v failed,%v", base58.Encode(wallet.Accounts()[0].Address.Bytes()), err)
 			}
 		}
 	} else {

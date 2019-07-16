@@ -25,16 +25,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sero-cash/go-sero/zero/light"
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
+	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
-	"github.com/sero-cash/go-sero/zero/exchange"
+	"github.com/sero-cash/go-sero/zero/txtool"
+
+	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
 	"github.com/tyler-smith/go-bip39"
 
 	"github.com/sero-cash/go-sero/common/address"
 
-	"github.com/sero-cash/go-sero/zero/light/light_types"
-	"github.com/sero-cash/go-sero/zero/lstate"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate"
 
 	"github.com/sero-cash/go-sero/zero/txs"
 
@@ -225,19 +227,18 @@ func (s *PublicAccountAPI) Accounts() []address.AccountAddress {
 }
 
 func (s *PublicAccountAPI) GetTk(addr common.Address) address.AccountAddress {
-	flag, err := common.IsPkr(&addr)
-	if err != nil {
-		return address.AccountAddress{}
-	}
 	var pk address.AccountAddress
 	wallets := s.am.Wallets()
-	if flag {
+
+	if addr.IsAccountAddress() {
+		pk = common.AddrToAccountAddr(addr)
+	} else {
 		pkAddrr := getLocalAccountAddressByPkr(wallets, addr)
 		if pkAddrr != nil {
 			pk = *pkAddrr
+		} else {
+			return address.AccountAddress{}
 		}
-	} else {
-		pk = common.AddrToAccountAddr(addr)
 	}
 	for _, wallet := range wallets {
 		account := accounts.Account{Address: pk}
@@ -246,20 +247,14 @@ func (s *PublicAccountAPI) GetTk(addr common.Address) address.AccountAddress {
 		}
 	}
 	return address.AccountAddress{}
+
 }
 
-func (s *PublicAccountAPI) IsMinePKr(PKr common.Address) *address.AccountAddress {
-	flag, err := common.IsPkr(&PKr)
-	if err != nil {
-		return nil
-	}
-	if flag {
-		wallets := s.am.Wallets()
-		return getLocalAccountAddressByPkr(wallets, PKr)
-	} else {
-		log.Info("IsMinePKr invalid pkr", "pkr", PKr.String())
-		return nil
-	}
+func (s *PublicAccountAPI) IsMinePKr(PKr PKrAddress) *address.AccountAddress {
+	wallets := s.am.Wallets()
+	var address common.Address
+	copy(address[:], PKr[:])
+	return getLocalAccountAddressByPkr(wallets, address)
 
 }
 
@@ -520,7 +515,7 @@ type threaded interface {
 // signTransactions sets defaults and signs the given transaction
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool
-func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (pretx *light_types.GenTxParam, tx *types.Transaction, e error) {
+func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (pretx *txtool.GTxParam, tx *types.Transaction, e error) {
 	s.nonceLock.mu.Lock()
 	defer s.nonceLock.mu.Unlock()
 	// Look up the wallet containing the requested abi
@@ -543,12 +538,9 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 		return
 	}
 
+	var txt *ztx.T
 	// Assemble the transaction and sign with the wallet
-	tx, txt, err := args.toTransaction(state)
-	if err != nil {
-		e = err
-		return
-	}
+	tx, txt = args.toTransaction(state)
 
 	if th, ok := s.b.GetEngin().(threaded); ok {
 		miner := s.b.GetMiner()
@@ -562,36 +554,32 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 			defer th.SetThreads(threads)
 		}
 	}
-	if args.To == nil || state.IsContract(*args.To) || !seroparam.IsExchange() {
+	if !seroparam.IsExchange() {
 		tx, e = wallet.EncryptTxWithPassphrase(account, passwd, tx, txt, state)
 		return
 	} else {
-		if txParam, err := args.toTxParam(); err == nil {
-			if pretx, e = s.b.GenTx(txParam); e != nil {
-				return
-			}
-			log.Info("ToTxParam", "utxos", len(pretx.Ins))
-			seed, err := wallet.GetSeedWithPassphrase(passwd)
-			if err != nil {
-				exchange.CurrentExchange().ClearTxParam(pretx)
-				e = err
-				return
-			}
-			sk := keys.Seed2Sk(seed.SeedToUint256())
-			gtx, err := light.SignTx(&sk, pretx)
-			if err != nil {
-				exchange.CurrentExchange().ClearTxParam(pretx)
-				e = err
-				return
-			}
-			gasPrice := big.Int(gtx.GasPrice)
-			gas := uint64(gtx.Gas)
-			tx = types.NewTxWithGTx(gas, &gasPrice, &gtx.Tx)
+		if pretx, e = s.b.GenTx(args.toTxParam(state)); e != nil {
 			return
-		} else {
+		}
+		log.Info("ToTxParam", "utxos", len(pretx.Ins))
+		seed, err := wallet.GetSeedWithPassphrase(passwd)
+		if err != nil {
+			exchange.CurrentExchange().ClearTxParam(pretx)
 			e = err
 			return
 		}
+		sk := keys.Seed2Sk(seed.SeedToUint256())
+		gtx, err := flight.SignTx(&sk, pretx)
+		if err != nil {
+			exchange.CurrentExchange().ClearTxParam(pretx)
+			e = err
+			return
+		}
+		gasPrice := big.Int(gtx.GasPrice)
+		gas := uint64(gtx.Gas)
+		tx = types.NewTxWithGTx(gas, &gasPrice, &gtx.Tx)
+		return
+
 	}
 
 }
@@ -739,12 +727,8 @@ func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses
 
 }
 
-func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk address.AccountAddress) (common.Address, error) {
-
-	if !(keys.IsPKValid(Pk.ToUint512())) {
-		return common.Address{}, errors.New("invalid address")
-	}
-	PKr := keys.Addr2PKr(Pk.ToUint512(), nil)
+func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk PKAddress) (common.Address, error) {
+	PKr := keys.Addr2PKr(Pk.ToUint512().NewRef(), nil)
 	result := common.Address{}
 	copy(result[:], PKr[:])
 	return result, nil
@@ -815,21 +799,11 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 	if state == nil || err != nil {
 		return Balance{}, err
 	}
-	wallets := s.b.AccountManager().Wallets()
-	var address address.AccountAddress
-	flag, err := common.IsPkr(&addr)
-	if err != nil {
-		return Balance{}, err
-	}
-	if flag {
-		keystoreAccount := getLocalAccountAddressByPkr(wallets, addr)
-		if keystoreAccount == nil {
-			return Balance{}, nil
-		} else {
-			address = *keystoreAccount
-		}
-	} else {
-		address = common.AddrToAccountAddr(addr)
+	var address *address.AccountAddress
+
+	address = getAccountAddress(addr, s.b)
+	if address == nil {
+		return Balance{}, nil
 	}
 
 	tkn := map[string]*hexutil.Big{}
@@ -850,7 +824,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 			return GetBalanceFromExchange(exchangBalance), nil
 		} else {
 			// Look up the wallet containing the requested abi
-			account := accounts.Account{Address: address}
+			account := accounts.Account{Address: *address}
 
 			wallet, err := s.b.AccountManager().Find(account)
 			if err != nil {
@@ -866,6 +840,19 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr common.Addres
 
 }
 
+func getAccountAddress(addr common.Address, b Backend) *address.AccountAddress {
+	//accountAddr = &address.AccountAddress{}
+	if addr.IsAccountAddress() {
+		accountAddr := common.AddrToAccountAddr(addr)
+		return &accountAddr
+	} else {
+		wallets := b.AccountManager().Wallets()
+		return getLocalAccountAddressByPkr(wallets, addr)
+
+	}
+	return nil
+}
+/**
 func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, addr common.Address, packed bool, id *keys.Uint256) (interface{}, error) {
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
@@ -873,26 +860,16 @@ func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, addr common.Address, p
 		return nil, err
 	}
 	wallets := s.b.AccountManager().Wallets()
-	var accountAddress address.AccountAddress
-	flag, err := common.IsPkr(&addr)
-	if err != nil {
-		return nil, err
+	accountAddress := getAccountAddress(addr, s.b)
+	if accountAddress == nil {
+		return nil, nil
 	}
-	if flag {
-		keystoreAccount := getLocalAccountAddressByPkr(wallets, addr)
-		if keystoreAccount == nil {
-			return nil, nil
-		}
-		accountAddress = *keystoreAccount
-	} else {
-		accountAddress = common.AddrToAccountAddr(addr)
-	}
+
 	if state.IsContract(common.BytesToAddress(accountAddress[:])) {
 		return nil, errors.New("does not support contract address!")
 	}
-
 	// Look up the wallet containing the requested abi
-	account := accounts.Account{Address: accountAddress}
+	account := accounts.Account{Address: *accountAddress}
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
 		return nil, err
@@ -946,7 +923,7 @@ func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, addr common.Address, p
 	}
 	return nil, nil
 }
-
+**/
 func (s *PublicBlockChainAPI) WatchPkg(ctx context.Context, id keys.Uint256, key keys.Uint256) (map[string]interface{}, error) {
 
 	pkg_o, pkr, err := txs.WatchPkg(&id, &key)
@@ -982,7 +959,7 @@ func (s *PublicBlockChainAPI) WatchPkg(ctx context.Context, id keys.Uint256, key
 	return pkg, nil
 }
 
-func (s *PublicBlockChainAPI) GetBlockInfo(ctx context.Context, start hexutil.Uint64, count hexutil.Uint64) ([]light_types.Block, error) {
+func (s *PublicBlockChainAPI) GetBlockInfo(ctx context.Context, start hexutil.Uint64, count hexutil.Uint64) ([]txtool.Block, error) {
 	block, err := s.b.GetBlocksInfo(uint64(start), uint64(count))
 	if err != nil {
 		return nil, err
@@ -990,7 +967,7 @@ func (s *PublicBlockChainAPI) GetBlockInfo(ctx context.Context, start hexutil.Ui
 	return block, err
 }
 
-func (s *PublicBlockChainAPI) GetAnchor(ctx context.Context, roots []keys.Uint256) ([]light_types.Witness, error) {
+func (s *PublicBlockChainAPI) GetAnchor(ctx context.Context, roots []keys.Uint256) ([]txtool.Witness, error) {
 	witness, err := s.b.GetAnchor(roots)
 	if err != nil {
 		return nil, err
@@ -1017,6 +994,7 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.
 
 func (s *PublicBlockChainAPI) GetBlockRewardByNumber(ctx context.Context, blockNr rpc.BlockNumber) [3]hexutil.Big {
 	var res [3]hexutil.Big
+
 	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
 		rewards := GetBlockReward(block.Header().Number, block.Header().Difficulty, block.Header().GasUsed, block.Header().GasLimit)
 		res[0] = hexutil.Big(*rewards[0])
@@ -1163,17 +1141,20 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		copy(rand[:], args.To[:16])
 	}
 	if args.To != nil {
-		var toAddress common.Address
+		to = &common.Address{}
 		if state.IsContract(common.BytesToAddress(args.To[:])) {
-			toAddress = common.BytesToAddress(args.To[:])
+			t := common.BytesToAddress(args.To[:])
+			to = &t
 		} else {
-			toPkr, err := common.AddressToPkr(*args.To)
-			if err != nil {
-				return nil, 0, false, err
+			if args.To.IsAccountAddress() {
+				pk := common.AddrToAccountAddr(*args.To)
+				pkr := (keys.Addr2PKr(pk.ToUint512(), nil))
+				t := common.BytesToAddress(pkr[:])
+				to = &t
+			} else {
+				to = args.To
 			}
-			toAddress = common.BytesToAddress(toPkr[:])
 		}
-		to = &toAddress
 	}
 
 	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
@@ -1186,7 +1167,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		fee = new(big.Int).Div(fee.Mul(fee, m), d)
 	}
 	feeToken := assets.Token{
-		utils.StringToUint256(string(args.GasCurrency)),
+		utils.CurrencyToUint256(string(args.GasCurrency)),
 		utils.U256(*fee),
 	}
 	pkr := keys.Addr2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
@@ -1419,6 +1400,8 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 		"timestamp":        (*hexutil.Big)(head.Time),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
+		"currentVotes":     head.CurrentVotes,
+		"parentVotes":      head.ParentVotes,
 	}
 
 	if inclTx {
@@ -1688,6 +1671,8 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 		"contractAddress":   nil,
 		"logs":              receipt.Logs,
 		"logsBloom":         receipt.Bloom,
+		"shareId":           receipt.ShareId,
+		"poolId":            receipt.PoolId,
 	}
 
 	// Assign receipt status or post state.
@@ -1753,11 +1738,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		if len(input) > 0 {
 			return errors.New(`not create or call contract data must be nil`)
 		}
-		flag, err := common.IsPkr(args.To)
-		if err != nil {
-			return err
-		}
-		if !flag {
+		if args.To.IsAccountAddress() {
 			if !keys.IsPKValid(args.To.ToUint512()) {
 				return errors.New("invalid to address")
 			}
@@ -1819,41 +1800,94 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
-func (args *SendTxArgs) toTxParam() (txParam exchange.TxParam, e error) {
-
-	flag, err := common.IsPkr(args.To)
-	if err != nil {
-		e = err
-		return
+func (args *SendTxArgs) toAsset() assets.Asset {
+	var token *assets.Token
+	var ticket *assets.Ticket
+	if args.Value.ToInt().Sign() > 0 {
+		token = &assets.Token{
+			Currency: *(common.BytesToHash(common.LeftPadBytes([]byte(args.Currency), 32)).HashToUint256()),
+			Value:    *utils.U256(*args.Value.ToInt()).ToRef(),
+		}
 	}
-	var topkr keys.PKr
+	if args.Tkt != nil {
+		ticket = &assets.Ticket{
+			Category: *(common.BytesToHash(common.LeftPadBytes([]byte(args.Category), 32)).HashToUint256()),
+			Value:    *args.Tkt.HashToUint256(),
+		}
+	}
+	return assets.Asset{
+		Tkn: token,
+		Tkt: ticket,
+	}
+}
 
-	if flag {
-		topkr = *args.To.ToPKr()
+func (args *SendTxArgs) toTxParam(state *state.StateDB) (txParam prepare.PreTxParam) {
+
+	var refundPkr keys.PKr
+	txParam.GasPrice = (*big.Int)(args.GasPrice)
+	txParam.From = *args.From.ToUint512()
+
+	feevalue := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
+	asset := args.toAsset()
+	if args.To == nil {
+		fromRand := keys.Uint256{}
+		copy(fromRand[:16], (*args.Data)[:16])
+		txParam.Cmds = prepare.Cmds{}
+		contractCmd := stx.ContractCmd{asset, nil, *args.Data}
+		txParam.Cmds.Contract = &contractCmd
+		refundPkr = keys.Addr2PKr(args.From.ToUint512(), &fromRand)
+	} else if state.IsContract(common.BytesToAddress(args.To[:])) {
+		fromRand := keys.Uint256{}
+		copy(fromRand[:16], args.To[:16])
+		if args.Dynamic {
+			refundPkr = keys.Addr2PKr(args.From.ToUint512(), nil)
+		} else {
+			refundPkr = keys.Addr2PKr(args.From.ToUint512(), &fromRand)
+		}
+		if args.GasCurrency.IsNotSero() {
+			m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
+			feevalue = new(big.Int).Div(feevalue.Mul(feevalue, m), d)
+		}
+		txParam.Cmds = prepare.Cmds{}
+		var data []byte
+		if args.Data!=nil{
+			data=*args.Data
+		}
+		contractCmd := stx.ContractCmd{asset, args.To.ToPKr(),data}
+		txParam.Cmds.Contract = &contractCmd
+		refundPkr = keys.Addr2PKr(args.From.ToUint512(), &fromRand)
 	} else {
-		topkr = keys.Addr2PKr(args.To.ToUint512(), nil)
-
+		var topkr keys.PKr
+		if args.To.IsAccountAddress() {
+			topkr = keys.Addr2PKr(args.To.ToUint512(), nil)
+		} else {
+			topkr = *args.To.ToPKr()
+		}
+		refundPkr = keys.Addr2PKr(args.From.ToUint512(), nil)
+		receptions := []prepare.Reception{{Addr: topkr, Asset: asset}}
+		txParam.Receptions = receptions
 	}
-	receptions := []exchange.Reception{{Addr: topkr, Currency: string(args.Currency), Value: (*big.Int)(args.Value)}}
-
-	txParam = exchange.TxParam{From: *args.From.ToUint512(),
-		Receptions: receptions,
-		Gas:        uint64(*args.Gas),
-		GasPrice:   (*big.Int)(args.GasPrice),
+	feeAsset := assets.Token{
+		utils.CurrencyToUint256(string(args.GasCurrency)),
+		utils.U256(*feevalue),
 	}
+	txParam.Fee = feeAsset
+	txParam.RefundTo = &refundPkr
 	return
 
 }
 
-func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+func defaultFee(gasPrice *hexutil.Big, gas *hexutil.Uint64) *big.Int {
+	return new(big.Int).Mul(((*big.Int)(gasPrice)), new(big.Int).SetUint64(uint64(*gas)))
+}
+
+func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T) {
 	var input []byte
 	var Pkr keys.PKr
-	var err error
 	var isZ bool
 	to := args.To
 	fromRand := keys.Uint256{}
-
-	feevalue := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
+	feevalue := defaultFee(args.GasPrice, args.Gas)
 	if to == nil {
 		copy(fromRand[:16], (*args.Data)[:16])
 		isZ = false
@@ -1868,10 +1902,7 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 			feevalue = new(big.Int).Div(feevalue.Mul(feevalue, m), d)
 		}
 	} else {
-		Pkr, err = common.AddressToPkr(*args.To)
-		if err != nil {
-			return nil, nil, err
-		}
+		Pkr = common.AddrToPKr(*args.To)
 		fromRand = keys.RandUint256()
 		isZ = true
 	}
@@ -1881,36 +1912,66 @@ func (args *SendTxArgs) toTransaction(state *state.StateDB) (*types.Transaction,
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), input)
 	ehash := tx.Ehash()
 	fee := assets.Token{
-		utils.StringToUint256(string(args.GasCurrency)),
+		utils.CurrencyToUint256(string(args.GasCurrency)),
 		utils.U256(*feevalue),
 	}
 	outData := types.NewTxtOut(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, args.Memo, isZ)
 	txt := types.NewTxt(fromRand.NewRef(), ehash, fee, outData, nil, nil, nil)
-	return tx, txt, nil
+	return tx, txt
 }
 
-func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
+func (args *SendTxArgs) toPkg(state *state.StateDB) (*types.Transaction, *ztx.T) {
 	var Pkr keys.PKr
-	var err error
 	if state.IsContract(common.BytesToAddress(args.To[:])) {
 		Pkr = *(args.To.ToPKr())
 	} else {
-		Pkr, err = common.AddressToPkr(*args.To)
-		if err != nil {
-			return nil, nil, err
-		}
+		Pkr = common.AddrToPKr(*args.To)
 	}
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), nil)
 	fromRand := keys.RandUint256().NewRef()
 	ehash := tx.Ehash()
 	fee := assets.Token{
-		utils.StringToUint256(string(args.GasCurrency)),
+		utils.CurrencyToUint256(string(args.GasCurrency)),
 		utils.U256(*new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))),
 	}
 	pkgCreate := types.NewCreatePkg(Pkr, string(args.Currency), (*big.Int)(args.Value), string(args.Category), args.Tkt, args.Memo)
 	txt := types.NewTxt(fromRand, ehash, fee, nil, pkgCreate, nil, nil)
 	txt.FromRnd = keys.RandUint256().NewRef()
-	return tx, txt, nil
+	return tx, txt
+}
+
+func stringToUint512(str string) keys.Uint512 {
+	var ret keys.Uint512
+	b := []byte(str)
+	if len(b) > len(ret) {
+		b = b[len(b)-len(ret):]
+	}
+	copy(ret[len(ret)-len(b):], b)
+	return ret
+}
+
+func (args *SendTxArgs) toCreatePkg(state *state.StateDB) (txParam prepare.PreTxParam) {
+	var toPkr keys.PKr
+	txParam.GasPrice = (*big.Int)(args.GasPrice)
+	txParam.From = *args.From.ToUint512()
+	feevalue := defaultFee(args.GasPrice, args.Gas)
+	asset := args.toAsset()
+	if state.IsContract(common.BytesToAddress(args.To[:])) {
+		toPkr = *(args.To.ToPKr())
+	} else {
+		toPkr = common.AddrToPKr(*args.To)
+	}
+	feeToken := assets.Token{
+		utils.CurrencyToUint256(string(args.GasCurrency)),
+		utils.U256(*feevalue),
+	}
+	txParam.From = *args.From.ToUint512()
+	txParam.RefundTo = keys.Addr2PKr(args.From.ToUint512(), keys.RandUint256().NewRef()).NewRef()
+	txParam.Fee = feeToken
+	pkgCreateCmd := prepare.PkgCreateCmd{keys.RandUint256(), toPkr, asset, stringToUint512(args.Memo)}
+	txParam.Cmds.PkgCreate = &pkgCreateCmd
+	return
+
 }
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
@@ -1958,7 +2019,7 @@ func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.H
 		return common.Hash{}, err
 	}
 
-	if args.To == nil || state.IsContract(*args.To) || !seroparam.IsExchange() {
+	if !seroparam.IsExchange() {
 
 		account := accounts.Account{Address: args.From}
 
@@ -1966,36 +2027,45 @@ func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.H
 		if err != nil {
 			return common.Hash{}, err
 		}
-
 		// Assemble the transaction and sign with the wallet
-		tx, txt, err := args.toTransaction(state)
-		if err != nil {
-			return common.Hash{}, err
-		}
+		tx, txt := args.toTransaction(state)
 		encrypted, err := wallet.EncryptTx(account, tx, txt, state)
 		if err != nil {
 			return common.Hash{}, err
 		}
 		return submitTransaction(ctx, b, encrypted, args.To)
 	} else {
-		if txParam, err := args.toTxParam(); err == nil {
-			pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(txParam)
-			if err != nil {
-				return common.Hash{}, err
-			}
-			err = b.CommitTx(gtx)
-			if err != nil {
-				exchange.CurrentExchange().ClearTxParam(pretx)
-				return common.Hash{}, err
-			}
-			return common.BytesToHash(gtx.Hash[:]), nil
-		} else {
+		txParam := args.toTxParam(state)
+		txhash, err := commitPreTx(txParam, b, args.To)
+		if err != nil {
 			return common.Hash{}, err
+		} else {
+			return txhash, nil
 		}
 	}
 }
 
-func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args *light_types.GTx) error {
+func commitPreTx(txParam prepare.PreTxParam, b Backend, to *common.Address) (common.Hash, error) {
+	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(txParam)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	err = b.CommitTx(gtx)
+	if err != nil {
+		exchange.CurrentExchange().ClearTxParam(pretx)
+		return common.Hash{}, err
+	}
+	txhash := common.BytesToHash(gtx.Hash[:])
+	if to == nil {
+		log.Info("create contract  transaction", "fullhash", txhash.Hex())
+	} else {
+		log.Info("Submitted transaction", "fullhash", txhash.Hex(), "recipient", to)
+	}
+	return txhash, nil
+
+}
+
+func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args *txtool.GTx) error {
 	return s.b.CommitTx(args)
 }
 
@@ -2022,6 +2092,7 @@ func (s *PublicTransactionPoolAPI) ReSendTransaction(ctx context.Context, txhash
 	return submitTransaction(ctx, s.b, tx, nil)
 }
 
+/**
 func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 	s.nonceLock.mu.Lock()
 	defer s.nonceLock.mu.Unlock()
@@ -2042,36 +2113,40 @@ func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArg
 		return common.Hash{}, err
 	}
 
+	if args.GasCurrency.IsNotSero() {
+		return common.Hash{}, errors.New("create pkg gasCurrency must be sero")
+	}
+
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	// Assemble the transaction and sign with the wallet
-	tx, txt, err := args.toPkg(state)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	if th, ok := s.b.GetEngin().(threaded); ok {
-		miner := s.b.GetMiner()
-		if miner.CanStart() {
-			miner.SetCanStart(0)
-			defer miner.SetCanStart(1)
+	if seroparam.IsExchange() {
+		txParam := args.toCreatePkg(state)
+		pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(txParam)
+		if err != nil {
+			return common.Hash{}, err
 		}
-		threads := th.Threads()
-		if threads >= 0 {
-			th.SetThreads(-1)
-			defer th.SetThreads(threads)
+		err = s.b.CommitTx(gtx)
+		if err != nil {
+			exchange.CurrentExchange().ClearTxParam(pretx)
+			return common.Hash{}, err
 		}
+		return common.BytesToHash(gtx.Hash[:]), nil
+	} else {
+		// Assemble the transaction and sign with the wallet
+		tx, txt := args.toPkg(state)
+		encrypted, err := wallet.EncryptTx(account, tx, txt, state)
+		if err != nil {
+			return common.Hash{}, err
+		}
+		return submitTransaction(ctx, s.b, encrypted, args.To)
 	}
-	encrypted, err := wallet.EncryptTx(account, tx, txt, state)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return submitTransaction(ctx, s.b, encrypted, args.To)
-}
 
+}
+**/
 type ClosePkgArgs struct {
 	From     *address.AccountAddress `json:"from"`
 	Gas      *hexutil.Uint64         `json:"gas"`
@@ -2109,13 +2184,30 @@ func (args *ClosePkgArgs) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
+func (args *ClosePkgArgs) toTxParam() (txParam prepare.PreTxParam) {
+	txParam.GasPrice = (*big.Int)(args.GasPrice)
+	txParam.From = *args.From.ToUint512()
+	feevalue := defaultFee(args.GasPrice, args.Gas)
+	feeToken := assets.Token{
+		utils.CurrencyToUint256("SERO"),
+		utils.U256(*feevalue),
+	}
+	txParam.From = *args.From.ToUint512()
+	txParam.RefundTo = keys.Addr2PKr(args.From.ToUint512(), keys.RandUint256().NewRef()).NewRef()
+	txParam.Fee = feeToken
+	pkgCloseCmd := prepare.PkgCloseCmd{*args.PkgId, *args.Key}
+	txParam.Cmds.PkgClose = &pkgCloseCmd
+	return
+
+}
+
 func (args *ClosePkgArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), nil)
 	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	ehash := tx.Ehash()
 	txt := &ztx.T{
 		Fee: assets.Token{
-			utils.StringToUint256(params.DefaultCurrency),
+			utils.CurrencyToUint256(params.DefaultCurrency),
 			utils.U256(*fee),
 		},
 		PkgClose: &ztx.PkgClose{*args.PkgId, *args.Key},
@@ -2212,18 +2304,14 @@ func (args *TransferPkgArgs) toTransaction(state *state.StateDB) (*types.Transac
 	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	ehash := tx.Ehash()
 	var Pkr keys.PKr
-	var err error
 	if state.IsContract(common.BytesToAddress(args.To[:])) {
 		Pkr = *(args.To.ToPKr())
 	} else {
-		Pkr, err = common.AddressToPkr(*args.To)
-		if err != nil {
-			return nil, nil, err
-		}
+		Pkr = common.AddrToPKr(*args.To)
 	}
 	txt := &ztx.T{
 		Fee: assets.Token{
-			utils.StringToUint256(params.DefaultCurrency),
+			utils.CurrencyToUint256(params.DefaultCurrency),
 			utils.U256(*fee),
 		},
 		PkgTransfer: &ztx.PkgTransfer{*args.PkgId, Pkr},
@@ -2319,13 +2407,10 @@ func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args 
 		}
 	}
 	var signed *types.Transaction
-	if args.To == nil || state.IsContract(*args.To) || !seroparam.IsExchange() {
-		// Assemble the transaction and sign with the wallet
-		tx, txt, err := args.toTransaction(state)
 
-		if err != nil {
-			return nil, err
-		}
+	if !seroparam.IsExchange() {
+		// Assemble the transaction and sign with the wallet
+		tx, txt := args.toTransaction(state)
 
 		account := accounts.Account{Address: args.From}
 
@@ -2338,18 +2423,13 @@ func (s *PublicTransactionPoolAPI) EncryptTransaction(ctx context.Context, args 
 			return nil, err
 		}
 	} else {
-
-		if txParam, err := args.toTxParam(); err == nil {
-			_, gtx, err := exchange.CurrentExchange().GenTxWithSign(txParam)
-			if err != nil {
-				return nil, err
-			}
-			gasPrice := big.Int(gtx.GasPrice)
-			gas := uint64(gtx.Gas)
-			signed = types.NewTxWithGTx(gas, &gasPrice, &gtx.Tx)
-		} else {
+		_, gtx, err := exchange.CurrentExchange().GenTxWithSign(args.toTxParam(state))
+		if err != nil {
 			return nil, err
 		}
+		gasPrice := big.Int(gtx.GasPrice)
+		gas := uint64(gtx.Gas)
+		signed = types.NewTxWithGTx(gas, &gasPrice, &gtx.Tx)
 	}
 
 	data, err := rlp.EncodeToBytes(signed)

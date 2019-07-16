@@ -3,8 +3,8 @@ package txs
 import (
 	"errors"
 
-	"github.com/sero-cash/go-sero/zero/lstate"
-	"github.com/sero-cash/go-sero/zero/lstate/lstate_types"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate"
+	"github.com/sero-cash/go-sero/zero/wallet/lstate/lstate_types"
 
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
@@ -18,7 +18,7 @@ func WatchPkg(id *keys.Uint256, key *keys.Uint256) (ret pkg.Pkg_O, pkr keys.PKr,
 		e = errors.New("Watch Pkg but lstate is nil")
 		return
 	}
-	pg := st1.ZState().Pkgs.GetPkgById(id)
+	pg := st1.CurrentZState().Pkgs.GetPkgById(id)
 	if pg == nil || pg.Closed {
 		e = errors.New("Watch Pkg but has been closed")
 		return

@@ -17,6 +17,8 @@
 package stx
 
 import (
+	"sync/atomic"
+
 	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/crypto/sha3"
@@ -165,9 +167,40 @@ type T struct {
 	Desc_Z   Desc_Z
 	Desc_O   Desc_O
 	Desc_Pkg PkgDesc_Z
+	Desc_Cmd DescCmd
+
+	//cache
+	hash  atomic.Value
+	feeCC atomic.Value
+}
+
+func (self *T) ToFeeCC() keys.Uint256 {
+	if cc, ok := self.feeCC.Load().(keys.Uint256); ok {
+		return cc
+	}
+	asset_desc := cpt.AssetDesc{
+		Tkn_currency: self.Fee.Currency,
+		Tkn_value:    self.Fee.Value.ToUint256(),
+		Tkt_category: keys.Empty_Uint256,
+		Tkt_value:    keys.Empty_Uint256,
+	}
+	cpt.GenAssetCC(&asset_desc)
+	v := asset_desc.Asset_cc
+	self.feeCC.Store(v)
+	return v
 }
 
 func (self *T) ToHash() (ret keys.Uint256) {
+	if h, ok := self.hash.Load().(keys.Uint256); ok {
+		ret = h
+		return
+	}
+	v := self._ToHash()
+	self.hash.Store(v)
+	return v
+}
+
+func (self *T) _ToHash() (ret keys.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Ehash[:])
 	d.Write(self.From[:])
@@ -178,6 +211,9 @@ func (self *T) ToHash() (ret keys.Uint256) {
 	d.Write(self.Sign[:])
 	d.Write(self.Bcr[:])
 	d.Write(self.Bsign[:])
+	if self.Desc_Cmd.Count() > 0 {
+		d.Write(self.Desc_Cmd.ToHash().NewRef()[:])
+	}
 	copy(ret[:], d.Sum(nil))
 	return
 }
@@ -190,6 +226,9 @@ func (self *T) ToHash_for_gen() (ret keys.Uint256) {
 	d.Write(self.Desc_Z.ToHash_for_gen().NewRef()[:])
 	d.Write(self.Desc_O.ToHash_for_gen().NewRef()[:])
 	d.Write(self.Desc_Pkg.ToHash_for_gen().NewRef()[:])
+	if self.Desc_Cmd.Count() > 0 {
+		d.Write(self.Desc_Cmd.ToHash().NewRef()[:])
+	}
 	copy(ret[:], d.Sum(nil))
 	return
 }
@@ -202,6 +241,9 @@ func (self *T) ToHash_for_sign() (ret keys.Uint256) {
 	d.Write(self.Desc_Z.ToHash_for_sign().NewRef()[:])
 	d.Write(self.Desc_O.ToHash_for_sign().NewRef()[:])
 	d.Write(self.Desc_Pkg.ToHash_for_sign().NewRef()[:])
+	if self.Desc_Cmd.Count() > 0 {
+		d.Write(self.Desc_Cmd.ToHash().NewRef()[:])
+	}
 	copy(ret[:], d.Sum(nil))
 	return
 }

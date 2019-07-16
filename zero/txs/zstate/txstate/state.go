@@ -43,7 +43,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"github.com/sero-cash/go-sero/zero/witness/merkle"
 )
 
 type State struct {
@@ -58,19 +57,19 @@ type State struct {
 	revisions []data.Revision
 }
 
-func (self *State) Tri() tri.Tri {
-	return self.tri
-}
-
 func (self *State) Num() uint64 {
 	return self.num
+}
+
+func (self *State) Tri() tri.Tri {
+	return self.tri
 }
 
 func NewState(tri tri.Tri, num uint64) (state State) {
 	state = State{tri: tri, num: num}
 	state.rw = new(sync.RWMutex)
 	state.MTree = NewMerkleTree(tri)
-	if num >= seroparam.SIP2() {
+	if state.num >= seroparam.SIP2() {
 		state.data = data_v1.NewData(num)
 	} else {
 		state.data = data.NewData(num)
@@ -303,10 +302,4 @@ func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
 			number = number - 1
 		}
 	}
-}
-
-type State0Trees struct {
-	Trees       map[uint64]merkle.Tree
-	Roots       []keys.Uint256
-	Start_index uint64
 }

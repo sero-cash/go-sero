@@ -27,9 +27,15 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
+	"github.com/sero-cash/go-sero/zero/txtool/verify"
+
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 
-	"github.com/sero-cash/go-sero/zero/txs/verify"
+	"github.com/sero-cash/go-sero/zero/stake"
 
 	"github.com/hashicorp/golang-lru"
 
@@ -236,26 +242,30 @@ func (self *State1BlockChain) IsValid() bool {
 	if header.Number.Uint64() < seroparam.DefaultConfirmedBlock() {
 		return false
 	}
-	if _, e := state.New(header.Root, self.Bc.stateCache, header.Number.Uint64()); e != nil {
+	if _, e := state.New(self.Bc.stateCache, header); e != nil {
 		return false
 	}
 	return true
 }
 
-func (self *State1BlockChain) NewState(hash *common.Hash) *zstate.ZState {
+func (self *State1BlockChain) GetSeroGasLimit(to *common.Address, tfee *assets.Token, gas *big.Int) (gaslimit uint64, e error) {
+	if state, err := self.Bc.State(); err != nil {
+		e = err
+		return
+	} else {
+		return state.GetSeroGasLimit(to, tfee, gas)
+	}
+}
+
+func (self *State1BlockChain) CurrentState(hash *common.Hash) *zstate.ZState {
 	header := self.Bc.GetHeaderByHash(*hash)
-	num := header.Number.Uint64()
 	var st *state.StateDB
 	var e error
-	if num == 0 {
-		st, e = state.NewGenesis(header.Root, self.Bc.stateCache)
-	} else {
-		st, e = state.New(header.Root, self.Bc.stateCache, num-1)
-	}
+	st, e = state.New(self.Bc.stateCache, header)
 	if e != nil {
 		panic(e)
 	}
-	return st.GetZState()
+	return st.CurrentZState()
 }
 func (self *State1BlockChain) GetTks() []keys.Uint512 {
 	tks := []keys.Uint512{}
@@ -273,6 +283,9 @@ func (self *State1BlockChain) GetTkAt(tk *keys.Uint512) uint64 {
 		}
 	}
 	return 0
+}
+func (bc *BlockChain) GetDB() serodb.Database {
+	return bc.db
 }
 
 // loadLastState loads the last known chain state from the database. This method
@@ -293,7 +306,7 @@ func (bc *BlockChain) loadLastState() error {
 		return bc.Reset()
 	}
 	// Make sure the state associated with the block is available
-	if _, err := state.New(currentBlock.Root(), bc.stateCache, currentBlock.NumberU64()); err != nil {
+	if _, err := state.New(bc.stateCache, currentBlock.Header()); err != nil {
 		// Dangling block without a state associated, init from scratch
 		log.Warn("Head state missing, repairing chain", "number", currentBlock.Number(), "hash", currentBlock.Hash())
 		if err := bc.repair(&currentBlock); err != nil {
@@ -360,7 +373,7 @@ func (bc *BlockChain) SetHead(head uint64, delFn DeleteCallback) error {
 		bc.currentBlock.Store(bc.GetBlock(currentHeader.Hash(), currentHeader.Number.Uint64()))
 	}
 	if currentBlock := bc.CurrentBlock(); currentBlock != nil {
-		if _, err := state.New(currentBlock.Root(), bc.stateCache, currentBlock.NumberU64()); err != nil {
+		if _, err := state.New(bc.stateCache, currentBlock.Header()); err != nil {
 			// Rewound state missing, rolled back to before pivot, reset to genesis
 			bc.currentBlock.Store(bc.genesisBlock)
 		}
@@ -453,12 +466,12 @@ func (bc *BlockChain) Processor() Processor {
 // State returns a new mutable state based on the current HEAD block.
 func (bc *BlockChain) State() (*state.StateDB, error) {
 	block := bc.CurrentBlock()
-	return bc.StateAt(block.Root(), block.NumberU64())
+	return bc.StateAt(block.Header())
 }
 
 // StateAt returns a new mutable state based on a particular point in time.
-func (bc *BlockChain) StateAt(root common.Hash, number uint64) (*state.StateDB, error) {
-	return state.New(root, bc.stateCache, number)
+func (bc *BlockChain) StateAt(header *types.Header) (*state.StateDB, error) {
+	return state.New(bc.stateCache, header)
 }
 
 // Reset purges the entire blockchain, restoring it to its genesis state.
@@ -502,7 +515,7 @@ func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
 func (bc *BlockChain) repair(head **types.Block) error {
 	for {
 		// Abort if we've rewound to a head block that does have associated state
-		if _, err := state.New((*head).Root(), bc.stateCache, (*head).NumberU64()); err == nil {
+		if _, err := state.New(bc.stateCache, (*head).Header()); err == nil {
 			log.Info("Rewound blockchain to past state", "number", (*head).Number(), "hash", (*head).Hash())
 			return nil
 		}
@@ -960,14 +973,26 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Write other block data using a batch.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
-	state.GetZState().RecordBlock(batch, block.Header().Hash().HashToUint256())
-	//rawdb.WriteHash(bc.db, block.Number().Uint64(), block.Hash())
+	blockhash := block.Hash()
+
+	if block.Header().Number.Uint64() >= seroparam.SIP4() {
+		state.GetStakeCons().Record(block.Header(), batch)
+		stakeState := stake.NewStakeState(state)
+		err = stakeState.RecordVotes(batch, block)
+		if err != nil {
+			log.Info("write block with pos","err",err)
+			return NonStatTy, err
+		}
+	}
+	state.NextZState().RecordBlock(batch, blockhash.HashToUint256())
 
 	root, err := state.Commit(true)
 	if root != block.Root() {
-		panic("root not eq")
+		log.Info("WiriteBlockWithState root not equal Error","root",root,"block.root",block.Root())
+		return NonStatTy, err
 	}
-	if err != nil {
+	if err!=nil {
+		log.Error("WriteBlockWithState.Commit Error:","root",root,"err",err)
 		return NonStatTy, err
 	}
 	triedb := bc.stateCache.TrieDB()
@@ -995,8 +1020,16 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			header := bc.GetHeaderByNumber(current - triesInMemory)
 			chosen := header.Number.Uint64()
 
+			var needCommit bool
+
+			if zconfig.IsSnapshotMode() {
+				needCommit = zconfig.NeedSnapshot(block.NumberU64())
+			} else {
+				needCommit = (bc.gcproc > bc.cacheConfig.TrieTimeLimit) || (header.Number.Uint64()%10000 == 0)
+			}
+
 			// If we exceeded out time allowance, flush an entire trie to disk
-			if bc.gcproc > bc.cacheConfig.TrieTimeLimit || header.Number.Uint64()%10000 == 0 {
+			if needCommit {
 				// If we're exceeding limits but haven't reached a large enough memory gap,
 				// warn the user that the system is becoming unstable.
 				if chosen < lastWrite+triesInMemory && bc.gcproc >= 2*bc.cacheConfig.TrieTimeLimit {
@@ -1030,10 +1063,22 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		// Split same-difficulty blocks by number, then at random
 		reorg = block.NumberU64() < currentBlock.NumberU64()
 		if !reorg && block.NumberU64() == currentBlock.NumberU64() {
-			if block.Transactions().Len() == currentBlock.Transactions().Len() {
-				reorg = mrand.Float64() < 0.5
+			if block.NumberU64() < seroparam.SIP4() {
+				if block.Transactions().Len() == currentBlock.Transactions().Len() {
+					reorg = mrand.Float64() < 0.5
+				} else {
+					reorg = block.Transactions().Len() > currentBlock.Transactions().Len()
+				}
 			} else {
-				reorg = block.Transactions().Len() > currentBlock.Transactions().Len()
+				if len(block.Header().CurrentVotes) == len(currentBlock.Header().CurrentVotes) {
+					if block.Transactions().Len() == currentBlock.Transactions().Len() {
+						reorg = mrand.Float64() < 0.5
+					} else {
+						reorg = block.Transactions().Len() > currentBlock.Transactions().Len()
+					}
+				} else {
+					reorg = len(block.Header().CurrentVotes) > len(currentBlock.Header().CurrentVotes)
+				}
 			}
 		}
 	}
@@ -1076,6 +1121,8 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	bc.PostChainEvents(events, logs)
 	return n, err
 }
+
+func test(i interface{}) {}
 
 // insertChain will execute the actual chain insertion and event aggregation. The
 // only reason this method exists as a separate one is to make locking cleaner
@@ -1126,6 +1173,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 
 	// Start a parallel signature recovery (abi will fluke on fork transition, minimal perf loss)
 	//senderCacher.recoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number()), chain)
+	tx_abort, tx_results := NewTxChecker(bc, chain)
+	defer close(tx_abort)
 
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
@@ -1211,24 +1260,34 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		} else {
 			parent = chain[i-1]
 		}
-		state, err := state.New(parent.Root(), bc.stateCache, parent.NumberU64())
-
-		if bc.accountManager != nil {
-			seeds := []keys.Uint512{}
-			for _, w := range bc.accountManager.Wallets() {
-				seed := w.Accounts()[0].Tk
-				seeds = append(seeds, *seed.ToUint512())
-			}
-			state.SetSeeds(seeds)
-		}
+		state, err := state.New(bc.stateCache, parent.Header())
 
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
 
 		for _, tx := range block.Transactions() {
-			err := verify.Verify(tx.GetZZSTX(), state.GetZState())
+			err := <-tx_results
+			if err == nil {
+				err = verify.VerifyWithState(tx.GetZZSTX(), state.NextZState())
+			}
+			//err := verify.Verify(tx.GetZZSTX(), state.GetZState())
 			if err != nil {
+				return i, events, coalescedLogs, err
+			}
+		}
+
+		if seroparam.SIP4() <= block.NumberU64() {
+			stakeState := stake.NewStakeState(state)
+			err = stakeState.ProcessBeforeApply(bc, block.Header())
+			if err != nil {
+				log.Error("insert chain pos block processBeforeApply","err",err)
+				return i, events, coalescedLogs, err
+			}
+
+			err = stakeState.CheckVotes(block, bc)
+			if err != nil {
+				log.Error("insert chain pos block checkVote","err",err)
 				return i, events, coalescedLogs, err
 			}
 		}
@@ -1278,10 +1337,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		cache, _ := bc.stateCache.TrieDB().Size()
 		stats.report(chain, i, cache)
 	}
+
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.CurrentBlock().Hash() == lastCanon.Hash() {
 		events = append(events, ChainHeadEvent{lastCanon})
 	}
+
 	return 0, events, coalescedLogs, nil
 }
 

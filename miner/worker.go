@@ -23,10 +23,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
+	"github.com/sero-cash/go-sero/zero/stake"
+
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core"
@@ -50,6 +53,10 @@ const (
 	chainHeadChanSize = 10
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
+
+	chainVoteSize = 30
+
+	delayBlock = 1
 )
 
 // Agent can register themself with the worker
@@ -100,14 +107,20 @@ type worker struct {
 	mux          *event.TypeMux
 	txsCh        chan core.NewTxsEvent
 	txsSub       event.Subscription
+	voteCh       chan core.NewVoteEvent
+	voteSub      event.Subscription
 	chainHeadCh  chan core.ChainHeadEvent
 	chainHeadSub event.Subscription
 	chainSideCh  chan core.ChainSideEvent
 	chainSideSub event.Subscription
 	wg           sync.WaitGroup
 
-	agents map[Agent]struct{}
-	recv   chan *Result
+	voter voter
+
+	agents    map[Agent]struct{}
+	recv      chan *Result
+	powRecv   chan *Result
+	posTaskCh chan *Result
 
 	eth     Backend
 	chain   *core.BlockChain
@@ -129,33 +142,50 @@ type worker struct {
 	// atomic status counters
 	mining int32
 	atWork int32
+
+	pendingVote pendingVote
+
+	//pendingVoteMu sync.RWMutex
+	//pendingVote   map[voteKey]voteSet
+	//pendingVoteTime sync.Map
+	//pendingPosMu  sync.RWMutex
+	//pendingPos    map[common.Hash]time.Time
+	//pendingVoteMu sync.RWMutex
+	//pendingVote   map[common.Hash]mapset.Set
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase address.AccountAddress, sero Backend, mux *event.TypeMux) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase address.AccountAddress, voter voter, sero Backend, mux *event.TypeMux) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
 		eth:         sero,
 		mux:         mux,
 		txsCh:       make(chan core.NewTxsEvent, txChanSize),
+		voteCh:      make(chan core.NewVoteEvent, chainVoteSize),
 		chainHeadCh: make(chan core.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh: make(chan core.ChainSideEvent, chainSideChanSize),
 		chainDb:     sero.ChainDb(),
 		recv:        make(chan *Result, resultQueueSize),
+		powRecv:     make(chan *Result),
+		posTaskCh:   make(chan *Result),
 		chain:       sero.BlockChain(),
 		proc:        sero.BlockChain().Validator(),
 		coinbase:    coinbase,
 		agents:      make(map[Agent]struct{}),
 		unconfirmed: newUnconfirmedBlocks(sero.BlockChain(), miningLogAtDepth),
+		voter:       voter,
+		pendingVote: newPendingVote(),
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = sero.TxPool().SubscribeNewTxsEvent(worker.txsCh)
+	worker.voteSub = worker.voter.SubscribeWorkerVoteEvent(worker.voteCh)
 	// Subscribe events for blockchain
 	worker.chainHeadSub = sero.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = sero.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 	go worker.update()
-
-	go worker.wait()
+	go worker.voteLoop()
+	go worker.powResultLoop()
+	go worker.resultLoop()
 	worker.commitNewWork()
 
 	return worker
@@ -229,7 +259,7 @@ func (self *worker) register(agent Agent) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.agents[agent] = struct{}{}
-	agent.SetReturnCh(self.recv)
+	agent.SetReturnCh(self.powRecv)
 }
 
 func (self *worker) unregister(agent Agent) {
@@ -240,6 +270,7 @@ func (self *worker) unregister(agent Agent) {
 }
 
 func (self *worker) update() {
+
 	defer self.txsSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
 	defer self.chainSideSub.Unsubscribe()
@@ -248,7 +279,11 @@ func (self *worker) update() {
 		// A real event arrived, process interesting content
 		select {
 		// Handle ChainHeadEvent
-		case <-self.chainHeadCh:
+		case block := <-self.chainHeadCh:
+			header := block.Block.Header()
+
+			self.pendingVote.deleteBefore(header.Number.Uint64() - 1)
+
 			self.commitNewWork()
 
 			// Handle ChainSideEvent
@@ -272,7 +307,6 @@ func (self *worker) update() {
 				self.updateSnapshot()
 				self.currentMu.Unlock()
 			}
-
 			// System stopped
 		case <-self.txsSub.Err():
 			return
@@ -284,9 +318,65 @@ func (self *worker) update() {
 	}
 }
 
-func (self *worker) wait() {
+func (self *worker) powResultLoop() {
 	for {
-		for result := range self.recv {
+		select {
+		case result := <-self.powRecv:
+			if result == nil {
+				continue
+			}
+			if result.Block.Header().Number.Uint64() < seroparam.SIP4() {
+				self.recv <- result
+			} else {
+				lotter := newLotter(self, result.Block.Header(), result.Work.state)
+				self.voter.AddLottery(&lotter.lottery)
+
+				log.Info("Broadcast Lottery", "poshash", lotter.hashPos, "block", lotter.header.Number.Uint64())
+
+				go func() {
+					if lotter.wait() {
+						result.Block.SetVotes(lotter.currentHeaderVotes, lotter.parentHeaderVotes)
+						self.recv <- result
+					}
+				}()
+			}
+		}
+	}
+}
+
+func (self *worker) voteLoop() {
+	defer self.voteSub.Unsubscribe()
+	for {
+		select {
+		case voteResult := <-self.voteCh:
+			if atomic.LoadInt32(&self.mining) == 0 {
+				continue
+			}
+
+			vote := voteResult.Vote
+			if vote == nil {
+				continue
+			}
+
+			if vote.ParentNum+1 < self.pendingBlock().NumberU64()-1 {
+				continue
+			}
+
+			log.Info("worker voteLoop", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
+
+			self.pendingVote.add(vote)
+
+		case <-self.voteSub.Err():
+			return
+
+		}
+	}
+}
+
+func (self *worker) resultLoop() {
+	for {
+		select {
+		case result := <-self.recv:
 			atomic.AddInt32(&self.atWork, -1)
 
 			if result == nil {
@@ -325,9 +415,10 @@ func (self *worker) wait() {
 			}
 			self.chain.PostChainEvents(events, logs)
 
-			// Insert the block into the set of pending ones to wait for confirmations
+			// Insert the block into the set of pending ones to resultLoop for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 			log.Info(fmt.Sprintf("mined new block done in %v, number = %v, txs = %v", time.Since(work.createdAt), block.NumberU64(), len(block.Body().Transactions)))
+
 		}
 	}
 }
@@ -348,7 +439,7 @@ func (self *worker) push(work *Work) {
 
 // makeCurrent creates a new environment for the current cycle.
 func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error {
-	state, err := self.chain.StateAt(parent.Root(), parent.NumberU64())
+	state, err := self.chain.StateAt(parent.Header())
 	if err != nil {
 		return err
 	}
@@ -358,16 +449,6 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		header:    header,
 		createdAt: time.Now(),
 	}
-
-	if self.eth.AccountManager() != nil {
-		seeds := []keys.Uint512{}
-		for _, w := range self.eth.AccountManager().Wallets() {
-			seed := w.Accounts()[0].Tk
-			seeds = append(seeds, *seed.ToUint512())
-		}
-		work.state.SetSeeds(seeds)
-	}
-
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
 	self.current = work
@@ -390,7 +471,7 @@ func (self *worker) commitNewWork() {
 	// this will ensure we're not going off too far in the future
 	if now := time.Now().Unix(); tstamp > now+1 {
 		wait := time.Duration(tstamp-now) * time.Second
-		log.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
+		log.Info("Mining too far in the future", "resultLoop", common.PrettyDuration(wait))
 		time.Sleep(wait)
 	}
 
@@ -436,6 +517,15 @@ func (self *worker) commitNewWork() {
 		return
 	}
 	txs := types.NewTransactionsByPrice(pending)
+
+	if header.Number.Uint64() >= seroparam.SIP4() {
+		stakeState := stake.NewStakeState(work.state)
+		err := stakeState.ProcessBeforeApply(self.chain, header)
+		if err != nil {
+			log.Error("ProcessBeforeApply", "err", err)
+			return
+		}
+	}
 
 	work.commitTransactions(self.mux, txs, self.chain, header.Coinbase)
 
@@ -484,12 +574,6 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		tx := txs.Peek()
 		if tx == nil {
 			break
-		}
-
-		if env.header.Number.Uint64() == seroparam.VP0() {
-			txs.Shift()
-			env.errHandledTxs = append(env.errHandledTxs, tx)
-			continue
 		}
 
 		// Start executing the transaction

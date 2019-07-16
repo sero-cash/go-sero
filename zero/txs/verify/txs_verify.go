@@ -34,6 +34,9 @@ import (
 )
 
 func CheckUint(i *utils.U256) bool {
+	if len(i.ToInt().Bytes()) > 32 {
+		return false
+	}
 	u := i.ToUint256()
 	if u[31] == 0 && u[30] == 0 {
 		return true
@@ -43,9 +46,6 @@ func CheckUint(i *utils.U256) bool {
 }
 
 func Verify(s *stx.T, state *zstate.ZState) (e error) {
-	return Verify_state1(s, state)
-}
-func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 
 	t := utils.TR_enter("Miner-Verify-----Pre")
 
@@ -111,35 +111,14 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 			desc.hash_z = hash_z
 			desc.src = *src
 			verify_input_o_procs.StartProc(&desc)
-
-			/*g := cpt.VerifyInputSDesc{}
-			g.Ehash = hash_z
-			g.Nil = in_o.Nil
-			g.RootCM = *src.ToRootCM()
-			g.Sign = in_o.Sign
-			g.Pkr = *src.ToPKr()
-			if err := cpt.VerifyInputS(&g); err != nil {
-				e = errors.New("txs.Verify: in_o verify failed!")
-				return
-			} else {
-				asset := src.Out_O.Asset.ToFlatAsset()
-				asset_desc := cpt.AssetDesc{
-					Tkn_currency: asset.Tkn.Currency,
-					Tkn_value:    asset.Tkn.Value.ToUint256(),
-					Tkt_category: asset.Tkt.Category,
-					Tkt_value:    asset.Tkt.Value,
-				}
-				cpt.GenAssetCC(&asset_desc)
-				balance_desc.Oin_accs = append(balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
-			}*/
 		} else {
 			e = errors.New("txs.Verify: in_o not find in the outs!")
 			return
 		}
 	}
 	if verify_input_o_procs.HasProc() {
-		if p_runs := verify_input_o_procs.Wait(); p_runs != nil {
-			for _, p_run := range p_runs {
+		if e = verify_input_o_procs.End(); e == nil {
+			for _, p_run := range verify_input_o_procs.Runs {
 				desc := p_run.(*verify_input_o_desc)
 				balance_desc.Oin_accs = append(balance_desc.Oin_accs, desc.asset_cc[:]...)
 			}
@@ -169,6 +148,16 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 			cpt.GenAssetCC(&asset_desc)
 			balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
 		}
+	}
+
+	if s.Desc_Cmd.Count() > 0 && s.Desc_Pkg.Count() > 0 {
+		e = errors.New("pkg and cmd desc only exists one")
+		return
+	}
+
+	if !s.Desc_Pkg.Valid() {
+		e = errors.New("pkg desc is invalid")
+		return
 	}
 
 	t.Renter("Miner-Verify-----pkgs")
@@ -208,8 +197,49 @@ func Verify_state1(s *stx.T, state *zstate.ZState) (e error) {
 		}
 	}
 
+	if !s.Desc_Cmd.Valid() {
+		e = errors.New("cmd desc is invalid")
+		return
+	}
+
+	if s.Desc_Cmd.BuyShare != nil {
+		asset := s.Desc_Cmd.BuyShare.Asset().ToRef().ToFlatAsset()
+		asset_desc := cpt.AssetDesc{
+			Tkn_currency: asset.Tkn.Currency,
+			Tkn_value:    asset.Tkn.Value.ToUint256(),
+			Tkt_category: asset.Tkt.Category,
+			Tkt_value:    asset.Tkt.Value,
+		}
+		cpt.GenAssetCC(&asset_desc)
+		balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+	}
+
+	if s.Desc_Cmd.RegistPool != nil {
+		asset := s.Desc_Cmd.RegistPool.Asset().ToRef().ToFlatAsset()
+		asset_desc := cpt.AssetDesc{
+			Tkn_currency: asset.Tkn.Currency,
+			Tkn_value:    asset.Tkn.Value.ToUint256(),
+			Tkt_category: asset.Tkt.Category,
+			Tkt_value:    asset.Tkt.Value,
+		}
+		cpt.GenAssetCC(&asset_desc)
+		balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+	}
+
+	if s.Desc_Cmd.Contract != nil {
+		asset := s.Desc_Cmd.Contract.Asset.ToFlatAsset()
+		asset_desc := cpt.AssetDesc{
+			Tkn_currency: asset.Tkn.Currency,
+			Tkn_value:    asset.Tkn.Value.ToUint256(),
+			Tkt_category: asset.Tkt.Category,
+			Tkt_value:    asset.Tkt.Value,
+		}
+		cpt.GenAssetCC(&asset_desc)
+		balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
+	}
+
 	t.Renter("Miner-Verify-----z_ins")
-	for _, in_z := range s.Desc_Z.Ins {
+	for _, in_z := range s.Desc_Z.Ins { //state.verifyZs
 		if ok := state.State.HasIn(&in_z.Nil); ok {
 			e = errors.New("txs.verify in already in nils")
 			return

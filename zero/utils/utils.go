@@ -18,10 +18,13 @@ package utils
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"runtime"
 	"strings"
+
+	"github.com/sero-cash/go-sero/common"
 
 	"github.com/sero-cash/go-czero-import/keys"
 )
@@ -55,19 +58,52 @@ func (self Uint256s) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
 }
 
-func StringToUint256(str string) keys.Uint256 {
-	var ret keys.Uint256
-	b := []byte(strings.ToUpper(str))
-	if len(b) > len(ret) {
-		b = b[len(b)-len(ret):]
-	}
-	copy(ret[len(ret)-len(b):], b)
-	return ret
+func CurrencyToUint256(str string) (ret keys.Uint256) {
+	bs := CurrencyToBytes(str)
+	copy(ret[:], bs)
+	return
+}
 
+func Uint256ToCurrency(u *keys.Uint256) (ret string) {
+	return BytesToCurrency(u[:])
+}
+
+func CurrencyToBytes(currency string) []byte {
+	return common.LeftPadBytes([]byte(strings.ToUpper(currency)), 32)
+}
+
+func BytesToCurrency(bs []byte) string {
+	return common.BytesToString(bs)
 }
 
 func ShowStack() {
 	var buf [4096]byte
 	n := runtime.Stack(buf[:], false)
 	fmt.Printf("==> %s\n", string(buf[:n]))
+}
+
+func DecodeNumber32(data []byte) uint32 {
+	if len(data) == 0 {
+		return 0
+	}
+	return binary.BigEndian.Uint32(data)
+}
+
+func EncodeNumber32(number uint32) []byte {
+	enc := make([]byte, 4)
+	binary.BigEndian.PutUint32(enc, number)
+	return enc
+}
+
+func EncodeNumber(number uint64) []byte {
+	enc := make([]byte, 8)
+	binary.BigEndian.PutUint64(enc, number)
+	return enc
+}
+
+func DecodeNumber(data []byte) uint64 {
+	if len(data) == 0 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(data)
 }
