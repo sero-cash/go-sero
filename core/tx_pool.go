@@ -551,12 +551,12 @@ func (pool *TxPool) checkDescCmd(tx *stx.T, state *state.StateDB) (err error) {
 			err = errors.New("registPool Vote is invalid")
 			return
 		}
-		if cmd.RegistPool.FeeRate > 8000 {
-			err = errors.New("registPool Vote fee must <= 80%")
+		if cmd.RegistPool.FeeRate > seroparam.HIGHEST_STAKING_NODE_FEE_RATE {
+			err = fmt.Errorf("registPool Vote fee must <= %v%%", seroparam.HIGHEST_STAKING_NODE_FEE_RATE/100)
 			return
 		}
-		if cmd.RegistPool.FeeRate < 2000 {
-			err = errors.New("registPool Vote fee must >= 20%")
+		if cmd.RegistPool.FeeRate < seroparam.LOWEST_STAKING_NODE_FEE_RATE {
+			err = fmt.Errorf("registPool Vote fee must >= %v%%", seroparam.LOWEST_STAKING_NODE_FEE_RATE/100)
 			return
 		}
 	} else if cmd.ClosePool != nil {
