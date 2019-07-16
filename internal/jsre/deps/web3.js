@@ -4679,7 +4679,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 return ;
             }
             if(result instanceof Array){
-                ['missed', 'num', 'total', 'status',"remaining","expired"].forEach(function(key){
+                ['missed', 'num', 'total', 'status',"remaining",'expired','fee'].forEach(function(key){
                     result.forEach(function(s){
                         if (s.hasOwnProperty(key)){
                             s[key] = utils.toDecimal(s[key]);
@@ -4694,7 +4694,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     });
                 });
             }else{
-                ['missed', 'num', 'total', 'status',"remaining","expired"].forEach(function(key){
+                ['missed', 'num', 'total', 'status',"remaining",'expired','fee'].forEach(function(key){
                     if (result.hasOwnProperty(key)){
                         result[key] = utils.toDecimal(result[key]);
                     }

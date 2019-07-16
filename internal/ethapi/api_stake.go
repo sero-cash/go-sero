@@ -2,6 +2,7 @@ package ethapi
 
 import (
 	"context"
+	"fmt"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/log"
@@ -185,8 +186,12 @@ func (args *RegistStakePoolTxArg) setDefaults(ctx context.Context, b Backend) er
 			return errors.New(`gasPrice can not be zero`)
 		}
 	}
-	if uint32(*args.Fee) > 10000 {
-		return errors.New("fee rate can not large then %100")
+	
+	if uint32(*args.Fee) < seroparam.LOWEST_STAKING_NODE_FEE_RATE{
+		return errors.New(fmt.Sprintf("fee rate can not less then %v",seroparam.LOWEST_STAKING_NODE_FEE_RATE))
+	}
+	if uint32(*args.Fee) > seroparam.HIGHEST_STAKING_NODE_FEE_RATE {
+		return errors.New(fmt.Sprintf("fee rate can not large then  %v",seroparam.HIGHEST_STAKING_NODE_FEE_RATE))
 	}
 
 	if args.Value == nil {
@@ -207,11 +212,15 @@ func (args *RegistStakePoolTxArg) toPreTxParam() prepare.PreTxParam {
 	registPoolCmd := stx.RegistPoolCmd{}
 	registPoolCmd.Value = utils.U256(*args.Value.ToInt())
 	registPoolCmd.Vote = common.AddrToPKr(*args.Vote)
-	registPoolCmd.FeeRate = uint32(*args.Fee)*4/5 + 2000
+	registPoolCmd.FeeRate = uint32(*args.Fee)
 	preTx.Cmds.RegistPool = &registPoolCmd
 	return preTx
-
 }
+
+const (
+	MinFee=2500
+	MaxFee=7500
+)
 
 func (s *PublicStakeApI) RegistStakePool(ctx context.Context, args RegistStakePoolTxArg) (common.Hash, error) {
 
@@ -327,6 +336,14 @@ func (s *PublicStakeApI) CloseStakePool(ctx context.Context, from common.Address
 }
 
 func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from common.Address, fee hexutil.Uint64) (common.Hash, error) {
+
+	if uint32(fee) < seroparam.LOWEST_STAKING_NODE_FEE_RATE {
+		return common.Hash{},errors.New(fmt.Sprintf("fee rate can not less then %v",seroparam.LOWEST_STAKING_NODE_FEE_RATE))
+	}
+	if uint32(fee) > seroparam.HIGHEST_STAKING_NODE_FEE_RATE {
+		return common.Hash{},errors.New(fmt.Sprintf("fee rate can not large then  %v",seroparam.HIGHEST_STAKING_NODE_FEE_RATE))
+	}
+
 	wallets := s.b.AccountManager().Wallets()
 	var own address.AccountAddress
 	if from.IsAccountAddress() {
@@ -361,7 +378,7 @@ func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from common.Add
 		return common.Hash{}, errors.New("stake pool has closed")
 	}
 	preTx := prepare.PreTxParam{}
-	preTx.From = *own.ToUint512()
+	preTx.From =*(own.ToUint512())
 	preTx.RefundTo = &fromPkr
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
@@ -371,7 +388,7 @@ func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from common.Add
 	preTx.Cmds = prepare.Cmds{}
 	registPoolCmd := stx.RegistPoolCmd{}
 	registPoolCmd.Vote = pool.VotePKr
-	registPoolCmd.FeeRate = uint32(fee)*4/5 + 2000
+	registPoolCmd.FeeRate = uint32(fee)
 	preTx.Cmds.RegistPool = &registPoolCmd
 	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(preTx)
 	if err != nil {
@@ -555,6 +572,7 @@ func newRPCShare(wallets []accounts.Wallet, share stake.Share) map[string]interf
 	if share.Profit!=nil {
 		s["profit"] = hexutil.Big(*share.Profit)
 	}
+	s["fee"]=hexutil.Uint64(share.Fee)
 
 	s["tx"] = share.TransactionHash
 	return s
