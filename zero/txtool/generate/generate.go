@@ -25,6 +25,10 @@ func GenTx(param *txtool.GTxParam) (ret stx.T, e error) {
 	ctx.param = *param
 	ctx.prepare()
 	ctx.setData()
+	if err := ctx.check(); err != nil {
+		e = err
+		return
+	}
 	if err := ctx.genDesc_Zs(); err != nil {
 		e = err
 		return
@@ -34,6 +38,16 @@ func GenTx(param *txtool.GTxParam) (ret stx.T, e error) {
 		return
 	}
 	ret = ctx.s
+	return
+}
+
+func (self *gen_ctx) check() (e error) {
+	sk := self.param.From.SKr.ToUint512()
+	tk := keys.Sk2Tk(&sk)
+	if !keys.IsMyPKr(&tk, &self.param.From.PKr) {
+		e = errors.New("sk unmatch pkr for the From field")
+		return
+	}
 	return
 }
 
