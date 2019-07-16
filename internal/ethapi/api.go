@@ -994,6 +994,7 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.
 
 func (s *PublicBlockChainAPI) GetBlockRewardByNumber(ctx context.Context, blockNr rpc.BlockNumber) [3]hexutil.Big {
 	var res [3]hexutil.Big
+
 	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
 		rewards := GetBlockReward(block.Header().Number, block.Header().Difficulty, block.Header().GasUsed, block.Header().GasLimit)
 		res[0] = hexutil.Big(*rewards[0])
