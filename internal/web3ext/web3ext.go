@@ -816,7 +816,8 @@ web3._extend({
         new web3._extend.Method({
 			name: 'modifyStakePoolFee',
 			call: 'stake_modifyStakePoolFee',
-			params:2 
+			params:2,
+			inputFormatter: [null, web3._extend.utils.toHex]
 		}),
         new web3._extend.Method({
 			name: 'modifyStakePoolVote',
