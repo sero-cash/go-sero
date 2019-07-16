@@ -60,7 +60,7 @@ func (self *Lotter) verify(vote *types.Vote, share *stake.Share) bool {
 
 	if votePkr != nil {
 		parentPosHash := self.parentBlock.HashPos()
-		stakHash := types.StakeHash(&vote.PosHash, &parentPosHash,vote.IsPool)
+		stakHash := types.StakeHash(&vote.PosHash, &parentPosHash, vote.IsPool)
 		if keys.VerifyPKr(stakHash.HashToUint256(), &vote.Sign, votePkr) {
 			return true
 		}
@@ -93,7 +93,7 @@ func (self *Lotter) NewFilter(idxs []uint32, shares []*stake.Share) (filter vote
 	return
 }
 
-func (self *Lotter) RunFilter(filter map[string]*shareFilter, votes voteSet) (dels []types.Vote) {
+func (self *Lotter) RunFilter(filter map[string]*shareFilter, votes voteSet,hashPos common.Hash) (dels []types.Vote) {
 
 	for _, v := range votes {
 		for _, vote := range v {
@@ -149,7 +149,7 @@ func (self *Lotter) wait() bool {
 
 		votes := self.worker.pendingVote.getMyPending(self.key)
 
-		dels := self.RunFilter(filter, votes)
+		dels := self.RunFilter(filter, votes, self.hashPos)
 		self.worker.pendingVote.deleteVotes(self.key, dels)
 
 		sels := filter.result()
@@ -163,7 +163,7 @@ func (self *Lotter) wait() bool {
 
 	pidx, pshares := stake.SeleteBlockShare(self.worker.chain.GetDB(), self.parentBlock.Hash())
 	parentfilter := self.NewFilter(pidx, pshares)
-	self.RunFilter(parentfilter, parentVoteSet)
+	self.RunFilter(parentfilter, parentVoteSet, self.parentBlock.HashPos())
 
 	for _, vote := range filter.result() {
 		log.Info("pos currentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
