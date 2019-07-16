@@ -18,25 +18,25 @@ var (
 
 	maxReware, _ = new(big.Int).SetString("35600000000000000000", 10) //35.6 SERO
 
-	//outOfDateWindow      = uint64(198720)   // 1 month 30*24*60*4.6
-	//missVotedWindow      = uint64(596160)   // 3 month 3*30*24*60*4.6
-	//payWindow            = uint64(42336)    // 1 week 7*24*60*4.6
-	//statisticsMissWindow = uint64(6048)     // 1 day 24*60*4.6
+	outOfDateWindow      = uint64(198720) // 1 month 30*24*60*4.6
+	missVotedWindow      = uint64(596160) // 3 month 3*30*24*60*4.6
+	payWindow            = uint64(42336)  // 1 week 7*24*60*4.6
+	statisticsMissWindow = uint64(6048)   // 1 day 24*60*4.6
 
 	//test
-	outOfDateWindow      = uint64(100)
-	missVotedWindow      = uint64(120)
-	payWindow            = uint64(5)
-	statisticsMissWindow = uint64(10)
+	//outOfDateWindow      = uint64(100)
+	//missVotedWindow      = uint64(120)
+	//payWindow            = uint64(5)
+	//statisticsMissWindow = uint64(10)
 )
 
 const (
 	SOLO_RATE  = 3
 	TOTAL_RATE = 4
 
-	//minSharePoolSize = 20000  // 20K
+	minSharePoolSize = 20000 // 20K
 	//test
-	minSharePoolSize = 20
+	//minSharePoolSize = 20
 
 	minMissRate    = 0.2
 	MaxVoteCount   = 3
