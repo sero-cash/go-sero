@@ -15,28 +15,21 @@ import (
 )
 
 type Lotter struct {
-	worker  *worker
-	state   *state.StateDB
-	header  *types.Header
-	hashPos common.Hash
-	stake   *stake.StakeState
-	key     voteKey
-	lottery types.Lottery
+	worker *worker
+	state  *state.StateDB
+	block  *types.Block
+	stake  *stake.StakeState
 
-	parentBlock *types.Block
-
+	lottery            types.Lottery
 	currentHeaderVotes []types.HeaderVote
 	parentHeaderVotes  []types.HeaderVote
 }
 
-func newLotter(worker *worker, header *types.Header, db *state.StateDB) (ret Lotter) {
+func newLotter(worker *worker, block *types.Block, db *state.StateDB) (ret Lotter) {
 	ret.worker = worker
-	ret.header = header
 	ret.state = db.Copy()
+	ret.block = block
 	ret.stake = stake.NewStakeState(ret.state)
-	ret.hashPos = header.HashPos()
-	ret.key = voteKey{header.Number.Uint64(), ret.hashPos}
-	ret.lottery = types.Lottery{header.ParentHash, header.Number.Uint64() - 1, ret.hashPos}
 	return
 }
 
@@ -44,8 +37,64 @@ func selKey(idx uint32, sid []byte) string {
 	return common.BytesToString(utils.EncodeNumber32(idx)) + string(sid)
 }
 
-func (self *Lotter) verify(vote *types.Vote, share *stake.Share) bool {
+type shareFilter struct {
+	vote  *types.Vote
+	share *stake.Share
+}
 
+type votesFilter struct {
+	stake       *stake.StakeState
+	filters     map[string]*shareFilter
+	block       *types.Block
+	parentBlock *types.Block
+	idxs        []uint32
+	shares      []*stake.Share
+}
+
+func NewVotesFilter(state *stake.StakeState, idxs []uint32, shares []*stake.Share, block *types.Block, parentBlock *types.Block) (ret votesFilter) {
+	ret.stake = state
+	ret.filters = make(map[string]*shareFilter)
+	for i, idx := range idxs {
+		share := shares[i]
+		ret.filters[selKey(idx, share.Id())] = &shareFilter{nil, share}
+	}
+	ret.block = block
+	ret.parentBlock = parentBlock
+	ret.idxs = idxs
+	ret.shares = shares
+	return
+}
+
+func (self *votesFilter) result() (ret []types.Vote) {
+	for _, v := range self.filters {
+		if v.vote != nil {
+			ret = append(ret, *v.vote)
+		}
+	}
+	return
+}
+
+func (self *votesFilter) RunFilter(votes voteSet) (dels []types.Vote) {
+	for _, v := range votes {
+		for _, vote := range v {
+			if vote.PosHash == self.block.HashPos() {
+				k := selKey(vote.Idx, vote.ShareId[:])
+				if s, ok := self.filters[k]; ok {
+					if s.vote == nil {
+						if self.verify(&vote, s.share) {
+							copy_vote := vote
+							self.filters[k].vote = &copy_vote
+						}
+					}
+				}
+				dels = append(dels, vote)
+			}
+		}
+	}
+	return
+}
+
+func (self *votesFilter) verify(vote *types.Vote, share *stake.Share) bool {
 	var votePkr *keys.PKr
 	if vote.IsPool {
 		if share.PoolId != nil {
@@ -57,7 +106,6 @@ func (self *Lotter) verify(vote *types.Vote, share *stake.Share) bool {
 	} else {
 		votePkr = &share.VotePKr
 	}
-
 	if votePkr != nil {
 		parentPosHash := self.parentBlock.HashPos()
 		stakHash := types.StakeHash(&vote.PosHash, &parentPosHash, vote.IsPool)
@@ -68,71 +116,26 @@ func (self *Lotter) verify(vote *types.Vote, share *stake.Share) bool {
 	return false
 }
 
-type shareFilter struct {
-	vote  *types.Vote
-	share *stake.Share
-}
-
-type votesFilter map[string]*shareFilter
-
-func (self *votesFilter) result() (ret []types.Vote) {
-	for _, v := range *self {
-		if v.vote != nil {
-			ret = append(ret, *v.vote)
-		}
-	}
-	return
-}
-
-func (self *Lotter) NewFilter(idxs []uint32, shares []*stake.Share) (filter votesFilter) {
-	filter = make(votesFilter)
-	for i, idx := range idxs {
-		share := shares[i]
-		filter[selKey(idx, share.Id())] = &shareFilter{nil, share}
-	}
-	return
-}
-
-func (self *Lotter) RunFilter(filter map[string]*shareFilter, votes voteSet,hashPos common.Hash) (dels []types.Vote) {
-
-	for _, v := range votes {
-		for _, vote := range v {
-			if vote.PosHash == self.hashPos {
-				k := selKey(vote.Idx, vote.ShareId[:])
-				if s, ok := filter[k]; ok {
-					if s.vote == nil {
-						if self.verify(&vote, s.share) {
-							copy_vote := vote
-							filter[k].vote = &copy_vote
-						}
-					}
-				}
-				dels = append(dels, vote)
-			}
-		}
-	}
-
-	return
-}
 func (self *Lotter) wait() bool {
-	needWait := self.stake.NeedTwoVote(self.header.Number.Uint64())
+	needWait := self.stake.NeedTwoVote(self.block.NumberU64())
 	if !needWait {
 		log.Info("not need pos")
 	}
 
-	self.parentBlock = self.worker.chain.GetBlockByHash(self.header.ParentHash)
+	parentBlock := self.worker.chain.GetBlockByHash(self.block.ParentHash())
+
 	startTime := time.Now()
 
-	idx, shares, err := self.stake.SeleteShare(self.hashPos)
+	idx, shares, err := self.stake.SeleteShare(self.block.HashPos())
 	if err != nil {
 		log.Error("Lotter wait ", "error", err)
 		return false
 	}
-	filter := self.NewFilter(idx, shares)
+	filter := NewVotesFilter(self.stake, idx, shares, self.block, parentBlock)
 	count := 0
 	for {
 		currentHeader := self.worker.chain.CurrentHeader()
-		if currentHeader.Hash() != self.header.ParentHash {
+		if currentHeader.Hash() != self.block.ParentHash() {
 			return false
 		}
 
@@ -147,10 +150,11 @@ func (self *Lotter) wait() bool {
 		}
 		count++
 
-		votes := self.worker.pendingVote.getMyPending(self.key)
+		key := voteKey{self.block.NumberU64(), self.block.HashPos()}
+		votes := self.worker.pendingVote.getMyPending(key)
 
-		dels := self.RunFilter(filter, votes, self.hashPos)
-		self.worker.pendingVote.deleteVotes(self.key, dels)
+		dels := filter.RunFilter(votes)
+		self.worker.pendingVote.deleteVotes(key, dels)
 
 		sels := filter.result()
 		if len(sels) > 2 || !needWait {
@@ -158,12 +162,13 @@ func (self *Lotter) wait() bool {
 		}
 	}
 
-	parentVoteKey := voteKey{self.parentBlock.NumberU64(), self.parentBlock.HashPos()}
+	parentVoteKey := voteKey{parentBlock.NumberU64(), parentBlock.HashPos()}
 	parentVoteSet := self.worker.pendingVote.getMyPending(parentVoteKey)
 
-	pidx, pshares := stake.SeleteBlockShare(self.worker.chain.GetDB(), self.parentBlock.Hash())
-	parentfilter := self.NewFilter(pidx, pshares)
-	self.RunFilter(parentfilter, parentVoteSet, self.parentBlock.HashPos())
+	pidx, pshares := stake.SeleteBlockShare(self.worker.chain.GetDB(), parentBlock.Hash())
+	ppBlock := self.worker.chain.GetBlockByHash(parentBlock.ParentHash())
+	parentfilter := NewVotesFilter(self.stake, pidx, pshares, parentBlock, ppBlock)
+	parentfilter.RunFilter(parentVoteSet)
 
 	for _, vote := range filter.result() {
 		log.Info("pos currentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
@@ -175,14 +180,14 @@ func (self *Lotter) wait() bool {
 
 	parentVotes := parentfilter.result()
 	if len(parentVotes) > 0 {
-		log.Info("parentVotes", "block", self.header.Number.Uint64(), "voteIds", pidx)
+		log.Info("parentVotes", "block", self.block.NumberU64(), "voteIds", pidx)
 		voteNumMap := map[common.Hash]int{}
 		for _, share := range pshares {
 			voteNumMap[common.BytesToHash(share.Id())] += 1
 		}
 
 		voteMap := map[keys.Uint512]bool{}
-		for _, vote := range self.parentBlock.Header().CurrentVotes {
+		for _, vote := range parentBlock.Header().CurrentVotes {
 			voteMap[vote.Sign] = true
 			voteNumMap[vote.Id] -= 1
 		}

@@ -328,10 +328,10 @@ func (self *worker) powResultLoop() {
 			if result.Block.Header().Number.Uint64() < seroparam.SIP4() {
 				self.recv <- result
 			} else {
-				lotter := newLotter(self, result.Block.Header(), result.Work.state)
-				self.voter.AddLottery(&lotter.lottery)
+				lotter := newLotter(self, result.Block, result.Work.state)
+				self.voter.AddLottery(&types.Lottery{result.Block.ParentHash(), result.Block.Number().Uint64() - 1, result.Block.HashPos()})
 
-				log.Info("Broadcast Lottery", "poshash", lotter.hashPos, "block", lotter.header.Number.Uint64())
+				log.Info("Broadcast Lottery", "poshash", result.Block.HashPos(), "block", result.Block.Number().Uint64())
 
 				go func() {
 					if lotter.wait() {

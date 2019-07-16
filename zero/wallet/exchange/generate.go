@@ -29,8 +29,10 @@ func (self *Exchange) buildTxParam(
 
 	txParam, e = prepare.BuildTxParam(&prepare.DefaultTxParamState{}, utxos, refundTo, receptions, cmds, fee, gasPrice)
 
-	for _, in := range txParam.Ins {
-		self.usedFlag.Store(in.Out.Root, 1)
+	if e == nil {
+		for _, in := range txParam.Ins {
+			self.usedFlag.Store(in.Out.Root, 1)
+		}
 	}
 	return
 }

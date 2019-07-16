@@ -11,7 +11,6 @@ import (
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/crypto"
@@ -363,7 +362,7 @@ func (self *StakeState) GetStakeState(key common.Hash) common.Hash {
 	return common.BytesToHash(self.sharePool.GetValue(key.Bytes()))
 }
 
-var newShareNumKey=[]byte("newShareNum")
+var newShareNumKey = []byte("newShareNum")
 
 func (self *StakeState) setNewShareNum(num uint32) {
 	self.newShareNum.SetValue(newShareNumKey, utils.EncodeNumber32(num))
@@ -444,7 +443,7 @@ func (self *StakeState) ShareSize() uint32 {
 
 func (self *StakeState) SeleteShare(seed common.Hash) (ints []uint32, shares []*Share, err error) {
 	tree := NewTree(self)
-	tree.MiddleOrder()
+	//tree.MiddleOrder()
 
 	if tree.size() < MaxVoteCount {
 		return
@@ -475,14 +474,6 @@ func (self *StakeState) GetShare(key common.Hash) *Share {
 	return item.(*Share)
 }
 
-/*func (self *StakeState) getShare(key common.Hash) *Share {
-	share := self.GetShare(key)
-	if share == nil {
-		log.Crit("getShare error", "key", common.BytesToHash(key[:]))
-	}
-	return share
-}*/
-
 func (self *StakeState) GetStakePool(poolId common.Hash) *StakePool {
 	item := self.stakePoolObj.GetObj(poolId.Bytes(), &StakePool{})
 	if item == nil {
@@ -490,14 +481,6 @@ func (self *StakeState) GetStakePool(poolId common.Hash) *StakePool {
 	}
 	return item.(*StakePool)
 }
-
-/*func (self *StakeState) getStakePool(poolId common.Hash) *StakePool {
-	pool := self.GetStakePool(poolId)
-	if pool == nil {
-		log.Crit("getStakePool error", "poolId", common.BytesToHash(poolId[:]))
-	}
-	return pool
-}*/
 
 func GetBlockRecords(getter serodb.Getter, blockHash common.Hash, blockNumber uint64) (shares []*Share, pools []*StakePool) {
 	records := state.StakeDB.GetBlockRecords(getter, blockNumber, &blockHash)
@@ -511,8 +494,6 @@ func GetBlockRecords(getter serodb.Getter, blockHash common.Hash, blockNumber ui
 		if record.Name == "pool" {
 			for _, each := range record.Pairs {
 				ret := StakePoolDB.GetObject(getter, each.Hash, &StakePool{})
-				pool := ret.(*StakePool)
-				log.Info("get blocks", "id", hexutil.Encode(each.Ref), "hash", hexutil.Encode(each.Hash), "retHash", hexutil.Encode(pool.State()))
 				pools = append(pools, ret.(*StakePool))
 			}
 		}
@@ -612,7 +593,7 @@ func sum(basePrice, addition *big.Int, n int64) *big.Int {
 
 func (self *StakeState) CaleAvgPrice(amount *big.Int) (uint32, *big.Int, *big.Int) {
 	basePrice := self.CurrentPrice()
- 	left := int64(1)
+	left := int64(1)
 	right := new(big.Int).Div(amount, basePrice).Int64()
 	if right <= 1 {
 		return uint32(right), basePrice, basePrice
@@ -799,7 +780,6 @@ func (self *StakeState) processRemedyRewards(bc blockChain, header *types.Header
 		parentHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 		if len(parentHeader.CurrentVotes) >= 2 && len(parentHeader.ParentVotes) > 0 {
 			soloReware, totalReward := self.StakeCurrentReward(parentHeader.Number)
-			log.Info("accumulateRewards: currentReward", "soloReware", soloReware, "totalReward", totalReward, "header.ParentVotes", len(parentHeader.ParentVotes))
 			reward := new(big.Int)
 			for _, vote := range parentHeader.ParentVotes {
 				if vote.IsPool {
@@ -815,7 +795,6 @@ func (self *StakeState) processRemedyRewards(bc blockChain, header *types.Header
 				},
 				nil,
 			}
-			log.Info("pos to pow reward:", "coinbase", parentHeader.Coinbase.String(), "value", reward, "at", parentHeader.Number.Uint64())
 			self.statedb.NextZState().AddTxOut(parentHeader.Coinbase, asset)
 		}
 	}
@@ -849,14 +828,17 @@ func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) 
 	// last block pow remedy rewards
 	self.processRemedyRewards(bc, header)
 	// last block statistics
-	self.statisticsByWindow(header, bc)
+	err = self.statisticsByWindow(header, bc)
+	if err != nil {
+		return err
+	}
 	return
 }
 
-func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) {
+func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) error {
 	statisticsMissWindow := getStatisticsMissWindow()
 	if header.Number.Uint64() < 1 || header.Number.Uint64()-1 < seroparam.SIP4() {
-		return
+		return nil
 	}
 	value := self.missedNum.GetValue(missedNumKey)
 
@@ -876,17 +858,16 @@ func (self *StakeState) statisticsByWindow(header *types.Header, bc blockChain) 
 			delNum = uint32(MaxVoteCount - totalWVote)
 		}
 		if missedNum < delNum {
-			log.Crit("ProcessBeforeApply: statisticsByWindow err", "missedNum", missedNum)
+			return errors.New("ProcessBeforeApply: statisticsByWindow err")
 		} else {
 			missedNum -= delNum
 		}
 	}
-	log.Info("ProcessBeforeApply: statisticsByWindow", "missedNum", missedNum)
 	self.missedNum.SetValue(missedNumKey, utils.EncodeNumber32(missedNum))
+	return nil
 }
 
 func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) (err error) {
-	log.Info("ProcessBeforeApply: processVotedShare", "blockNumber", header.Number.Uint64())
 	if header.Number.Uint64() == 1 || header.Number.Uint64()-1 < seroparam.SIP4() {
 		return
 	}
@@ -894,7 +875,6 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) (
 	tree := NewTree(self)
 	poshash := preHeader.HashPos()
 	indexs, e := FindShareIdxs(tree.size(), MaxVoteCount, NewHash256PRNG(poshash[:]))
-	log.Info("processVotedShare selete share", "poshash", poshash, "blockNumber", preHeader.Number.Uint64(), "indexs", indexs, "pool size", tree.size())
 	if e == nil {
 		ndoes := []*SNode{}
 		for _, index := range indexs {
@@ -912,11 +892,9 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) (
 			}
 			share.WillVoteNum += 1
 			if share.Num > 0 {
-				log.Info("ProcessBeforeApply: share.Num-1", "share.Num", share.Num, "key", common.Bytes2Hex(share.Id()))
 				share.Num -= 1
 			} else {
 				return errors.New(fmt.Sprint("ProcessBeforeApply: process vote err ", "shareId=", common.Bytes2Hex(share.Id()), " error=", "share.Num=0"))
-				//log.Crit("ProcessBeforeApply: process vote err", "shareId", common.Bytes2Hex(share.Id()), "error", "share.Num=0")
 			}
 			self.updateShare(share)
 
@@ -930,16 +908,13 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) (
 				pool.MissedVoteNum += 1
 
 				if pool.CurrentShareNum > 0 {
-					log.Info("ProcessBeforeApply: pool.CurrentShareNum", "poolId", common.Bytes2Hex(pool.Id()), "pool.CurrentShareNum", pool.CurrentShareNum)
 					pool.CurrentShareNum -= 1
 				} else {
 					err = errors.New(fmt.Sprint("ProcessBeforeApply: process vote err", " poolId=", share.PoolId, " error=", "pool.CurrentShareNum=0"))
 					return
-					//log.Crit("ProcessBeforeApply: process vote err", "poolId", share.PoolId, "error", "pool.CurrentShareNum=0")
 				}
 				pool.WishVoteNum += 1
 				self.updateStakePool(pool)
-				log.Info("ProcessBeforeApply: pool", "poolId", common.Bytes2Hex(pool.Id()), "pool.CurrentShareNum", pool.CurrentShareNum, "pool.WillVoteNum", pool.WishVoteNum)
 			}
 		}
 		for _, node := range ndoes {
@@ -949,8 +924,6 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) (
 
 	soloReware, reward := self.StakeCurrentReward(preHeader.Number)
 	if len(preHeader.CurrentVotes) > 0 {
-		//log.Info("ProcessBeforeApply: process vote CurrentVotes", "size", len(preHeader.CurrentVotes), "blockNumber", preHeader.Number.Uint64())
-		log.Info("ProcessBeforeApply: currentReward", "soloReware", soloReware, "reward", reward)
 		for _, vote := range preHeader.CurrentVotes {
 			err = self.rewardVote(vote, soloReware, reward, preHeader.Number.Uint64())
 			if err != nil {
@@ -960,10 +933,8 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) (
 	}
 
 	if len(preHeader.ParentVotes) > 0 {
-		//log.Info("ProcessBeforeApply: process vote ParentVotes", "size", len(preHeader.ParentVotes), "blockNumber", preHeader.Number.Uint64())
 		reward = new(big.Int).Sub(reward, new(big.Int).Div(reward, big.NewInt(3)))
 		soloReware = new(big.Int).Sub(soloReware, new(big.Int).Div(soloReware, big.NewInt(3)))
-		log.Info("ProcessBeforeApply for ParentVotes currentReward", "soloReware", soloReware, "reward", reward)
 		for _, vote := range preHeader.ParentVotes {
 			err = self.rewardVote(vote, soloReware, reward, preHeader.Number.Uint64())
 			if err != nil {
@@ -982,10 +953,8 @@ func (self *StakeState) rewardVote(vote types.HeaderVote, soloReware, reward *bi
 	}
 	if share.WillVoteNum > 0 {
 		share.WillVoteNum -= 1
-		log.Info("processVotedShare rewardVote", "shareId", common.Bytes2Hex(share.Id()), "share.WillVoteNum", share.WillVoteNum)
 	} else {
 		return errors.New(fmt.Sprint("ProcessBeforeApply: process vote err", " shareId=", common.Bytes2Hex(share.Id()), " error=", "share.WillVoteNum=0"))
-		//log.Crit("ProcessBeforeApply: process vote err", "shareId", common.Bytes2Hex(share.Id()), "error", "share.WillVoteNum=0")
 	}
 
 	if share.PoolId != nil {
@@ -1001,7 +970,6 @@ func (self *StakeState) rewardVote(vote types.HeaderVote, soloReware, reward *bi
 			}
 		} else {
 			return errors.New(fmt.Sprint("ProcessBeforeApply: process vote err", " poolId=", share.PoolId, " error=", "pool.WillVoteNum=0"))
-			//log.Crit("ProcessBeforeApply: process vote err", "poolId", share.PoolId, "error", "pool.WillVoteNum=0")
 		}
 		self.updateStakePool(pool)
 	}
@@ -1015,23 +983,18 @@ func (self *StakeState) rewardVote(vote types.HeaderVote, soloReware, reward *bi
 			pool.MissedVoteNum -= 1
 		} else {
 			return errors.New(fmt.Sprint("ProcessBeforeApply: process vote err", " poolId=", share.PoolId, " error=", "pool.MissedVoteNum=0"))
-			//log.Crit("ProcessBeforeApply: process vote err", "poolId", share.PoolId, "error", "pool.MissedVoteNum=0")
 		}
 
 		poolReward := new(big.Int).Div(new(big.Int).Mul(reward, big.NewInt(int64(share.Fee))), big.NewInt(10000))
-		log.Info("pos to pool fee", "pool", common.BytesToHash(pool.Id()), "reward", poolReward, "at", block)
 		pool.addProfit(poolReward)
 		pool.addIncome(poolReward)
 
 		share.addProfit(new(big.Int).Sub(reward, poolReward))
 		share.addIncome(new(big.Int).Add(share.Value, new(big.Int).Sub(reward, poolReward)))
-		log.Info("pos to share reward", "pool", common.BytesToHash(pool.Id()), "share", common.BytesToHash(share.Id()), "reward", new(big.Int).Sub(reward, poolReward), "at", block)
 		self.updateStakePool(pool)
 	} else {
 		share.addProfit(soloReware)
 		share.addIncome(new(big.Int).Add(share.Value, soloReware))
-		log.Info("pos to share reward", "share", common.BytesToHash(share.Id()), "reward", soloReware, "at", block)
-		//log.Info("processVotedShare rewardVote", "shareId", common.Bytes2Hex(share.Id()), "share.Value", share.Value, "soloReware", soloReware, "Income", share.Income)
 	}
 	self.updateShare(share)
 	return nil
@@ -1070,7 +1033,6 @@ func (self *StakeState) processOutDate(header *types.Header, bc blockChain) (err
 				if sndoe == nil {
 					err = errors.New("processOutDate share not found")
 					return
-					//log.Crit("ProcessBeforeApply: processOutDate share not found", "shareId", common.Bytes2Hex(share.Id()), "InitNum", share.InitNum, "Num", share.Num, "WillVoteNum", share.WillVoteNum)
 				}
 				if share.Num != sndoe.num {
 					err = errors.New(fmt.Sprint("ProcessBeforeApply: processOutDate err", " share.num=", share.Num, " snode.num=", sndoe.num))
@@ -1089,17 +1051,14 @@ func (self *StakeState) processOutDate(header *types.Header, bc blockChain) (err
 					} else {
 						err = errors.New(fmt.Sprint("ProcessBeforeApply: processOutDate err", " pool.CurrentShareNum ", pool.CurrentShareNum, " share.num=", share.Num))
 						return
-						//log.Crit("ProcessBeforeApply: processOutDate err", "pool.CurrentShareNum", pool.CurrentShareNum, "share.num", share.Num)
 					}
 					if pool.Closed && pool.CurrentShareNum == 0 && pool.WishVoteNum == 0 {
 						pool.addIncome(pool.Amount)
 						pool.Amount = new(big.Int)
-						log.Info("ProcessBeforeApply: processOutDate close pool", "poolId", common.Bytes2Hex(share.Id()))
 					}
 					self.updateStakePool(pool)
 				}
 
-				log.Info("ProcessBeforeApply: processOutDate set share.Num = 0", "shareId", common.Bytes2Hex(share.Id()), "share.num", share.Num)
 				share.addIncome(new(big.Int).Mul(share.Value, big.NewInt(int64(share.Num))))
 				share.Status = STATUS_OUTOFDATE
 				self.updateShare(share)
@@ -1136,10 +1095,6 @@ func (self *StakeState) processMissVoted(header *types.Header, bc blockChain) (e
 					continue
 				}
 
-				//if share.Num != 0 {
-				//	log.Crit("ProcessBeforeApply: processMissVoted err, share.Num!=0", "shareId", common.Bytes2Hex(share.Id()), "share.Num", share.Num)
-				//}
-
 				if share.PoolId != nil {
 					pool := self.GetStakePool(*share.PoolId)
 					if pool == nil {
@@ -1149,19 +1104,16 @@ func (self *StakeState) processMissVoted(header *types.Header, bc blockChain) (e
 					if pool.WishVoteNum < share.WillVoteNum {
 						err = errors.New(fmt.Sprint("ProcessBeforeApply: processMissVoted err", " poolId=", common.Bytes2Hex(share.Id()), " error=", "pool.WishVoteNum < share.WillVoteNum"))
 						return
-						//log.Crit("ProcessBeforeApply: processMissVoted err", "poolId", common.Bytes2Hex(share.Id()), "error", "pool.WishVoteNum < share.WillVoteNum")
 					}
 					pool.WishVoteNum -= share.WillVoteNum
 					if pool.Closed && pool.CurrentShareNum == 0 && pool.WishVoteNum == 0 {
 						pool.addIncome(pool.Amount)
 						pool.Amount = new(big.Int)
-						log.Info("ProcessBeforeApply: processMissVoted close pool", "poolId", common.Bytes2Hex(share.Id()))
 					}
 					self.updateStakePool(pool)
 				}
 
 				share.addIncome(new(big.Int).Mul(share.Value, big.NewInt(int64(share.WillVoteNum))))
-				log.Info("ProcessBeforeApply: processMissVoted set share.Statue = STATUS_FINISHED", "shareId", common.Bytes2Hex(share.Id()), "share.WillVoteNum", share.WillVoteNum)
 				share.Status = STATUS_FINISHED
 				self.updateShare(share)
 			}
@@ -1226,7 +1178,6 @@ func (self *StakeState) payIncome(bc blockChain, header *types.Header) (err erro
 			share.setIncomeZero()
 			self.statedb.NextZState().AddTxOut(addr, asset)
 			self.updateShare(share)
-			log.Info("ProcessBeforeApply: payIncome rewardVote", "shareId", common.Bytes2Hex(share.Id()), "Income", share.Income)
 		}
 	}
 	for _, pool := range pools {
@@ -1242,7 +1193,6 @@ func (self *StakeState) payIncome(bc blockChain, header *types.Header) (err erro
 			pool.setIncomeZero()
 			self.statedb.NextZState().AddTxOut(addr, asset)
 			self.updateStakePool(pool)
-			log.Info("ProcessBeforeApply: payIncome rewardVote", "poolId", common.Bytes2Hex(pool.Id()), "Income", pool.Income)
 		}
 	}
 	return nil
