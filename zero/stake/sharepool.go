@@ -272,6 +272,7 @@ type StakeState struct {
 	stakePoolObj consensus.ObjPoint
 	missedNum    consensus.KVPoint
 	blockHash    consensus.KVPoint
+	newShareNum  consensus.KVPoint
 }
 
 var (
@@ -341,6 +342,7 @@ func NewStakeState(statedb *state.StateDB) *StakeState {
 	stakeState.shareObj = consensus.NewObjPt(cons, "STAKE$SHAREOBJ$CONS", ShareDB.Pre, "share")
 	stakeState.stakePoolObj = consensus.NewObjPt(cons, "STAKE$POOL$CONS", StakePoolDB.Pre, "pool")
 	stakeState.blockHash = consensus.NewKVPt(cons, "BLOCK$BLOCKHASH$", "")
+	stakeState.newShareNum = consensus.NewKVPt(cons, "STAKE$NEWSHARENUM$", "")
 	return stakeState
 }
 
@@ -361,6 +363,15 @@ func (self *StakeState) GetStakeState(key common.Hash) common.Hash {
 	return common.BytesToHash(self.sharePool.GetValue(key.Bytes()))
 }
 
+func (self *StakeState) setNewShareNum(num uint32) {
+	self.newShareNum.SetValue([]byte("newshoreNum"), utils.EncodeNumber32(num))
+}
+
+func (self *StakeState) getNewShareNum() uint32 {
+	value := self.newShareNum.GetValue([]byte("newshoreNum"))
+	return utils.DecodeNumber32(value)
+}
+
 func (self *StakeState) AddShare(share *Share) {
 	//tree := NewTree(self)
 	//tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.InitNum})
@@ -372,7 +383,19 @@ func (self *StakeState) AddShare(share *Share) {
 	if share.Profit == nil {
 		share.Profit = new(big.Int)
 	}
+	self.setNewShareNum(self.getNewShareNum() + share.InitNum)
 	self.updateShare(share)
+}
+
+func (self *StakeState) InsertShare(share *Share) error {
+	num := self.getNewShareNum()
+	if num < share.InitNum {
+		return errors.New("newsharenum < share.InitNum")
+	}
+	self.setNewShareNum(num - share.InitNum)
+	tree := NewTree(self)
+	tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num, nodeNum: 1})
+	return nil
 }
 
 func (self *StakeState) updateShare(share *Share) {
@@ -563,7 +586,9 @@ func (self *StakeState) getShares(getter serodb.Getter, blockHash common.Hash, b
 
 func (self *StakeState) CurrentPrice() *big.Int {
 	tree := NewTree(self)
-	return new(big.Int).Add(basePrice, new(big.Int).Mul(addition, big.NewInt(int64(tree.size()))))
+	newNum := self.getNewShareNum()
+	size := tree.size() + newNum
+	return new(big.Int).Add(basePrice, new(big.Int).Mul(addition, big.NewInt(int64(size))))
 }
 
 func (self *StakeState) SumAmount(n int64) *big.Int {
@@ -585,7 +610,7 @@ func sum(basePrice, addition *big.Int, n int64) *big.Int {
 
 func (self *StakeState) CaleAvgPrice(amount *big.Int) (uint32, *big.Int, *big.Int) {
 	basePrice := self.CurrentPrice()
-	left := int64(1)
+ 	left := int64(1)
 	right := new(big.Int).Div(amount, basePrice).Int64()
 	if right <= 1 {
 		return uint32(right), basePrice, basePrice
@@ -684,7 +709,7 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 		blockPosHash := block.HashPos()
 		voteNumMap := map[keys.Uint512]bool{}
 		for _, vote := range header.CurrentVotes {
-			ret := types.StakeHash(&blockPosHash, &parentPosHash,vote.IsPool)
+			ret := types.StakeHash(&blockPosHash, &parentPosHash, vote.IsPool)
 			if err := self.verifyVote(vote, ret); err != nil {
 				return err
 			}
@@ -721,7 +746,7 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 		parentPosHash := perperBlock.HashPos()
 		blockPosHash := parentblock.HashPos()
 		for _, vote := range header.ParentVotes {
-			ret := types.StakeHash(&blockPosHash, &parentPosHash,vote.IsPool)
+			ret := types.StakeHash(&blockPosHash, &parentPosHash, vote.IsPool)
 			if err := self.verifyVote(vote, ret); err != nil {
 				return err
 			}
@@ -1148,12 +1173,13 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) (e
 	shares := GetSharesByBlock(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64())
 	//shares := self.getShares(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64(), shareCacheMap)
 	if len(shares) > 0 {
-		tree := NewTree(self)
+		//tree := NewTree(self)
 		for _, share := range shares {
 			if share.BlockNumber != perHeader.Number.Uint64() {
 				continue
 			}
-			tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num, nodeNum: 1})
+			//tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num, nodeNum: 1})
+			self.InsertShare(share)
 			if share.PoolId != nil {
 				pool := self.GetStakePool(*share.PoolId)
 				if pool == nil {
