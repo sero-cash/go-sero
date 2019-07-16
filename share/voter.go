@@ -278,7 +278,6 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 		var voteInfos []voteInfo
 		if len(ints) > 0 {
 			parentPos := parentHeader.HashPos()
-			stakeHash := types.StakeHash(&poshash, &parentPos)
 			wallets := self.sero.AccountManager().Wallets()
 			for i, share := range shares {
 				var pool *stake.StakePool
@@ -289,6 +288,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 					}
 				}
 				if pool != nil {
+					stakeHash := types.StakeHash(&poshash, &parentPos,true)
 					seed := GetSeedByVotePkr(wallets, pool.VotePKr)
 					if seed != nil {
 						voteInfos = append(voteInfos, voteInfo{
@@ -304,6 +304,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 				}
 				shareVoteSeed := GetSeedByVotePkr(wallets, share.VotePKr)
 				if shareVoteSeed != nil {
+					stakeHash := types.StakeHash(&poshash, &parentPos,false)
 					info := voteInfo{
 						ints[i],
 						parentNumber.Uint64(),
@@ -380,27 +381,6 @@ func (self *Voter) AddLottery(lottery *types.Lottery) {
 	}
 }
 
-func (self *Voter) getStakeHashByParentHash(posHash common.Hash, parentHash common.Hash) common.Hash {
-	parentHeader := self.chain.GetHeaderByHash(parentHash)
-	if parentHeader == nil {
-		return common.Hash{}
-	}
-	parentPosHash := parentHeader.HashPos()
-	stakeHash := types.StakeHash(&posHash, &parentPosHash)
-	return stakeHash
-
-}
-
-func (self *Voter) getStakeHashByParentNumb(posHash common.Hash, parentNumber uint64) common.Hash {
-	parentHeader := self.chain.GetHeaderByNumber(parentNumber)
-	if parentHeader == nil {
-		return common.Hash{}
-	}
-	parentPosHash := parentHeader.HashPos()
-	stakeHash := types.StakeHash(&posHash, &parentPosHash)
-	return stakeHash
-
-}
 func (self *Voter) getStateByNumber(num uint64) (*state.StateDB, error) {
 	header := self.chain.GetHeaderByNumber(num)
 	if header == nil {

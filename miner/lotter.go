@@ -60,7 +60,7 @@ func (self *Lotter) verify(vote *types.Vote, share *stake.Share) bool {
 
 	if votePkr != nil {
 		parentPosHash := self.parentBlock.HashPos()
-		stakHash := types.StakeHash(&vote.PosHash, &parentPosHash)
+		stakHash := types.StakeHash(&vote.PosHash, &parentPosHash,vote.IsPool)
 		if keys.VerifyPKr(stakHash.HashToUint256(), &vote.Sign, votePkr) {
 			return true
 		}

@@ -631,11 +631,12 @@ func (self *StakeState) StakeCurrentReward(blockNumber *big.Int) (soloRewards *b
 	if totalReward.Cmp(maxReware) > 0 {
 		totalReward = new(big.Int).Set(maxReware)
 	}
-	halve := ethash.Halve(blockNumber)
-	fmt.Println(halve)
 
-	soleAmount := new(big.Int).Div(new(big.Int).Mul(totalReward, big.NewInt(SOLO_RATE)), big.NewInt(TOTAL_RATE))
-	return new(big.Int).Div(soleAmount, halve), new(big.Int).Div(totalReward, halve)
+	halve := ethash.Halve(blockNumber)
+	totalReward = new(big.Int).Div(totalReward, halve)
+	totalReward = new(big.Int).Div(totalReward, big.NewInt(3))
+
+	return new(big.Int).Div(new(big.Int).Mul(totalReward, big.NewInt(SOLO_RATE)), big.NewInt(TOTAL_RATE)), totalReward
 }
 
 func (self *StakeState) checkShareRepeated(header *types.Header) error {
@@ -681,9 +682,9 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 		// check repeated vote
 		parentPosHash := parentblock.HashPos()
 		blockPosHash := block.HashPos()
-		ret := types.StakeHash(&blockPosHash, &parentPosHash)
 		voteNumMap := map[keys.Uint512]bool{}
 		for _, vote := range header.CurrentVotes {
+			ret := types.StakeHash(&blockPosHash, &parentPosHash,vote.IsPool)
 			if err := self.verifyVote(vote, ret); err != nil {
 				return err
 			}
@@ -719,8 +720,8 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 		perperBlock := bc.GetBlock(parentblock.ParentHash(), parentblock.NumberU64()-1)
 		parentPosHash := perperBlock.HashPos()
 		blockPosHash := parentblock.HashPos()
-		ret := types.StakeHash(&blockPosHash, &parentPosHash)
 		for _, vote := range header.ParentVotes {
+			ret := types.StakeHash(&blockPosHash, &parentPosHash,vote.IsPool)
 			if err := self.verifyVote(vote, ret); err != nil {
 				return err
 			}
@@ -769,7 +770,7 @@ func (self *StakeState) verifyVote(vote types.HeaderVote, stakeHash common.Hash)
 func (self *StakeState) processRemedyRewards(bc blockChain, header *types.Header) {
 	if header.Number.Uint64() > 0 {
 		parentHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-		if len(parentHeader.ParentVotes) > 0 {
+		if len(parentHeader.CurrentVotes) >= 2 && len(parentHeader.ParentVotes) > 0 {
 			soloReware, totalReward := self.StakeCurrentReward(parentHeader.Number)
 			log.Info("accumulateRewards: currentReward", "soloReware", soloReware, "totalReward", totalReward, "header.ParentVotes", len(parentHeader.ParentVotes))
 			reward := new(big.Int)

@@ -81,15 +81,17 @@ func TestPosRewad(t *testing.T) {
 
 	var pkr keys.PKr
 	copy(pkr[:], crypto.Keccak512([]byte("123")))
-	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 326592, Num: 326592}
+	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 326592+10, Num: 326592+10}
 	//state.AddShare(share)
 	//fmt.Println("root:", root.String())
 
 	tree := NewTree(state)
-	tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num + 10, total: share.Num + 10})
+	tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num})
 	fmt.Println(state.ShareSize())
 	fmt.Println(maxReware)
-	fmt.Println(state.StakeCurrentReward(big.NewInt(3057599 + 8294400 + 1)))
+	fmt.Println(state.StakeCurrentReward(big.NewInt(3057599)))
+	fmt.Println(state.StakeCurrentReward(big.NewInt(3057600)))
+	fmt.Println(state.StakeCurrentReward(big.NewInt(3057600 + 8294400)))
 }
 
 func TestPosDif(t *testing.T) {
