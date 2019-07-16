@@ -487,11 +487,11 @@ func (s *PrivateAccountAPI) ExportMnemonic(addr address.AccountAddress, password
 }
 
 func (s *PrivateAccountAPI) ExportRawKey(addr address.AccountAddress, password string) (hexutil.Bytes, error) {
-	seed,err:=fetchKeystore(s.am).ExportRewKey(accounts.Account{Address: addr}, password)
-	if err !=nil{
-		return nil ,err
+	seed, err := fetchKeystore(s.am).ExportRewKey(accounts.Account{Address: addr}, password)
+	if err != nil {
+		return nil, err
 	}
-	return hexutil.Bytes(seed),nil
+	return hexutil.Bytes(seed), nil
 }
 
 func (s *PrivateAccountAPI) GenSeed() (hexutil.Bytes, error) {
@@ -499,7 +499,7 @@ func (s *PrivateAccountAPI) GenSeed() (hexutil.Bytes, error) {
 	if err != nil {
 		return nil, err
 	}
-	return hexutil.Bytes(entropy),nil
+	return hexutil.Bytes(entropy), nil
 }
 
 // LockAccount will lock the account associated with the given address when it's unlocked.
@@ -852,6 +852,7 @@ func getAccountAddress(addr common.Address, b Backend) *address.AccountAddress {
 	}
 	return nil
 }
+
 /**
 func (s *PublicBlockChainAPI) GetPkg(ctx context.Context, addr common.Address, packed bool, id *keys.Uint256) (interface{}, error) {
 
@@ -996,7 +997,7 @@ func (s *PublicBlockChainAPI) GetBlockRewardByNumber(ctx context.Context, blockN
 	var res [3]hexutil.Big
 
 	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
-		rewards := GetBlockReward(block.Header().Number, block.Header().Difficulty, block.Header().GasUsed, block.Header().GasLimit)
+		rewards := GetBlockReward(block)
 		res[0] = hexutil.Big(*rewards[0])
 		res[1] = hexutil.Big(*rewards[1])
 		res[2] = hexutil.Big(*rewards[2])
@@ -1850,10 +1851,10 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB) (txParam prepare.PreTxPa
 		}
 		txParam.Cmds = prepare.Cmds{}
 		var data []byte
-		if args.Data!=nil{
-			data=*args.Data
+		if args.Data != nil {
+			data = *args.Data
 		}
-		contractCmd := stx.ContractCmd{asset, args.To.ToPKr(),data}
+		contractCmd := stx.ContractCmd{asset, args.To.ToPKr(), data}
 		txParam.Cmds.Contract = &contractCmd
 		refundPkr = keys.Addr2PKr(args.From.ToUint512(), &fromRand)
 	} else {

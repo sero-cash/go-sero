@@ -2,7 +2,6 @@ package flight
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -89,18 +88,7 @@ func (self *SLI) GenTx(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
 func SignTx(sk *keys.Uint512, paramTx *txtool.GTxParam) (tx txtool.GTx, err error) {
 	copy(paramTx.From.SKr[:], sk[:])
 	for i := range paramTx.Ins {
-		out := paramTx.Ins[i]
-		if pkr := paramTx.Ins[i].Out.State.OS.ToPKr(); pkr != nil {
-			if keys.IsMyPKr(&tk, pkr) {
-				copy(paramTx.Ins[i].SKr[:], sk[:])
-			} else {
-				err = fmt.Errorf("Sign Tx Error:  sk not match the out(%s) pkr(%s) is nil", hexutil.Encode(out.Out.Root[:]), hexutil.Encode(pkr[:]))
-				return
-			}
-		} else {
-			err = fmt.Errorf("Sign Tx Error: out(%s) pkr is nil", hexutil.Encode(out.Out.Root[:]))
-			return
-		}
+    copy(paramTx.Ins[i].SKr[:], sk[:])
 	}
 	if gtx, e := SLI_Inst.GenTx(paramTx); e != nil {
 		err = e

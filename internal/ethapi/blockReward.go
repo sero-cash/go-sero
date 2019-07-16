@@ -1,10 +1,9 @@
 package ethapi
 
 import (
-	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
+
+	"github.com/sero-cash/go-sero/core/types"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 )
@@ -21,8 +20,8 @@ var (
 	big100              = big.NewInt(100)
 	oneSero             = new(big.Int).Mul(big.NewInt(10), base)
 
-	lReward = new(big.Int).Mul(big.NewInt(176), base)
-	hReward = new(big.Int).Mul(big.NewInt(445), base)
+	lReward   = new(big.Int).Mul(big.NewInt(176), base)
+	hReward   = new(big.Int).Mul(big.NewInt(445), base)
 	hRewardV4 = new(big.Int).Mul(big.NewInt(356), base)
 
 	argA, _ = new(big.Int).SetString("985347985347985", 10)
@@ -120,8 +119,7 @@ func accumulateRewardsV3(number, bdiff *big.Int) [3]*big.Int {
 	return res
 }
 
-
-func accumulateRewardsV4(number, bdiff *big.Int) [3]*big.Int  {
+func accumulateRewardsV4(number, bdiff *big.Int) [3]*big.Int {
 	var res [3]*big.Int
 	diff := new(big.Int).Div(bdiff, big.NewInt(1000000000))
 	reward := new(big.Int).Add(new(big.Int).Mul(argA, diff), argB)
@@ -142,7 +140,6 @@ func accumulateRewardsV4(number, bdiff *big.Int) [3]*big.Int  {
 	res[2] = teamReward
 	return res
 
-
 }
 
 /**
@@ -151,13 +148,13 @@ func accumulateRewardsV4(number, bdiff *big.Int) [3]*big.Int  {
   [2] team reward
 */
 func GetBlockReward(block *types.Block) [3]*big.Int {
-	number:=block.Number()
-	diff:=block.Difficulty()
-	gasUsed:=block.GasUsed()
-	gasLimit:=block.GasLimit()
-	if (number.Uint64()>=seroparam.SIP4()){
+	number := block.Number()
+	diff := block.Difficulty()
+	gasUsed := block.GasUsed()
+	gasLimit := block.GasLimit()
+	if number.Uint64() >= seroparam.SIP4() {
 		return accumulateRewardsV4(number, diff)
-	}else if number.Uint64() >= seroparam.SIP3() {
+	} else if number.Uint64() >= seroparam.SIP3() {
 		return accumulateRewardsV3(number, diff)
 	} else if number.Uint64() >= seroparam.SIP1() {
 		return accumulateRewardsV2(number, diff)

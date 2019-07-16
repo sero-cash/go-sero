@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sero-cash/go-czero-import/cpt"
-	"github.com/sero-cash/go-sero/log"
 )
 
 type Proc interface {
