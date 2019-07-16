@@ -26,9 +26,9 @@ func TestAddShare(t *testing.T) {
 	var pkr keys.PKr
 	copy(pkr[:], crypto.Keccak512([]byte("123")))
 	share1 := &Share{PKr: pkr, Value: big.NewInt(10000), InitNum: 10, Num: 10}
-	state.AddShare(share1)
+	state.AddPendingShare(share1)
 	share2 := &Share{PKr: pkr, Value: big.NewInt(10001), InitNum: 10, Num: 10}
-	state.AddShare(share2)
+	state.AddPendingShare(share2)
 	fmt.Println(common.Bytes2Hex(share1.Id()), common.Bytes2Hex(share2.Id()))
 
 	root := stateDB.IntermediateRoot(true)
@@ -45,7 +45,7 @@ func TestCaleAvePrice(t *testing.T) {
 	//var pkr keys.PKr
 	//copy(pkr[:], crypto.Keccak512([]byte("123")))
 	//share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 10, Num: 10}
-	//state.AddShare(share)
+	//state.AddPendingShare(share)
 	//root := stateDB.IntermediateRoot(true)
 	//fmt.Println("root:", root.String())
 	//fmt.Println(state.ShareSize())
@@ -82,7 +82,7 @@ func TestPosRewad(t *testing.T) {
 	var pkr keys.PKr
 	copy(pkr[:], crypto.Keccak512([]byte("123")))
 	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 326592+10, Num: 326592+10}
-	//state.AddShare(share)
+	//state.AddPendingShare(share)
 	//fmt.Println("root:", root.String())
 
 	tree := NewTree(state)
@@ -100,7 +100,7 @@ func TestPosDif(t *testing.T) {
 	var pkr keys.PKr
 	copy(pkr[:], crypto.Keccak512([]byte("123")))
 	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 10000, Num: 10000}
-	//state.AddShare(share)
+	//state.AddPendingShare(share)
 	//fmt.Println("root:", root.String())
 
 	tree := NewTree(state)

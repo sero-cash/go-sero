@@ -217,11 +217,6 @@ func (args *RegistStakePoolTxArg) toPreTxParam() prepare.PreTxParam {
 	return preTx
 }
 
-const (
-	MinFee=2500
-	MaxFee=7500
-)
-
 func (s *PublicStakeApI) RegistStakePool(ctx context.Context, args RegistStakePoolTxArg) (common.Hash, error) {
 
 

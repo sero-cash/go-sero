@@ -363,16 +363,18 @@ func (self *StakeState) GetStakeState(key common.Hash) common.Hash {
 	return common.BytesToHash(self.sharePool.GetValue(key.Bytes()))
 }
 
+var newShareNumKey=[]byte("newShareNum")
+
 func (self *StakeState) setNewShareNum(num uint32) {
-	self.newShareNum.SetValue([]byte("newshoreNum"), utils.EncodeNumber32(num))
+	self.newShareNum.SetValue(newShareNumKey, utils.EncodeNumber32(num))
 }
 
 func (self *StakeState) getNewShareNum() uint32 {
-	value := self.newShareNum.GetValue([]byte("newshoreNum"))
+	value := self.newShareNum.GetValue(newShareNumKey)
 	return utils.DecodeNumber32(value)
 }
 
-func (self *StakeState) AddShare(share *Share) {
+func (self *StakeState) AddPendingShare(share *Share) {
 	//tree := NewTree(self)
 	//tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.InitNum})
 	share.Status = STATUS_VALID
@@ -387,7 +389,7 @@ func (self *StakeState) AddShare(share *Share) {
 	self.updateShare(share)
 }
 
-func (self *StakeState) InsertShare(share *Share) error {
+func (self *StakeState) insertSharePool(share *Share) error {
 	num := self.getNewShareNum()
 	if num < share.InitNum {
 		return errors.New("newsharenum < share.InitNum")
@@ -1179,7 +1181,7 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) (e
 				continue
 			}
 			//tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num, nodeNum: 1})
-			self.InsertShare(share)
+			self.insertSharePool(share)
 			if share.PoolId != nil {
 				pool := self.GetStakePool(*share.PoolId)
 				if pool == nil {

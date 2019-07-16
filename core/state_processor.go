@@ -201,7 +201,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			id := common.BytesToHash(share.Id())
 			shareId = &id
 
-			stakeState.AddShare(share)
+			stakeState.AddPendingShare(share)
 		} else {
 			asset := assets.Asset{Tkn: &assets.Token{
 				Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
