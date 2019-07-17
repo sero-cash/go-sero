@@ -102,8 +102,8 @@ func (self *ZState) Revert(revid int) {
 	return
 }
 
-func (state *ZState) AddOut_O(out *stx.Out_O) {
-	state.State.AddOut(out.Clone().ToRef(), nil, nil)
+func (state *ZState) AddOut_O(out *stx.Out_O, txhash common.Hash) {
+	state.State.AddOut(out.Clone().ToRef(), nil, txhash.HashToUint256())
 }
 
 func (state *ZState) AddStx(st *stx.T) (e error) {
@@ -131,7 +131,7 @@ func (state *ZState) AddStx(st *stx.T) (e error) {
 	return
 }
 
-func (state *ZState) AddTxOutWithCheck(addr common.Address, asset assets.Asset) (alarm bool) {
+func (state *ZState) AddTxOutWithCheck(addr common.Address, asset assets.Asset, txhash common.Hash) (alarm bool) {
 	alarm = false
 	if state.Num() >= seroparam.VP0() {
 		count := state.State.AddTxOut_Log(addr.ToPKr())
@@ -141,12 +141,12 @@ func (state *ZState) AddTxOutWithCheck(addr common.Address, asset assets.Asset) 
 		}
 	}
 
-	state.AddTxOut(addr, asset)
+	state.AddTxOut(addr, asset, txhash)
 
 	return
 }
 
-func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset) {
+func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset, txhash common.Hash) {
 	t := utils.TR_enter("AddTxOut-----")
 	need_add := false
 	if asset.Tkn != nil {
@@ -165,7 +165,7 @@ func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset) {
 	}
 	if need_add {
 		o := stx.Out_O{Addr: *addr.ToPKr(), Asset: asset, Memo: keys.Uint512{}}
-		state.AddOut_O(&o)
+		state.AddOut_O(&o, txhash)
 	}
 	t.Leave()
 
