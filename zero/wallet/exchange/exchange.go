@@ -850,8 +850,9 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 
 	self.indexPkgs(pks, batch, blocks)
 
+	var roots []keys.Uint256
 	if len(utxosMap) > 0 || len(nils) > 0 {
-		if err := self.indexBlocks(batch, utxosMap, blockMap, nils); err != nil {
+		if roots, err = self.indexBlocks(batch, utxosMap, blockMap, nils); err != nil {
 			log.Error("indexBlocks ", "error", err)
 			return
 		}
@@ -871,17 +872,22 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []keys.Uin
 			self.numbers.Store(pk, num)
 		}
 	}
+
+	for _, root := range roots {
+		self.usedFlag.Delete(root)
+	}
 	log.Info("Exchange indexed", "blockNumber", num-1)
 	return
 }
 
-func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo, blockMap map[uint64]*BlockInfo, nils []keys.Uint256) (err error) {
+func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo, blockMap map[uint64]*BlockInfo, nils []keys.Uint256) (delRoots []keys.Uint256, err error) {
 	ops := map[string]string{}
 
 	for num, blockInfo := range blockMap {
-		data, err := rlp.EncodeToBytes(blockInfo)
-		if err != nil {
-			return err
+		data, e := rlp.EncodeToBytes(blockInfo)
+		if e != nil {
+			err = e
+			return
 		}
 		batch.Put(blockKey(num), data)
 	}
@@ -890,9 +896,10 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 	for key, list := range utxosMap {
 		roots := []keys.Uint256{}
 		for _, utxo := range list {
-			data, err := rlp.EncodeToBytes(utxo)
-			if err != nil {
-				return err
+			data, e := rlp.EncodeToBytes(utxo)
+			if e != nil {
+				err = e
+				return
 			}
 
 			// "ROOT" + root
@@ -935,9 +942,10 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 			//log.Info("Index add", "PK", base58.EncodeToString(key.PK[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "root", common.Bytes2Hex(utxo.Root[:]), "Value", utxo.Asset.Tkn.Value)
 		}
 
-		data, err := rlp.EncodeToBytes(roots)
-		if err != nil {
-			return err
+		data, e := rlp.EncodeToBytes(roots)
+		if e != nil {
+			err = e
+			return
 		}
 		// blockNumber + PK => [roots]
 		batch.Put(utxoKey(key.Num, key.PK), data)
@@ -950,7 +958,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 	for txHash, list := range txMap {
 		data, err := rlp.EncodeToBytes(list)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		batch.Put(txKey(txHash), data)
 	}
@@ -972,7 +980,8 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 			var root keys.Uint256
 			copy(root[:], value[98:130])
 			delete(ops, common.Bytes2Hex(nilKey(root)))
-			self.usedFlag.Delete(root)
+			//self.usedFlag.Delete(root)
+			delRoots = append(delRoots, root)
 
 			copy(pk[:], value[2:66])
 		} else {
@@ -989,7 +998,8 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 				var root keys.Uint256
 				copy(root[:], value[98:130])
 				batch.Delete(nilKey(root))
-				self.usedFlag.Delete(root)
+				//self.usedFlag.Delete(root)
+				delRoots = append(delRoots, root)
 
 				copy(pk[:], value[2:66])
 			}
@@ -998,14 +1008,13 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 		if account := self.getAccountByPk(pk); account != nil {
 			account.isChanged = true
 		}
-
 	}
 
 	for key, value := range ops {
 		batch.Put(common.Hex2Bytes(key), common.Hex2Bytes(value))
 	}
 
-	return nil
+	return
 }
 
 func (self *Exchange) ownPkr(pks []keys.Uint512, pkr keys.PKr) (account *Account, ok bool) {

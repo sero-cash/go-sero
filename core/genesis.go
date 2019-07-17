@@ -251,7 +251,7 @@ func (g *Genesis) ToBlock(db serodb.Database) *types.Block {
 					Value:    utils.U256(*account.Balance),
 				},
 				}
-				statedb.NextZState().AddTxOut(addr, asset)
+				statedb.NextZState().AddTxOut(addr, asset, common.Hash{})
 			}
 		}
 		for key, value := range account.Storage {

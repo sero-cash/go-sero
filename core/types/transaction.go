@@ -347,8 +347,8 @@ func (tx *Transaction) AsMessage() (Message, error) {
 		data:     tx.Data(),
 		asset:    tx.Pkg(),
 		fee:      tx.Stxt().Fee,
+		txHash:   tx.Hash(),
 	}
-
 	return msg, nil
 }
 
@@ -491,6 +491,7 @@ type Message struct {
 	fee      assets.Token
 	gasPrice *big.Int
 	data     []byte
+	txHash   common.Hash
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, asset assets.Asset, fee assets.Token, gasPrice *big.Int, data []byte) Message {
@@ -511,6 +512,5 @@ func (m Message) To() *common.Address  { return m.to }
 func (m Message) GasPrice() *big.Int   { return m.gasPrice }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) Fee() assets.Token    { return m.fee }
-func (m Message) Asset() *assets.Asset {
-	return m.asset
-}
+func (m Message) Asset() *assets.Asset { return m.asset }
+func (m Message) TxHash() common.Hash  { return m.txHash }

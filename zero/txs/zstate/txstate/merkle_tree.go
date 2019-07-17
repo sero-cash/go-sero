@@ -112,8 +112,16 @@ func (self *MerkleTree) GetPaths(value keys.Uint256) (pos uint64, paths [DEPTH]k
 	if leafIndex == 0 {
 		panic(fmt.Errorf("leaf index can not be 0"))
 	}
-	cur_leafIndex := self.getCurrentLeafIndex() - 1
+
 	treeIndex := keys.Uint256_To_Uint64(self.db.GetState(treeKey(value).NewRef()).NewRef())
+	currentTreeIndex := self.geCurrentTreeIndex()
+
+	var cur_leafIndex uint64
+	if currentTreeIndex == treeIndex {
+		cur_leafIndex = self.getCurrentLeafIndex() - 1
+	} else {
+		cur_leafIndex = cap - 1
+	}
 
 	anchor = self.db.GetState(indexPathKey(1, treeIndex).NewRef())
 	pos = leafIndex - startIndex

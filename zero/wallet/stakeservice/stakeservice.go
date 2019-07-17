@@ -3,7 +3,6 @@ package stakeservice
 import (
 	"github.com/robfig/cron"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/zero/utils"
 	"sync"
@@ -154,7 +153,6 @@ func (self *StakeService) stakeIndex() {
 		}
 
 		for _, pool := range pools {
-			log.Info("indexpool", "id", hexutil.Encode(pool.Id()), "hash", hexutil.Encode(pool.State()))
 			batch.Put(poolKey(pool.Id()), pool.State())
 		}
 		sharesCount += len(shares)

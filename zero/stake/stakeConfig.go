@@ -43,6 +43,13 @@ const (
 	ValidVoteCount = 2
 )
 
+func getMinSharePoolSize() uint32 {
+	if seroparam.Is_Dev() {
+		return 20
+	}
+	return minSharePoolSize
+}
+
 func GetPoolValueThreshold() *big.Int {
 	if seroparam.Is_Dev() {
 		return big.NewInt(1000000000000000000)

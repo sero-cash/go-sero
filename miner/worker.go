@@ -91,6 +91,13 @@ type Work struct {
 	gasReward uint64
 }
 
+func (self *Work) Copy() (ret *Work) {
+	ret = &Work{}
+	*ret = *self
+	ret.state = self.state.Copy()
+	return
+}
+
 type Result struct {
 	Work  *Work
 	Block *types.Block
@@ -362,7 +369,7 @@ func (self *worker) voteLoop() {
 				continue
 			}
 
-			log.Info("worker voteLoop", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
+			log.Trace("worker voteLoop", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 
 			self.pendingVote.add(vote)
 

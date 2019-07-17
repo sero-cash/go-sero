@@ -418,21 +418,17 @@ func (self *StakeState) updateStakePool(pool *StakePool) {
 }
 
 func (self *StakeState) NeedTwoVote(num uint64) bool {
-	if seroparam.Is_Dev() {
-		return self.ShareSize() > ValidVoteCount
-	} else {
-		window_size := getStatisticsMissWindow()
-		if num > seroparam.SIP4()+window_size {
-			missedNum := utils.DecodeNumber32(self.missedNum.GetValue(missedNumKey))
-			seletedNum := window_size * MaxVoteCount
-			ratio := float64(missedNum) / float64(seletedNum)
-			if ratio > minMissRate || self.ShareSize() < minSharePoolSize {
-				return false
-			}
-			return true
-		} else {
+	window_size := getStatisticsMissWindow()
+	if num > seroparam.SIP4()+window_size {
+		missedNum := utils.DecodeNumber32(self.missedNum.GetValue(missedNumKey))
+		seletedNum := window_size * MaxVoteCount
+		ratio := float64(missedNum) / float64(seletedNum)
+		if ratio > minMissRate || self.ShareSize() < getMinSharePoolSize() {
 			return false
 		}
+		return true
+	} else {
+		return false
 	}
 }
 
@@ -795,7 +791,7 @@ func (self *StakeState) processRemedyRewards(bc blockChain, header *types.Header
 				},
 				nil,
 			}
-			self.statedb.NextZState().AddTxOut(parentHeader.Coinbase, asset)
+			self.statedb.NextZState().AddTxOut(parentHeader.Coinbase, asset, common.BytesToHash([]byte{3}))
 		}
 	}
 }
@@ -1127,13 +1123,16 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) (e
 	shares := GetSharesByBlock(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64())
 	//shares := self.getShares(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64(), shareCacheMap)
 	if len(shares) > 0 {
-		//tree := NewTree(self)
 		for _, share := range shares {
 			if share.BlockNumber != perHeader.Number.Uint64() {
 				continue
 			}
 			//tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num, nodeNum: 1})
-			self.insertSharePool(share)
+			err = self.insertSharePool(share)
+			if err != nil {
+				return
+			}
+
 			if share.PoolId != nil {
 				pool := self.GetStakePool(*share.PoolId)
 				if pool == nil {
@@ -1143,6 +1142,9 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) (e
 				pool.CurrentShareNum += share.Num
 				self.updateStakePool(pool)
 			}
+		}
+		if self.getNewShareNum() != 0 {
+			log.Crit("processNowShares newShareNum != 0")
 		}
 	}
 	return nil
@@ -1176,7 +1178,7 @@ func (self *StakeState) payIncome(bc blockChain, header *types.Header) (err erro
 
 			share.LastPayTime = header.Number.Uint64()
 			share.setIncomeZero()
-			self.statedb.NextZState().AddTxOut(addr, asset)
+			self.statedb.NextZState().AddTxOut(addr, asset, common.BytesToHash([]byte{2}))
 			self.updateShare(share)
 		}
 	}
@@ -1191,7 +1193,7 @@ func (self *StakeState) payIncome(bc blockChain, header *types.Header) (err erro
 			}
 			pool.LastPayTime = header.Number.Uint64()
 			pool.setIncomeZero()
-			self.statedb.NextZState().AddTxOut(addr, asset)
+			self.statedb.NextZState().AddTxOut(addr, asset, common.BytesToHash([]byte{2}))
 			self.updateStakePool(pool)
 		}
 	}

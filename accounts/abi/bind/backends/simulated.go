@@ -392,6 +392,7 @@ func (m callmsg) Fee() assets.Token {
 	return assets.Token{}
 }
 func (m callmsg) Asset() *assets.Asset { return &assets.Asset{} }
+func (m callmsg) TxHash() common.Hash  { return common.Hash{} }
 
 // filterBackend implements filters.Backend to support filtering for logs without
 // taking bloom-bits acceleration structures into account.
