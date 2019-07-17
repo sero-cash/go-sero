@@ -13,7 +13,7 @@ import (
 
 func (self *Exchange) GenTx(param prepare.PreTxParam) (txParam *txtool.GTxParam, e error) {
 	txParam, e = prepare.GenTxParam(&param, self, &prepare.DefaultTxParamState{})
-	if e == nil {
+	if e == nil && txParam!=nil {
 		for _, in := range txParam.Ins {
 			self.usedFlag.Store(in.Out.Root, 1)
 		}
@@ -31,7 +31,7 @@ func (self *Exchange) buildTxParam(
 
 	txParam, e = prepare.BuildTxParam(&prepare.DefaultTxParamState{}, utxos, refundTo, receptions, cmds, fee, gasPrice)
 
-	if e == nil {
+	if e == nil && txParam!=nil {
 		for _, in := range txParam.Ins {
 			self.usedFlag.Store(in.Out.Root, 1)
 		}
