@@ -705,3 +705,8 @@ func (s *PublicStakeApI) GetShare(ctx context.Context, shareId common.Hash) map[
 	return newRPCShare(wallets, *share)
 	return nil
 }
+func (s *PublicStakeApI) GetShareByPkr(ctx context.Context, pkr PKrAddress) []map[string]interface{} {
+	wallets := s.b.AccountManager().Wallets()
+	shares := stakeservice.CurrentStakeService().SharesByPkr(*(pkr.ToPKr()))
+	return newRPCStatisticsShare(wallets, shares)
+}

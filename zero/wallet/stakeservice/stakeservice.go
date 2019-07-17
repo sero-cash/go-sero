@@ -121,6 +121,17 @@ func (self *StakeService) SharesByPk(pk keys.Uint512) (shares []*stake.Share) {
 	return
 }
 
+func (self *StakeService) SharesByPkr(pkr keys.PKr) (shares []*stake.Share) {
+	iterator := self.db.NewIteratorWithPrefix(pkr[:])
+	for iterator.Next() {
+		value := iterator.Value()
+		share := stake.ShareDB.GetObject(self.bc.GetDB(), value, &stake.Share{})
+		shares = append(shares, share.(*stake.Share))
+	}
+	return
+}
+
+
 func (self *StakeService) GetBlockRecords(blockNumber uint64) (shares []*stake.Share, pools []*stake.StakePool) {
 	header := self.bc.GetHeaderByNumber(blockNumber)
 	return stake.GetBlockRecords(self.bc.GetDB(), header.Hash(), blockNumber)
@@ -148,6 +159,7 @@ func (self *StakeService) stakeIndex() {
 		shares, pools := self.GetBlockRecords(blocNumber)
 		for _, share := range shares {
 			batch.Put(sharekey(share.Id()), share.State())
+			batch.Put(pkrShareKey(share.PKr, share.Id()), share.State())
 			if pk, ok := self.ownPkr(share.PKr); ok {
 				batch.Put(pkShareKey(pk, share.Id()), share.State())
 			}
@@ -262,6 +274,11 @@ var (
 func pkShareKey(pk *keys.Uint512, key []byte) []byte {
 	return append(pk[:], key[:]...)
 }
+
+func pkrShareKey(pk keys.PKr, key []byte) []byte {
+	return append(pk[:], key[:]...)
+}
+
 
 func sharekey(key []byte) []byte {
 	return append(sharePrefix, key[:]...)
