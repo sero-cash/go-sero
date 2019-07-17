@@ -13,8 +13,10 @@ import (
 
 func (self *Exchange) GenTx(param prepare.PreTxParam) (txParam *txtool.GTxParam, e error) {
 	txParam, e = prepare.GenTxParam(&param, self, &prepare.DefaultTxParamState{})
-	for _, in := range txParam.Ins {
-		self.usedFlag.Store(in.Out.Root, 1)
+	if e == nil {
+		for _, in := range txParam.Ins {
+			self.usedFlag.Store(in.Out.Root, 1)
+		}
 	}
 	return
 }
