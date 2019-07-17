@@ -169,8 +169,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		}
 
 		value := stakeDesc.BuyShare.Value.ToInt()
-		num, avgPrice, currentPrice := stakeState.CaleAvgPrice(value)
-		log.Info("BuyShare", "num", num, "price", avgPrice, "currentPrice", currentPrice)
+		num, avgPrice,_  := stakeState.CaleAvgPrice(value)
 		if num > 0 {
 			var amount *big.Int
 			if num > 1000 {
