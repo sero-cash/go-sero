@@ -179,7 +179,7 @@ func genDesc_Zs(seed *keys.Uint256, ptx *preTx, balance_desc *cpt.BalanceDesc, t
 
 	if gen_input_procs.HasProc() {
 		if e = gen_input_procs.End(); e == nil {
-			for _, g := range gen_output_procs.Runs {
+			for _, g := range gen_input_procs.Runs {
 				input_desc := g.(*gen_input_desc)
 				desc := input_desc.desc
 				in_z := stx.In_Z{}
