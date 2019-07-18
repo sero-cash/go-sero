@@ -587,3 +587,15 @@ func (s *PublicExchangeAPI) Tk2Pk(ctx context.Context, tk TKAddress) (address.Ac
 	pk := keys.Tk2Pk(tk.ToUint512().NewRef())
 	return address.BytesToAccount(pk[:]), nil
 }
+func (s *PublicExchangeAPI) Pk2Pkr(ctx context.Context, pk PKAddress,index *keys.Uint256) (PKrAddress, error) {
+	empty:=keys.Uint256{}
+	if index!=nil{
+		if (*index) ==empty{
+            *index=keys.RandUint256()
+		}
+	}
+	pkr:=keys.Addr2PKr(pk.ToUint512().NewRef(),index)
+	var pkrAddress PKrAddress
+	copy(pkrAddress[:],pkr[:])
+	return pkrAddress, nil
+}

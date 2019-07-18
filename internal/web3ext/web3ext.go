@@ -755,6 +755,11 @@ web3._extend({
             params: 1
 		}),
         new web3._extend.Method({
+			name: 'pk2Pkr',
+			call: 'exchange_pk2Pkr',
+            params: 2
+		}),
+        new web3._extend.Method({
 			name: 'signTxWithSk',
 			call: 'exchange_signTxWithSk',
             params: 2
