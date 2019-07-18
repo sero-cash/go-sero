@@ -85,8 +85,8 @@ func (self *consItem) Log() string {
 
 func (self *consItem) CopyRef() (ret *consItem) {
 	var item_copy CItem
-	if self.item!=nil {
-		item_copy=self.item.CopyTo()
+	if self.item != nil {
+		item_copy = self.item.CopyTo()
 	}
 	ret = &consItem{
 		self.key.CopyTo(),
@@ -130,21 +130,21 @@ func NewCons(db DB, pre string) (ret Cons) {
 }
 
 func (self *Cons) Copy(db DB) (ret *Cons) {
-	ret=&Cons{}
+	ret = &Cons{}
 	ret.db = db
 	ret.pre = self.pre
 	ret.content = make(map[string]*consItem)
 	ret.ver = self.ver
 	ret.updateVer = self.updateVer
-	for _,log:=range self.cls {
-		temp:=log
-		if log.old!=nil {
+	for _, log := range self.cls {
+		temp := log
+		if log.old != nil {
 			temp.old = log.old.CopyTo()
 		}
-		ret.cls=append(ret.cls,temp)
+		ret.cls = append(ret.cls, temp)
 	}
-	for k,v:=range self.content {
-		ret.content[k]=v.CopyRef()
+	for k, v := range self.content {
+		ret.content[k] = v.CopyRef()
 	}
 	return
 }
@@ -291,7 +291,7 @@ func (self *Cons) fetchConsPairs(onlyget bool) (ret consItems) {
 	return
 }
 
-func (self *Cons) fetchDBPairs(onlyget bool) (ret consItems) {
+func (self *Cons) fetchDBPairs() (ret consItems) {
 	cis := consItems{}
 	for _, v := range self.content {
 		if v.inDB != nil {
@@ -311,11 +311,11 @@ func (self *Cons) fetchDBPairs(onlyget bool) (ret consItems) {
 
 	sort.Sort(ret)
 
-	for _, v := range cis {
+	/*for _, v := range cis {
 		if !onlyget {
 			v.inDB = nil
 		}
-	}
+	}*/
 	return
 }
 
@@ -338,7 +338,7 @@ func (self *Record) Log() string {
 	return ret
 }
 
-func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
+func (self *Cons) fetchBlockRecords() (ret []*Record) {
 
 	cis0 := consItems{}
 	for _, v := range self.content {
@@ -378,16 +378,16 @@ func (self *Cons) fetchBlockRecords(onlyget bool) (ret []*Record) {
 		r.Pairs = append(r.Pairs, rp)
 	}
 
-	for _, v := range cis0 {
+	/*for _, v := range cis0 {
 		if !onlyget {
 			v.inBlock = nil
 		}
-	}
+	}*/
 	return
 }
 
 func (self *Cons) ReportConItems(name string, items consItems, num uint64) {
-    return
+	return
 	fmt.Printf("%v REPORT ITEMS: num=%v\n", name, num)
 	for _, item := range items {
 		fmt.Print("  ")
@@ -432,15 +432,15 @@ type DPutter interface {
 }
 
 func (self *Cons) Record(header *types.Header, batch DPutter) {
-	self.ReportRecords(self.fetchBlockRecords(true), header.Number.Uint64())
-	recordlist := self.fetchBlockRecords(false)
+	recordlist := self.fetchBlockRecords()
+	self.ReportRecords(recordlist, header.Number.Uint64())
 
 	if len(recordlist) > 0 {
 		hash := header.Hash()
 		DBObj{self.pre}.setBlockRecords(batch, header.Number.Uint64(), &hash, recordlist)
 	}
 
-	dblist := self.fetchDBPairs(false)
+	dblist := self.fetchDBPairs()
 	self.ReportConItems("DB", dblist, header.Number.Uint64())
 	for _, v := range dblist {
 		if v.item == nil {
