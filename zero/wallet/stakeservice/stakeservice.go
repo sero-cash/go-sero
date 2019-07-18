@@ -3,7 +3,6 @@ package stakeservice
 import (
 	"github.com/robfig/cron"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/zero/utils"
 	"sync"
