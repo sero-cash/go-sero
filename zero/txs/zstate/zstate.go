@@ -60,7 +60,7 @@ func NextState(tri0 tri.Tri, num int64) (state *ZState) {
 }
 
 func (self *ZState) Copy() *ZState {
-	return nil
+	return self
 }
 
 func (self *ZState) Update() {

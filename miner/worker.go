@@ -91,6 +91,13 @@ type Work struct {
 	gasReward uint64
 }
 
+func (self *Work) Copy() (ret *Work) {
+	ret = &Work{}
+	*ret = *self
+	ret.state = self.state.Copy()
+	return
+}
+
 type Result struct {
 	Work  *Work
 	Block *types.Block
