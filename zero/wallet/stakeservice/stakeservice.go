@@ -154,7 +154,6 @@ func (self *StakeService) stakeIndex() {
 		}
 
 		for _, pool := range pools {
-			log.Info("indexpool", "id", hexutil.Encode(pool.Id()), "hash", hexutil.Encode(pool.State()))
 			batch.Put(poolKey(pool.Id()), pool.State())
 		}
 		sharesCount += len(shares)
