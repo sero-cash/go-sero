@@ -171,7 +171,7 @@ func (self *Lotter) wait() bool {
 	parentfilter.RunFilter(parentVoteSet)
 
 	for _, vote := range filter.result() {
-		log.Info("pos currentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
+		//log.Info("pos currentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 		self.currentHeaderVotes = append(self.currentHeaderVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
 		if len(self.currentHeaderVotes) == 3 {
 			break
@@ -180,7 +180,7 @@ func (self *Lotter) wait() bool {
 
 	parentVotes := parentfilter.result()
 	if len(parentVotes) > 0 {
-		log.Info("parentVotes", "block", self.block.NumberU64(), "voteIds", pidx)
+		//log.Info("parentVotes", "block", self.block.NumberU64(), "voteIds", pidx)
 		voteNumMap := map[common.Hash]int{}
 		for _, share := range pshares {
 			voteNumMap[common.BytesToHash(share.Id())] += 1
@@ -198,7 +198,7 @@ func (self *Lotter) wait() bool {
 			if voteNumMap[vote.ShareId] == 0 {
 				continue
 			} else {
-				log.Info("pos parentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
+				//log.Info("pos parentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 				self.parentHeaderVotes = append(self.parentHeaderVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
 				voteMap[vote.Sign] = true
 				voteNumMap[vote.ShareId] -= 1

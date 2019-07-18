@@ -137,11 +137,11 @@ func (self *Voter) lotteryTaskLoop() {
 	for {
 		select {
 		case lottery := <-self.lotteryCh:
-			current := self.chain.CurrentBlock().NumberU64()
+			//current := self.chain.CurrentBlock().NumberU64()
 			if !self.IsLotteryValid(lottery) {
 				continue
 			}
-			log.Info(">>>>>>>lotteryTaskLoop new lottery", "poshash", lottery.PosHash, "block", lottery.ParentNum+1, "localBlock", current)
+			//log.Info(">>>>>>>lotteryTaskLoop new lottery", "poshash", lottery.PosHash, "block", lottery.ParentNum+1, "localBlock", current)
 			parentBlock := self.chain.GetBlock(lottery.ParentHash, lottery.ParentNum)
 			if parentBlock == nil {
 				log.Info(">>>>>lotteryTaskLoop can not find parentblokc", "parent block", lottery.ParentNum)
@@ -169,7 +169,7 @@ func (self *Voter) voteLoop() {
 			current := self.chain.CurrentBlock().NumberU64()
 			for item := self.lotteryQueue.Pop(); item != nil; item = self.lotteryQueue.Pop() {
 				lItem := item.Value.(*lotteryItem)
-				log.Info(">>>>>voteLoop get Vote Item", "poshash", lItem.Lottery.PosHash, "block", lItem.Lottery.ParentNum+1)
+				//log.Info(">>>>>voteLoop get Vote Item", "poshash", lItem.Lottery.PosHash, "block", lItem.Lottery.ParentNum+1)
 				if current > lItem.Lottery.ParentNum+delayNum {
 					log.Info(">>>>>>not need vote", "current", current, "vote block", lItem.Lottery.ParentNum+1)
 					continue
@@ -336,7 +336,7 @@ func (self *Voter) sign(info voteInfo) {
 		log.Info("voter sign", "sign err", err)
 		return
 	}
-	log.Info(">>>>>>>>>>>>>sign vote", "poshas", info.poshash, "block", info.parentNum+1, "share", info.shareHash, "idx", info.index, "isPool", info.isPool)
+	//log.Info(">>>>>>>>>>>>>sign vote", "poshas", info.poshash, "block", info.parentNum+1, "share", info.shareHash, "idx", info.index, "isPool", info.isPool)
 	vote := &types.Vote{info.index, info.parentNum, info.shareHash, info.poshash, info.isPool, sign}
 	//go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
 	self.AddVote(vote)
