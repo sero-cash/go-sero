@@ -795,7 +795,7 @@ func (self *StakeState) processRemedyRewards(bc blockChain, header *types.Header
 				},
 				nil,
 			}
-			self.statedb.NextZState().AddTxOut(parentHeader.Coinbase, asset)
+			self.statedb.NextZState().AddTxOut(parentHeader.Coinbase, asset, common.BytesToHash([]byte{3}))
 		}
 	}
 }
@@ -1176,7 +1176,7 @@ func (self *StakeState) payIncome(bc blockChain, header *types.Header) (err erro
 
 			share.LastPayTime = header.Number.Uint64()
 			share.setIncomeZero()
-			self.statedb.NextZState().AddTxOut(addr, asset)
+			self.statedb.NextZState().AddTxOut(addr, asset, common.BytesToHash([]byte{2}))
 			self.updateShare(share)
 		}
 	}
@@ -1191,7 +1191,7 @@ func (self *StakeState) payIncome(bc blockChain, header *types.Header) (err erro
 			}
 			pool.LastPayTime = header.Number.Uint64()
 			pool.setIncomeZero()
-			self.statedb.NextZState().AddTxOut(addr, asset)
+			self.statedb.NextZState().AddTxOut(addr, asset, common.BytesToHash([]byte{2}))
 			self.updateStakePool(pool)
 		}
 	}

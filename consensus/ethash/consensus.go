@@ -470,7 +470,7 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 		Value:    utils.U256(*reward),
 	},
 	}
-	statedb.NextZState().AddTxOut(header.Coinbase, asset)
+	statedb.NextZState().AddTxOut(header.Coinbase, asset, common.BytesToHash([]byte{1}))
 }
 
 func accumulateRewardsV1(config *params.ChainConfig, statedb *state.StateDB, header *types.Header) *big.Int {
@@ -554,7 +554,7 @@ func accumulateRewardsV2(statedb *state.StateDB, header *types.Header) *big.Int 
 			Value:    utils.U256(*balance),
 		},
 		}
-		statedb.NextZState().AddTxOut(teamAddress, assetTeam)
+		statedb.NextZState().AddTxOut(teamAddress, assetTeam, common.Hash{})
 
 		balance = statedb.GetBalance(communityRewardPool, "SERO")
 		statedb.SubBalance(communityRewardPool, "SERO", balance)
@@ -563,7 +563,7 @@ func accumulateRewardsV2(statedb *state.StateDB, header *types.Header) *big.Int 
 			Value:    utils.U256(*balance),
 		},
 		}
-		statedb.NextZState().AddTxOut(communityAddress, assetCommunity)
+		statedb.NextZState().AddTxOut(communityAddress, assetCommunity, common.Hash{})
 	}
 	return reward
 }
@@ -598,7 +598,7 @@ func accumulateRewardsV3(statedb *state.StateDB, header *types.Header) *big.Int 
 			Value:    utils.U256(*balance),
 		},
 		}
-		statedb.NextZState().AddTxOut(teamAddress, assetTeam)
+		statedb.NextZState().AddTxOut(teamAddress, assetTeam, common.Hash{})
 
 		balance = statedb.GetBalance(communityRewardPool, "SERO")
 		if balance.Sign() > 0 {
@@ -608,7 +608,7 @@ func accumulateRewardsV3(statedb *state.StateDB, header *types.Header) *big.Int 
 				Value:    utils.U256(*balance),
 			},
 			}
-			statedb.NextZState().AddTxOut(communityAddress, assetCommunity)
+			statedb.NextZState().AddTxOut(communityAddress, assetCommunity, common.Hash{})
 		}
 	}
 	return reward
@@ -639,7 +639,7 @@ func accumulateRewardsV4(statedb *state.StateDB, header *types.Header) *big.Int 
 			Value:    utils.U256(*balance),
 		},
 		}
-		statedb.NextZState().AddTxOut(teamAddress, assetTeam)
+		statedb.NextZState().AddTxOut(teamAddress, assetTeam, common.Hash{})
 	}
 	return reward
 }

@@ -188,7 +188,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 					Value:    utils.U256(*refund),
 				},
 				}
-				statedb.NextZState().AddTxOut(from, asset)
+				statedb.NextZState().AddTxOut(from, asset, txHash)
 			}
 
 			share := &stake.Share{PKr: pkr, VotePKr: stakeDesc.BuyShare.Vote, Value: avgPrice, TransactionHash: txHash, BlockNumber: number, InitNum: num}
@@ -207,7 +207,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 				Value:    stakeDesc.BuyShare.Value,
 			},
 			}
-			statedb.NextZState().AddTxOut(from, asset)
+			statedb.NextZState().AddTxOut(from, asset,txHash)
 		}
 	} else if stakeDesc.RegistPool != nil {
 		id := crypto.Keccak256Hash(pkr[:])
@@ -224,7 +224,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 					Value:    stakeDesc.RegistPool.Value,
 				},
 				}
-				statedb.NextZState().AddTxOut(from, asset)
+				statedb.NextZState().AddTxOut(from, asset, txHash)
 			}
 			stakePool.Fee = uint16(stakeDesc.RegistPool.FeeRate)
 			stakePool.VotePKr = stakeDesc.RegistPool.Vote
@@ -264,7 +264,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 				Value:    utils.U256(*stakePool.Amount),
 			},
 			}
-			statedb.NextZState().AddTxOut(from, asset)
+			statedb.NextZState().AddTxOut(from, asset, txHash)
 			stakePool.Amount = new(big.Int)
 		}
 		stakeState.AddStakePool(stakePool)

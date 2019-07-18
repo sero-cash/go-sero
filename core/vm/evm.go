@@ -35,7 +35,7 @@ type (
 	// CanTransferFunc is the signature of a transfer guard function
 	CanTransferFunc func(StateDB, common.Address, *assets.Asset) bool
 	// TransferFunc is the signature of a transfer function
-	TransferFunc func(StateDB, common.Address, common.Address, *assets.Asset) (alarm bool)
+	TransferFunc func(StateDB, common.Address, common.Address, *assets.Asset, common.Hash) (alarm bool)
 	// GetHashFunc returns the nth block hash in the blockchain
 	// and is used by the BLOCKHASH EVM op code.
 	GetHashFunc func(uint64) common.Hash
@@ -73,6 +73,7 @@ type Context struct {
 	// Message information
 	Origin   common.Address // Provides information for ORIGIN
 	GasPrice *big.Int       // Provides information for GASPRICE
+	TxHash   common.Hash
 
 	// Block information
 	Coinbase    common.Address // Provides information for COINBASE
@@ -171,7 +172,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		snapshot = evm.StateDB.Snapshot()
 	)
 
-	alarm = evm.Transfer(evm.StateDB, caller.Address(), to.Address(), asset)
+	alarm = evm.Transfer(evm.StateDB, caller.Address(), to.Address(), asset, evm.TxHash)
 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
@@ -377,7 +378,7 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, asset *asset
 	snapshot := evm.StateDB.Snapshot()
 	evm.StateDB.CreateAccount(address)
 
-	evm.Transfer(evm.StateDB, caller.Address(), address, asset)
+	evm.Transfer(evm.StateDB, caller.Address(), address, asset, evm.TxHash)
 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
