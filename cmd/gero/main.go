@@ -118,6 +118,7 @@ var (
 		utils.AutoMergeFlag,
 		utils.ConfirmedBlockFlag,
 		utils.LightNodeFlag,
+		utils.ResetBlockNumber,
 
 		utils.DeveloperFlag,
 		utils.SnapshotFlag,
