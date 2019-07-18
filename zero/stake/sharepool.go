@@ -1130,7 +1130,11 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) (e
 				continue
 			}
 			//tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num, nodeNum: 1})
-			self.insertSharePool(share)
+			err = self.insertSharePool(share)
+			if err != nil {
+				return
+			}
+
 			if share.PoolId != nil {
 				pool := self.GetStakePool(*share.PoolId)
 				if pool == nil {

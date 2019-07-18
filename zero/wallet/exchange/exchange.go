@@ -955,6 +955,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 		batch.Put(txKey(txHash), data)
 	}
 
+	roots := []keys.Uint256{}
 	for _, Nil := range nils {
 
 		var pk keys.Uint512
@@ -972,7 +973,8 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 			var root keys.Uint256
 			copy(root[:], value[98:130])
 			delete(ops, common.Bytes2Hex(nilKey(root)))
-			self.usedFlag.Delete(root)
+			//self.usedFlag.Delete(root)
+			roots = append(roots, root)
 
 			copy(pk[:], value[2:66])
 		} else {
@@ -989,7 +991,8 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 				var root keys.Uint256
 				copy(root[:], value[98:130])
 				batch.Delete(nilKey(root))
-				self.usedFlag.Delete(root)
+				//self.usedFlag.Delete(root)
+				roots = append(roots, root)
 
 				copy(pk[:], value[2:66])
 			}
@@ -998,7 +1001,10 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 		if account := self.getAccountByPk(pk); account != nil {
 			account.isChanged = true
 		}
+	}
 
+	for _, root := range roots {
+		self.usedFlag.Delete(root)
 	}
 
 	for key, value := range ops {
