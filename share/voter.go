@@ -144,7 +144,7 @@ func (self *Voter) lotteryTaskLoop() {
 			//log.Info(">>>>>>>lotteryTaskLoop new lottery", "poshash", lottery.PosHash, "block", lottery.ParentNum+1, "localBlock", current)
 			parentBlock := self.chain.GetBlock(lottery.ParentHash, lottery.ParentNum)
 			if parentBlock == nil {
-				log.Info(">>>>>lotteryTaskLoop can not find parentblokc", "parent block", lottery.ParentNum)
+				log.Info(">>>>>lotteryTaskLoop can not find parentblock", "parent block", lottery.ParentNum)
 				self.lotteryQueue.PushItem(lottery.PosHash, &lotteryItem{Lottery: lottery, Attempts: uint8(0)}, lottery.ParentNum+1)
 			} else {
 				selfShares, err := self.SelfShares(lottery.PosHash, lottery.ParentHash, parentBlock.Number())
@@ -288,7 +288,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 					}
 				}
 				if pool != nil {
-					stakeHash := types.StakeHash(&poshash, &parentPos,true)
+					stakeHash := types.StakeHash(&poshash, &parentPos, true)
 					seed := GetSeedByVotePkr(wallets, pool.VotePKr)
 					if seed != nil {
 						voteInfos = append(voteInfos, voteInfo{
@@ -304,7 +304,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 				}
 				shareVoteSeed := GetSeedByVotePkr(wallets, share.VotePKr)
 				if shareVoteSeed != nil {
-					stakeHash := types.StakeHash(&poshash, &parentPos,false)
+					stakeHash := types.StakeHash(&poshash, &parentPos, false)
 					info := voteInfo{
 						ints[i],
 						parentNumber.Uint64(),
