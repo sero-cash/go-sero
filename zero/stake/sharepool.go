@@ -1144,6 +1144,9 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) (e
 				self.updateStakePool(pool)
 			}
 		}
+		if self.getNewShareNum() != 0 {
+			log.Crit("processNowShares newShareNum != 0")
+		}
 	}
 	return nil
 }
