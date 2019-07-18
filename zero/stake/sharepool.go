@@ -418,21 +418,17 @@ func (self *StakeState) updateStakePool(pool *StakePool) {
 }
 
 func (self *StakeState) NeedTwoVote(num uint64) bool {
-	if seroparam.Is_Dev() {
-		return self.ShareSize() > ValidVoteCount
-	} else {
-		window_size := getStatisticsMissWindow()
-		if num > seroparam.SIP4()+window_size {
-			missedNum := utils.DecodeNumber32(self.missedNum.GetValue(missedNumKey))
-			seletedNum := window_size * MaxVoteCount
-			ratio := float64(missedNum) / float64(seletedNum)
-			if ratio > minMissRate || self.ShareSize() < minSharePoolSize {
-				return false
-			}
-			return true
-		} else {
+	window_size := getStatisticsMissWindow()
+	if num > seroparam.SIP4()+window_size {
+		missedNum := utils.DecodeNumber32(self.missedNum.GetValue(missedNumKey))
+		seletedNum := window_size * MaxVoteCount
+		ratio := float64(missedNum) / float64(seletedNum)
+		if ratio > minMissRate || self.ShareSize() < getMinSharePoolSize() {
 			return false
 		}
+		return true
+	} else {
+		return false
 	}
 }
 
