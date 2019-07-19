@@ -111,7 +111,7 @@ type txPool interface {
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 }
 
-type voter interface {
+type shareVoter interface {
 	SubscribeNewVoteEvent(chan<- core.NewVoteEvent) event.Subscription
 	SubscribeNewLotteryEvent(chan<- core.NewLotteryEvent) event.Subscription
 	AddLottery(lottery *types.Lottery)
