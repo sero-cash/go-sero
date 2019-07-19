@@ -321,6 +321,11 @@ var (
 		Usage: "The balance will be confirmed after the current block of number,default is 12",
 	}
 
+	ResetBlockNumber =  cli.Uint64Flag{
+		Name:  "resetBlockNumber",
+		Usage: "reset currentblock, gcmode must be archive",
+	}
+
 	// Miner settings
 	MiningModeFlag = cli.BoolFlag{
 		Name:  "mineMode",
@@ -949,6 +954,12 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 			seroparam.InitComfirmedBlock(balanceDelay)
 		}
 	}
+
+	if ctx.GlobalIsSet(ResetBlockNumber.Name) {
+		blockNumber := ctx.GlobalUint64(ResetBlockNumber.Name)
+		seroparam.InitCurrentBlockNumber(blockNumber)
+	}
+
 	if ctx.GlobalBool(DeveloperFlag.Name) {
 		// --dev mode can't use p2p networking.
 		//cfg.MaxPeers = 0

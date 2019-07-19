@@ -298,38 +298,51 @@ func (bc *BlockChain) loadLastState() error {
 		log.Warn("Empty database, resetting chain")
 		return bc.Reset()
 	}
-	// Make sure the entire head block is available
-	currentBlock := bc.GetBlockByHash(head)
-	if currentBlock == nil {
-		// Corrupt or empty database, init from scratch
-		log.Warn("Head block missing, resetting chain", "hash", head)
-		return bc.Reset()
-	}
-	// Make sure the state associated with the block is available
-	if _, err := state.New(bc.stateCache, currentBlock.Header()); err != nil {
-		// Dangling block without a state associated, init from scratch
-		log.Warn("Head state missing, repairing chain", "number", currentBlock.Number(), "hash", currentBlock.Hash())
-		if err := bc.repair(&currentBlock); err != nil {
-			return err
-		}
-	}
-	// Everything seems to be fine, set as the head block
-	bc.currentBlock.Store(currentBlock)
 
-	// Restore the last known head header
-	currentHeader := currentBlock.Header()
-	if head := rawdb.ReadHeadHeaderHash(bc.db); head != (common.Hash{}) {
-		if header := bc.GetHeaderByHash(head); header != nil {
-			currentHeader = header
-		}
-	}
-	bc.hc.SetCurrentHeader(currentHeader)
+	var currentBlock *types.Block
+	var currentHeader *types.Header
+	if seroparam.DefaultCurrentBlock() > 0 {
+		currentBlock = bc.GetBlockByNumber(seroparam.DefaultCurrentBlock())
 
-	// Restore the last known head fast block
-	bc.currentFastBlock.Store(currentBlock)
-	if head := rawdb.ReadHeadFastBlockHash(bc.db); head != (common.Hash{}) {
-		if block := bc.GetBlockByHash(head); block != nil {
-			bc.currentFastBlock.Store(block)
+		bc.currentBlock.Store(currentBlock)
+		currentHeader = currentBlock.Header()
+		bc.hc.SetCurrentHeader(currentHeader)
+		bc.currentFastBlock.Store(currentBlock)
+	} else {
+		// Make sure the entire head block is available
+		currentBlock = bc.GetBlockByHash(head)
+		if currentBlock == nil {
+			// Corrupt or empty database, init from scratch
+			log.Warn("Head block missing, resetting chain", "hash", head)
+			return bc.Reset()
+		}
+		// Make sure the state associated with the block is available
+		if _, err := state.New(bc.stateCache, currentBlock.Header()); err != nil {
+			// Dangling block without a state associated, init from scratch
+			log.Warn("Head state missing, repairing chain", "number", currentBlock.Number(), "hash", currentBlock.Hash())
+			if err := bc.repair(&currentBlock); err != nil {
+				return err
+			}
+		}
+
+		// Everything seems to be fine, set as the head block
+		bc.currentBlock.Store(currentBlock)
+
+		// Restore the last known head header
+		currentHeader = currentBlock.Header()
+		if head := rawdb.ReadHeadHeaderHash(bc.db); head != (common.Hash{}) {
+			if header := bc.GetHeaderByHash(head); header != nil {
+				currentHeader = header
+			}
+		}
+		bc.hc.SetCurrentHeader(currentHeader)
+
+		// Restore the last known head fast block
+		bc.currentFastBlock.Store(currentBlock)
+		if head := rawdb.ReadHeadFastBlockHash(bc.db); head != (common.Hash{}) {
+			if block := bc.GetBlockByHash(head); block != nil {
+				bc.currentFastBlock.Store(block)
+			}
 		}
 	}
 
@@ -980,7 +993,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		stakeState := stake.NewStakeState(state)
 		err = stakeState.RecordVotes(batch, block)
 		if err != nil {
-			log.Info("write block with pos","err",err)
+			log.Info("write block with pos", "err", err)
 			return NonStatTy, err
 		}
 	}
@@ -988,11 +1001,11 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 	root, err := state.Commit(true)
 	if root != block.Root() {
-		log.Info("WiriteBlockWithState root not equal Error","root",root,"block.root",block.Root())
+		log.Info("WiriteBlockWithState root not equal Error", "root", root, "block.root", block.Root())
 		return NonStatTy, err
 	}
-	if err!=nil {
-		log.Error("WriteBlockWithState.Commit Error:","root",root,"err",err)
+	if err != nil {
+		log.Error("WriteBlockWithState.Commit Error:", "root", root, "err", err)
 		return NonStatTy, err
 	}
 	triedb := bc.stateCache.TrieDB()
@@ -1281,13 +1294,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 			stakeState := stake.NewStakeState(state)
 			err = stakeState.ProcessBeforeApply(bc, block.Header())
 			if err != nil {
-				log.Error("insert chain pos block processBeforeApply","err",err)
+				log.Error("insert chain pos block processBeforeApply", "err", err)
 				return i, events, coalescedLogs, err
 			}
 
 			err = stakeState.CheckVotes(block, bc)
 			if err != nil {
-				log.Error("insert chain pos block checkVote","err",err)
+				log.Error("insert chain pos block checkVote", "err", err)
 				return i, events, coalescedLogs, err
 			}
 		}

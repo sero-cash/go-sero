@@ -63,6 +63,8 @@ type Message interface {
 	Fee() assets.Token
 
 	Data() []byte
+
+	TxHash() common.Hash
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
@@ -200,9 +202,9 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	if contractCreation {
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, msg.Asset())
 	} else {
-		to:=msg.To()
+		to := msg.To()
 
-		if evm.BlockNumber.Uint64() < seroparam.SIP4() || (to!=nil && st.state.IsContract(*to)) {
+		if evm.BlockNumber.Uint64() < seroparam.SIP4() || (to != nil && st.state.IsContract(*to)) {
 			ret, st.gas, vmerr, _ = evm.Call(sender, st.to(), st.data, st.gas, msg.Asset())
 		}
 	}
@@ -215,7 +217,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 			return nil, 0, false, vmerr
 		}
 		if msg.Asset() != nil {
-			st.state.NextZState().AddTxOut(msg.From(), *msg.Asset())
+			st.state.NextZState().AddTxOut(msg.From(), *msg.Asset(), msg.TxHash())
 		}
 	}
 
@@ -253,7 +255,7 @@ func (st *StateTransition) refundGas() {
 					Value:    utils.U256(*remainToken),
 				},
 				}
-				st.state.NextZState().AddTxOut(st.msg.From(), asset)
+				st.state.NextZState().AddTxOut(st.msg.From(), asset, st.msg.TxHash())
 				st.state.SubBalance(*st.msg.To(), curency, remainToken)
 			}
 		} else {
@@ -262,7 +264,7 @@ func (st *StateTransition) refundGas() {
 				Value:    utils.U256(*remaining),
 			},
 			}
-			st.state.NextZState().AddTxOut(st.msg.From(), asset)
+			st.state.NextZState().AddTxOut(st.msg.From(), asset, st.msg.TxHash())
 		}
 	}
 

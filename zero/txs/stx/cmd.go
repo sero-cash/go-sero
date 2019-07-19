@@ -60,7 +60,9 @@ func (self *RegistPoolCmd) Asset() (ret assets.Asset) {
 	return
 }
 
-type ClosePoolCmd struct{}
+type ClosePoolCmd struct {
+	None byte
+}
 
 func (self *ClosePoolCmd) ToHash() (ret keys.Uint256) {
 	ret[0] = 1

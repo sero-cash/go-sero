@@ -184,11 +184,11 @@ func TestConsFetch(t *testing.T) {
 	if len(conslist) != 1 {
 		t.FailNow()
 	}
-	blocklist := cmap.fetchBlockRecords(false)
+	blocklist := cmap.fetchBlockRecords()
 	if len(blocklist) != 1 && len(blocklist[0].Pairs) != 1 {
 		t.FailNow()
 	}
-	dblist := cmap.fetchDBPairs(false)
+	dblist := cmap.fetchDBPairs()
 	if len(dblist) != 1 {
 		t.FailNow()
 	}
@@ -197,12 +197,12 @@ func TestConsFetch(t *testing.T) {
 	if len(conslist) != 0 {
 		t.FailNow()
 	}
-	blocklist = cmap.fetchBlockRecords(true)
-	if len(blocklist) != 0 {
+	blocklist = cmap.fetchBlockRecords()
+	if len(blocklist) != 1 && len(blocklist[0].Pairs) != 1 {
 		t.FailNow()
 	}
-	dblist = cmap.fetchDBPairs(true)
-	if len(dblist) != 0 {
+	dblist = cmap.fetchDBPairs()
+	if len(dblist) != 1 {
 		t.FailNow()
 	}
 

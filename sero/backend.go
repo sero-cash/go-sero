@@ -21,13 +21,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
 	"math/big"
 	"runtime"
 	"sync"
 	"sync/atomic"
 
-	"github.com/sero-cash/go-sero/share"
+	"github.com/sero-cash/go-sero/voter"
+	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
+
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
@@ -81,10 +82,10 @@ type Sero struct {
 
 	// Handlers
 	txPool          *core.TxPool
-	voter           *share.Voter
+	voter           *voter.Voter
 	blockchain      *core.BlockChain
 	exchange        *exchange.Exchange
-	lightNode           *light.LightNode
+	lightNode       *light.LightNode
 	protocolManager *ProtocolManager
 	lesServer       LesServer
 
@@ -182,7 +183,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	//}
 	sero.txPool = core.NewTxPool(config.TxPool, sero.chainConfig, sero.blockchain)
 
-	sero.voter = share.NewVoter(sero.chainConfig, sero.blockchain, sero)
+	sero.voter = voter.NewVoter(sero.chainConfig, sero.blockchain, sero)
 
 	if sero.protocolManager, err = NewProtocolManager(sero.chainConfig, config.SyncMode, config.NetworkId, sero.eventMux, sero.voter, sero.txPool, sero.engine, sero.blockchain, chainDb); err != nil {
 		return nil, err
@@ -204,11 +205,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 
 	stakeservice.NewStakeService(zconfig.Stake_dir(), sero.blockchain, sero.accountManager)
 
-
-
 	//init light
 	if config.StartLight {
-		sero.lightNode = light.NewLightNode(zconfig.Light_dir(), sero.txPool,sero.blockchain.GetDB())
+		sero.lightNode = light.NewLightNode(zconfig.Light_dir(), sero.txPool, sero.blockchain.GetDB())
 	}
 
 	return sero, nil
@@ -401,7 +400,7 @@ func (s *Sero) Miner() *miner.Miner { return s.miner }
 func (s *Sero) AccountManager() *accounts.Manager  { return s.accountManager }
 func (s *Sero) BlockChain() *core.BlockChain       { return s.blockchain }
 func (s *Sero) TxPool() *core.TxPool               { return s.txPool }
-func (s *Sero) Voter() *share.Voter                { return s.voter }
+func (s *Sero) Voter() *voter.Voter                { return s.voter }
 func (s *Sero) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *Sero) Engine() consensus.Engine           { return s.engine }
 func (s *Sero) ChainDb() serodb.Database           { return s.chainDb }

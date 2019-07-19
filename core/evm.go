@@ -58,6 +58,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		Difficulty:  new(big.Int).Set(header.Difficulty),
 		GasLimit:    header.GasLimit,
 		GasPrice:    new(big.Int).Set(msg.GasPrice()),
+		TxHash:      msg.TxHash(),
 	}
 }
 
@@ -106,7 +107,7 @@ func CanTransfer(db vm.StateDB, addr common.Address, asset *assets.Asset) bool {
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
-func Transfer(db vm.StateDB, sender, recipient common.Address, asset *assets.Asset) (alarm bool) {
+func Transfer(db vm.StateDB, sender, recipient common.Address, asset *assets.Asset, txHash common.Hash) (alarm bool) {
 	if asset == nil {
 		return
 	}
@@ -137,7 +138,7 @@ func Transfer(db vm.StateDB, sender, recipient common.Address, asset *assets.Ass
 			db.AddTicket(recipient, category, common.BytesToHash(asset.Tkt.Value[:]))
 		}
 	} else {
-		alarm = db.NextZState().AddTxOutWithCheck(recipient, *asset)
+		alarm = db.NextZState().AddTxOutWithCheck(recipient, *asset, txHash)
 	}
 	return
 }

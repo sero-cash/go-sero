@@ -1,4 +1,4 @@
-package share
+package voter
 
 import (
 	"container/heap"
