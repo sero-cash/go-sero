@@ -1,4 +1,4 @@
-package share
+package voter
 
 import (
 	"math/big"
@@ -144,12 +144,12 @@ func (self *Voter) lotteryTaskLoop() {
 			//log.Info(">>>>>>>lotteryTaskLoop new lottery", "poshash", lottery.PosHash, "block", lottery.ParentNum+1, "localBlock", current)
 			parentBlock := self.chain.GetBlock(lottery.ParentHash, lottery.ParentNum)
 			if parentBlock == nil {
-				log.Info(">>>>>lotteryTaskLoop can not find parentblock", "parent block", lottery.ParentNum)
+				log.Trace(">>>>>lotteryTaskLoop can not find parentblock", "parent block", lottery.ParentNum)
 				self.lotteryQueue.PushItem(lottery.PosHash, &lotteryItem{Lottery: lottery, Attempts: uint8(0)}, lottery.ParentNum+1)
 			} else {
 				selfShares, err := self.SelfShares(lottery.PosHash, lottery.ParentHash, parentBlock.Number())
 				if err != nil {
-					log.Info("lotteryTaskLoop", "selfShare error ", err)
+					log.Error("lotteryTaskLoop", "selfShare error ", err)
 				} else {
 					for _, s := range selfShares {
 						go self.sign(s)
@@ -171,18 +171,18 @@ func (self *Voter) voteLoop() {
 				lItem := item.Value.(*lotteryItem)
 				//log.Info(">>>>>voteLoop get Vote Item", "poshash", lItem.Lottery.PosHash, "block", lItem.Lottery.ParentNum+1)
 				if current > lItem.Lottery.ParentNum+delayNum {
-					log.Info(">>>>>>not need vote", "current", current, "vote block", lItem.Lottery.ParentNum+1)
+					log.Trace(">>>>>>not need vote", "current", current, "vote block", lItem.Lottery.ParentNum+1)
 					continue
 				}
 				parentBlock := self.chain.GetBlock(lItem.Lottery.ParentHash, lItem.Lottery.ParentNum)
 				if parentBlock == nil {
-					log.Info(">>>>>voteLoop get parent is nil", "hash", lItem.Lottery.ParentHash, "block", lItem.Lottery.ParentNum)
+					log.Trace(">>>>>voteLoop get parent is nil", "hash", lItem.Lottery.ParentHash, "block", lItem.Lottery.ParentNum)
 					self.lotteryQueue.PushItem(lItem.Lottery.PosHash, lItem, item.Block)
 					break
 				}
 				selfShares, err := self.SelfShares(lItem.Lottery.PosHash, parentBlock.Hash(), parentBlock.Number())
 				if err != nil {
-					log.Info("lotteryTaskLoop", "selfShare error ", err)
+					log.Trace("lotteryTaskLoop", "selfShare error ", err)
 				} else {
 					for _, s := range selfShares {
 						self.sign(s)
@@ -230,7 +230,7 @@ func GetSeedByVotePkr(wallets []accounts.Wallet, pkr keys.PKr) *address.Seed {
 		if w.IsMine(pkrToAddress(pkr)) {
 			seed, err := w.GetSeed()
 			if err != nil {
-				log.Info("GetSeedByVotePkr", "err", err)
+				log.Trace("GetSeedByVotePkr", "err", err)
 				return nil
 			} else {
 				return seed
@@ -251,7 +251,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 	}
 	state, err := self.chain.StateAt(parentHeader)
 	if err != nil {
-		log.Info("lotteryTaskLoop", "stateAt", poshash, "err", err)
+		log.Trace("lotteryTaskLoop", "stateAt", poshash, "err", err)
 		return nil, err
 	} else {
 		stakeState := stake.NewStakeState(state)
@@ -284,7 +284,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 				if share.PoolId != nil {
 					pool = stakeState.GetStakePool(*share.PoolId)
 					if pool == nil {
-						log.Info("lotteryTaskLoop", "GetStakePool", share.PoolId, "note exist")
+						log.Error("lotteryTaskLoop", "GetStakePool", share.PoolId, "note exist")
 					}
 				}
 				if pool != nil {
@@ -333,7 +333,7 @@ func (self *Voter) sign(info voteInfo) {
 	copy(data[:], info.statkeHash[:])
 	sign, err := keys.SignPKr(info.seed.SeedToUint256(), &data, &info.votePKr)
 	if err != nil {
-		log.Info("voter sign", "sign err", err)
+		log.Error("voter sign", "sign err", err)
 		return
 	}
 	//log.Info(">>>>>>>>>>>>>sign vote", "poshas", info.poshash, "block", info.parentNum+1, "share", info.shareHash, "idx", info.index, "isPool", info.isPool)
@@ -369,12 +369,12 @@ func (self *Voter) AddLottery(lottery *types.Lottery) {
 	defer self.lotteryMu.Unlock()
 	current := self.chain.CurrentBlock().Number().Uint64()
 	if current > lottery.ParentNum+delayNum {
-		log.Info("AddLottery droped", "current", current, "voteBlock", lottery.ParentNum+1)
+		log.Trace("AddLottery droped", "current", current, "voteBlock", lottery.ParentNum+1)
 		return
 	}
 	_, exits := self.lotterys[lottery.PosHash]
 	if !exits {
-		log.Info("AddLottery", "poshas", lottery.PosHash, "block", lottery.ParentNum+1)
+		log.Trace("AddLottery", "poshas", lottery.PosHash, "block", lottery.ParentNum+1)
 		self.lotterys[lottery.PosHash] = time.Now()
 		self.lotteryCh <- lottery
 		self.SendLotteryEvent(lottery)
@@ -396,12 +396,12 @@ func (self *Voter) AddVote(vote *types.Vote) {
 
 	current := self.chain.CurrentBlock().Number().Uint64()
 	if current > vote.ParentNum+delayNum {
-		log.Info("AddVote droped", "current", current, "voteBlock", vote.ParentNum+1)
+		log.Trace("AddVote droped", "current", current, "voteBlock", vote.ParentNum+1)
 		return
 	}
 	_, exits := self.votes[vote.Hash()]
 	if !exits {
-		log.Info("AddVote", "hashpos", vote.PosHash, "block", vote.ParentNum+1)
+		log.Trace("AddVote", "hashpos", vote.PosHash, "block", vote.ParentNum+1)
 		go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
 		self.SendVoteEvent(vote)
 		self.votes[vote.Hash()] = time.Now()
