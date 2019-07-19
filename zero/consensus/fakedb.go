@@ -40,7 +40,8 @@ func (self *FakeTri) Put(key, value []byte) error {
 }
 
 func (self *FakeTri) TryUpdate(key, value []byte) error {
-	self.m[string(key)] = value
+	str := string(key)
+	self.m[str] = append([]byte{}, value...)
 	return nil
 }
 
