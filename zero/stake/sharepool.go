@@ -1123,8 +1123,6 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) (e
 	shares := GetSharesByBlock(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64())
 	//shares := self.getShares(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64(), shareCacheMap)
 	if len(shares) > 0 {
-		tree := NewTree(self)
-		log.Info("sharepool :", "size", tree.size(), "newShareNum", self.getNewShareNum())
 		for _, share := range shares {
 			if share.BlockNumber != perHeader.Number.Uint64() {
 				continue
@@ -1145,8 +1143,6 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) (e
 				self.updateStakePool(pool)
 			}
 		}
-		tree.MiddleOrder()
-		log.Info("sharepool : ", "size", tree.size(), "newShareNum", self.getNewShareNum())
 		if self.getNewShareNum() != 0 {
 			log.Crit("processNowShares newShareNum != 0")
 		}
