@@ -1144,7 +1144,8 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) (e
 			}
 		}
 		if self.getNewShareNum() != 0 {
-			log.Crit("processNowShares newShareNum != 0")
+			return fmt.Errorf("processNowShares: newShareNum(%v) != 0", self.getNewShareNum())
+			//log.Crit("processNowShares newShareNum != 0")
 		}
 	}
 	return nil
