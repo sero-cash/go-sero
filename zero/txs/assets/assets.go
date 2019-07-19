@@ -11,6 +11,22 @@ type Asset struct {
 	Tkt *Ticket `rlp:"nil"`
 }
 
+func (self *Asset) HasAsset() bool {
+	if self != nil {
+		if self.Tkn != nil {
+			if self.Tkn.Value.Cmp(&utils.U256_0) != 0 {
+				return true
+			}
+		}
+		if self.Tkt != nil {
+			if self.Tkt.Value != keys.Empty_Uint256 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func NewAsset(tkn *Token, tkt *Ticket) (ret Asset) {
 	if tkn != nil {
 		if tkn.Value.Cmp(&utils.U256_0) > 0 {

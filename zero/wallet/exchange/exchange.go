@@ -1039,6 +1039,8 @@ type MergeUtxos struct {
 	tickets map[keys.Uint256]keys.Uint256
 }
 
+var default_fee_value = new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000))
+
 func (self *Exchange) getMergeUtxos(from *keys.Uint512, currency string, zcount int, left int) (mu MergeUtxos, e error) {
 	if zcount > 400 {
 		e = errors.New("zout count must <= 400")
@@ -1084,7 +1086,7 @@ func (self *Exchange) getMergeUtxos(from *keys.Uint512, currency string, zcount 
 			mu.tickets[utxo.Asset.Tkt.Value] = utxo.Asset.Tkt.Category
 		}
 	}
-	mu.amount.Sub(&mu.amount, new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000)))
+	mu.amount.Sub(&mu.amount, default_fee_value)
 	return
 }
 
@@ -1124,10 +1126,10 @@ func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e er
 		mu.list.Roots(),
 		mp.To,
 		receptions,
-		nil,
+		&prepare.Cmds{},
 		&assets.Token{
 			utils.CurrencyToUint256("SERO"),
-			utils.NewU256(25000),
+			utils.U256(*default_fee_value),
 		},
 		big.NewInt(1000000000),
 	)
@@ -1157,6 +1159,7 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string, force bool) (coun
 
 	if mu.zcount >= 100 || mu.ocount >= 2400 || time.Now().After(account.nextMergeTime) || force {
 
+		count = mu.list.Len()
 		bytes := common.LeftPadBytes([]byte(currency), 32)
 		var Currency keys.Uint256
 		copy(Currency[:], bytes[:])
@@ -1174,10 +1177,10 @@ func (self *Exchange) Merge(pk *keys.Uint512, currency string, force bool) (coun
 			account,
 			nil,
 			receptions,
-			nil,
+			&prepare.Cmds{},
 			&assets.Token{
 				utils.CurrencyToUint256("SERO"),
-				utils.NewU256(25000),
+				utils.U256(*default_fee_value),
 			},
 			big.NewInt(1000000000),
 		)

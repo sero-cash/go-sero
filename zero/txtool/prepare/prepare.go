@@ -125,12 +125,14 @@ func BuildTxParam(
 		return
 	}
 
-	if cmdsAsset, err := cmds.InAsset(); err != nil {
-		e = err
-		return
-	} else {
-		if cmdsAsset != nil {
-			ck.AddIn(cmdsAsset)
+	if cmds != nil {
+		if cmdsAsset, err := cmds.InAsset(); err != nil {
+			e = err
+			return
+		} else {
+			if cmdsAsset != nil {
+				ck.AddIn(cmdsAsset)
+			}
 		}
 	}
 
@@ -145,8 +147,10 @@ func BuildTxParam(
 		Outs = append(Outs, txtool.GOut{PKr: pkr, Asset: reception.Asset})
 	}
 
-	if cmdsAsset := cmds.OutAsset(); cmdsAsset != nil {
-		ck.AddOut(cmdsAsset)
+	if cmds != nil {
+		if cmdsAsset := cmds.OutAsset(); cmdsAsset != nil {
+			ck.AddOut(cmdsAsset)
+		}
 	}
 
 	tkns, tkts := ck.GetList()
@@ -172,8 +176,10 @@ func BuildTxParam(
 			a.Tkt.Category = tkt.Category
 			a.Tkt.Value = tkt.Value
 		}
-		ck.AddOut(&a)
-		Outs = append(Outs, txtool.GOut{PKr: txParam.From.PKr, Asset: a})
+		if a.HasAsset() {
+			ck.AddOut(&a)
+			Outs = append(Outs, txtool.GOut{PKr: txParam.From.PKr, Asset: a})
+		}
 	}
 
 	if e = ck.Check(); e != nil {
