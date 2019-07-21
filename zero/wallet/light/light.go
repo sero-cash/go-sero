@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"github.com/robfig/cron"
 	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/rawdb"
@@ -59,6 +60,9 @@ func (self *LightNode) getLastNumber() (num uint64) {
 	if self.lastNumber == 0 {
 		//light wallet start at block 1200000
 		var initBlockNum = uint64(1280000)
+		if seroparam.Is_Dev(){
+			initBlockNum = uint64(0)
+		}
 		value, err := self.db.Get(numKey())
 		if err != nil {
 			self.db.Put(numKey(), uint64ToBytes(initBlockNum))
