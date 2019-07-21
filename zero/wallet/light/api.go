@@ -2,7 +2,6 @@ package light
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rlp"
@@ -27,7 +26,6 @@ func (self *LightNode) GetOutsByPKr(pkrs []keys.PKr, start, end uint64) (br Bloc
 
 			key := iterator.Key()
 			num := bytesToUint64(key[99:107])
-			fmt.Println("getOutsByPKr:", num)
 			if num > end {
 				break
 			}

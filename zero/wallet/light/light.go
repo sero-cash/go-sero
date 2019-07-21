@@ -2,12 +2,9 @@ package light
 
 import (
 	"encoding/binary"
-	"encoding/json"
-	"fmt"
 	"github.com/robfig/cron"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/log"
@@ -58,14 +55,19 @@ func NewLightNode(dbPath string, txPool *core.TxPool, bcDB serodb.Database) (lig
 var fetchCount = uint64(5000)
 
 func (self *LightNode) getLastNumber() (num uint64) {
+
 	if self.lastNumber == 0 {
+		//light wallet start at block 1200000
+		var initBlockNum = uint64(1280000)
 		value, err := self.db.Get(numKey())
 		if err != nil {
-			return 0
+			self.db.Put(numKey(), uint64ToBytes(initBlockNum))
+			return initBlockNum
 		}
 		self.lastNumber = bytesToUint64(value)
 		if self.lastNumber == 0 {
-			//self.lastNumber = 1200000
+			self.lastNumber = initBlockNum
+			self.db.Put(numKey(), uint64ToBytes(initBlockNum))
 		}
 	}
 	return self.lastNumber
@@ -133,19 +135,14 @@ func (self *LightNode) fetchBlockInfo() {
 				TxHash: txHash,
 				TxFee: *big.NewInt(0).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas()))),
 			}
-			pb,_:=json.Marshal(nilValue)
 			if nilValue, err := rlp.EncodeToBytes(nilValue); err != nil {
 				return
 			} else {
 				for _, in := range tx.Stxt().Desc_O.Ins {
-					fmt.Println("Desc_O.Ins: ",hexutil.Encode(in.Nil[:]), string(pb[:]))
-					fmt.Println("Desc_O.Ins: ",hexutil.Encode(in.Root[:]), string(pb[:]))
 					batch.Put(nilKey(in.Nil), nilValue)
 					batch.Put(nilKey(in.Root), nilValue)
 				}
 				for _, in := range tx.Stxt().Desc_Z.Ins {
-					fmt.Println("Desc_Z.Ins: ",hexutil.Encode(in.Nil[:]), string(pb[:]))
-					fmt.Println("Desc_Z.Ins: ",hexutil.Encode(in.Trace[:]), string(pb[:]))
 					batch.Put(nilKey(in.Trace), nilValue)
 					batch.Put(nilKey(in.Nil), nilValue)
 				}
