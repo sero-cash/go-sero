@@ -666,7 +666,7 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share)[]ma
 			if share.PoolId != nil {
 				s.Pools = append(s.Pools, *share.PoolId)
 			}
-			s.Profit=big.NewInt(0)
+			s.Profit=new(big.Int).Set(share.Profit)
 			s.ShareIds = append(s.ShareIds, common.BytesToHash(share.Id()))
 			result[keystr] = s
 		}
