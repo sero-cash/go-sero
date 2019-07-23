@@ -19,6 +19,12 @@ type Out struct {
 	State localdb.RootState
 }
 
+type TDOut struct {
+	Asset assets.Asset
+	Memo  keys.Uint512
+	Nils  []keys.Uint256
+}
+
 type DOut struct {
 	Asset assets.Asset
 	Memo  keys.Uint512
