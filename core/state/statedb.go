@@ -737,6 +737,12 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 	}
 }
 
+func (self *StateDB) CopyWithNoZState() *StateDB {
+	state := self.Copy()
+	state.zstate = nil
+	return state
+}
+
 // Copy creates a deep, independent copy of the state.
 // Snapshots of the copied state cannot be applied to the copy.
 func (self *StateDB) Copy() *StateDB {
@@ -758,7 +764,7 @@ func (self *StateDB) Copy() *StateDB {
 		journal:           newJournal(),
 		number:            self.number,
 	}
-	if self.stakeState!=nil {
+	if self.stakeState != nil {
 		state.stakeState = self.stakeState.Copy(&zeroDB{state})
 	}
 	// Copy the dirty states, logs, and preimages

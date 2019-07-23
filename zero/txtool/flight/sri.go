@@ -3,6 +3,8 @@ package flight
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-sero/common"
+
 	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -41,6 +43,23 @@ func GetOut(root *keys.Uint256, num uint64) (out *localdb.RootState) {
 	}
 }
 
+func GetBlock(num uint64, hash *common.Hash) (ret *localdb.Block) {
+	ret = localdb.GetBlock(txtool.Ref_inst.Bc.GetDB(), num, hash.HashToUint256())
+	if ret == nil {
+		temp_state := txtool.Ref_inst.Bc.CurrentState(hash)
+		if temp_state == nil {
+			panic(fmt.Sprintf("new zstate error: %v:%v !", num, hash))
+		} else {
+			log.Debug("STATE1_PARSE GO BACK TO STATE: ", "num", num, "hash", hash)
+		}
+		ret = &localdb.Block{}
+		ret.Pkgs = temp_state.Pkgs.GetPkgHashes()
+		ret.Roots = temp_state.State.GetBlockRoots()
+		ret.Dels = temp_state.State.GetBlockDels()
+	}
+	return
+}
+
 func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []txtool.Block, e error) {
 	stable_num := txtool.Ref_inst.GetDelayedNum(seroparam.DefaultConfirmedBlock())
 	if start <= stable_num {
@@ -51,7 +70,7 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []txtool.Bloc
 			num := start + i
 			chain_block := txtool.Ref_inst.Bc.GetBlockByNumber(num)
 			hash := chain_block.Hash()
-			local_block := localdb.GetBlock(txtool.Ref_inst.Bc.GetDB(), num, hash.HashToUint256())
+			local_block := GetBlock(num, &hash)
 			if local_block != nil {
 				block := txtool.Block{}
 				block.Hash = *hash.HashToUint256()

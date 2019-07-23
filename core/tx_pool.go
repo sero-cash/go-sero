@@ -481,18 +481,18 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 		return ErrGasLimit
 	}
 
-	copyState := pool.currentState.Copy()
-	if err := pool.checkDescCmd(tx.GetZZSTX(), copyState); err != nil {
-		return err
-	}
-
-	state := copyState.NextZState()
-	if err := verify.VerifyWithoutState(tx.Ehash().NewRef(), tx.GetZZSTX(), state.Num()); err != nil {
+	if err := verify.VerifyWithoutState(tx.Ehash().NewRef(), tx.GetZZSTX(), pool.chain.CurrentBlock().NumberU64()); err != nil {
 		log.Error("validateTx verify without state error", "hash", tx.Hash().Hex(), "verify stx err", err)
 		pool.faileds[tx.Hash()] = time.Now()
 		return ErrVerifyError
 	}
 
+	copyState := pool.currentState.CopyWithNoZState()
+	if err := pool.checkDescCmd(tx.GetZZSTX(), copyState); err != nil {
+		return err
+	}
+
+	state := copyState.NextZState()
 	err := verify.VerifyWithState(tx.GetZZSTX(), state)
 	//err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
 	if err != nil {
