@@ -183,6 +183,7 @@ func (self *Lotter) wait() bool {
 		if _, ok := voteNumMap[vote.Sign]; ok {
 			continue
 		} else {
+			voteNumMap[vote.Sign]=true
 			self.currentHeaderVotes = append(self.currentHeaderVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
 			if len(self.currentHeaderVotes) == 3 {
 				break
