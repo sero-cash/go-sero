@@ -75,20 +75,27 @@ func (self *votesFilter) result() (ret []types.Vote) {
 }
 
 func (self *votesFilter) RunFilter(votes voteSet) (dels []types.Vote) {
-	for _, v := range votes {
-		for _, vote := range v {
-			if vote.PosHash == self.block.HashPos() {
-				k := selKey(vote.Idx, vote.ShareId[:])
-				if s, ok := self.filters[k]; ok {
-					if s.vote == nil {
-						if self.verify(&vote, s.share) {
-							copy_vote := vote
-							self.filters[k].vote = &copy_vote
+	voteNumMap := map[keys.Uint512]bool{}
+	for _, sets := range votes {
+		for _, vote := range sets {
+			if _, ok := voteNumMap[vote.Sign]; ok {
+				continue
+			} else {
+				if vote.PosHash == self.block.HashPos() {
+					k := selKey(vote.Idx, vote.ShareId[:])
+					if s, ok := self.filters[k]; ok {
+						if s.vote == nil {
+							if self.verify(&vote, s.share) {
+								voteNumMap[vote.Sign] = true
+								copy_vote := vote
+								self.filters[k].vote = &copy_vote
+							}
 						}
 					}
+					dels = append(dels, vote)
 				}
-				dels = append(dels, vote)
 			}
+
 		}
 	}
 	return
@@ -170,11 +177,16 @@ func (self *Lotter) wait() bool {
 	parentfilter := NewVotesFilter(self.stake, pidx, pshares, parentBlock, ppBlock)
 	parentfilter.RunFilter(parentVoteSet)
 
+	voteNumMap := map[keys.Uint512]bool{}
 	for _, vote := range filter.result() {
 		//log.Info("pos currentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
-		self.currentHeaderVotes = append(self.currentHeaderVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
-		if len(self.currentHeaderVotes) == 3 {
-			break
+		if _, ok := voteNumMap[vote.Sign]; ok {
+			continue
+		} else {
+			self.currentHeaderVotes = append(self.currentHeaderVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
+			if len(self.currentHeaderVotes) == 3 {
+				break
+			}
 		}
 	}
 
