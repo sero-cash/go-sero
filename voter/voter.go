@@ -206,7 +206,7 @@ type voteInfo struct {
 }
 
 func cotainsVoteInfo(voteInfos []voteInfo, item voteInfo, pool *stake.StakePool) bool {
-	if pool != nil && !pool.Closed {
+	if pool != nil && pool.Closed {
 		return false
 	}
 	for _, v := range voteInfos {
@@ -336,7 +336,7 @@ func (self *Voter) sign(info voteInfo) {
 		log.Error("voter sign", "sign err", err)
 		return
 	}
-	//log.Info(">>>>>>>>>>>>>sign vote", "poshas", info.poshash, "block", info.parentNum+1, "share", info.shareHash, "idx", info.index, "isPool", info.isPool)
+	log.Info(">>>>>>>>>>>>>sign vote", "poshas", info.poshash, "block", info.parentNum+1, "share", info.shareHash, "idx", info.index, "isPool", info.isPool)
 	vote := &types.Vote{info.index, info.parentNum, info.shareHash, info.poshash, info.isPool, sign}
 	//go self.voteWorkFeed.Send(core.NewVoteEvent{vote})
 	self.AddVote(vote)

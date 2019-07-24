@@ -28,7 +28,7 @@ do
         esac
 done
 
-cmd="bin/gero --config ${CONFIG_PATH} --unlock ${VOTER} --password ${VOTER_PASSWORD_PATH} --datadir ${DATADIR_OPTION} --port ${DEFAULT_PORT} ${KEYSTORE_OPTION}"
+cmd="bin/gero --mineMode --config ${CONFIG_PATH} --unlock ${VOTER} --password ${VOTER_PASSWORD_PATH} --datadir ${DATADIR_OPTION} --port ${DEFAULT_PORT} ${KEYSTORE_OPTION}"
 mkdir -p $LOGDIR
 
 echo $cmd
