@@ -929,11 +929,12 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 
 	for txHash, list := range txMap {
 		key := txKey(txHash)
-		data, err := self.db.Get(key)
+		data, e := self.db.Get(key)
 		var records []Utxo
-		if err == nil {
-			if err = rlp.Decode(bytes.NewReader(data), &records); err != nil {
-				log.Error("Invalid utxos RLP", "txHash", common.Bytes2Hex(txHash[:]), "err", err)
+		if e == nil {
+			if e = rlp.Decode(bytes.NewReader(data), &records); e != nil {
+				err = e
+				log.Error("Invalid utxos RLP", "txHash", common.Bytes2Hex(txHash[:]), "err", e)
 				return
 			}
 		}
