@@ -22,7 +22,7 @@ var Modules = map[string]string{
 	"chequebook": Chequebook_JS,
 	"clique":     Clique_JS,
 	"debug":      Debug_JS,
-	"ser":        SER_JS,
+	"sero":        SER_JS,
 	"miner":      Miner_JS,
 	"net":        Net_JS,
 	"personal":   Personal_JS,
@@ -401,7 +401,7 @@ web3._extend({
 
 const SER_JS = `
 web3._extend({
-	property: 'ser',
+	property: 'sero',
 	methods: [
 		new web3._extend.Method({
 			name: 'sign',
@@ -426,6 +426,20 @@ web3._extend({
 			call: 'sero_submitTransaction',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+        new web3._extend.Method({
+			name: 'getBlockTotalRewardByNumber',
+			call: 'sero_getBlockTotalRewardByNumber',
+			params: 1,
+			inputFormatter: [web3._extend.utils.toHex],
+			outputFormatter: web3._extend.utils.toDecimal
+		}),
+       new web3._extend.Method({
+			name: 'getBlockPosRewardByNumber',
+			call: 'sero_getBlockPosRewardByNumber',
+			params: 1,
+            inputFormatter: [web3._extend.utils.toHex],
+			outputFormatter: web3._extend.utils.toDecimal
 		}),
 		new web3._extend.Method({
 			name: 'getRawTransaction',

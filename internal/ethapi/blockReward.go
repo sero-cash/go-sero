@@ -70,8 +70,8 @@ func accumulateRewardsV1(diff *big.Int, gasUsed uint64, gasLimit uint64) *big.In
 	return reward
 }
 
-func accumulateRewardsV2(number, diff *big.Int) [3]*big.Int {
-	var res [3]*big.Int
+func accumulateRewardsV2(number, diff *big.Int) [2]*big.Int {
+	var res [2]*big.Int
 	rewardStd := new(big.Int).Set(oriReward)
 	if number.Uint64() >= halveNimber.Uint64() {
 		i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(number, halveNimber), interval), big1)
@@ -95,12 +95,11 @@ func accumulateRewardsV2(number, diff *big.Int) [3]*big.Int {
 	}
 	res[0] = reward
 	res[1] = new(big.Int).Div(rewardStd, big.NewInt(15))
-	res[2] = new(big.Int).Div(new(big.Int).Mul(reward, big2), big.NewInt(15))
 	return res
 }
 
-func accumulateRewardsV3(number, bdiff *big.Int) [3]*big.Int {
-	var res [3]*big.Int
+func accumulateRewardsV3(number, bdiff *big.Int) [2]*big.Int {
+	var res [2]*big.Int
 	diff := new(big.Int).Div(bdiff, big.NewInt(1000000000))
 	reward := new(big.Int).Add(new(big.Int).Mul(argA, diff), argB)
 
@@ -115,12 +114,11 @@ func accumulateRewardsV3(number, bdiff *big.Int) [3]*big.Int {
 
 	res[0] = reward
 	res[1] = big.NewInt(0)
-	res[2] = new(big.Int).Div(reward, big.NewInt(5))
 	return res
 }
 
-func accumulateRewardsV4(number, bdiff *big.Int) [3]*big.Int {
-	var res [3]*big.Int
+func accumulateRewardsV4(number, bdiff *big.Int) [2]*big.Int {
+	var res [2]*big.Int
 	diff := new(big.Int).Div(bdiff, big.NewInt(1000000000))
 	reward := new(big.Int).Add(new(big.Int).Mul(argA, diff), argB)
 
@@ -133,11 +131,8 @@ func accumulateRewardsV4(number, bdiff *big.Int) [3]*big.Int {
 	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(number, halveNimber), interval), big1)
 	reward.Div(reward, new(big.Int).Exp(big2, i, nil))
 
-	teamReward := new(big.Int).Div(hRewardV4, big.NewInt(4))
-	teamReward = new(big.Int).Div(teamReward, new(big.Int).Exp(big2, i, nil))
 	res[0] = reward
 	res[1] = big.NewInt(0)
-	res[2] = teamReward
 	return res
 
 }
@@ -147,7 +142,7 @@ func accumulateRewardsV4(number, bdiff *big.Int) [3]*big.Int {
   [1] community reward
   [2] team reward
 */
-func GetBlockReward(block *types.Block) [3]*big.Int {
+func GetBlockReward(block *types.Block) [2]*big.Int {
 	number := block.Number()
 	diff := block.Difficulty()
 	gasUsed := block.GasUsed()
@@ -159,10 +154,9 @@ func GetBlockReward(block *types.Block) [3]*big.Int {
 	} else if number.Uint64() >= seroparam.SIP1() {
 		return accumulateRewardsV2(number, diff)
 	} else {
-		var res [3]*big.Int
+		var res [2]*big.Int
 		res[0] = accumulateRewardsV1(diff, gasUsed, gasLimit)
 		res[1] = big.NewInt(0)
-		res[2] = big.NewInt(0)
 		return res
 	}
 }

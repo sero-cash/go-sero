@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/stake"
 	"math/big"
 	"strings"
 	"time"
@@ -995,15 +996,76 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.
 
 func (s *PublicBlockChainAPI) GetBlockRewardByNumber(ctx context.Context, blockNr rpc.BlockNumber) [3]hexutil.Big {
 	var res [3]hexutil.Big
-
+	zero:=big.NewInt(0)
 	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
 		rewards := GetBlockReward(block)
 		res[0] = hexutil.Big(*rewards[0])
 		res[1] = hexutil.Big(*rewards[1])
-		res[2] = hexutil.Big(*rewards[2])
+		res[2] = hexutil.Big(*zero)
 	}
 	return res
 }
+
+
+func (s *PublicBlockChainAPI) GetBlockPowRewardByNumber(ctx context.Context, blockNr rpc.BlockNumber) hexutil.Big {
+	var res hexutil.Big
+
+	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
+		rewards := GetBlockReward(block)
+		res = hexutil.Big(*rewards[0])
+	}
+	return res
+}
+
+func (s *PublicBlockChainAPI) GetBlockPosRewardByNumber(ctx context.Context, blockNr rpc.BlockNumber) hexutil.Big {
+
+     zero:=big.NewInt(0)
+
+	if blockNr <1300000{
+		return  hexutil.Big(*zero)
+	}
+	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+
+	if err!=nil {
+		return  hexutil.Big(*zero)
+	}
+	stakeState:=stake.NewStakeState(state)
+	solo,total:=stakeState.StakeCurrentReward(big.NewInt(int64(blockNr)))
+	reward:=big.NewInt(0)
+	for _,v:=range header.CurrentVotes{
+		if v.IsPool{
+			reward.Add(reward,total)
+		}else{
+			reward.Add(reward,solo)
+		}
+	}
+	for _,v:=range header.ParentVotes{
+		if v.IsPool{
+			r:=new(big.Int).Div(new(big.Int).Mul(total, big.NewInt(2)), big.NewInt(3))
+			reward.Add(reward,r)
+		}else{
+			r:=new(big.Int).Div(new(big.Int).Mul(solo, big.NewInt(2)), big.NewInt(3))
+			reward.Add(reward,r)
+		}
+	}
+	return hexutil.Big(*reward)
+}
+
+
+func (s *PublicBlockChainAPI) GetBlockTotalRewardByNumber(ctx context.Context, blockNr rpc.BlockNumber) hexutil.Big {
+	reward:=big.NewInt(0)
+	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
+		pows := GetBlockReward(block)
+		for _,p:=range pows{
+			reward.Add(reward,p)
+		}
+	}
+	pos:=s.GetBlockPosRewardByNumber(ctx,blockNr)
+	reward.Add(reward,pos.ToInt())
+	return hexutil.Big(*reward)
+
+}
+
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned.
