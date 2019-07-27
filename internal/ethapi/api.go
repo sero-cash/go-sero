@@ -993,7 +993,7 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.
 	}
 	return nil, err
 }
-
+//pow reward
 func (s *PublicBlockChainAPI) GetBlockRewardByNumber(ctx context.Context, blockNr rpc.BlockNumber) [3]hexutil.Big {
 	var res [3]hexutil.Big
 	zero:=big.NewInt(0)
@@ -1006,52 +1006,7 @@ func (s *PublicBlockChainAPI) GetBlockRewardByNumber(ctx context.Context, blockN
 	return res
 }
 
-
-func (s *PublicBlockChainAPI) GetBlockPowRewardByNumber(ctx context.Context, blockNr rpc.BlockNumber) hexutil.Big {
-	var res hexutil.Big
-
-	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
-		rewards := GetBlockReward(block)
-		res = hexutil.Big(*rewards[0])
-	}
-	return res
-}
-
-func (s *PublicBlockChainAPI) GetBlockPosRewardByNumber(ctx context.Context, blockNr rpc.BlockNumber) hexutil.Big {
-
-     zero:=big.NewInt(0)
-
-	if blockNr <1300000{
-		return  hexutil.Big(*zero)
-	}
-	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
-
-	if err!=nil {
-		return  hexutil.Big(*zero)
-	}
-	stakeState:=stake.NewStakeState(state)
-	solo,total:=stakeState.StakeCurrentReward(big.NewInt(int64(blockNr)))
-	reward:=big.NewInt(0)
-	for _,v:=range header.CurrentVotes{
-		if v.IsPool{
-			reward.Add(reward,total)
-		}else{
-			reward.Add(reward,solo)
-		}
-	}
-	for _,v:=range header.ParentVotes{
-		if v.IsPool{
-			r:=new(big.Int).Div(new(big.Int).Mul(total, big.NewInt(2)), big.NewInt(3))
-			reward.Add(reward,r)
-		}else{
-			r:=new(big.Int).Div(new(big.Int).Mul(solo, big.NewInt(2)), big.NewInt(3))
-			reward.Add(reward,r)
-		}
-	}
-	return hexutil.Big(*reward)
-}
-
-
+//block reward
 func (s *PublicBlockChainAPI) GetBlockTotalRewardByNumber(ctx context.Context, blockNr rpc.BlockNumber) hexutil.Big {
 	reward:=big.NewInt(0)
 	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
@@ -1060,8 +1015,29 @@ func (s *PublicBlockChainAPI) GetBlockTotalRewardByNumber(ctx context.Context, b
 			reward.Add(reward,p)
 		}
 	}
-	pos:=s.GetBlockPosRewardByNumber(ctx,blockNr)
-	reward.Add(reward,pos.ToInt())
+	if blockNr >=1300000{
+		state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+
+		if err!=nil {
+			return  hexutil.Big(*reward)
+		}
+		stakeState:=stake.NewStakeState(state)
+		solo,total:=stakeState.StakeCurrentReward(big.NewInt(int64(blockNr)))
+		for _,v:=range header.CurrentVotes{
+			if v.IsPool{
+				reward.Add(reward,total)
+			}else{
+				reward.Add(reward,solo)
+			}
+		}
+		for _,v:=range header.ParentVotes{
+			if v.IsPool{
+				reward.Add(reward,total)
+			}else{
+				reward.Add(reward,solo)
+			}
+		}
+	}
 	return hexutil.Big(*reward)
 
 }
