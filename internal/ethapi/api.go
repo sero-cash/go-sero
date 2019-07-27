@@ -1008,14 +1008,16 @@ func (s *PublicBlockChainAPI) GetBlockRewardByNumber(ctx context.Context, blockN
 
 //block reward
 func (s *PublicBlockChainAPI) GetBlockTotalRewardByNumber(ctx context.Context, blockNr rpc.BlockNumber) hexutil.Big {
+
 	reward:=big.NewInt(0)
-	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
+	block, _ := s.b.BlockByNumber(ctx, blockNr);
+	 if block != nil {
 		pows := GetBlockReward(block)
 		for _,p:=range pows{
 			reward.Add(reward,p)
 		}
 	}
-	if blockNr >=1300000{
+	if block!=nil && blockNr >=1300000{
 		state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 
 		if err!=nil {
