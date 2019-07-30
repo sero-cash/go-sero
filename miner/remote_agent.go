@@ -157,7 +157,8 @@ func (a *RemoteAgent) SubmitWork(nonce types.BlockNonce, mixDigest, hash common.
 	block := work.Block.WithSeal(result)
 
 	// Solutions seems to be valid, return to the miner and notify acceptance
-	a.returnCh <- &Result{work, block}
+	w := work.Copy()
+	a.returnCh <- &Result{w, block}
 	delete(a.work, hash)
 
 	return true

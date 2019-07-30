@@ -18,6 +18,7 @@
 package core
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -235,6 +236,26 @@ func (self *State1BlockChain) GetCurrenHeader() *types.Header {
 
 func (self *State1BlockChain) GetHeader(hash *common.Hash) *types.Header {
 	return self.Bc.GetHeaderByHash(*hash)
+}
+
+func (self *State1BlockChain) IsContract(address common.Address) (ret bool, e error) {
+	empty := common.Hash{}
+	if bytes.Compare(address[64:], empty[:]) != 0 {
+		ret = false
+		return
+	}
+	if state, err := self.Bc.State(); err != nil {
+		e = err
+		return
+	} else {
+		if state.GetCodeSize(address) > 0 {
+			ret = true
+			return
+		} else {
+			ret = false
+			return
+		}
+	}
 }
 
 func (self *State1BlockChain) IsValid() bool {

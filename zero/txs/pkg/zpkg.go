@@ -10,7 +10,7 @@ import (
 type Pkg_Z struct {
 	AssetCM keys.Uint256
 	PkgCM   keys.Uint256
-	EInfo   cpt.Einfo `json:"-"`
+	EInfo   cpt.Einfo
 }
 
 func (this Pkg_Z) ToRef() (ret *Pkg_Z) {

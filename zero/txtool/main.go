@@ -18,6 +18,7 @@ type BlockChain interface {
 	GetCurrenHeader() *types.Header
 	GetHeader(hash *common.Hash) *types.Header
 	CurrentState(hash *common.Hash) *zstate.ZState
+	IsContract(address common.Address) (ret bool, e error)
 	GetSeroGasLimit(to *common.Address, tfee *assets.Token, gasPrice *big.Int) (gaslimit uint64, e error)
 	GetTks() []keys.Uint512
 	GetTkAt(tk *keys.Uint512) uint64
