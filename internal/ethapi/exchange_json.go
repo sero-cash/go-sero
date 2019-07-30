@@ -1,10 +1,14 @@
 package ethapi
 
 import (
+	"bytes"
 	"encoding/hex"
 	"math/big"
 	"regexp"
 	"strconv"
+
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/btcsuite/btcutil/base58"
 
@@ -166,7 +170,6 @@ func (b *PKAddress) UnmarshalText(input []byte) error {
 		return err
 	}
 }
-
 
 type TKAddress [64]byte
 
@@ -356,4 +359,157 @@ func (b *MixBase58Adrress) UnmarshalText(input []byte) error {
 	} else {
 		return errors.New("not base58 string")
 	}
+}
+
+type AllMixedAddress []byte
+
+func (b AllMixedAddress) IsContract() bool {
+	empty := common.Hash{}
+	if len(b) == 96 {
+		if bytes.Compare(b[64:], empty[:]) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (b AllMixedAddress) ToPKr() (ret keys.PKr) {
+	copy(ret[:], b[:])
+	return
+}
+
+func (b AllMixedAddress) MarshalText() ([]byte, error) {
+	return []byte(base58.Encode(b)), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (b *AllMixedAddress) UnmarshalText(input []byte) error {
+
+	if len(input) == 0 {
+		return ErrEmptyString
+	}
+
+	var out []byte
+	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
+		out = base58.Decode(string(input))
+	} else {
+		if raw, err := checkText(input, true); err != nil {
+			return err
+		} else {
+			dec := make([]byte, len(raw)/2)
+			if _, err = hex.Decode(dec, raw); err != nil {
+				return mapError(err)
+			} else {
+				out = dec
+			}
+		}
+	}
+
+	if len(out) == 96 {
+		addr := common.Address{}
+		copy(addr[:], out)
+		if isContract, err := txtool.Ref_inst.Bc.IsContract(addr); err != nil {
+			return err
+		} else {
+			if isContract {
+				*b = out[:]
+				return nil
+			} else {
+				pkr := keys.PKr{}
+				copy(pkr[:], out[:])
+				if keys.PKrValid(&pkr) {
+					*b = out[:]
+					return nil
+				} else {
+					return errors.New("invalid PKr")
+				}
+			}
+		}
+	} else if len(out) == 64 {
+		contract_addr := common.Address{}
+		copy(contract_addr[:], out)
+		if isContract, err := txtool.Ref_inst.Bc.IsContract(contract_addr); err != nil {
+			return err
+		} else {
+			if isContract {
+				*b = contract_addr[:]
+				return nil
+			} else {
+				pk := keys.Uint512{}
+				copy(pk[:], out[:])
+				if keys.IsPKValid(&pk) {
+					pkr := keys.Addr2PKr(&pk, nil)
+					*b = pkr[:]
+					return nil
+				} else {
+					return errors.New("invalid PK")
+				}
+			}
+		}
+	} else {
+		return errors.New("AllMixedAddress must be length 64 or 96")
+	}
+	return nil
+
+}
+
+type ContractAddress keys.PKr
+
+func (b ContractAddress) MarshalText() ([]byte, error) {
+	return []byte(base58.Encode(b[:])), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (b *ContractAddress) UnmarshalText(input []byte) error {
+
+	if len(input) == 0 {
+		return ErrEmptyString
+	}
+
+	var out []byte
+	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
+		out = base58.Decode(string(input))
+	} else {
+		if raw, err := checkText(input, true); err != nil {
+			return err
+		} else {
+			dec := make([]byte, len(raw)/2)
+			if _, err = hex.Decode(dec, raw); err != nil {
+				return mapError(err)
+			} else {
+				out = dec
+			}
+		}
+	}
+
+	if len(out) == 96 {
+		addr := common.Address{}
+		copy(addr[:], out)
+		if isContract, err := txtool.Ref_inst.Bc.IsContract(addr); err != nil {
+			return err
+		} else {
+			if isContract {
+				copy(b[:], out)
+				return nil
+			} else {
+				return errors.New("this 96 bytes not contract address")
+			}
+		}
+	} else if len(out) == 64 {
+		contract_addr := common.Address{}
+		copy(contract_addr[:], out)
+		if isContract, err := txtool.Ref_inst.Bc.IsContract(contract_addr); err != nil {
+			return err
+		} else {
+			if isContract {
+				copy(b[:], contract_addr[:])
+				return nil
+			} else {
+				return errors.New("this 64 bytes not contract address")
+			}
+		}
+	} else {
+		return errors.New("ContractAddress must be length 64 or 96")
+	}
+
 }
