@@ -2,14 +2,10 @@ package ethapi
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/txtool/flight"
-	"github.com/sero-cash/go-sero/zero/txtool/prepare"
-
 	"github.com/sero-cash/go-sero/common/address"
+	"github.com/sero-cash/go-sero/zero/txtool/flight"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -108,45 +104,6 @@ type ReceptionArgs struct {
 	Value    *Big
 }
 
-type GenTxArgs struct {
-	From       PKAddress
-	RefundTo   *PKrAddress
-	Receptions []ReceptionArgs
-	Gas        uint64
-	GasPrice   *Big
-	Roots      []keys.Uint256
-}
-
-func (args GenTxArgs) check() error {
-	if len(args.Receptions) == 0 {
-		return errors.New("have no receptions")
-	}
-	if args.GasPrice == nil {
-		return fmt.Errorf("gasPrice not specified")
-	}
-
-	if args.RefundTo != nil {
-		if !keys.PKrValid(args.RefundTo.ToPKr()) {
-			return errors.New("RefundTo is not a valid pkr")
-		}
-	}
-
-	for _, rec := range args.Receptions {
-		_, err := validAddress(rec.Addr)
-		if err != nil {
-			return err
-		}
-		if rec.Currency.IsEmpty() {
-			return errors.Errorf("%v reception currency is nil", hexutil.Encode(rec.Addr[:]))
-		}
-		if rec.Value == nil {
-			return errors.Errorf("%v reception value is nil", hexutil.Encode(rec.Addr[:]))
-		}
-	}
-	return nil
-
-}
-
 func MixAdrressToPkr(addr MixAdrress) keys.PKr {
 	pkr := keys.PKr{}
 	if len(addr) == 64 {
@@ -157,44 +114,6 @@ func MixAdrressToPkr(addr MixAdrress) keys.PKr {
 		copy(pkr[:], addr[:])
 	}
 	return pkr
-}
-
-func (args GenTxArgs) toTxParam() prepare.PreTxParam {
-	gasPrice := args.GasPrice.ToInt()
-
-	if gasPrice.Sign() == 0 {
-		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
-	}
-	receptions := []prepare.Reception{}
-	for _, rec := range args.Receptions {
-		pkr := MixAdrressToPkr(rec.Addr)
-		var currency keys.Uint256
-		bytes := common.LeftPadBytes([]byte(string(rec.Currency)), 32)
-		copy(currency[:], bytes)
-		receptions = append(receptions, prepare.Reception{
-			pkr,
-			assets.Asset{Tkn: &assets.Token{
-				Currency: currency,
-				Value:    utils.U256(*rec.Value.ToInt())},
-			},
-		})
-	}
-	var refundPkr *keys.PKr
-	if args.RefundTo != nil {
-		refundPkr = args.RefundTo.ToPKr()
-	}
-	return prepare.PreTxParam{
-		args.From.ToUint512(),
-		refundPkr,
-		receptions,
-		prepare.Cmds{},
-		assets.Token{
-			utils.CurrencyToUint256("SERO"),
-			utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(args.Gas)), args.GasPrice.ToInt())),
-		},
-		gasPrice,
-		args.Roots,
-	}
 }
 
 func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*txtool.GTxParam, error) {
@@ -587,15 +506,15 @@ func (s *PublicExchangeAPI) Tk2Pk(ctx context.Context, tk TKAddress) (address.Ac
 	pk := keys.Tk2Pk(tk.ToUint512().NewRef())
 	return address.BytesToAccount(pk[:]), nil
 }
-func (s *PublicExchangeAPI) Pk2Pkr(ctx context.Context, pk PKAddress,index *keys.Uint256) (PKrAddress, error) {
-	empty:=keys.Uint256{}
-	if index!=nil{
-		if (*index) ==empty{
-            *index=keys.RandUint256()
+func (s *PublicExchangeAPI) Pk2Pkr(ctx context.Context, pk PKAddress, index *keys.Uint256) (PKrAddress, error) {
+	empty := keys.Uint256{}
+	if index != nil {
+		if (*index) == empty {
+			*index = keys.RandUint256()
 		}
 	}
-	pkr:=keys.Addr2PKr(pk.ToUint512().NewRef(),index)
+	pkr := keys.Addr2PKr(pk.ToUint512().NewRef(), index)
 	var pkrAddress PKrAddress
-	copy(pkrAddress[:],pkr[:])
+	copy(pkrAddress[:], pkr[:])
 	return pkrAddress, nil
 }

@@ -470,6 +470,23 @@ func (self *StakeState) GetShare(key common.Hash) *Share {
 	return item.(*Share)
 }
 
+func GetStakePoolByBlockNumber(getter serodb.Getter, id common.Hash, blockHash common.Hash, blockNumber uint64) *StakePool {
+	records := state.StakeDB.GetBlockRecords(getter, blockNumber, &blockHash)
+	for _, record := range records {
+		if record.Name == "pool" {
+			for _, each := range record.Pairs {
+				if bytes.Equal(id[:], each.Ref) {
+					ret := StakePoolDB.GetObject(getter, each.Hash, &StakePool{})
+					if ret != nil {
+						return ret.(*StakePool)
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (self *StakeState) GetStakePool(poolId common.Hash) *StakePool {
 	item := self.stakePoolObj.GetObj(poolId.Bytes(), &StakePool{})
 	if item == nil {
@@ -528,6 +545,23 @@ func (self *StakeState) getBlockRecords(getter serodb.Getter, blockHash common.H
 func GetShare(getter serodb.Getter, hash common.Hash) *Share {
 	ret := ShareDB.GetObject(getter, hash[:], &Share{})
 	return ret.(*Share)
+}
+
+func GetShareByBlockNumber(getter serodb.Getter, id common.Hash, blockHash common.Hash, blockNumber uint64) *Share {
+	records := state.StakeDB.GetBlockRecords(getter, blockNumber, &blockHash)
+	for _, record := range records {
+		if record.Name == "share" {
+			for _, each := range record.Pairs {
+				if bytes.Equal(id[:], each.Ref) {
+					ret := ShareDB.GetObject(getter, each.Hash, &Share{})
+					if ret != nil {
+						return ret.(*Share)
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func GetSharesByBlock(getter serodb.Getter, blockHash common.Hash, blockNumber uint64) (shares []*Share) {

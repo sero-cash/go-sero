@@ -2,7 +2,9 @@ package generate
 
 import (
 	"errors"
+	"fmt"
 
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/sero-cash/go-czero-import/cpt"
@@ -175,6 +177,11 @@ func (self *gen_ctx) setData() {
 }
 
 func (self *gen_ctx) signTxFrom() error {
+	sk := self.param.From.SKr.ToUint512()
+	tk := keys.Sk2Tk(&sk)
+	if !keys.IsMyPKr(&tk, &self.s.From) {
+		return fmt.Errorf("sign from : sk unmatch the from (%v)", hexutil.Encode(self.s.From[:]))
+	}
 	if sign, err := keys.SignPKrBySk(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.s.From); err != nil {
 		return err
 	} else {

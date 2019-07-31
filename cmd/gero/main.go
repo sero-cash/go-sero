@@ -141,6 +141,7 @@ var (
 		utils.RPCListenAddrFlag,
 		utils.RPCPortFlag,
 		utils.RPCApiFlag,
+		utils.RPCRequestContentLength,
 		utils.RPCReadTimeoutFlag,
 		utils.RPCWriteTimeoutFlag,
 		utils.RPCIdleTimeoutFlag,
