@@ -470,7 +470,15 @@ func (s *PublicStakeApI) PoolState(ctx context.Context, poolId common.Hash) (map
 	if poolState == nil {
 		return nil, errors.New("stake pool not exists")
 	}
-	ret := newRPCStakePool(wallets, *poolState)
+
+	timestamp:=uint64(0)
+	block, _ := s.b.BlockByNumber(ctx, rpc.BlockNumber(poolState.BlockNumber))
+
+	if block != nil {
+		timestamp=block.Header().Time.Uint64()
+	}
+
+	ret := newRPCStakePool(wallets, *poolState,timestamp)
 
 	if poolState.LastPayTime != 0 {
 		header, _ := s.b.HeaderByNumber(ctx, rpc.BlockNumber(poolState.LastPayTime))
@@ -515,7 +523,7 @@ type StakePool struct {
 	Closed          bool
 }
 
-func newRPCStakePool(wallets []accounts.Wallet, pool stake.StakePool) map[string]interface{} {
+func newRPCStakePool(wallets []accounts.Wallet, pool stake.StakePool,timestamp uint64) map[string]interface{} {
 	result := map[string]interface{}{}
 	result["id"] = common.BytesToHash(pool.Id())
 	result["idPkr"] = common.BytesToAddress(pool.PKr[:])
@@ -532,6 +540,7 @@ func newRPCStakePool(wallets []accounts.Wallet, pool stake.StakePool) map[string
 	result["closed"] = pool.Closed
 	result["tx"] = pool.TransactionHash
 	result["createAt"] = hexutil.Uint64(pool.BlockNumber)
+	result["timestamp"]= hexutil.Uint64(timestamp)
 	return result
 }
 
@@ -540,7 +549,13 @@ func (s *PublicStakeApI) StakePools(ctx context.Context) []map[string]interface{
 	result := []map[string]interface{}{}
 	wallets := s.b.AccountManager().Wallets()
 	for _, pool := range pools {
-		result = append(result, newRPCStakePool(wallets, *pool))
+		timestamp:=uint64(0)
+		block, _ := s.b.BlockByNumber(ctx, rpc.BlockNumber(pool.BlockNumber))
+
+		if block != nil {
+			timestamp=block.Header().Time.Uint64()
+		}
+		result = append(result, newRPCStakePool(wallets, *pool,timestamp))
 	}
 	return result
 }
@@ -556,7 +571,7 @@ func getAccountAddrByPKr(wallets []accounts.Wallet, PKr keys.PKr) interface{} {
 	return addr
 }
 
-func newRPCShare(wallets []accounts.Wallet, share stake.Share) map[string]interface{} {
+func newRPCShare(wallets []accounts.Wallet, share stake.Share,timestamp uint64) map[string]interface{} {
 	s := map[string]interface{}{}
 	s["id"] = common.BytesToHash(share.Id())
 	s["addr"] = getAccountAddrByPKr(wallets, share.PKr)
@@ -581,6 +596,8 @@ func newRPCShare(wallets []accounts.Wallet, share stake.Share) map[string]interf
 	s["fee"] = hexutil.Uint64(share.Fee)
 
 	s["tx"] = share.TransactionHash
+	s["at"] = hexutil.Uint64(share.BlockNumber)
+	s["timestamp"]= hexutil.Uint64(timestamp)
 	return s
 }
 
@@ -713,7 +730,13 @@ func (s *PublicStakeApI) GetShare(ctx context.Context, shareId common.Hash) map[
 		return nil
 	}
 	wallets := s.b.AccountManager().Wallets()
-	ret := newRPCShare(wallets, *share)
+	timestamp:=uint64(0)
+	block, _ := s.b.BlockByNumber(ctx, rpc.BlockNumber(share.BlockNumber))
+
+	if block != nil {
+		timestamp=block.Header().Time.Uint64()
+	}
+	ret := newRPCShare(wallets, *share,timestamp)
 
 	if share.LastPayTime != 0 {
 		header, _ := s.b.HeaderByNumber(ctx, rpc.BlockNumber(share.LastPayTime))

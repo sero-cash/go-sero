@@ -4679,14 +4679,14 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 return ;
             }
             if(result instanceof Array){
-                ['missed', 'num', 'total', 'status',"remaining",'expired','fee'].forEach(function(key){
+                ['missed', 'num', 'total', 'status',"remaining",'expired','fee','at','timestamp','lastPayTime','returnNum'].forEach(function(key){
                     result.forEach(function(s){
                         if (s.hasOwnProperty(key)){
                             s[key] = utils.toDecimal(s[key]);
                         }
                     });
                 });
-                ['profit','price'].forEach(function(key){
+                ['profit','price','returnProfit'].forEach(function(key){
                     result.forEach(function(s){
                         if (s.hasOwnProperty(key)){
                             s[key] = utils.toBigNumber(s[key]);
@@ -4694,12 +4694,12 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     });
                 });
             }else{
-                ['missed', 'num', 'total', 'status',"remaining",'expired','fee'].forEach(function(key){
+                ['missed', 'num', 'total', 'status',"remaining",'expired','fee','at','timestamp','lastPayTime','returnNum'].forEach(function(key){
                     if (result.hasOwnProperty(key)){
                         result[key] = utils.toDecimal(result[key]);
                     }
                 });
-                ['profit','price'].forEach(function(key){
+                ['profit','price','returnProfit'].forEach(function(key){
                     if (result.hasOwnProperty(key)){
                         result[key] = utils.toBigNumber(result[key]);
                     };
@@ -4716,7 +4716,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }
 
             if(result instanceof Array){
-                ['choicedNum', 'createAt', 'expireNum', 'fee','missedNum','shareNum','lastPayTime'].forEach(function(key){
+                ['choicedNum', 'createAt', 'expireNum', 'fee','missedNum','shareNum','lastPayTime','wishVoteNum','timestamp'].forEach(function(key){
                     result.forEach(function(s){
                         if (s.hasOwnProperty(key)){
                             s[key] = utils.toDecimal(s[key]);
@@ -4732,7 +4732,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
                 });
             }else{
-                ['choicedNum', 'createAt', 'expireNum', 'fee','missedNum','shareNum','lastPayTime'].forEach(function(key){
+                ['choicedNum', 'createAt', 'expireNum', 'fee','missedNum','shareNum','lastPayTime','wishVoteNum','timestamp'].forEach(function(key){
                     if (result.hasOwnProperty(key)){
                         result[key] = utils.toDecimal(result[key]);
                     }
