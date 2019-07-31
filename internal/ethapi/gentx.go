@@ -184,7 +184,7 @@ type GenTxArgs struct {
 }
 
 func (args GenTxArgs) check() error {
-	if len(args.Receptions) == 0 {
+	if len(args.Receptions) == 0 && args.Cmds == nil {
 		return errors.New("have no receptions")
 	}
 	if args.GasPrice == nil {
