@@ -847,7 +847,8 @@ web3._extend({
 			name: 'getStakeInfo',
 			call: 'stake_getStakeInfo',
 			params:3,
-            inputFormatter: [null,web3._extend.utils.toHex,web3._extend.utils.toHex]
+            inputFormatter: [null,web3._extend.utils.toHex,web3._extend.utils.toHex],
+            outputFormatter: web3._extend.formatters.outputStakeInfoFormatter
 		})
 
 	],

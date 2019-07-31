@@ -766,18 +766,18 @@ func (s *PublicStakeApI) GetStakeInfo(ctx context.Context, poolId common.Hash, s
 				share := map[string]interface{}{}
 				share["id"] = common.BytesToHash(each.Id())
 				share["own"] = base58.Encode(each.PKr[:])
-				share["blockNumber"] = header.Number.Uint64()
-				share["total"] = each.InitNum
-				share["missed"] = each.WillVoteNum
-				share["price"] = each.Value
-				share["remaining"] = each.Num
-				share["status"] = each.Status
+				share["blockNumber"] = hexutil.Uint64(header.Number.Uint64())
+				share["total"] = hexutil.Uint64(each.InitNum)
+				share["missed"] = hexutil.Uint64(each.WillVoteNum)
+				share["price"] = hexutil.Big(*each.Value)
+				share["remaining"] = hexutil.Uint64(each.Num)
+				share["status"] =hexutil.Uint64( each.Status)
 				if each.PoolId != nil {
 					share["pool"] = each.PoolId
 				}
-				share["profit"] = each.Profit
-				share["lastPayTime"] = each.LastPayTime
-				share["fee"] = each.Fee
+				share["profit"] = hexutil.Big(*each.Profit)
+				share["lastPayTime"] = hexutil.Uint64(each.LastPayTime)
+				share["fee"] = hexutil.Uint64(each.Fee)
 				share["tx"] = each.TransactionHash
 				shares = append(shares, share)
 			}
@@ -788,17 +788,17 @@ func (s *PublicStakeApI) GetStakeInfo(ctx context.Context, poolId common.Hash, s
 				pool := map[string]interface{}{}
 				pool["id"] = common.BytesToHash(each.Id())
 				pool["own"] = base58.Encode(each.PKr[:])
-				pool["blockNumber"] = header.Number.Uint64()
-				pool["fee"] = each.Fee
-				pool["shareNum"] = each.CurrentShareNum
-				pool["choicedNum"] = each.ChoicedShareNum
-				pool["wishVoteNum"] = each.WishVoteNum
-				pool["expireNum"] = each.ExpireNum
-				pool["missedNum"] = each.MissedVoteNum
-				pool["profit"] = each.Profit
-				pool["lastPayTime"] = each.LastPayTime
+				pool["blockNumber"] = hexutil.Uint64(header.Number.Uint64())
+				pool["fee"] = hexutil.Uint64(each.Fee)
+				pool["shareNum"] = hexutil.Uint64(each.CurrentShareNum)
+				pool["choicedNum"] = hexutil.Uint64(each.ChoicedShareNum)
+				pool["wishVoteNum"] = hexutil.Uint64(each.WishVoteNum)
+				pool["expireNum"] = hexutil.Uint64(each.ExpireNum)
+				pool["missedNum"] = hexutil.Uint64(each.MissedVoteNum)
+				pool["profit"] = hexutil.Big(*each.Profit)
+				pool["lastPayTime"] = hexutil.Uint64(each.LastPayTime)
 				pool["tx"] = each.TransactionHash
-				pool["createAt"] = each.BlockNumber
+				pool["createAt"] = hexutil.Uint64(each.BlockNumber)
 				pool["closed"] = each.Closed
 
 				pools = append(pools, pool)

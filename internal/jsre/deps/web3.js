@@ -4747,6 +4747,56 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return result;
         };
 
+
+        var outputStakeInfoFormatter = function(result) {
+            if (!result) {
+                return ;
+            }
+
+            if (!result.pools && !result.shares){
+                return ;
+            }
+
+            if (result.pools){
+                ['choicedNum', 'createAt', 'expireNum', 'fee','missedNum','shareNum','lastPayTime','wishVoteNum','timestamp','blockNumber'].forEach(function(key){
+                    result.pools.forEach(function(s){
+                        if (s.hasOwnProperty(key)){
+                            s[key] = utils.toDecimal(s[key]);
+                        }
+                    });
+                });
+                ['profit'].forEach(function(key){
+                    result.pools.forEach(function(s){
+                        if (s.hasOwnProperty(key)){
+                            s[key] = utils.toBigNumber(s[key]);
+                        }
+                    });
+
+                });
+            }
+            if (result.shares){
+                ['missed', 'num', 'total', 'status',"remaining",'expired','fee','at','timestamp','lastPayTime','returnNum','blockNumber'].forEach(function(key){
+                    result.shares.forEach(function(s){
+                        if (s.hasOwnProperty(key)){
+                            s[key] = utils.toDecimal(s[key]);
+                        }
+                    });
+                });
+                ['profit','price'].forEach(function(key){
+                    result.shares.forEach(function(s){
+                        if (s.hasOwnProperty(key)){
+                            s[key] = utils.toBigNumber(s[key]);
+                        }
+                    });
+
+                });
+            }
+
+
+            return result;
+        };
+
+
         module.exports = {
             inputDefaultBlockNumberFormatter: inputDefaultBlockNumberFormatter,
             inputBlockNumberFormatter: inputBlockNumberFormatter,
@@ -4765,7 +4815,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             outputSyncingFormatter: outputSyncingFormatter,
             outputBalanceFormatter:outputBalanceFormatter,
             outputStakeShareFormatter:outputStakeShareFormatter,
-            outputStakePoolFormatter:outputStakePoolFormatter
+            outputStakePoolFormatter:outputStakePoolFormatter,
+            outputStakeInfoFormatter:outputStakeInfoFormatter
         };
 
 
