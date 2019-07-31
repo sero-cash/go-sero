@@ -732,12 +732,12 @@ func (s *PublicStakeApI) GetShareByPkr(ctx context.Context, pkr PKrAddress) []ma
 	return newRPCStatisticsShare(wallets, shares)
 }
 
-func (s *PublicStakeApI) GetStakeInfo(ctx context.Context, poolId common.Hash, start, end uint64) (ret map[string][]interface{}) {
+func (s *PublicStakeApI) GetStakeInfo(ctx context.Context, poolId common.Hash, start, end hexutil.Uint64) (ret map[string][]interface{}) {
 	pools := []interface{}{}
 	shares := []interface{}{}
 	for start < end {
 		header, _ := s.b.HeaderByNumber(ctx, rpc.BlockNumber(start))
-		shareList, poolList := stake.GetBlockRecords(s.b.ChainDb(), header.Hash(), start)
+		shareList, poolList := stake.GetBlockRecords(s.b.ChainDb(), header.Hash(), uint64(start))
 		for _, each := range shareList {
 			if each.PoolId != nil && *each.PoolId == poolId {
 				share := map[string]interface{}{}
