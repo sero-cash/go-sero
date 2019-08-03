@@ -45,18 +45,13 @@ own sero instance.
 
 ## Sero networks
 
-sero have 4 networks: **dev**, **alpha**(internal test), **beta**(public test), main(the main network will be online 
-soon)
+sero have 2 networks: **dev**, **main**(mainnet)
 
 For example 
 
-```gero --dev ... ``` will connect to a private network for development, developer need to setup bootnode and member 
-miner in it.
+```gero --dev ... ``` will connect to a private network for development
 
-```gero --alpha ... ``` will connect to Sero's alpha network, it is a testing network with public bootnodes and public
-miner member supported
-
-```gero ...```  will connect to Sero's **beta** network, it is for public testing. License is needed for mining
+```gero ...```  will connect to Sero's main network, it is for public testing. License is needed for mining
 
 ### Go into console with the Sero network options
 
@@ -93,21 +88,18 @@ entire system. In other words, instead of attaching to the main network, you wan
 network with your node, which is fully equivalent to the main network, but with play-Sero only.
 
 ```
-$ gero --alpha console
+$ gero --dev console
 ```
 
 The `console` subcommand have the exact same meaning as above. Please see above for their explanations if you've 
 skipped to here.
 
-Specifying the `--alpha` flag however will reconfigure your sero instance a bit:
+Specifying the `--dev` flag however will reconfigure your sero instance a bit:
 
- * Instead of using the default data directory (`~/.sero` on Linux for example), sero will nest
-   itself one level deeper into a `alpha` subfolder (`~/.sero/alpha` on Linux). Note, on OSX
+ * using the default data directory (`~/.sero` on Linux for example). Note, on OSX
    and Linux this also means that attaching to a running alpha network node requires the use of a custom
-   endpoint since `sero attach` will try to attach to a production node endpoint by default. E.g.
-   `gero attach <datadir>/alpha/sero.ipc`.
- * Instead of connecting the main Sero network, the client will connect to the alpha network,
-   which uses different P2P bootnodes, different network IDs and genesis states.
+   endpoint since `gero attach` will try to attach to a production node endpoint by default. E.g.
+   `gero attach <datadir>/alpha/gero.ipc`.
    
 *Note: Although there are some internal protective measures to prevent transactions from crossing
 over between the main(beta) network and alpha network, you should make sure to always use separate accounts
