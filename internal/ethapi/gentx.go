@@ -120,7 +120,7 @@ type ContractArgs struct {
 	Currency Smbol
 	Value    *Big
 	To       *ContractAddress
-	Data     []byte
+	Data     hexutil.Bytes
 }
 
 func (self *ContractArgs) toCmd() *stx.ContractCmd {

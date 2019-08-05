@@ -456,6 +456,21 @@ web3._extend({
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.utils.toHex]
 		}),
+        new web3._extend.Method({
+			name: 'packMethod',
+            call: 'sero_packMethod',	
+			params:4
+		}),
+       new web3._extend.Method({
+			name: 'packConstruct',
+            call: 'sero_packConstruct',	
+			params: 3
+		}),
+       new web3._extend.Method({
+			name: 'unPack',
+            call: 'sero_unPack',	
+			params: 3
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

@@ -183,7 +183,9 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 	case BoolTy:
 		return readBool(returnOutput)
 	case AddressTy:
-		return common.BytesToAddress(returnOutput), nil
+		var caddr common.ContractAddress
+	    caddr.SetBytes(returnOutput)
+	    return caddr,nil
 	case HashTy:
 		return common.BytesToHash(returnOutput), nil
 	case BytesTy:
