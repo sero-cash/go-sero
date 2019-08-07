@@ -65,22 +65,10 @@ type Cmds struct {
 
 type GTxParam struct {
 	Gas      uint64
-	GasPrice big.Int
+	GasPrice *big.Int
 	Fee      assets.Token
 	From     Kr
 	Ins      []GIn
 	Outs     []GOut
 	Cmds     Cmds
-}
-
-type ISLI interface {
-	CreateKr() Kr
-	DecOuts(outs []Out, skr *keys.PKr) ([]DOut, error)
-	GenTx(param *GTxParam) (GTx, error)
-}
-
-type ISRI interface {
-	GetBlocksInfo(start uint64, count uint64) ([]Block, error)
-	GetAnchor(roots []keys.Uint256) ([]Witness, error)
-	CommitTx(tx *GTx) error
 }

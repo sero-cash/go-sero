@@ -27,7 +27,7 @@ func (s *PublicSSIAPI) Detail(ctx context.Context, roots []keys.Uint256, skr *ke
 	return ssi.SSI_Inst.Detail(roots, skr)
 }
 
-func (s *PublicSSIAPI) GenTx(ctx context.Context, param *ssi.GenTxParam) (hash keys.Uint256, e error) {
+func (s *PublicSSIAPI) GenTx(ctx context.Context, param *ssi.PreTxParam) (hash keys.Uint256, e error) {
 	return ssi.SSI_Inst.GenTx(param)
 }
 

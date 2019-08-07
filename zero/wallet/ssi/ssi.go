@@ -87,18 +87,17 @@ func (self *SSI) Detail(roots []keys.Uint256, skr *keys.PKr) (douts []txtool.DOu
 			outs = append(outs, txtool.Out{r, *root})
 		}
 	}
-	douts = flight.SLI_Inst.DecOuts(outs, skr)
+	douts = DecNilOuts(outs, skr)
 
 	return
 }
 
 var txMap sync.Map
 
-func (self *SSI) GenTx(param *GenTxParam) (hash keys.Uint256, e error) {
+func (self *SSI) GenTxParam(param *PreTxParam) (p txtool.GTxParam, e error) {
 	log.Printf("genTx start")
-	p := txtool.GTxParam{}
 	p.Gas = param.Gas
-	p.GasPrice = *big.NewInt(0).SetUint64(param.GasPrice)
+	p.GasPrice = big.NewInt(0).SetUint64(param.GasPrice)
 	p.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
 		utils.U256(*new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), new(big.Int).SetUint64(param.GasPrice))),
@@ -118,7 +117,7 @@ func (self *SSI) GenTx(param *GenTxParam) (hash keys.Uint256, e error) {
 			return
 		} else {
 			out := txtool.Out{in.Root, *root}
-			dOuts := flight.SLI_Inst.DecOuts([]txtool.Out{out}, &in.SKr)
+			dOuts := DecNilOuts([]txtool.Out{out}, &in.SKr)
 			if len(dOuts) == 0 {
 				e = fmt.Errorf("SSI GenTx Error for root %v", in.Root)
 				return
@@ -203,18 +202,26 @@ func (self *SSI) GenTx(param *GenTxParam) (hash keys.Uint256, e error) {
 		p.Ins = append(p.Ins, in)
 	}
 
-	log.Printf("genTx ins : %v, outs : %v", len(p.Ins), len(p.Outs))
-	if gtx, err := flight.SLI_Inst.GenTx(&p); err != nil {
+	log.Printf("genTxParam ins : %v, outs : %v", len(p.Ins), len(p.Outs))
+	return
+}
+
+func (self *SSI) GenTx(param *PreTxParam) (hash keys.Uint256, e error) {
+	if p, err := self.GenTxParam(param); err != nil {
 		e = err
-		log.Printf("genTx error : %v", err)
 		return
 	} else {
-		hash = gtx.Tx.ToHash()
-		txMap.Store(hash, &gtx)
-		log.Printf("genTx success hash: %s", common.Bytes2Hex(hash[:]))
+		if gtx, err := flight.SLI_Inst.GenTx(&p); err != nil {
+			e = err
+			log.Printf("genTx error : %v", err)
+			return
+		} else {
+			hash = gtx.Tx.ToHash()
+			txMap.Store(hash, &gtx)
+			log.Printf("genTx success hash: %s", common.Bytes2Hex(hash[:]))
+			return
+		}
 	}
-
-	return
 }
 
 func (self *SSI) GetTx(txhash keys.Uint256) (tx *txtool.GTx, e error) {
