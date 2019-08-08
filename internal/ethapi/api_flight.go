@@ -13,6 +13,7 @@ import (
 	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/core/rawdb"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -23,7 +24,7 @@ type PublicFlightAPI struct {
 }
 
 func (s *PublicFlightAPI) GetBlocksInfo(ctx context.Context, start uint64, count uint64) ([]txtool.Block, error) {
-	block, err := flight.SRI_Inst.GetBlocksInfo(start, count)
+	block, err := flight.SRI_Inst.GetBlocksInfoByDelay(start, count, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -34,8 +35,41 @@ func (s *PublicFlightAPI) GetBlockByNumber(ctx context.Context, blockNum *int64)
 	return s.exchange.GetBlockByNumber(ctx, blockNum)
 }
 
-func (s *PublicFlightAPI) GenTxParam(ctx context.Context, param flight.PreTxParam, tk PKAddress) (p txtool.GTxParam, e error) {
-	return flight.GenTxParam(&param, tk.ToUint512())
+type GOutArgs struct {
+	PKr   PKrAddress
+	Asset assets.Asset
+	Memo  keys.Uint512
+}
+
+func (self *GOutArgs) ToOut() (ret txtool.GOut) {
+	ret.PKr = *self.PKr.ToPKr()
+	ret.Asset = self.Asset
+	ret.Memo = self.Memo
+	return
+}
+
+type PreTxParamArgs struct {
+	Gas      uint64
+	GasPrice uint64
+	From     PKrAddress
+	Ins      []keys.Uint256
+	Outs     []GOutArgs
+}
+
+func (self *PreTxParamArgs) ToParam() (ret flight.PreTxParam) {
+	ret.Gas = self.Gas
+	ret.GasPrice = self.GasPrice
+	ret.From = *self.From.ToPKr()
+	ret.Ins = self.Ins
+	for _, out := range self.Outs {
+		ret.Outs = append(ret.Outs, out.ToOut())
+	}
+	return
+}
+
+func (s *PublicFlightAPI) GenTxParam(ctx context.Context, param PreTxParamArgs, tk PKAddress) (p txtool.GTxParam, e error) {
+	preTxParam := param.ToParam()
+	return flight.GenTxParam(&preTxParam, tk.ToUint512())
 }
 
 func (s *PublicFlightAPI) CommitTx(ctx context.Context, args *txtool.GTx) error {
@@ -107,7 +141,7 @@ func (s *PublicFlightAPI) GetTxReceipt(ctx context.Context, txhash keys.Uint256)
 	}
 	receipt := receipts[tindex]
 
-	blocks, err := flight.SRI_Inst.GetBlocksInfo(bnum, 1)
+	blocks, err := flight.SRI_Inst.GetBlocksInfoByDelay(bnum, 1, 0)
 	if err != nil {
 		e = err
 		return

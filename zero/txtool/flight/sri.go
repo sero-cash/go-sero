@@ -64,7 +64,7 @@ func GetBlock(num uint64, hash *common.Hash) (ret *localdb.Block) {
 	return
 }
 
-func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []txtool.Block, e error) {
+func (self *SRI) GetBlocksInfoByDelay(start uint64, count uint64, delay uint64) (blocks []txtool.Block, e error) {
 	stable_num := txtool.Ref_inst.GetDelayedNum(seroparam.DefaultConfirmedBlock())
 	if start <= stable_num {
 		if stable_num-start+1 < count {
@@ -106,6 +106,10 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []txtool.Bloc
 	} else {
 		return
 	}
+}
+
+func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []txtool.Block, e error) {
+	return self.GetBlocksInfoByDelay(start, count, seroparam.DefaultConfirmedBlock())
 }
 
 func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []txtool.Witness, e error) {
