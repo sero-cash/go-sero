@@ -168,7 +168,7 @@ func (self *gen_ctx) setCmdsData() {
 }
 
 func (self *gen_ctx) setData() {
-	self.s.Ehash = types.Ehash(self.param.GasPrice, self.param.Gas, []byte{})
+	self.s.Ehash = types.Ehash(*self.param.GasPrice, self.param.Gas, []byte{})
 	self.setFeeData()
 	self.setInsData()
 	self.setOutsData()

@@ -22,7 +22,7 @@ var Modules = map[string]string{
 	"chequebook": Chequebook_JS,
 	"clique":     Clique_JS,
 	"debug":      Debug_JS,
-	"sero":        SER_JS,
+	"sero":       SER_JS,
 	"miner":      Miner_JS,
 	"net":        Net_JS,
 	"personal":   Personal_JS,
@@ -34,6 +34,8 @@ var Modules = map[string]string{
 	"exchange":   Exchange_JS,
 	"light":      LightNode_JS,
 	"stake":      Stake_JS,
+	"flight":     Flight_JS,
+	"local":      Local_JS,
 }
 
 const Chequebook_JS = `
@@ -881,6 +883,112 @@ web3._extend({
 			call: 'light_checkNil',
 			params: 1
 		}),
+	]
+});
+`
+
+const Flight_JS = `
+web3._extend({
+	property: 'flight',
+	methods: [
+		new web3._extend.Method({
+			name: 'getBlocksInfo',
+			call: 'flight_getBlocksInfo',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'getBlockByNumber',
+			call: 'flight_getBlockByNumber',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'genTxParam',
+			call: 'flight_genTxParam',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'commitTx',
+			call: 'flight_commitTx',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getOut',
+			call: 'flight_getOut',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getTx',
+			call: 'flight_getTx',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getTxReceipt',
+			call: 'flight_getTxReceipt',
+			params: 1
+		})
+	]
+});
+`
+
+const Local_JS = `
+web3._extend({
+	property: 'local',
+	methods: [
+        new web3._extend.Method({
+			name: 'currencyToId',
+			call: 'local_currencyToId',
+            params: 1
+		}),
+        new web3._extend.Method({
+			name: 'idToCurrency',
+			call: 'local_idToCurrency',
+            params: 1
+		}),
+        new web3._extend.Method({
+			name: 'genSeed',
+			call: 'local_genSeed',
+            params: 0
+		}),
+        new web3._extend.Method({
+			name: 'seed2Sk',
+			call: 'local_seed2Sk',
+            params: 1
+		}),
+        new web3._extend.Method({
+			name: 'sk2Tk',
+			call: 'local_sk2Tk',
+            params: 1
+		}),
+        new web3._extend.Method({
+			name: 'tk2Pk',
+			call: 'local_tk2Pk',
+            params: 1
+		}),
+        new web3._extend.Method({
+			name: 'pk2Pkr',
+			call: 'local_pk2Pkr',
+            params: 2
+		}),
+        new web3._extend.Method({
+			name: 'signTxWithSk',
+			call: 'local_signTxWithSk',
+            params: 2
+		}),
+		new web3._extend.Method({
+			name: 'decOut',
+			call: 'local_decOut',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'isPkrValid',
+			call: 'local_isPkrValid',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'isPkValid',
+			call: 'local_isPkValid',
+			params: 1
+		})
 	]
 });
 `

@@ -89,7 +89,7 @@ func BuildTxParam(
 	ck := NewCKState(false, fee)
 
 	txParam.Fee = *fee
-	txParam.GasPrice = *gasPrice
+	txParam.GasPrice = gasPrice
 
 	txParam.From = txtool.Kr{PKr: *refundTo}
 
@@ -252,7 +252,7 @@ func BuildTxParam(
 		}
 	}
 
-	if gaslimit, err := state.GetSeroGasLimit(contractTo, &txParam.Fee, &txParam.GasPrice); err != nil {
+	if gaslimit, err := state.GetSeroGasLimit(contractTo, &txParam.Fee, txParam.GasPrice); err != nil {
 		e = err
 		return
 	} else {

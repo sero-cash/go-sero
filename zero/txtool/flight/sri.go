@@ -2,14 +2,18 @@ package flight
 
 import (
 	"fmt"
+	"math/big"
+	"strings"
+
+	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/common"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
-
-	"github.com/sero-cash/go-sero/log"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
 
@@ -60,7 +64,7 @@ func GetBlock(num uint64, hash *common.Hash) (ret *localdb.Block) {
 	return
 }
 
-func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []txtool.Block, e error) {
+func (self *SRI) GetBlocksInfoByDelay(start uint64, count uint64, delay uint64) (blocks []txtool.Block, e error) {
 	stable_num := txtool.Ref_inst.GetDelayedNum(seroparam.DefaultConfirmedBlock())
 	if start <= stable_num {
 		if stable_num-start+1 < count {
@@ -104,6 +108,10 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []txtool.Bloc
 	}
 }
 
+func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []txtool.Block, e error) {
+	return self.GetBlocksInfoByDelay(start, count, seroparam.DefaultConfirmedBlock())
+}
+
 func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []txtool.Witness, e error) {
 	state := txtool.Ref_inst.CurrentState()
 	if state != nil {
@@ -125,5 +133,124 @@ func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []txtool.Witness, e error
 		e = errors.New("State is nil")
 		return
 	}
+	return
+}
+
+func GenTxParam(param *PreTxParam, tk keys.Uint512) (p txtool.GTxParam, e error) {
+	log.Debug("genTx start")
+	p.Gas = param.Gas
+	p.GasPrice = big.NewInt(0).SetUint64(param.GasPrice)
+	p.Fee = assets.Token{
+		utils.CurrencyToUint256("SERO"),
+		utils.U256(*new(big.Int).Mul(new(big.Int).SetUint64(param.Gas), new(big.Int).SetUint64(param.GasPrice))),
+	}
+	p.From.PKr = param.From
+
+	p.Outs = param.Outs
+
+	skr := keys.PKr{}
+	copy(skr[:], tk[:])
+
+	roots := []keys.Uint256{}
+	outs := []txtool.Out{}
+
+	amounts := make(map[string]*big.Int)
+	ticekts := make(map[keys.Uint256]keys.Uint256)
+	for _, in := range param.Ins {
+		roots = append(roots, in)
+		if root := localdb.GetRoot(txtool.Ref_inst.Bc.GetDB(), &in); root == nil {
+			e = fmt.Errorf("SRI.GenTxParam get root Error for root %v", in)
+			return
+		} else {
+			out := txtool.Out{in, *root}
+			dOuts := DecTraceOuts([]txtool.Out{out}, &skr)
+			if len(dOuts) == 0 {
+				e = fmt.Errorf("SRI.GenTxParam dec outs Error for root %v", in)
+				return
+			}
+			oOut := dOuts[0]
+			if len(oOut.Nils) == 0 {
+				e = fmt.Errorf("SRI.GenTxParam dec outs Error for root %v", in)
+				return
+			}
+			if oOut.Asset.Tkn != nil {
+				currency := strings.Trim(string(oOut.Asset.Tkn.Currency[:]), string([]byte{0}))
+				if amount, ok := amounts[currency]; ok {
+					amount.Add(amount, oOut.Asset.Tkn.Value.ToIntRef())
+				} else {
+					amounts[currency] = oOut.Asset.Tkn.Value.ToIntRef()
+				}
+
+			}
+			if oOut.Asset.Tkt != nil {
+				ticekts[oOut.Asset.Tkt.Value] = oOut.Asset.Tkt.Category
+			}
+			outs = append(outs, txtool.Out{in, *root})
+		}
+	}
+
+	for _, out := range param.Outs {
+		if out.Asset.Tkn != nil {
+			currency := strings.Trim(string(out.Asset.Tkn.Currency[:]), string([]byte{0}))
+			token := out.Asset.Tkn.Value.ToIntRef()
+			if amount, ok := amounts[currency]; ok && amount.Cmp(token) >= 0 {
+				amount.Sub(amount, token)
+				if amount.Sign() == 0 {
+					delete(amounts, currency)
+				}
+			} else {
+				e = fmt.Errorf("SSI GenTx Error: balance is not enough")
+				return
+			}
+		}
+		if out.Asset.Tkt != nil {
+			if value, ok := ticekts[out.Asset.Tkt.Value]; ok && value == out.Asset.Tkt.Category {
+				delete(ticekts, out.Asset.Tkt.Value)
+			} else {
+				e = fmt.Errorf("SSI GenTx Erro: balance is not enough")
+				return
+			}
+		}
+	}
+
+	if amount, ok := amounts[utils.Uint256ToCurrency(&p.Fee.Currency)]; !ok || amount.Cmp(p.Fee.Value.ToInt()) < 0 {
+		e = fmt.Errorf("SSI GenTx Error: sero amount < Fee")
+		return
+	} else {
+		amount.Sub(amount, p.Fee.Value.ToInt())
+		if amount.Sign() == 0 {
+			delete(amounts, utils.Uint256ToCurrency(&p.Fee.Currency))
+		}
+	}
+
+	if len(amounts) > 0 || len(ticekts) > 0 {
+		for currency, value := range amounts {
+			p.Outs = append(p.Outs, txtool.GOut{PKr: p.From.PKr, Asset: assets.Asset{Tkn: &assets.Token{
+				Currency: *common.BytesToHash(common.LeftPadBytes([]byte(currency), 32)).HashToUint256(),
+				Value:    utils.U256(*value),
+			}}})
+		}
+		for value, category := range ticekts {
+			p.Outs = append(p.Outs, txtool.GOut{PKr: p.From.PKr, Asset: assets.Asset{Tkt: &assets.Ticket{
+				Category: category,
+				Value:    value,
+			}}})
+		}
+	}
+
+	wits := []txtool.Witness{}
+
+	if wits, e = SRI_Inst.GetAnchor(roots); e != nil {
+		return
+	}
+
+	for i := 0; i < len(wits); i++ {
+		in := txtool.GIn{}
+		in.Out = outs[i]
+		in.Witness = wits[i]
+		p.Ins = append(p.Ins, in)
+	}
+
+	log.Debug("genTxParam ins : %v, outs : %v", len(p.Ins), len(p.Outs))
 	return
 }
