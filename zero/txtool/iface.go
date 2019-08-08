@@ -27,6 +27,7 @@ type GTx struct {
 	GasPrice hexutil.Big
 	Tx       stx.T
 	Hash     keys.Uint256
+	Roots    []keys.Uint256
 }
 
 type GPkgCloseCmd struct {
