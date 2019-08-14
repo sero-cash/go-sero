@@ -196,7 +196,7 @@ func (b *TKAddress) UnmarshalText(input []byte) error {
 		if len(out) == 64 {
 			copy(b[:], out[:])
 		} else {
-			return errors.New("ivalid PK")
+			return errors.New("ivalid TK")
 		}
 		return nil
 	} else {
@@ -209,7 +209,7 @@ func (b *TKAddress) UnmarshalText(input []byte) error {
 			err = mapError(err)
 		} else {
 			if len(dec) != 64 {
-				return errors.New("PKAddress must be length 64 ")
+				return errors.New("TKAddress must be length 64 ")
 			}
 			copy(b[:], dec)
 		}
