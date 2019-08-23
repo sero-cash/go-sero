@@ -685,13 +685,13 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *ke
 		randSeed = (&randUint128).ToUint256()
 	}
 	for _, addr := range addresses {
-		if !keys.IsPKValid(addr.ToUint512()) {
-			return nil, errors.New("address must be accountAddress")
-		}
 		onceAddr := common.Address{}
 		if state.IsContract(common.BytesToAddress(addr[:])) {
 			onceAddr = common.BytesToAddress(addr[:])
 		} else {
+			if !keys.IsPKValid(addr.ToUint512()) {
+				return nil, errors.New("address must be accountAddress")
+			}
 			pkr := keys.Addr2PKr(addr.ToUint512(), randSeed.NewRef())
 			onceAddr.SetBytes(pkr[:])
 		}
