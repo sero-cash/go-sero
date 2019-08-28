@@ -711,17 +711,17 @@ func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses
 	addrMap := map[common.ContractAddress]common.Address{}
 	for _, short := range shortAddresses {
 		full := state.GetNonceAddress(short[:])
-
-		wallets := s.b.AccountManager().Wallets()
-
-		if len(wallets) > 0 {
-			for _, wallet := range wallets {
-				if wallet.IsMine(full) {
-					full = common.BytesToAddress(wallet.Accounts()[0].Address[:])
-					break
-				}
-			}
-		}
+		//
+		//wallets := s.b.AccountManager().Wallets()
+		//
+		//if len(wallets) > 0 {
+		//	for _, wallet := range wallets {
+		//		if wallet.IsMine(full) {
+		//			full = common.BytesToAddress(wallet.Accounts()[0].Address[:])
+		//			break
+		//		}
+		//	}
+		//}
 		addrMap[short] = full
 	}
 	return addrMap, nil
@@ -1108,7 +1108,7 @@ func (s *Smbol) IsNotSero() bool {
 
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
-	From        address.AccountAddress `json:"from"`
+	From        common.Address `json:"from"`
 	To          *common.Address        `json:"to"`
 	GasCurrency Smbol                  `json:"gasCy"` //default SERO
 	Gas         hexutil.Uint64         `json:"gas"`
@@ -1131,10 +1131,11 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 	// Set sender address or use a default if none specified
 	addr := args.From
-	if addr == (address.AccountAddress{}) {
+	if addr ==(common.Address{}){
 		if wallets := s.b.AccountManager().Wallets(); len(wallets) > 0 {
 			if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-				addr = accounts[0].Address
+				fromAddr:=accounts[0].Address
+				addr = common.BytesToAddress(fromAddr[:])
 			}
 		}
 	}
@@ -1211,9 +1212,14 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		utils.CurrencyToUint256(string(args.GasCurrency)),
 		utils.U256(*fee),
 	}
-	pkr := keys.Addr2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
+	var fromPkr keys.PKr
+	if addr.IsAccountAddress(){
+		fromPkr = keys.Addr2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
+	}else{
+		fromPkr = *addr.ToPKr()
+	}
 
-	msg := types.NewMessage(common.BytesToAddress(pkr[:]), to, 0, asset, feeToken, gasPrice, args.Data)
+	msg := types.NewMessage(common.BytesToAddress(fromPkr[:]), to, 0, asset, feeToken, gasPrice, args.Data)
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.
@@ -1247,7 +1253,6 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	if err := vmError(); err != nil {
 		return nil, 0, false, err
 	}
-
 	return res, gas, failed, err
 
 }
@@ -1272,7 +1277,7 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 		hi = uint64(args.Gas)
 	} else {
 		// Retrieve the current pending block to act as the gas ceiling
-		block, err := s.b.BlockByNumber(ctx, rpc.PendingBlockNumber)
+		block, err := s.b.BlockByNumber(ctx, rpc.LatestBlockNumber)
 		if err != nil {
 			return 0, err
 		}
@@ -1284,7 +1289,7 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 	executable := func(gas uint64) bool {
 		args.Gas = hexutil.Uint64(gas)
 
-		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, vm.Config{}, 0)
+		_, _, failed, err := s.doCall(ctx, args, rpc.LatestBlockNumber, vm.Config{}, 0)
 		if err != nil || failed {
 			return false
 		}

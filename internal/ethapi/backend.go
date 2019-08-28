@@ -114,6 +114,12 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Public:    true,
 		},
 		{
+			Namespace: "sero",
+			Version:   "1.0",
+			Service:   &PublicAbiAPI{},
+			Public:    true,
+		},
+		{
 			Namespace: "light",
 			Version:   "1.0",
 			Service:   &PublicLightNodeApi{apiBackend},

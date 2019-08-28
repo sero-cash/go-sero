@@ -876,6 +876,14 @@ func TestUnpackEvent(t *testing.T) {
 		t.Logf("len(data): %d; received event: %+v", len(data), ev)
 	}
 
+	ev2 :=make([]interface{},3)
+	err = abi.Unpack(&ev2, "received", data)
+	if err != nil {
+		t.Error(err)
+	} else {
+		t.Logf("len(data): %d; received event: %+v", len(data), ev2)
+	}
+
 	type ReceivedAddrEvent struct {
 		Address common.Address
 	}

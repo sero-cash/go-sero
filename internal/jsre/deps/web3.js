@@ -1693,7 +1693,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     result.push(f.formatInputInt(length).encode());
 
                     value.forEach(function (v) {
-                        result.push(self.encode(v, nestedName));
+                        result.push(self.encode(v, nestedName,shortAddrMap));
                     });
 
                     return result;
@@ -1707,7 +1707,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
                     var result = [];
                     for (var i = 0; i < length; i++) {
-                        result.push(self.encode(value[i], nestedName));
+                        result.push(self.encode(value[i], nestedName,shortAddrMap));
                     }
 
                     return result;
@@ -2987,7 +2987,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
     },{"./base58":17,"./sha3.js":20,"bignumber.js":"bignumber.js","utf8":87}],22:[function(require,module,exports){
         module.exports={
-            "version": "0.2.30"
+            "version": "0.3.2"
         }
 
     },{}],23:[function(require,module,exports){
@@ -4377,7 +4377,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             options.from = options.from || config.defaultAccount;
 
             if (options.from) {
-                options.from = inputAddressFormatter(options.from);
+                options.from = inputParamAddressFormatter(options.from);
             }
 
             if (options.to) { // it might be contract creation

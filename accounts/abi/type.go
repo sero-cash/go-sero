@@ -136,7 +136,7 @@ func NewType(t string) (typ Type, err error) {
 	case "address":
 		typ.Kind = reflect.Array
 		typ.Type = addressT
-		typ.Size = 64
+		typ.Size = 20
 		typ.T = AddressTy
 	case "string":
 		typ.Kind = reflect.String
