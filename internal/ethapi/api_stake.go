@@ -278,22 +278,21 @@ func getStakePoolId(from keys.PKr) common.Hash {
 func (s *PublicStakeApI) CloseStakePool(ctx context.Context, from common.Address) (common.Hash, error) {
 	wallets := s.b.AccountManager().Wallets()
 	var own address.AccountAddress
+	var fromPkr keys.PKr
 	if from.IsAccountAddress() {
 		own = common.AddrToAccountAddr(from)
+		wallet, err := s.b.AccountManager().Find(accounts.Account{Address: own})
+		if err != nil {
+			return common.Hash{}, err
+		}
+		fromPkr = getStakePoolPkr(wallet.Accounts()[0])
 	} else {
-
 		localAddr := getLocalAccountAddressByPkr(wallets, from)
 		if localAddr == nil {
 			return common.Hash{}, errors.New("can not find local account")
 		}
-		own = *localAddr
-
+		fromPkr=*from.ToPKr()
 	}
-	wallet, err := s.b.AccountManager().Find(accounts.Account{Address: own})
-	if err != nil {
-		return common.Hash{}, err
-	}
-	fromPkr := getStakePoolPkr(wallet.Accounts()[0])
 	poolId := getStakePoolId(fromPkr)
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
@@ -344,22 +343,24 @@ func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from common.Add
 
 	wallets := s.b.AccountManager().Wallets()
 	var own address.AccountAddress
+	var fromPkr keys.PKr
 	if from.IsAccountAddress() {
 		own = common.AddrToAccountAddr(from)
+		wallet, err := s.b.AccountManager().Find(accounts.Account{Address: own})
+		if err != nil {
+			return common.Hash{}, err
+		}
+		fromPkr = getStakePoolPkr(wallet.Accounts()[0])
 	} else {
 
 		localAddr := getLocalAccountAddressByPkr(wallets, from)
 		if localAddr == nil {
 			return common.Hash{}, errors.New("can not find local account")
 		}
-		own = *localAddr
+		fromPkr=*from.ToPKr()
+	}
 
-	}
-	wallet, err := s.b.AccountManager().Find(accounts.Account{Address: own})
-	if err != nil {
-		return common.Hash{}, err
-	}
-	fromPkr := getStakePoolPkr(wallet.Accounts()[0])
+
 	poolId := getStakePoolId(fromPkr)
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
@@ -403,22 +404,23 @@ func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from common.Add
 func (s *PublicStakeApI) ModifyStakePoolVote(ctx context.Context, from common.Address, vote common.Address) (common.Hash, error) {
 	wallets := s.b.AccountManager().Wallets()
 	var own address.AccountAddress
+	var fromPkr keys.PKr
 	if from.IsAccountAddress() {
 		own = common.AddrToAccountAddr(from)
+		wallet, err := s.b.AccountManager().Find(accounts.Account{Address: own})
+		if err != nil {
+			return common.Hash{}, err
+		}
+		fromPkr = getStakePoolPkr(wallet.Accounts()[0])
 	} else {
 
 		localAddr := getLocalAccountAddressByPkr(wallets, from)
 		if localAddr == nil {
 			return common.Hash{}, errors.New("can not find local account")
 		}
-		own = *localAddr
+		fromPkr=*from.ToPKr()
+	}
 
-	}
-	wallet, err := s.b.AccountManager().Find(accounts.Account{Address: own})
-	if err != nil {
-		return common.Hash{}, err
-	}
-	fromPkr := getStakePoolPkr(wallet.Accounts()[0])
 	poolId := getStakePoolId(fromPkr)
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
