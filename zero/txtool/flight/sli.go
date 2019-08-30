@@ -86,3 +86,10 @@ func SignTx(sk *keys.Uint512, paramTx *txtool.GTxParam) (tx txtool.GTx, err erro
 		return
 	}
 }
+
+func DecOut(tk *keys.Uint512, outs []txtool.Out) (douts []txtool.TDOut) {
+	tk_u96 := keys.PKr{}
+	copy(tk_u96[:], tk[:])
+	douts = DecTraceOuts(outs, &tk_u96)
+	return
+}

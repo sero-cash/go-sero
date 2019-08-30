@@ -21,9 +21,7 @@ type PublicLocalAPI struct {
 
 func (s *PublicLocalAPI) DecOut(ctx context.Context, outs []txtool.Out, tk TKAddress) (douts []txtool.TDOut, e error) {
 	tk_u64 := tk.ToUint512()
-	tk_u96 := keys.PKr{}
-	copy(tk_u96[:], tk_u64[:])
-	douts = flight.DecTraceOuts(outs, &tk_u96)
+	douts = flight.DecOut(&tk_u64, outs)
 	return
 }
 
