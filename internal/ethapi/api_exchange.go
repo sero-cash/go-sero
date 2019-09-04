@@ -483,6 +483,7 @@ func (s *PublicExchangeAPI) GetBlockByNumber(ctx context.Context, blockNum *int6
 	fields := map[string]interface{}{
 		"BlockNumber": block.Header().Number.Uint64(),
 		"BlockHash":   block.Hash(),
+		"ParentHash":  block.ParentHash(),
 		"Timestamp":   block.Header().Time.Uint64(),
 		"TxHashes":    transactions,
 	}
