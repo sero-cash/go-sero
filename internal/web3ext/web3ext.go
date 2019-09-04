@@ -833,6 +833,12 @@ web3._extend({
             outputFormatter: web3._extend.formatters.outputStakeShareFormatter
 		}),
         new web3._extend.Method({
+			name: 'getShareByPkr',
+			call: 'stake_getShareByPkr',
+			params:1,
+            outputFormatter: web3._extend.formatters.outputStakeShareFormatter
+		}),
+        new web3._extend.Method({
 			name: 'getShare',
 			call: 'stake_getShare',
 			params:1,
