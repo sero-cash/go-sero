@@ -628,6 +628,7 @@ type RPCStatisticsShare struct {
 	ShareIds    []common.Hash `json:"shareIds"`
 	Pools       []common.Hash `json:"pools"`
 	Profit      *big.Int      `json:"profit"`
+	TotalAmount *big.Int      `json:"totalAmount"`
 }
 
 func containsVoteAddr(vas []interface{}, item interface{}) bool {
@@ -652,6 +653,11 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []m
 	result := map[string]*RPCStatisticsShare{}
 	var key interface{}
 	for _, share := range shares {
+
+		if share.LastPayTime > share.BlockNumber+198720 {
+			continue
+		}
+
 		key = getAccountAddrByPKr(wallets, share.PKr)
 		var keystr string
 		switch inst := key.(type) {
@@ -683,6 +689,7 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []m
 			if share.Profit != nil {
 				s.Profit = big.NewInt(0).Add(s.Profit, share.Profit)
 			}
+			s.TotalAmount = new(big.Int).Add(s.TotalAmount, new(big.Int).Mul(big.NewInt(int64(share.Num)), share.Value));
 		} else {
 			s := &RPCStatisticsShare{}
 			s.Address = key
@@ -699,8 +706,11 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []m
 			}
 			s.Profit = new(big.Int).Set(share.Profit)
 			s.ShareIds = append(s.ShareIds, common.BytesToHash(share.Id()))
+
+			s.TotalAmount = new(big.Int).Mul(big.NewInt(int64(share.Num)), share.Value);
 			result[keystr] = s
 		}
+
 	}
 	statistics := []map[string]interface{}{}
 	for _, v := range result {
