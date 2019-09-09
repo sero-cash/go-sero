@@ -615,6 +615,7 @@ func newRPCStaticsShareMap(rs RPCStatisticsShare) map[string]interface{} {
 	s["shareIds"] = rs.ShareIds
 	s["profit"] = hexutil.Big(*rs.Profit)
 	s["pools"] = rs.Pools
+	s["totalAmount"] = hexutil.Big(*rs.TotalAmount)
 	return s
 }
 
@@ -649,7 +650,7 @@ func containsHash(vas []common.Hash, item common.Hash) bool {
 	return false
 }
 
-func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []map[string]interface{} {
+func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share, api *PublicStakeApI, ctx context.Context) []map[string]interface{} {
 	result := map[string]*RPCStatisticsShare{}
 	var key interface{}
 	for _, share := range shares {
@@ -667,8 +668,9 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []m
 		case address.AccountAddress:
 			keystr = inst.String()
 		}
-		if s, ok := result[keystr]; ok {
-
+		var s *RPCStatisticsShare
+		if _, ok := result[keystr]; ok {
+			s = result[keystr]
 			s.Total += share.InitNum
 			if share.Status == stake.STATUS_VALID {
 				s.Remaining += share.Num
@@ -689,9 +691,9 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []m
 			if share.Profit != nil {
 				s.Profit = big.NewInt(0).Add(s.Profit, share.Profit)
 			}
-			s.TotalAmount = new(big.Int).Add(s.TotalAmount, new(big.Int).Mul(big.NewInt(int64(share.Num)), share.Value));
+
 		} else {
-			s := &RPCStatisticsShare{}
+			s = &RPCStatisticsShare{}
 			s.Address = key
 			s.Total = share.InitNum
 			s.Missed = share.WillVoteNum
@@ -707,10 +709,21 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share) []m
 			s.Profit = new(big.Int).Set(share.Profit)
 			s.ShareIds = append(s.ShareIds, common.BytesToHash(share.Id()))
 
-			s.TotalAmount = new(big.Int).Mul(big.NewInt(int64(share.Num)), share.Value);
 			result[keystr] = s
 		}
 
+		remain := share.InitNum
+		if share.LastPayTime != 0 {
+			header, _ := api.b.HeaderByNumber(ctx, rpc.BlockNumber(share.LastPayTime))
+			snapshot := stake.GetShareByBlockNumber(api.b.ChainDb(), common.BytesToHash(share.Id()), header.Hash(), header.Number.Uint64())
+			if snapshot != nil {
+				remain = snapshot.Num + snapshot.WillVoteNum;
+			}
+		}
+		if (s.TotalAmount == nil) {
+			s.TotalAmount = new(big.Int);
+		}
+		s.TotalAmount = new(big.Int).Add(s.TotalAmount, new(big.Int).Mul(big.NewInt(int64(remain)), share.Value));
 	}
 	statistics := []map[string]interface{}{}
 	for _, v := range result {
@@ -734,7 +747,7 @@ func (s *PublicStakeApI) MyShare(ctx context.Context, addr common.Address) []map
 		}
 	}
 	shares := stakeservice.CurrentStakeService().SharesByPk(pk)
-	return newRPCStatisticsShare(wallets, shares)
+	return newRPCStatisticsShare(wallets, shares, s, ctx)
 }
 
 func (s *PublicStakeApI) GetShare(ctx context.Context, shareId common.Hash) map[string]interface{} {
@@ -765,7 +778,7 @@ func (s *PublicStakeApI) GetShare(ctx context.Context, shareId common.Hash) map[
 func (s *PublicStakeApI) GetShareByPkr(ctx context.Context, pkr PKrAddress) []map[string]interface{} {
 	wallets := s.b.AccountManager().Wallets()
 	shares := stakeservice.CurrentStakeService().SharesByPkr(*(pkr.ToPKr()))
-	return newRPCStatisticsShare(wallets, shares)
+	return newRPCStatisticsShare(wallets, shares, s, ctx)
 }
 
 func (s *PublicStakeApI) GetStakeInfo(ctx context.Context, poolId common.Hash, start, end hexutil.Uint64) (ret map[string][]interface{}) {
@@ -825,5 +838,15 @@ func (s *PublicStakeApI) GetStakeInfo(ctx context.Context, poolId common.Hash, s
 	ret = map[string][]interface{}{}
 	ret["pools"] = pools
 	ret["shares"] = shares
+	return
+}
+func (s *PublicStakeApI) Shares(ctx context.Context) (shares []*stake.Share) {
+	return stakeservice.CurrentStakeService().Shares()
+}
+
+func (s *PublicStakeApI) GetShareAtNumber(ctx context.Context, shareId common.Hash, num hexutil.Uint64) (share *stake.Share) {
+
+	header, _ := s.b.HeaderByNumber(ctx, rpc.BlockNumber(num))
+	share = stake.GetShareByBlockNumber(s.b.ChainDb(), shareId, header.Hash(), header.Number.Uint64())
 	return
 }
