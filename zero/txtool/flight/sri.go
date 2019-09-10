@@ -65,7 +65,7 @@ func GetBlock(num uint64, hash *common.Hash) (ret *localdb.Block) {
 }
 
 func (self *SRI) GetBlocksInfoByDelay(start uint64, count uint64, delay uint64) (blocks []txtool.Block, e error) {
-	stable_num := txtool.Ref_inst.GetDelayedNum(seroparam.DefaultConfirmedBlock())
+	stable_num := txtool.Ref_inst.GetDelayedNum(delay)
 	if start <= stable_num {
 		if stable_num-start+1 < count {
 			count = stable_num - start + 1
