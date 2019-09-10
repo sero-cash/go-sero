@@ -67,7 +67,7 @@ func (self *PreTxParamArgs) ToParam() (ret flight.PreTxParam) {
 	return
 }
 
-func (s *PublicFlightAPI) GenTxParam(ctx context.Context, param PreTxParamArgs, tk PKAddress) (p txtool.GTxParam, e error) {
+func (s *PublicFlightAPI) GenTxParam(ctx context.Context, param PreTxParamArgs, tk TKAddress) (p txtool.GTxParam, e error) {
 	preTxParam := param.ToParam()
 	return flight.GenTxParam(&preTxParam, tk.ToUint512())
 }
