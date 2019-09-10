@@ -654,11 +654,6 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share, api
 	result := map[string]*RPCStatisticsShare{}
 	var key interface{}
 	for _, share := range shares {
-
-		if share.LastPayTime > share.BlockNumber+198720 {
-			continue
-		}
-
 		key = getAccountAddrByPKr(wallets, share.PKr)
 		var keystr string
 		switch inst := key.(type) {
@@ -712,6 +707,9 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share, api
 			result[keystr] = s
 		}
 
+		if share.LastPayTime > share.BlockNumber+198720 {
+			continue
+		}
 		remain := share.InitNum
 		if share.LastPayTime != 0 {
 			header, _ := api.b.HeaderByNumber(ctx, rpc.BlockNumber(share.LastPayTime))

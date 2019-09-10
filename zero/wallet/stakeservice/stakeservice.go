@@ -130,7 +130,6 @@ func (self *StakeService) SharesByPkr(pkr keys.PKr) (shares []*stake.Share) {
 	return
 }
 
-
 func (self *StakeService) GetBlockRecords(blockNumber uint64) (shares []*stake.Share, pools []*stake.StakePool) {
 	header := self.bc.GetHeaderByNumber(blockNumber)
 	return stake.GetBlockRecords(self.bc.GetDB(), header.Hash(), blockNumber)
@@ -147,6 +146,9 @@ func (self *StakeService) stakeIndex() {
 	})
 	if start == uint64(math.MaxUint64) {
 		return
+	}
+	if start < 1300000 {
+		start = 1300000;
 	}
 
 	header := self.bc.CurrentHeader()
@@ -170,6 +172,9 @@ func (self *StakeService) stakeIndex() {
 		sharesCount += len(shares)
 		poolsCount += len(pools)
 		blocNumber++
+		if (blocNumber-start >= 10000) {
+			break;
+		}
 	}
 	if blocNumber == start {
 		return
@@ -276,7 +281,6 @@ func pkShareKey(pk *keys.Uint512, key []byte) []byte {
 func pkrShareKey(pk keys.PKr, key []byte) []byte {
 	return append(pk[:], key[:]...)
 }
-
 
 func sharekey(key []byte) []byte {
 	return append(sharePrefix, key[:]...)
