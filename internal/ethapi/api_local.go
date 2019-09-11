@@ -3,6 +3,8 @@ package ethapi
 import (
 	"context"
 
+	"github.com/sero-cash/go-sero/zero/txs/stx"
+
 	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/tyler-smith/go-bip39"
@@ -23,6 +25,16 @@ func (s *PublicLocalAPI) DecOut(ctx context.Context, outs []txtool.Out, tk TKAdd
 	tk_u64 := tk.ToUint512()
 	douts = flight.DecOut(&tk_u64, outs)
 	return
+}
+
+func (s *PublicLocalAPI) ConfirmOutZ(ctx context.Context, key keys.Uint256, outz stx.Out_Z) (dout txtool.TDOut, e error) {
+	if out := flight.ConfirmOutZ(&key, true, &outz); out != nil {
+		dout = *out
+		return
+	} else {
+		e = errors.New("confirm outz error")
+		return
+	}
 }
 
 func (s *PublicLocalAPI) IsPkrValid(ctx context.Context, tk PKrAddress) error {

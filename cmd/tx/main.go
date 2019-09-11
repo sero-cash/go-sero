@@ -32,6 +32,7 @@ var txParam = ""
 var sk = ""
 var tk = ""
 var out = ""
+var key = ""
 
 func init() {
 	flag.StringVar(&method, "method", "", "tx method")
@@ -65,6 +66,10 @@ func main() {
 		cpt.ZeroInit_NoCircuit()
 		Dec(tk, out)
 		return
+	}
+	if method == "confirm" {
+		cpt.ZeroInit_NoCircuit()
+		Confirm(key, out)
 	}
 	OUTPUT_ERROR("METHOD-MUST-[sign,dec]", nil)
 }

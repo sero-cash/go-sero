@@ -19,10 +19,11 @@ type gen_ctx struct {
 	O_Ins        []txtool.GIn
 	Z_Ins        []txtool.GIn
 	balance_desc cpt.BalanceDesc
+	Keys         []keys.Uint256
 	s            stx.T
 }
 
-func GenTx(param *txtool.GTxParam) (ret stx.T, e error) {
+func GenTx(param *txtool.GTxParam) (ret stx.T, keys []keys.Uint256, e error) {
 	ctx := gen_ctx{}
 	ctx.param = *param
 	ctx.prepare()
@@ -40,6 +41,7 @@ func GenTx(param *txtool.GTxParam) (ret stx.T, e error) {
 		return
 	}
 	ret = ctx.s
+	keys = ctx.Keys
 	return
 }
 

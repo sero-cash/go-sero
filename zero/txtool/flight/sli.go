@@ -18,6 +18,30 @@ type SLI struct {
 
 var SLI_Inst = SLI{}
 
+func ConfirmOutZ(key *keys.Uint256, flag bool, outz *stx.Out_Z) (dout *txtool.TDOut) {
+	info_desc := cpt.InfoDesc{}
+	info_desc.Key = *key
+	info_desc.Flag = flag
+	info_desc.Einfo = outz.EInfo
+	cpt.DecOutput(&info_desc)
+
+	if e := stx.ConfirmOut_Z(&info_desc, outz); e == nil {
+		dout = &txtool.TDOut{}
+		dout.Asset = assets.NewAsset(
+			&assets.Token{
+				info_desc.Tkn_currency,
+				utils.NewU256_ByKey(&info_desc.Tkn_value),
+			},
+			&assets.Ticket{
+				info_desc.Tkt_category,
+				info_desc.Tkt_value,
+			},
+		)
+		dout.Memo = info_desc.Memo
+	}
+	return
+}
+
 func DecTraceOuts(outs []txtool.Out, skr *keys.PKr) (douts []txtool.TDOut) {
 	sk := keys.Uint512{}
 	copy(sk[:], skr[:])
@@ -32,24 +56,8 @@ func DecTraceOuts(outs []txtool.Out, skr *keys.PKr) (douts []txtool.TDOut) {
 			dout.Nils = append(dout.Nils, out.Root)
 		} else {
 			key, flag := keys.FetchKey(&sk, &out.State.OS.Out_Z.RPK)
-			info_desc := cpt.InfoDesc{}
-			info_desc.Key = key
-			info_desc.Flag = flag
-			info_desc.Einfo = out.State.OS.Out_Z.EInfo
-			cpt.DecOutput(&info_desc)
-
-			if e := stx.ConfirmOut_Z(&info_desc, out.State.OS.Out_Z); e == nil {
-				dout.Asset = assets.NewAsset(
-					&assets.Token{
-						info_desc.Tkn_currency,
-						utils.NewU256_ByKey(&info_desc.Tkn_value),
-					},
-					&assets.Ticket{
-						info_desc.Tkt_category,
-						info_desc.Tkt_value,
-					},
-				)
-				dout.Memo = info_desc.Memo
+			if confirm_out := ConfirmOutZ(&key, flag, out.State.OS.Out_Z); confirm_out != nil {
+				dout = *confirm_out
 				dout.Nils = append(dout.Nils, cpt.GenTil(&sk, out.State.OS.RootCM))
 				dout.Nils = append(dout.Nils, cpt.GenNil(&sk, out.State.OS.RootCM))
 			}
@@ -61,11 +69,12 @@ func DecTraceOuts(outs []txtool.Out, skr *keys.PKr) (douts []txtool.TDOut) {
 
 func (self *SLI) GenTx(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
 
-	if tx, err := generate.GenTx(param); err != nil {
+	if tx, keys, err := generate.GenTx(param); err != nil {
 		e = err
 		return
 	} else {
 		gtx.Tx = tx
+		gtx.Keys = keys
 		gtx.Gas = hexutil.Uint64(param.Gas)
 		gtx.GasPrice = hexutil.Big(*param.GasPrice)
 		gtx.Hash = tx.ToHash()

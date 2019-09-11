@@ -28,6 +28,7 @@ type GTx struct {
 	Tx       stx.T
 	Hash     keys.Uint256
 	Roots    []keys.Uint256
+	Keys     []keys.Uint256
 }
 
 type GPkgCloseCmd struct {

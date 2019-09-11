@@ -1001,6 +1001,11 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
+			name: 'confirmOutZ',
+			call: 'local_confirmOutZ',
+			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'isPkrValid',
 			call: 'local_isPkrValid',
 			params: 1
