@@ -70,6 +70,7 @@ func main() {
 	if method == "confirm" {
 		cpt.ZeroInit_NoCircuit()
 		Confirm(key, out)
+		return
 	}
-	OUTPUT_ERROR("METHOD-MUST-[sign,dec]", nil)
+	OUTPUT_ERROR("METHOD-MUST-[sign,dec,confirm]", nil)
 }
