@@ -615,7 +615,9 @@ func newRPCStaticsShareMap(rs RPCStatisticsShare) map[string]interface{} {
 	s["shareIds"] = rs.ShareIds
 	s["profit"] = hexutil.Big(*rs.Profit)
 	s["pools"] = rs.Pools
-	s["totalAmount"] = hexutil.Big(*rs.TotalAmount)
+	if rs.TotalAmount != nil {
+		s["totalAmount"] = hexutil.Big(*rs.TotalAmount)
+	}
 	return s
 }
 
