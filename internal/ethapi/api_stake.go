@@ -291,7 +291,7 @@ func (s *PublicStakeApI) CloseStakePool(ctx context.Context, from common.Address
 		if localAddr == nil {
 			return common.Hash{}, errors.New("can not find local account")
 		}
-		fromPkr=*from.ToPKr()
+		fromPkr = *from.ToPKr()
 	}
 	poolId := getStakePoolId(fromPkr)
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
@@ -357,9 +357,8 @@ func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from common.Add
 		if localAddr == nil {
 			return common.Hash{}, errors.New("can not find local account")
 		}
-		fromPkr=*from.ToPKr()
+		fromPkr = *from.ToPKr()
 	}
-
 
 	poolId := getStakePoolId(fromPkr)
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
@@ -418,7 +417,7 @@ func (s *PublicStakeApI) ModifyStakePoolVote(ctx context.Context, from common.Ad
 		if localAddr == nil {
 			return common.Hash{}, errors.New("can not find local account")
 		}
-		fromPkr=*from.ToPKr()
+		fromPkr = *from.ToPKr()
 	}
 
 	poolId := getStakePoolId(fromPkr)
@@ -768,7 +767,14 @@ func (s *PublicStakeApI) GetShare(ctx context.Context, shareId common.Hash) map[
 		header, _ := s.b.HeaderByNumber(ctx, rpc.BlockNumber(share.LastPayTime))
 		snapshot := stake.GetShareByBlockNumber(s.b.ChainDb(), shareId, header.Hash(), header.Number.Uint64())
 		if snapshot != nil {
-			ret["returnNum"] = hexutil.Uint64(snapshot.InitNum - snapshot.Num - snapshot.WillVoteNum)
+			if snapshot.Status == 1 {
+				ret["returnNum"] = hexutil.Uint64(snapshot.InitNum - snapshot.WillVoteNum)
+			} else if snapshot.Status == 2 {
+				ret["returnNum"] = hexutil.Uint64(snapshot.InitNum)
+			} else {
+				ret["returnNum"] = hexutil.Uint64(snapshot.InitNum - snapshot.Num - snapshot.WillVoteNum)
+			}
+
 			ret["returnProfit"] = hexutil.Big(*snapshot.Profit)
 		}
 		ret["lastPayTime"] = hexutil.Uint64(share.LastPayTime)
