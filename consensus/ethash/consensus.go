@@ -25,10 +25,10 @@ import (
 	"time"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/crypto"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
 
@@ -169,7 +169,7 @@ func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 // stock Ethereum ethash engine.
 // See YP section 4.3.4. "Block Header Validity"
 func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, seal bool) error {
-	if !keys.CheckLICr(header.Coinbase.ToPKr(), &header.Licr, header.Number.Uint64()) {
+	if !superzk.CheckLICr(header.Coinbase.ToPKr(), &header.Licr, header.Number.Uint64()) {
 		return fmt.Errorf("invalid Licr : pkr %v, licr %v", header.Coinbase, header.Licr)
 	}
 

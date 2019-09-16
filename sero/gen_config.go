@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus/ethash"
 	"github.com/sero-cash/go-sero/core"
@@ -23,7 +22,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		NetworkId               uint64
 		SyncMode                downloader.SyncMode
 		NoPruning               bool
-		MineMode                bool
 		LightServ               int  `toml:",omitempty"`
 		LightPeers              int  `toml:",omitempty"`
 		SkipBcVersionCheck      bool `toml:"-"`
@@ -31,9 +29,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		DatabaseCache           int
 		TrieCache               int
 		TrieTimeout             time.Duration
-		Serobase                address.AccountAddress `toml:",omitempty"`
-		MinerThreads            int                    `toml:",omitempty"`
-		ExtraData               hexutil.Bytes          `toml:",omitempty"`
+		MinerThreads            int           `toml:",omitempty"`
+		ExtraData               hexutil.Bytes `toml:",omitempty"`
 		GasPrice                *big.Int
 		Ethash                  ethash.Config
 		TxPool                  core.TxPoolConfig
@@ -46,7 +43,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.NetworkId = c.NetworkId
 	enc.SyncMode = c.SyncMode
 	enc.NoPruning = c.NoPruning
-	enc.MineMode = c.MineMode
 	enc.LightServ = c.LightServ
 	enc.LightPeers = c.LightPeers
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
@@ -54,7 +50,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.DatabaseCache = c.DatabaseCache
 	enc.TrieCache = c.TrieCache
 	enc.TrieTimeout = c.TrieTimeout
-	enc.Serobase = c.Serobase
 	enc.MinerThreads = c.MinerThreads
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
@@ -73,7 +68,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		NetworkId               *uint64
 		SyncMode                *downloader.SyncMode
 		NoPruning               *bool
-		MineMode                *bool
 		LightServ               *int  `toml:",omitempty"`
 		LightPeers              *int  `toml:",omitempty"`
 		SkipBcVersionCheck      *bool `toml:"-"`
@@ -81,9 +75,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		DatabaseCache           *int
 		TrieCache               *int
 		TrieTimeout             *time.Duration
-		Serobase                *address.AccountAddress `toml:",omitempty"`
-		MinerThreads            *int                    `toml:",omitempty"`
-		ExtraData               *hexutil.Bytes          `toml:",omitempty"`
+		MinerThreads            *int           `toml:",omitempty"`
+		ExtraData               *hexutil.Bytes `toml:",omitempty"`
 		GasPrice                *big.Int
 		Ethash                  *ethash.Config
 		TxPool                  *core.TxPoolConfig
@@ -107,9 +100,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.NoPruning != nil {
 		c.NoPruning = *dec.NoPruning
 	}
-	if dec.MineMode != nil {
-		c.MineMode = *dec.MineMode
-	}
 	if dec.LightServ != nil {
 		c.LightServ = *dec.LightServ
 	}
@@ -130,9 +120,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.TrieTimeout != nil {
 		c.TrieTimeout = *dec.TrieTimeout
-	}
-	if dec.Serobase != nil {
-		c.Serobase = *dec.Serobase
 	}
 	if dec.MinerThreads != nil {
 		c.MinerThreads = *dec.MinerThreads

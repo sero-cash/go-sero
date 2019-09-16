@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/sero-cash/go-sero/common/address"
-
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core"
@@ -59,7 +57,7 @@ type Miner struct {
 
 	worker *worker
 
-	coinbase address.AccountAddress
+	coinbase accounts.Account
 	mining   int32
 	sero     Backend
 	engine   consensus.Engine
@@ -73,7 +71,7 @@ func New(sero Backend, config *params.ChainConfig, mux *event.TypeMux, voter vot
 		sero:     sero,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, address.AccountAddress{}, voter, sero, mux),
+		worker:   newWorker(config, engine, accounts.Account{}, voter, sero, mux),
 		canStart: 1,
 	}
 	miner.Register(NewCpuAgent(sero.BlockChain(), engine))
@@ -114,7 +112,7 @@ out:
 	}
 }
 
-func (self *Miner) Start(coinbase address.AccountAddress) {
+func (self *Miner) Start(coinbase accounts.Account) {
 	atomic.StoreInt32(&self.shouldStart, 1)
 	self.SetSerobase(coinbase)
 
@@ -207,7 +205,7 @@ func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
 }
 
-func (self *Miner) SetSerobase(addr address.AccountAddress) {
-	self.coinbase = addr
-	self.worker.setSerobase(addr)
+func (self *Miner) SetSerobase(account accounts.Account) {
+	self.coinbase = account
+	self.worker.setSerobase(account)
 }

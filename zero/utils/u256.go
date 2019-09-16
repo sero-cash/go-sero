@@ -4,9 +4,11 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/pkg/errors"
+
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/rlp"
 )
 
@@ -17,6 +19,22 @@ var U256_0 U256 = U256(*big.NewInt(0))
 func NewU256(i uint64) (ret U256) {
 	ret = U256(*big.NewInt(int64(i)))
 	return
+}
+
+func (self U256) IsValid() bool {
+	v := self.ToInt()
+	if v.Sign() < 0 {
+		return false
+	}
+	if len(v.Bytes()) > 32 {
+		return false
+	}
+	u := self.ToUint256()
+	if u[31] == 0 && u[30] == 0 {
+		return true
+	} else {
+		return false
+	}
 }
 
 func (self U256) DeepCopy() interface{} {
@@ -93,6 +111,11 @@ func (b *U256) ToInt() *big.Int {
 	return (*big.Int)(b)
 }
 
+func (b *U256) ToBEBytes() (ret []byte) {
+	ret = b.ToInt().Bytes()
+	return
+}
+
 //func (b U256) MarshalText() ([]byte, error) {
 //	i := big.Int(b)
 //	return i.MarshalText()
@@ -121,7 +144,7 @@ func (b *U256) UnmarshalText(input []byte) error {
 	}
 }
 
-func NewU256_ByKey(k *keys.Uint256) (ret U256) {
+func NewU256_ByKey(k *c_type.Uint256) (ret U256) {
 	bytes := *k.NewRef()
 	for i := 0; i < len(bytes)/2; i++ {
 		bytes[i], bytes[len(bytes)-1-i] = bytes[len(bytes)-1-i], bytes[i]
@@ -147,7 +170,7 @@ func (self *U256) ToI256() (ret I256) {
 	return
 }
 
-func (self *U256) ToUint256() (ret keys.Uint256) {
+func (self *U256) ToUint256() (ret c_type.Uint256) {
 	i := big.Int(*self.ToRef())
 	bytes := i.Bytes()
 	for i := 0; i < len(bytes)/2; i++ {
@@ -155,6 +178,11 @@ func (self *U256) ToUint256() (ret keys.Uint256) {
 	}
 	copy(ret[:], bytes[:])
 	return
+}
+
+func (self *U256) ToLEBytes() (ret []byte) {
+	r := self.ToUint256()
+	return r[:]
 }
 
 func (self *U256) ToIntRef() (ret *big.Int) {
@@ -178,6 +206,9 @@ func (self *U256) Cmp(a *U256) int {
 }
 
 func (self *U256) SubU(a *U256) {
+	if self.Cmp(a) < 0 {
+		panic(errors.New("u256 sub error: result is negative"))
+	}
 	l := big.Int(*self.ToRef())
 	r := big.Int(*a)
 	l.Sub(&l, &r)

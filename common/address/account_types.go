@@ -17,17 +17,15 @@
 package address
 
 import (
-	"bytes"
-	"database/sql/driver"
-	"fmt"
-	"math/big"
-
-	"github.com/sero-cash/go-sero/common/addrutil"
+	"encoding/hex"
+	"errors"
+	"regexp"
+	"strings"
 
 	"github.com/btcsuite/btcutil/base58"
 
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-czero-import/superzk"
 )
 
 // Lengths of hashes and Accountes in bytes.
@@ -37,127 +35,269 @@ const (
 	SeedLength           = 32
 )
 
-// Data represents the 64 byte Data of an Ethereum account.
-type AccountAddress [AccountAddressLength]byte
-
-// If b is larger than len(h), b will be cropped from the left.
-func BytesToAccount(b []byte) AccountAddress {
-	var a AccountAddress
-	a.SetBytes(b)
-	return a
-}
-
-// BigToAccount returns Data with byte values of b.
-// If b is larger than len(h), b will be cropped from the left.
-func BigToAccount(b *big.Int) AccountAddress { return BytesToAccount(b.Bytes()) }
-
-// HexToAccount returns Data with byte values of s.
-// If s is larger than len(h), s will be cropped from the left.
-//func HexToAccount(s string) Data { return BytesToAccount(FromHex(s)) }
-
-func Base58ToAccount(s string) AccountAddress {
-	out := base58.Decode(s)
-	return BytesToAccount(out[:])
-}
-
-// Bytes gets the string representation of the underlying Data.
-func (a AccountAddress) Bytes() []byte { return a[:] }
-
-func (a AccountAddress) ToUint512() *keys.Uint512 {
-	pubKey := keys.Uint512{}
-	copy(pubKey[:], a[:])
-	return &pubKey
-}
-
-// Big converts an Data to a big integer.
-func (a AccountAddress) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
-
-// Base58 returns base58 string representation of the Data.
-func (a AccountAddress) Base58() string {
-	return base58.Encode(a[:])
-}
-
-// String implements fmt.Stringer.
-func (a AccountAddress) String() string {
-	return a.Base58()
-}
-
-// Format implements fmt.Formatter, forcing the byte slice to be formatted as is,
-// without going through the stringer interface used for logging.
-func (a AccountAddress) Format(s fmt.State, c rune) {
-	fmt.Fprintf(s, "%"+string(c), a[:])
-}
-
-// SetBytes sets the Data to the value of b.
-// If b is larger than len(a) it will panic.
-func (a *AccountAddress) SetBytes(b []byte) {
-	if len(b) > len(a) {
-		b = b[len(b)-AccountAddressLength:]
-	}
-	copy(a[AccountAddressLength-len(b):], b)
-}
-
-// MarshalText returns the hex representation of a.
-func (a AccountAddress) MarshalText() ([]byte, error) {
-	return hexutil.Bytes(a[:]).MarshalBase58Text()
-}
-
-func isZeroSuffix(base58bytes [96]byte) bool {
-	zerobytes := [32]byte{}
-	suffix := [32]byte{}
-	copy(suffix[:], base58bytes[64:])
-	return (zerobytes == suffix)
-}
-
-// UnmarshalText parses a hash in hex syntax.
-func (a *AccountAddress) UnmarshalText(input []byte) error {
-	out, err := addrutil.IsValidBase58AcccountAddress(input)
-	if err != nil {
-		return err
-	}
-	copy(a[:], out)
-	return nil
-}
-
-// Scan implements Scanner for database/sql.
-func (a *AccountAddress) Scan(src interface{}) error {
-	srcB, ok := src.([]byte)
-	if !ok {
-		return fmt.Errorf("can't scan %T into Data", src)
-	}
-	if len(srcB) != AccountAddressLength {
-		return fmt.Errorf("can't scan []byte of len %d into Data, want %d", len(srcB), AccountAddressLength)
-	}
-	copy(a[:], srcB)
-	return nil
-}
-
-//func (a *Data) IsContract() bool {
-//	return strings.HasSuffix(string(a[:]),"contract")
-//}
-
-// Value implements valuer for database/sql.
-func (a AccountAddress) Value() (driver.Value, error) {
-	return a[:], nil
-}
-
-type Accountes []AccountAddress
-
-func (self Accountes) Len() int {
-	return len(self)
-}
-func (self Accountes) Less(i, j int) bool {
-	return bytes.Compare(self[i][:], self[j][:]) < 0
-}
-func (self Accountes) Swap(i, j int) {
-	self[i], self[j] = self[j], self[i]
-}
-
 type Seed [SeedLength]byte
 
-func (priv *Seed) SeedToUint256() *keys.Uint256 {
-	seed := keys.Uint256{}
+func (priv *Seed) SeedToUint256() *c_type.Uint256 {
+	seed := c_type.Uint256{}
 	copy(seed[:], priv[:])
 	return &seed
 
+}
+
+func IsBase58Str(s string) bool {
+
+	pattern := "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$"
+	match, err := regexp.MatchString(pattern, s)
+	if err != nil {
+		return false
+	}
+	return match
+
+}
+
+type MixBase58Adrress []byte
+
+func (b MixBase58Adrress) MarshalText() ([]byte, error) {
+	return []byte(base58.Encode(b)), nil
+}
+
+func (b MixBase58Adrress) IsPkr() bool {
+	return len(b) == 96
+}
+
+func (b MixBase58Adrress) ToPkr() c_type.PKr {
+	var pkr c_type.PKr
+	if b.IsPkr() {
+		copy(pkr[:], b[:])
+	} else {
+		var pk c_type.Uint512
+		copy(pk[:], b[:])
+		pkr = superzk.Pk2PKr(&pk, nil)
+	}
+	return pkr
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (b *MixBase58Adrress) UnmarshalText(input []byte) error {
+
+	if len(input) == 0 {
+		return errors.New("empty string")
+	}
+	if IsBase58Str(string(input)) {
+		out := base58.Decode(string(input))
+		if len(out) == 96 {
+			err := ValidPkr(out)
+			if err != nil {
+				return err
+			}
+			*b = out[:]
+			return nil
+		} else if len(out) == 64 {
+			err := ValidPk(out)
+			if err != nil {
+				return err
+			}
+			*b = out[:]
+			return nil
+		} else {
+			return errors.New("invalid mix address")
+		}
+	} else {
+		return errors.New("is not base58 address")
+	}
+}
+
+type TKAddress [64]byte
+
+func Base58ToTk(str string) (ret TKAddress) {
+	b := base58.Decode(str)
+	copy(ret[:], b)
+	return
+}
+
+func (b TKAddress) ToTk() c_type.Tk {
+	result := c_type.Tk{}
+	copy(result[:], b[:])
+
+	return result
+}
+
+func (b *TKAddress) ToPk() (ret PKAddress) {
+	pk, _ := superzk.Tk2Pk(b.ToTk().NewRef())
+	copy(ret[:], pk[:])
+	return
+}
+
+func (c TKAddress) String() string {
+	return base58.Encode(c[:])
+}
+
+func (b TKAddress) MarshalText() ([]byte, error) {
+	return []byte(base58.Encode(b[:])), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (b *TKAddress) UnmarshalText(input []byte) error {
+
+	if len(input) == 0 {
+		return nil
+	}
+	if IsBase58Str(string(input)) {
+		out := base58.Decode(string(input))
+		if len(out) == 64 {
+			copy(b[:], out)
+		} else {
+			return errors.New("ivalid TK")
+		}
+		return nil
+
+	} else {
+		return errors.New("is not base58 string")
+	}
+}
+
+type PKAddress [64]byte
+
+func StringToPk(str string) (ret PKAddress) {
+	out := base58.Decode(str)
+	copy(ret[:], out)
+	return
+}
+
+func (b PKAddress) String() string {
+	return base58.Encode(b[:])
+}
+
+func (b PKAddress) ToUint512() c_type.Uint512 {
+	result := c_type.Uint512{}
+	copy(result[:], b[:])
+
+	return result
+}
+
+func NewPKAddres(b []byte) (ret PKAddress) {
+	copy(ret[:], b)
+	return
+}
+
+func (b PKAddress) MarshalText() ([]byte, error) {
+	return []byte(b.String()), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (b *PKAddress) UnmarshalText(input []byte) (e error) {
+	if len(input) == 0 {
+		return nil
+	}
+	var out []byte
+	if IsBase58Str(string(input)) {
+		out = base58.Decode(string(input))
+
+	} else if IsHex(string(input)) {
+		out, e = DecodeHex(string(input))
+		if e != nil {
+			return
+		}
+
+	} else {
+		return errors.New("invalid pk string")
+	}
+	if len(out) == 64 {
+		e = ValidPk(out)
+		if e != nil {
+			return e
+		}
+		copy(b[:], out)
+		return
+	} else {
+		return errors.New("pk address must be 64 bytes")
+	}
+}
+
+func ValidPk(addr []byte) error {
+	if len(addr) == 64 {
+		pk := c_type.Uint512{}
+		copy(pk[:], addr)
+		if !superzk.IsPKValid(&pk) {
+			return errors.New("invalid PK")
+		}
+	} else {
+		return errors.New("pk address must be 64 bytes")
+	}
+	return nil
+}
+
+func ValidPkr(addr []byte) error {
+	if len(addr) == 96 {
+		var pkr c_type.PKr
+		copy(pkr[:], addr)
+		if !superzk.IsPKrValid(&pkr) {
+			return errors.New("invalid pkr")
+		}
+	} else {
+		return errors.New("pkr address must be 96 bytes")
+	}
+	return nil
+}
+
+func Decode(input string) ([]byte, error) {
+	if len(input) == 0 {
+		return nil, errors.New("empty hex strin")
+	}
+	if !has0xPrefix(input) {
+		return nil, errors.New("hex string without 0x prefix")
+	}
+	b, err := hex.DecodeString(input[2:])
+	if err != nil {
+		return nil, err
+	}
+	return b, err
+}
+
+func has0xPrefix(input string) bool {
+	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
+}
+func isHexCharacter(c byte) bool {
+	return ('0' <= c && c <= '9') || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
+}
+
+func IsHex(s string) bool {
+	if has0xPrefix(s) {
+		s = s[2:]
+	}
+
+	for _, c := range []byte(s) {
+		if !isHexCharacter(c) {
+			return false
+		}
+	}
+	return true
+}
+func DecodeHex(hex string) (bytes []byte, err error) {
+	if strings.Index(hex, "0x") != 0 {
+		hex = "0x" + hex
+	}
+	if bytes, err = Decode(hex); err != nil {
+		return
+	} else {
+		if len(bytes) == 0 {
+			err = errors.New("the bytes length is 0")
+			return
+		} else {
+			return
+		}
+	}
+}
+
+func DecodeAddr(input []byte) (bytes []byte, e error) {
+	if IsBase58Str(string(input)) {
+		bytes = base58.Decode(string(input))
+		return
+	} else if IsHex(string(input)) {
+		return DecodeHex(string(input))
+
+	} else {
+		e = errors.New("invalid address string")
+		return
+	}
 }

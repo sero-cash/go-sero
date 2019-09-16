@@ -24,7 +24,7 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
@@ -82,30 +82,30 @@ func NewTransaction(gasPrice *big.Int, gasLimit uint64, data []byte) *Transactio
 	return tx
 }
 
-func Ehash(price big.Int, gasLimit uint64, payload []byte) keys.Uint256 {
+func Ehash(price big.Int, gasLimit uint64, payload []byte) c_type.Uint256 {
 	h := rlpHash([]interface{}{
 		price,
 		gasLimit,
 		payload,
 	})
-	r := keys.Uint256{}
+	r := c_type.Uint256{}
 	copy(r[:], h[:])
 	return r
 }
 
-func (tx Transaction) Ehash() keys.Uint256 {
+func (tx Transaction) Ehash() c_type.Uint256 {
 
 	h := rlpHash([]interface{}{
 		&tx.data.Price,
 		tx.data.GasLimit,
 		tx.data.Payload,
 	})
-	r := keys.Uint256{}
+	r := c_type.Uint256{}
 	copy(r[:], h[:])
 	return r
 }
 
-func NewTxt(fromRnd *keys.Uint256, ehash keys.Uint256, fee assets.Token, out *ztx.Out, pkgCreate *ztx.PkgCreate, pkgTransfer *ztx.PkgTransfer, pkgClose *ztx.PkgClose) *ztx.T {
+func NewTxt(fromRnd *c_type.Uint256, ehash c_type.Uint256, fee assets.Token, out *ztx.Out, pkgCreate *ztx.PkgCreate, pkgTransfer *ztx.PkgTransfer, pkgClose *ztx.PkgClose) *ztx.T {
 
 	outDatas := []ztx.Out{}
 	if out != nil {
@@ -134,7 +134,7 @@ func NewTxWithGTx(gas uint64, gasPrice *big.Int, t *zstx.T) *Transaction {
 	return tx
 }
 
-func NewTxtOut(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *common.Hash, memo string, isZ bool) *ztx.Out {
+func NewTxtOut(Pkr c_type.PKr, currency string, value *big.Int, catg string, tkt *common.Hash, memo string, isZ bool) *ztx.Out {
 	var token *assets.Token
 	var ticket *assets.Ticket
 	var outData *ztx.Out
@@ -165,8 +165,8 @@ func NewTxtOut(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *
 
 }
 
-func stringToUint512(str string) keys.Uint512 {
-	var ret keys.Uint512
+func stringToUint512(str string) c_type.Uint512 {
+	var ret c_type.Uint512
 	b := []byte(str)
 	if len(b) > len(ret) {
 		b = b[len(b)-len(ret):]
@@ -175,7 +175,7 @@ func stringToUint512(str string) keys.Uint512 {
 	return ret
 }
 
-func NewCreatePkg(Pkr keys.PKr, currency string, value *big.Int, catg string, tkt *common.Hash, memo string) *ztx.PkgCreate {
+func NewCreatePkg(Pkr c_type.PKr, currency string, value *big.Int, catg string, tkt *common.Hash, memo string) *ztx.PkgCreate {
 	var token *assets.Token
 	var ticket *assets.Ticket
 	if value != nil {
@@ -202,7 +202,7 @@ func NewCreatePkg(Pkr keys.PKr, currency string, value *big.Int, catg string, tk
 	}
 
 	return &ztx.PkgCreate{
-		Id:  keys.RandUint256(),
+		Id:  c_type.RandUint256(),
 		PKr: Pkr,
 		Pkg: pkg,
 	}
@@ -210,15 +210,7 @@ func NewCreatePkg(Pkr keys.PKr, currency string, value *big.Int, catg string, tk
 }
 
 func (tx *Transaction) Pkg() *assets.Asset {
-	if tx.GetZZSTX().Desc_Cmd.Contract != nil {
-		return &tx.GetZZSTX().Desc_Cmd.Contract.Asset
-	} else {
-		for _, desc_o := range tx.data.Stxt.Desc_O.Outs {
-			return &desc_o.Asset
-		}
-	}
-
-	return nil
+	return tx.GetZZSTX().ContractAsset()
 }
 
 // EncodeRLP implements rlp.Encoder
@@ -273,35 +265,17 @@ func (tx *Transaction) GetZZSTX() *zstx.T {
 }
 
 func (tx *Transaction) To() *common.Address {
-	if tx.GetZZSTX().Desc_Cmd.Contract != nil {
-		to := tx.GetZZSTX().Desc_Cmd.Contract.To
-		if to == nil {
-			return nil
-		}
+	if pkr := tx.GetZZSTX().ContractAddress(); pkr != nil {
 		addr := &common.Address{}
-		copy(addr[:], to[:])
+		copy(addr[:], pkr[:])
 		return addr
 	} else {
-		for _, out := range tx.data.Stxt.Desc_O.Outs {
-			if out.Addr != (keys.PKr{}) {
-				addr := common.BytesToAddress(out.Addr[:])
-				return &addr
-			}
-		}
+		return nil
 	}
-
-	return nil
 }
 
 func (tx Transaction) IsOpContract() bool {
-	if tx.data.Stxt.Desc_Cmd.Contract != nil {
-		return true
-	} else {
-		if len(tx.data.Stxt.Desc_O.Outs) > 0 {
-			return true
-		}
-	}
-	return false
+	return tx.GetZZSTX().IsOpContract()
 }
 
 func (tx *Transaction) Stxt() *zstx.T {

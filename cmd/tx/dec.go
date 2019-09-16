@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -48,7 +48,7 @@ func Dec(tk_str string, out_str string) {
 	}
 	if tk_bs, e := hexutil.Decode(tk_str); e == nil {
 		if len(tk_bs) == 64 {
-			tk := keys.Uint512{}
+			tk := c_type.Tk{}
 			copy(tk[:], tk_bs)
 			var outs []txtool.Out
 			if e := json.Unmarshal([]byte(out_str), &outs); e == nil {

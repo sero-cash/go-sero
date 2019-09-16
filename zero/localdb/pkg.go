@@ -3,7 +3,7 @@ package localdb
 import (
 	"math/big"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
@@ -13,12 +13,12 @@ import (
 
 type ZPkg struct {
 	High   uint64
-	From   keys.PKr
+	From   c_type.PKr
 	Pack   stx.PkgCreate
 	Closed bool
 }
 
-func (self *ZPkg) ToHash() (ret keys.Uint256) {
+func (self *ZPkg) ToHash() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(big.NewInt(int64(self.High)).Bytes())
 	d.Write(self.From[:])
@@ -56,18 +56,18 @@ func (self *PkgGet) Unserial(v []byte) (e error) {
 	}
 }
 
-func PkgKey(root *keys.Uint256) []byte {
+func PkgKey(root *c_type.Uint256) []byte {
 	key := []byte("$SERO_LOCALDB_PKG_HASH$")
 	key = append(key, root[:]...)
 	return key
 }
 
-func PutPkg(db serodb.Putter, hash *keys.Uint256, pkg *ZPkg) {
+func PutPkg(db serodb.Putter, hash *c_type.Uint256, pkg *ZPkg) {
 	key := PkgKey(hash)
 	tri.UpdateDBObj(db, key, pkg)
 }
 
-func GetPkg(db serodb.Getter, hash *keys.Uint256) (ret *ZPkg) {
+func GetPkg(db serodb.Getter, hash *c_type.Uint256) (ret *ZPkg) {
 	key := PkgKey(hash)
 	get := PkgGet{}
 	tri.GetDBObj(db, key, &get)

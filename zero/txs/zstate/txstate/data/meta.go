@@ -1,7 +1,7 @@
 package data
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/rlp"
 )
 
@@ -41,8 +41,8 @@ func (self *CurrentGet) Unserial(v []byte) (e error) {
 }
 
 type StateBlock struct {
-	Roots []keys.Uint256
-	Dels  []keys.Uint256
+	Roots []c_type.Uint256
+	Dels  []c_type.Uint256
 }
 
 func (self *StateBlock) Serial() (ret []byte, e error) {

@@ -17,19 +17,19 @@
 package tri
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/serodb"
 )
 
 type Tri interface {
 	TryGet(key []byte) ([]byte, error)
 	TryUpdate(key, value []byte) error
-	SetState(key *keys.Uint256, value *keys.Uint256)
-	GetState(key *keys.Uint256) (ret keys.Uint256)
+	SetState(obj *c_type.PKr, key *c_type.Uint256, value *c_type.Uint256)
+	GetState(obj *c_type.PKr, key *c_type.Uint256) (ret c_type.Uint256)
 	GlobalGetter() serodb.Getter
 }
 
-func slice2Uint256(s []byte) (r keys.Uint256) {
+func slice2Uint256(s []byte) (r c_type.Uint256) {
 	copy(r[:], s)
 	return
 }
@@ -40,7 +40,7 @@ func (name KEY_NAME) Bytes() []byte {
 	return []byte(name)
 }
 
-func TryGetUint256s(tri Tri, key []byte, cb func([]byte, *keys.Uint256)) (hashes []keys.Uint256) {
+func TryGetUint256s(tri Tri, key []byte, cb func([]byte, *c_type.Uint256)) (hashes []c_type.Uint256) {
 	if v, err := tri.TryGet(key); err != nil {
 		panic(err)
 		return
@@ -66,7 +66,7 @@ func TryGetUint256s(tri Tri, key []byte, cb func([]byte, *keys.Uint256)) (hashes
 	return
 }
 
-func TryUpdateUint256s(tri Tri, key []byte, hashes []keys.Uint256) {
+func TryUpdateUint256s(tri Tri, key []byte, hashes []c_type.Uint256) {
 	outs := []byte{}
 	for _, v := range hashes {
 		outs = append(outs, v[:]...)

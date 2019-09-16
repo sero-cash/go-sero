@@ -4,7 +4,7 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/rlp"
 )
 
@@ -156,7 +156,7 @@ func (self *I256) ToIntRef() (ret *big.Int) {
 	return
 }
 
-func (self *I256) ToUint256() (ret keys.Uint256) {
+func (self *I256) ToUint256() (ret c_type.Uint256) {
 	i := big.Int(*self.ToRef())
 	bytes := i.Bytes()
 	for i := 0; i < len(bytes)/2; i++ {

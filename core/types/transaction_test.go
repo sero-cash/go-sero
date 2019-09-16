@@ -1,13 +1,12 @@
 package types
 
 import (
-	"bufio"
-	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"testing"
 
-	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/common/hexutil"
 )
 
 type Uint256 [32]byte
@@ -46,30 +45,33 @@ func TestEhash(t *testing.T) {
 	h3 := rlpHash([]interface{}{
 		price,
 		gasLimit,
+		[]byte{},
 	})
 	if h3 != h2 && h2 != h1 {
 		t.Errorf("Ehash must be the right type")
 	}
 
 	fmt.Printf("%v\n", h1)
-	fmt.Printf("%v\n", h2)
-	fmt.Printf("%v\n", h3)
+	fmt.Printf("%v\n", hexutil.Encode(h2[:]))
+	fmt.Printf("%v\n", hexutil.Encode(h3[:]))
 }
 
-func TestHeader(t *testing.T) {
-	hs := []Header{}
-	hs = append(hs, Header{})
+type XX struct {
+	A *big.Int
+}
 
-	buf := bytes.Buffer{}
-	w := bufio.NewWriter(&buf)
-	e := rlp.Encode(w, &hs)
-	fmt.Println(e)
-	w.Flush()
+type st struct {
+	Cmd XX
+}
 
-	hs_d := []Header{}
-	stream := rlp.NewStream(&buf, uint64(buf.Len()))
-	_, size, _ := stream.Kind()
-	fmt.Println(size)
-	e = stream.Decode(&hs_d)
-	fmt.Println(e)
+func TestJson(t *testing.T) {
+	jsonStr := `{"cmd":null}`
+	var s st
+	err := json.Unmarshal([]byte(jsonStr), &s)
+	if err != nil {
+		fmt.Println(err)
+	}
+	b, _ := json.Marshal(s)
+	fmt.Println(string(b))
+
 }

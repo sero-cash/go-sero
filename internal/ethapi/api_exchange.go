@@ -3,6 +3,8 @@ package ethapi
 import (
 	"context"
 
+	"github.com/sero-cash/go-sero/zero/txtool/prepare"
+
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
@@ -21,13 +23,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-sero/log"
 
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
 	"github.com/sero-cash/go-sero/common"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/hexutil"
 )
 
@@ -35,7 +38,7 @@ type PublicExchangeAPI struct {
 	b Backend
 }
 
-func (s *PublicExchangeAPI) GetPkSynced(ctx context.Context, pk *PKAddress) (map[string]interface{}, error) {
+func (s *PublicExchangeAPI) GetPkSynced(ctx context.Context, pk *address.PKAddress) (map[string]interface{}, error) {
 	if pk == nil {
 		return nil, errors.New("pk can not be nil")
 	}
@@ -51,6 +54,7 @@ func (s *PublicExchangeAPI) GetPkSynced(ctx context.Context, pk *PKAddress) (map
 	if exchangeInstance == nil {
 		return nil, errors.New("exchange mode no start")
 	}
+
 	numbers := exchangeInstance.GetUtxoNum(pk.ToUint512())
 
 	// Otherwise gather the block sync stats
@@ -64,9 +68,9 @@ func (s *PublicExchangeAPI) GetPkSynced(ctx context.Context, pk *PKAddress) (map
 
 }
 
-func (s *PublicExchangeAPI) GetPkr(ctx context.Context, address PKAddress, index *keys.Uint256) (pkrAdd PKrAddress, e error) {
-	pk := address.ToUint512()
-	pkr, err := s.b.GetPkr(&pk, index)
+func (s *PublicExchangeAPI) GetPkr(ctx context.Context, pk address.PKAddress, index *c_type.Uint256) (pkrAdd PKrAddress, e error) {
+
+	pkr, err := s.b.GetPkr(pk.ToUint512().NewRef(), index)
 	if err != nil {
 		e = err
 		return
@@ -75,27 +79,30 @@ func (s *PublicExchangeAPI) GetPkr(ctx context.Context, address PKAddress, index
 	return
 }
 
-func (s *PublicExchangeAPI) GetLockedBalances(address PKAddress) map[string]*Big {
+func (s *PublicExchangeAPI) GetLockedBalances(pk address.PKAddress) map[string]*Big {
 	result := map[string]*Big{}
-
-	balances := s.b.GetLockedBalances(address.ToUint512())
+	balances := s.b.GetLockedBalances(pk.ToUint512())
 	for k, v := range balances {
 		result[k] = (*Big)(v)
 	}
 	return result
 }
 
-func (s *PublicExchangeAPI) GetMaxAvailable(address PKAddress, currency Smbol) (amount *Big) {
-	return (*Big)(s.b.GetMaxAvailable(address.ToUint512(), string(currency)))
+func (s *PublicExchangeAPI) GetMaxAvailable(pk address.PKAddress, currency Smbol) (amount *Big) {
+	return (*Big)(s.b.GetMaxAvailable(pk.ToUint512(), string(currency)))
 }
 
-func (s *PublicExchangeAPI) GetBalances(ctx context.Context, address PKAddress) map[string]*Big {
+func (s *PublicExchangeAPI) GetBalances(ctx context.Context, pk address.PKAddress) map[string]interface{} {
 	result := map[string]*Big{}
-	balances := s.b.GetBalances(address.ToUint512())
+
+	balances, tickets := s.b.GetBalances(pk.ToUint512())
 	for k, v := range balances {
 		result[k] = (*Big)(v)
 	}
-	return result
+	ret := make(map[string]interface{})
+	ret["tkn"] = result
+	ret["tkt"] = tickets
+	return ret
 }
 
 type ReceptionArgs struct {
@@ -104,12 +111,12 @@ type ReceptionArgs struct {
 	Value    *Big
 }
 
-func MixAdrressToPkr(addr MixAdrress) keys.PKr {
-	pkr := keys.PKr{}
+func MixAdrressToPkr(addr MixAdrress) c_type.PKr {
+	pkr := c_type.PKr{}
 	if len(addr) == 64 {
-		pk := keys.Uint512{}
+		pk := c_type.Uint512{}
 		copy(pk[:], addr[:])
-		pkr = keys.Addr2PKr(&pk, nil)
+		pkr = superzk.Pk2PKr(&pk, nil)
 	} else {
 		copy(pkr[:], addr[:])
 	}
@@ -137,7 +144,7 @@ func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param GenTxArgs) 
 	return tx, e
 }
 
-func pkrToPKrAddress(pkr keys.PKr) PKrAddress {
+func pkrToPKrAddress(pkr c_type.PKr) PKrAddress {
 	pkrAddress := PKrAddress{}
 	copy(pkrAddress[:], pkr[:])
 	return pkrAddress
@@ -145,15 +152,15 @@ func pkrToPKrAddress(pkr keys.PKr) PKrAddress {
 
 type Record struct {
 	Pkr      PKrAddress
-	Root     keys.Uint256
-	TxHash   keys.Uint256
-	Nil      keys.Uint256
+	Root     c_type.Uint256
+	TxHash   c_type.Uint256
+	Nil      c_type.Uint256
 	Num      uint64
 	Currency string
 	Value    *Big
 }
 
-func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash keys.Uint256) (map[string]interface{}, error) {
+func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash c_type.Uint256) (map[string]interface{}, error) {
 
 	tx, blockHash, blockNumber, index := rawdb.ReadTransaction(s.b.ChainDb(), common.BytesToHash(txHash[:]))
 	if tx == nil {
@@ -201,18 +208,32 @@ func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash keys.Uint256) (map
 		r["Pkr"] = record.Pkr
 		r["Currency"] = record.Currency
 		r["Value"] = record.Value
+		r["Root"] = record.Root
 		outs = append(outs, r)
 	}
 	fields["Outs"] = outs
 
-	ins := []keys.Uint256{}
-	for _, in := range tx.Stxt().Desc_O.Ins {
-		ins = append(ins, in.Root)
+	ins := []c_type.Uint256{}
+	if tx.Stxt().Tx0() != nil {
+		for _, in := range tx.Stxt().Tx0().Desc_O.Ins {
+			ins = append(ins, in.Root)
+		}
+		for _, in := range tx.Stxt().Tx0().Desc_Z.Ins {
+			if root := exchange.CurrentExchange().GetRootByNil(in.Trace); root != nil {
+				ins = append(ins, *root)
+			}
+		}
 	}
-	for _, in := range tx.Stxt().Desc_Z.Ins {
-		if root := exchange.CurrentExchange().GetRootByNil(in.Trace); root != nil {
+	for _, in := range tx.Stxt().Tx1.Ins_C {
+		if root := exchange.CurrentExchange().GetRootByNil(in.Nil); root != nil {
 			ins = append(ins, *root)
 		}
+	}
+	for _, in := range tx.Stxt().Tx1.Ins_P {
+		ins = append(ins, in.Root)
+	}
+	for _, in := range tx.Stxt().Tx1.Ins_P0 {
+		ins = append(ins, in.Root)
 	}
 	fields["Ins"] = ins
 
@@ -227,11 +248,12 @@ func (s *PublicExchangeAPI) GetRecords(ctx context.Context, begin, end uint64, a
 	} else {
 		addr := *address
 		if len(addr) == 64 {
-			var pk keys.Uint512
+			var pk c_type.Uint512
 			copy(pk[:], addr[:])
+
 			utxos, err = s.b.GetRecordsByPk(&pk, begin, end)
 		} else if len(addr) == 96 {
-			var pkr keys.PKr
+			var pkr c_type.PKr
 			copy(pkr[:], addr[:])
 			utxos, err = s.b.GetRecordsByPkr(pkr, begin, end)
 		} else {
@@ -253,7 +275,7 @@ func (s *PublicExchangeAPI) GetRecords(ctx context.Context, begin, end uint64, a
 }
 
 type MergeArgs struct {
-	From     PKAddress
+	From     address.PKAddress
 	To       *PKrAddress
 	Currency Smbol
 	Zcount   uint64
@@ -277,7 +299,7 @@ func (args MergeArgs) Check() error {
 		return errors.New("cy can not be nil")
 	}
 	if args.To != nil {
-		if !keys.PKrValid(args.To.ToPKr()) {
+		if !superzk.IsPKrValid(args.To.ToPKr()) {
 			return errors.New("To is not a valid pkr")
 		}
 	}
@@ -296,8 +318,8 @@ func (s *PublicExchangeAPI) GenMergeTx(ctx context.Context, args MergeArgs) (txP
 	return exchangeInstance.GenMergeTx(args.ToMergParam())
 }
 
-func (s *PublicExchangeAPI) Merge(ctx context.Context, address *PKAddress, cy Smbol) (map[string]interface{}, error) {
-	if address == nil {
+func (s *PublicExchangeAPI) Merge(ctx context.Context, pk *address.PKAddress, cy Smbol) (map[string]interface{}, error) {
+	if pk == nil {
 		return nil, errors.New("pk can not be nil")
 	}
 	if cy == "" {
@@ -308,7 +330,7 @@ func (s *PublicExchangeAPI) Merge(ctx context.Context, address *PKAddress, cy Sm
 	if exchangeInstance == nil {
 		return nil, errors.New("exchange mode no start")
 	}
-	count, hash, err := exchangeInstance.Merge(address.ToUint512().NewRef(), string(cy), true)
+	count, hash, err := exchangeInstance.Merge(pk.ToUint512().NewRef(), string(cy), true)
 	log.Info("merge query utxo", "cy=", cy, "count=", count)
 	if err != nil {
 		return nil, err
@@ -328,38 +350,38 @@ func validAddress(addr MixAdrress) (bool, error) {
 	}
 
 	if len(addr) == 64 {
-		pk := keys.Uint512{}
+		pk := c_type.Uint512{}
 		copy(pk[:], addr[:])
-		if !keys.IsPKValid(&pk) {
+		if !superzk.IsPKValid(&pk) {
 			return false, errors.Errorf("invalid pk %v", hexutil.Encode(addr[:]))
 		}
 	}
 	if len(addr) == 96 {
-		pkr := keys.PKr{}
+		pkr := c_type.PKr{}
 		copy(pkr[:], addr[:])
-		if !keys.PKrValid(&pkr) {
+		if !superzk.IsPKrValid(&pkr) {
 			return false, errors.Errorf("invalid  pkr %v", hexutil.Encode(addr[:]))
 		}
 	}
 	return true, nil
 }
 
-func (s *PublicExchangeAPI) ValidAddress(ctx context.Context, addr MixBase58Adrress) (bool, error) {
+func (s *PublicExchangeAPI) ValidAddress(ctx context.Context, addr address.MixBase58Adrress) (bool, error) {
 	if len(addr) != 64 && len(addr) != 96 {
 		return false, errors.Errorf("invalid addr %v", base58.Encode(addr[:]))
 	}
 
 	if len(addr) == 64 {
-		pk := keys.Uint512{}
+		pk := c_type.Uint512{}
 		copy(pk[:], addr[:])
-		if !keys.IsPKValid(&pk) {
+		if !superzk.IsPKValid(&pk) {
 			return false, errors.Errorf("invalid pk %v", base58.Encode(addr[:]))
 		}
 	}
 	if len(addr) == 96 {
-		pkr := keys.PKr{}
+		pkr := c_type.PKr{}
 		copy(pkr[:], addr[:])
-		if !keys.PKrValid(&pkr) {
+		if !superzk.IsPKrValid(&pkr) {
 			return false, errors.Errorf("invalid  pkr %v", base58.Encode(addr[:]))
 		}
 	}
@@ -371,17 +393,16 @@ func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *txtool.GTx) erro
 	return s.b.CommitTx(args)
 }
 
-func (s *PublicExchangeAPI) ClearUsedFlag(ctx context.Context, pkaddress PKAddress) (count int, e error) {
+func (s *PublicExchangeAPI) ClearUsedFlag(ctx context.Context, pk address.PKAddress) (count int, e error) {
 	exchangeInstance := exchange.CurrentExchange()
 	if exchangeInstance == nil {
 		return 0, errors.New("exchange mode no start")
 	}
-	address := pkaddress.ToUint512()
-	count = exchangeInstance.ClearUsedFlagForPK(&address)
+	count = exchangeInstance.ClearUsedFlagForPK(pk.ToUint512().NewRef())
 	return
 }
 
-func (s *PublicExchangeAPI) ClearUsedFlagForRoot(ctx context.Context, roots []keys.Uint256) (count int, e error) {
+func (s *PublicExchangeAPI) ClearUsedFlagForRoot(ctx context.Context, roots []c_type.Uint256) (count int, e error) {
 	exchangeInstance := exchange.CurrentExchange()
 	if exchangeInstance == nil {
 		return 0, errors.New("exchange mode no start")
@@ -396,8 +417,8 @@ func (s *PublicExchangeAPI) ClearUsedFlagForRoot(ctx context.Context, roots []ke
 
 type Block struct {
 	BlockNumber uint64
-	BlockHash   keys.Uint256
-	Ins         []keys.Uint256
+	BlockHash   c_type.Uint256
+	Ins         []c_type.Uint256
 	Outs        []Record
 	TxHashes    []common.Hash
 	Timestamp   uint64
@@ -443,14 +464,15 @@ func (s *PublicExchangeAPI) GetBlocksInfo(ctx context.Context, start, end uint64
 	}
 	return
 }
-func (s *PublicExchangeAPI) GetPkByPkr(ctx context.Context, pkr PKrAddress) (*address.AccountAddress, error) {
+func (s *PublicExchangeAPI) GetPkByPkr(ctx context.Context, pkr PKrAddress) (*address.PKAddress, error) {
 	wallets := s.b.AccountManager().Wallets()
 	if len(wallets) == 0 {
 		return nil, nil
 	}
 	for _, wallet := range wallets {
-		if keys.IsMyPKr(wallet.Accounts()[0].Tk.ToUint512(), pkr.ToPKr()) {
-			return &wallet.Accounts()[0].Address, nil
+		if superzk.IsMyPKr(wallet.Accounts()[0].Tk.ToTk().NewRef(), pkr.ToPKr()) {
+			pkAddr := wallet.Accounts()[0].Address
+			return &pkAddr, nil
 		}
 	}
 	return nil, nil
@@ -490,37 +512,58 @@ func (s *PublicExchangeAPI) GetBlockByNumber(ctx context.Context, blockNum *int6
 	return fields, nil
 }
 
-func (s *PublicExchangeAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes) (keys.Uint512, error) {
+func (s *PublicExchangeAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes, version int) (c_type.Uint512, error) {
 	if len(seed) != 32 {
-		return keys.Uint512{}, errors.New("seed len must be 32")
+		return c_type.Uint512{}, errors.New("seed len must be 32")
 	}
-	var sd keys.Uint256
+	if version == 0 {
+		version = 1
+	}
+	var sd c_type.Uint256
 	copy(sd[:], seed[:])
-	return keys.Seed2Sk(&sd), nil
+	return superzk.Seed2Sk(&sd, version), nil
 }
 
-func (s *PublicExchangeAPI) SignTxWithSk(param txtool.GTxParam, SK keys.Uint512) (txtool.GTx, error) {
+func (s *PublicExchangeAPI) SignTxWithSk(param txtool.GTxParam, SK c_type.Uint512) (txtool.GTx, error) {
 	return flight.SignTx(&SK, &param)
 }
 
-func (s *PublicExchangeAPI) Sk2Tk(ctx context.Context, sk keys.Uint512) (address.AccountAddress, error) {
-	tk := keys.Sk2Tk(&sk)
-	return address.BytesToAccount(tk[:]), nil
+func (s *PublicExchangeAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (ret address.TKAddress, err error) {
+	tk, err := superzk.Sk2Tk(&sk)
+	if err != nil {
+		return
+	}
+	copy(ret[:], tk[:])
+	return
 }
 
-func (s *PublicExchangeAPI) Tk2Pk(ctx context.Context, tk TKAddress) (address.AccountAddress, error) {
-	pk := keys.Tk2Pk(tk.ToUint512().NewRef())
-	return address.BytesToAccount(pk[:]), nil
+func (s *PublicExchangeAPI) Tk2Pk(ctx context.Context, tk address.TKAddress) (ret address.PKAddress, err error) {
+	var pk c_type.Uint512
+	pk, err = superzk.Tk2Pk(tk.ToTk().NewRef())
+	copy(ret[:], pk[:])
+	return
 }
-func (s *PublicExchangeAPI) Pk2Pkr(ctx context.Context, pk PKAddress, index *keys.Uint256) (PKrAddress, error) {
-	empty := keys.Uint256{}
+func (s *PublicExchangeAPI) Pk2Pkr(ctx context.Context, pk address.PKAddress, index *c_type.Uint256) (PKrAddress, error) {
+	empty := c_type.Uint256{}
 	if index != nil {
 		if (*index) == empty {
-			*index = keys.RandUint256()
+			*index = c_type.RandUint256()
 		}
 	}
-	pkr := keys.Addr2PKr(pk.ToUint512().NewRef(), index)
+	pkr := superzk.Pk2PKr(pk.ToUint512().NewRef(), index)
 	var pkrAddress PKrAddress
 	copy(pkrAddress[:], pkr[:])
 	return pkrAddress, nil
+}
+
+func (s *PublicExchangeAPI) FindRoots(pk address.PKAddress, cy Smbol, amount Big) (map[string]interface{}, error) {
+	utxos, remaining := exchange.CurrentExchange().FindRoots(pk.ToUint512().NewRef(), string(cy), amount.ToInt())
+	result := map[string]interface{}{}
+	result["utxos"] = utxos
+	result["remaining"] = Big(remaining)
+	return result, nil
+}
+
+func (s *PublicExchangeAPI) GetRoot(root *c_type.Uint256) *prepare.Utxo {
+	return exchange.CurrentExchange().GetRoot(root)
 }

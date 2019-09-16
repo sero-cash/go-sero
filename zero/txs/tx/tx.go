@@ -17,43 +17,43 @@
 package tx
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type In struct {
-	Root keys.Uint256
+	Root c_type.Uint256
 	IsO  bool
 }
 
 type Out struct {
-	Addr  keys.PKr
+	Addr  c_type.PKr
 	Asset assets.Asset
-	Memo  keys.Uint512
+	Memo  c_type.Uint512
 	IsZ   bool
 }
 
 type PkgCreate struct {
-	Id  keys.Uint256
-	PKr keys.PKr
+	Id  c_type.Uint256
+	PKr c_type.PKr
 	Pkg pkg.Pkg_O
 }
 
 type PkgClose struct {
-	Id  keys.Uint256
-	Key keys.Uint256
+	Id  c_type.Uint256
+	Key c_type.Uint256
 }
 
 type PkgTransfer struct {
-	Id  keys.Uint256
-	PKr keys.PKr
+	Id  c_type.Uint256
+	PKr c_type.PKr
 }
 
 type T struct {
-	FromRnd     *keys.Uint256
-	Ehash       keys.Uint256
+	FromRnd     *c_type.Uint256
+	Ehash       c_type.Uint256
 	Fee         assets.Token
 	Ins         []In
 	Outs        []Out
@@ -62,8 +62,8 @@ type T struct {
 	PkgClose    *PkgClose
 }
 
-func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
-	ret = make(map[keys.Uint256]utils.U256)
+func (self *T) TokenCost() (ret map[c_type.Uint256]utils.U256) {
+	ret = make(map[c_type.Uint256]utils.U256)
 	ret[self.Fee.Currency] = self.Fee.Value
 	if len(self.Outs) > 0 {
 		for _, out := range self.Outs {
@@ -91,8 +91,8 @@ func (self *T) TokenCost() (ret map[keys.Uint256]utils.U256) {
 	return
 }
 
-func (self *T) TikectCost() (ret map[keys.Uint256][]keys.Uint256) {
-	ret = make(map[keys.Uint256][]keys.Uint256)
+func (self *T) TikectCost() (ret map[c_type.Uint256][]c_type.Uint256) {
+	ret = make(map[c_type.Uint256][]c_type.Uint256)
 	if len(self.Outs) > 0 {
 		for _, out := range self.Outs {
 			if out.Asset.Tkt != nil {
@@ -100,7 +100,7 @@ func (self *T) TikectCost() (ret map[keys.Uint256][]keys.Uint256) {
 					tkts = append(tkts, out.Asset.Tkt.Value)
 					ret[out.Asset.Tkt.Category] = tkts
 				} else {
-					ret[out.Asset.Tkt.Category] = []keys.Uint256{out.Asset.Tkt.Value}
+					ret[out.Asset.Tkt.Category] = []c_type.Uint256{out.Asset.Tkt.Value}
 				}
 			}
 		}
@@ -112,7 +112,7 @@ func (self *T) TikectCost() (ret map[keys.Uint256][]keys.Uint256) {
 				tkts = append(tkts, asset.Tkt.Value)
 				ret[asset.Tkt.Category] = tkts
 			} else {
-				ret[asset.Tkt.Category] = []keys.Uint256{asset.Tkt.Value}
+				ret[asset.Tkt.Category] = []c_type.Uint256{asset.Tkt.Value}
 			}
 		}
 	}

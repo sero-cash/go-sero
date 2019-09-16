@@ -1,6 +1,4 @@
 [Sero]
-  MineMode = false
-
   [Node]
 
   #KeyStoreDir="./data/keystore"

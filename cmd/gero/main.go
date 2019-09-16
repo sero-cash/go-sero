@@ -29,10 +29,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/btcsuite/btcutil/base58"
+	"github.com/sero-cash/go-czero-import/c_type"
 
-	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"gopkg.in/urfave/cli.v1"
 
@@ -87,7 +87,6 @@ var (
 		utils.TxPoolGlobalQueueFlag,
 		utils.TxPoolLifetimeFlag,
 		utils.SyncModeFlag,
-		utils.MiningModeFlag,
 		utils.GCModeFlag,
 		utils.CacheFlag,
 		utils.CacheDatabaseFlag,
@@ -102,6 +101,7 @@ var (
 		utils.PThreadsFlag,
 		utils.MinerThreadsFlag,
 		utils.MiningEnabledFlag,
+		utils.MineModeEnabledFlag,
 		utils.TargetGasLimitFlag,
 		utils.NATFlag,
 		utils.NoDiscoverFlag,
@@ -134,6 +134,16 @@ var (
 		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
 		configFileFlag,
+	}
+
+	proofFlags = []cli.Flag{
+		utils.ProofEnabledFlag,
+		utils.ProofMaxThreadFlag,
+		utils.ProofMaxQueueFlag,
+		utils.ProofzinFeeFlag,
+		utils.ProofoinFeeFlag,
+		utils.ProofoutFeeFlag,
+		utils.ProofFixedFeeFlag,
 	}
 
 	rpcFlags = []cli.Flag{
@@ -182,7 +192,6 @@ func init() {
 		monitorCommand,
 		// See accountcmd.go:
 		accountCommand,
-		walletCommand,
 		// See consolecmd.go:
 		consoleCommand,
 		attachCommand,
@@ -202,6 +211,7 @@ func init() {
 	app.Flags = append(app.Flags, rpcFlags...)
 	app.Flags = append(app.Flags, consoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
+	app.Flags = append(app.Flags, proofFlags...)
 	app.Flags = append(app.Flags, metricsFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
@@ -213,14 +223,14 @@ func init() {
 		}
 
 		if !strings.EqualFold(subCommandName, "attach") && !strings.EqualFold(subCommandName, "version") {
-			netType := cpt.NET_Beta
+			netType := c_type.NET_Beta
 			switch {
 			case ctx.GlobalBool(utils.AlphanetFlag.Name):
-				netType = cpt.NET_Alpha
+				netType = c_type.NET_Alpha
 			case ctx.GlobalBool(utils.DeveloperFlag.Name):
-				netType = cpt.NET_Dev
+				netType = c_type.NET_Dev
 			}
-			cpt.ZeroInit(getKeyStore(ctx), netType)
+			superzk.ZeroInit(getKeyStore(ctx), netType)
 
 		}
 
@@ -380,7 +390,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		for _, wallet := range ks.Wallets() {
 			err := ks.Unlock(wallet.Accounts()[0], ctx.GlobalString(utils.DeveloperPasswordFlag.Name))
 			if err != nil {
-				fmt.Printf("unclock %v failed,%v", base58.Encode(wallet.Accounts()[0].Address.Bytes()), err)
+				fmt.Printf("unclock %v failed,%v", wallet.Accounts()[0].Address.String(), err)
 			}
 		}
 	} else {

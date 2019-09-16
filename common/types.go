@@ -24,18 +24,20 @@ import (
 	"math/big"
 	"math/rand"
 	"reflect"
-	"strings"
+
+	"github.com/sero-cash/go-sero/common/address"
+
+	"github.com/sero-cash/go-sero/common/hexutil"
+
+	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/pkg/errors"
 
 	"github.com/btcsuite/btcutil/base58"
 
-	"github.com/sero-cash/go-sero/common/addrutil"
-
 	"github.com/sero-cash/go-sero/crypto/sha3"
 
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-czero-import/c_type"
 )
 
 // Lengths of hashes and addresses in bytes.
@@ -50,6 +52,10 @@ var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
 )
+
+func IsString(input []byte) bool {
+	return len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"'
+}
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
 type Hash [HashLength]byte
@@ -149,8 +155,8 @@ func (h Hash) Value() (driver.Value, error) {
 	return h[:], nil
 }
 
-func (h Hash) HashToUint256() *keys.Uint256 {
-	u256 := keys.Uint256{}
+func (h Hash) HashToUint256() *c_type.Uint256 {
+	u256 := c_type.Uint256{}
 	copy(u256[:], h[:])
 	return &u256
 }
@@ -193,9 +199,9 @@ type ContractAddress [20]byte
 
 func (a Address) ToCaddr() ContractAddress {
 	var addr ContractAddress
-	pkr := new(keys.PKr)
+	pkr := new(c_type.PKr)
 	copy(pkr[:], a[:])
-	hash := keys.HashPKr(pkr)
+	hash := c_superzk.HashPKr(pkr)
 	addr.SetBytes(hash[:])
 	return addr
 }
@@ -217,10 +223,6 @@ func (a ContractAddress) MarshalText() ([]byte, error) {
 // UnmarshalText parses a hash in hex syntax.
 func (a *ContractAddress) UnmarshalText(input []byte) error {
 	return hexutil.UnmarshalFixedText("ContractAddress", input, a[:])
-}
-
-func BytesToString(b []byte) string {
-	return strings.Trim(string(b), string([]byte{0}))
 }
 
 // BytesToAddress returns Data with value b.
@@ -255,14 +257,14 @@ func Base58ToAddress(s string) Address {
 // Bytes gets the string representation of the underlying Data.
 func (a Address) Bytes() []byte { return a[:] }
 
-func (a Address) ToPKr() *keys.PKr {
-	pubKey := keys.PKr{}
+func (a Address) ToPKr() *c_type.PKr {
+	pubKey := c_type.PKr{}
 	copy(pubKey[:], a[:])
 	return &pubKey
 }
 
-func (a Address) ToUint512() *keys.Uint512 {
-	pubKey := keys.Uint512{}
+func (a Address) ToUint512() *c_type.Uint512 {
+	pubKey := c_type.Uint512{}
 	copy(pubKey[:], a[:])
 	return &pubKey
 }
@@ -317,17 +319,31 @@ func (a Address) MarshalText() ([]byte, error) {
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *Address) UnmarshalText(input []byte) error {
-	out, err := addrutil.IsValidBase58Address(input)
-	if err != nil {
-		return err
+	if address.IsBase58Str(string(input)) {
+		out := base58.Decode(string(input))
+		if len(out) != 64 && len(out) != 96 {
+			return errors.New("address lenght must be 64 or 96 bytes")
+		}
+		if len(out) == 96 {
+			empty := Hash{}
+			if bytes.Compare(out[64:], empty[:]) != 0 {
+				err := address.ValidPkr(out)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		copy(a[:], out)
+
+	} else {
+		return errors.New("not base58 string")
 	}
-	copy(a[:], out)
 	return nil
 }
 
 // UnmarshalJSON parses a hash in hex syntax.
 func (a *Address) UnmarshalJSON(input []byte) error {
-	if !addrutil.IsString(input) {
+	if !IsString(input) {
 		return errors.New("not string")
 	} else {
 		return a.UnmarshalText(input[1 : len(input)-1])
@@ -372,9 +388,8 @@ func (self AddressList) Swap(i, j int) {
 // UnprefixedAddress allows marshaling an Data without 0x prefix.
 type UnprefixedAddress Address
 
-// UnmarshalText decodes the Data from hex. The 0x prefix is optional.
 func (a *UnprefixedAddress) UnmarshalText(input []byte) error {
-	if addrutil.IsBase58Str(string(input)) {
+	if address.IsBase58Str(string(input)) {
 		out := base58.Decode(string(input))
 		copy(a[:], out[:])
 		return nil

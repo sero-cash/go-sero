@@ -26,22 +26,23 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-czero-import/c_type"
+
+	"github.com/sero-cash/go-czero-import/superzk"
+
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-sero/voter"
 	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
-	"github.com/sero-cash/go-sero/zero/wallet/lstate"
-
 	"github.com/sero-cash/go-sero/internal/ethapi"
 	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
-	"github.com/sero-cash/go-czero-import/keys"
-
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/consensus/ethash"
@@ -103,7 +104,7 @@ type Sero struct {
 
 	miner    *miner.Miner
 	gasPrice *big.Int
-	serobase address.AccountAddress
+	serobase accounts.Account
 
 	networkID     uint64
 	netRPCService *ethapi.PublicNetAPI
@@ -115,6 +116,8 @@ func (s *Sero) AddLesServer(ls LesServer) {
 	s.lesServer = ls
 	ls.SetBloomBitsIndexer(s.bloomIndexer)
 }
+
+var SeroInstance *Sero
 
 // New creates a new Sero object (including the
 // initialisation of the common Sero object)
@@ -145,7 +148,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
 		gasPrice:       config.GasPrice,
-		serobase:       config.Serobase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
@@ -166,9 +168,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	sero.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, sero.chainConfig, sero.engine, vmConfig, sero.accountManager)
 
 	txtool.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain})
-	if !config.MineMode {
-		lstate.InitLState()
-	}
 
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
@@ -178,9 +177,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	}
 	sero.bloomIndexer.Start(sero.blockchain)
 
-	//if config.TxPool.Journal != "" {
+	// if config.TxPool.Journal != "" {
 	//	config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
-	//}
+	// }
 	sero.txPool = core.NewTxPool(config.TxPool, sero.chainConfig, sero.blockchain)
 
 	sero.voter = voter.NewVoter(sero.chainConfig, sero.blockchain, sero)
@@ -198,18 +197,34 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	}
 	sero.APIBackend.gpo = gasprice.NewOracle(sero.APIBackend, gpoParams)
 
-	//init exchange
+	ethapi.Backend_Instance = sero.APIBackend
+
+	// init exchange
 	if config.StartExchange {
 		sero.exchange = exchange.NewExchange(zconfig.Exchange_dir(), sero.txPool, sero.accountManager, config.AutoMerge)
 	}
 
 	stakeservice.NewStakeService(zconfig.Stake_dir(), sero.blockchain, sero.accountManager)
 
-	//init light
+	// init light
 	if config.StartLight {
 		sero.lightNode = light.NewLightNode(zconfig.Light_dir(), sero.txPool, sero.blockchain.GetDB())
 	}
 
+	// if config.Proof != nil {
+	// 	if config.Proof.PKr == (c_type.PKr{}) {
+	// 		wallets := sero.accountManager.Wallets()
+	// 		if len(wallets) == 0 {
+	// 			// panic("init proofService error")
+	// 		}
+	//
+	// 		account := wallets[0].Accounts()
+	// 		config.Proof.PKr = superzk.Pk2PKr(account[0].Address.ToUint512(), &c_type.Uint256{1})
+	// 	}
+	// 	proofservice.NewProofService("", sero.APIBackend, config.Proof);
+	// }
+
+	SeroInstance = sero
 	return sero, nil
 }
 
@@ -330,17 +345,17 @@ func (s *Sero) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *Sero) Serobase() (eb address.AccountAddress, err error) {
+func (s *Sero) Serobase() (eb accounts.Account, err error) {
 	s.lock.RLock()
 	serobase := s.serobase
 	s.lock.RUnlock()
 
-	if serobase != (address.AccountAddress{}) {
+	if serobase != (accounts.Account{}) {
 		return serobase, nil
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
 		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			serobase := accounts[0].Address
+			serobase := accounts[0]
 
 			s.lock.Lock()
 			s.serobase = serobase
@@ -350,16 +365,17 @@ func (s *Sero) Serobase() (eb address.AccountAddress, err error) {
 			return serobase, nil
 		}
 	}
-	return address.AccountAddress{}, fmt.Errorf("Serobase must be explicitly specified")
+	return accounts.Account{}, fmt.Errorf("Serobase must be explicitly specified")
 }
 
 // SetSerobase sets the mining reward address.
-func (s *Sero) SetSerobase(serobase address.AccountAddress) {
+func (s *Sero) SetSerobase(serobase address.MixBase58Adrress) {
 	s.lock.Lock()
-	s.serobase = serobase
+	account, _ := s.accountManager.FindAccountByPkr(serobase.ToPkr())
+	s.serobase = account
 	s.lock.Unlock()
 
-	s.miner.SetSerobase(serobase)
+	s.miner.SetSerobase(account)
 }
 
 func (s *Sero) StartMining(local bool) error {
@@ -369,10 +385,10 @@ func (s *Sero) StartMining(local bool) error {
 		return fmt.Errorf("serobase missing: %v", err)
 	}
 	current_height := s.blockchain.CurrentHeader().Number.Uint64()
-	pkr, lic, ret := keys.Addr2PKrAndLICr(eb.ToUint512(), current_height)
-	ret = keys.CheckLICr(&pkr, &lic, current_height)
+	pkr, lic, ret := superzk.Pk2PKrAndLICr(eb.Address.ToUint512().NewRef(), current_height)
+	ret = superzk.CheckLICr(&pkr, &lic, current_height)
 	if !ret {
-		lic_t := keys.LICr{}
+		lic_t := c_type.LICr{}
 		if bytes.Equal(lic.Proof[:32], lic_t.Proof[:32]) {
 			log.Error("Cannot start mining , miner license does not exists ", "", "")
 			return fmt.Errorf(" miner license does not exists")

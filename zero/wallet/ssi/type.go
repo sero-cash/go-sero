@@ -1,26 +1,26 @@
 package ssi
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/txtool"
 )
 
 type Out struct {
-	Root keys.Uint256
-	Hash keys.Uint256
-	PKr  keys.PKr
+	Root c_type.Uint256
+	Hash c_type.Uint256
+	PKr  c_type.PKr
 }
 type Block struct {
 	Num  hexutil.Uint64
-	Hash keys.Uint256
+	Hash c_type.Uint256
 	Outs []Out
-	Nils []keys.Uint256
+	Nils []c_type.Uint256
 }
 
 type GIn struct {
-	SKr  keys.PKr
-	Root keys.Uint256
+	SKr  c_type.PKr
+	Root c_type.Uint256
 }
 
 type PreTxParam struct {
@@ -33,7 +33,7 @@ type PreTxParam struct {
 
 type ISSI interface {
 	GetBlocksInfo(start uint64, count uint64) ([]Block, error)
-	Detail(root []keys.Uint256, skr *keys.PKr) ([]txtool.DOut, error)
-	GenTx(param *PreTxParam) (keys.Uint256, error)
-	CommitTx(txhash *keys.Uint256) error
+	Detail(root []c_type.Uint256, skr *c_type.PKr) ([]txtool.DOut, error)
+	GenTx(param *PreTxParam) (c_type.Uint256, error)
+	CommitTx(txhash *c_type.Uint256) error
 }

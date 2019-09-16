@@ -22,8 +22,10 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/seroparam"
 
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/rlp"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -700,7 +702,7 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	// Pop other call parameters.
 	addr, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(addr))
-	//TODO
+	// TODO
 	if toAddr == (common.Address{}) {
 		return nil, ErrToAddressError
 	}
@@ -748,7 +750,7 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	// Pop other call parameters.
 	addr, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(addr))
-	//TODO
+	// TODO
 	if toAddr == (common.Address{}) {
 		return nil, ErrToAddressError
 	}
@@ -795,7 +797,7 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract,
 	// Pop other call parameters.
 	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(addr))
-	//TODO
+	// TODO
 	if toAddr == (common.Address{}) {
 		return nil, ErrToAddressError
 	}
@@ -824,7 +826,7 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, m
 	// Pop other call parameters.
 	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(addr))
-	//TODO
+	// TODO
 	if toAddr == (common.Address{}) {
 		return nil, ErrToAddressError
 	}
@@ -867,14 +869,14 @@ func opStop(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 }
 
 func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	//toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(stack.pop()))
-	//interpreter.evm.StateDB.Suicide(contract.Address(), toAddr)
+	// toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(stack.pop()))
+	// interpreter.evm.StateDB.Suicide(contract.Address(), toAddr)
 	return nil, nil
 }
 
 func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (common.Hash, uint64, error, bool) {
 	offset := new(big.Int).SetBytes(d[64:96]).Uint64()
-	len := new(big.Int).SetBytes(mem[offset:offset+32]).Uint64()
+	len := new(big.Int).SetBytes(mem[offset : offset+32]).Uint64()
 	if len == 0 {
 		return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "nameLen is zero"), false
 	}
@@ -912,10 +914,14 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 			},
 		}
 
+		if e := c_superzk.IsTktValid(&asset.Tkt.Category, &asset.Tkt.Value); e != nil {
+			return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "categoryName has no base"), false
+		}
+
 		gas := evm.callGasTemp + params.CallStipend
 		_, returnGas, err, _alarm := evm.Call(contract, toAddr, nil, gas, &asset)
 		alarm = _alarm
-		//contract.Gas += returnGas
+		// contract.Gas += returnGas
 		if err != nil {
 			return common.Hash{}, returnGas, err, alarm
 		} else {
@@ -961,7 +967,7 @@ var foundationAccount2 = common.Base58ToAddress("5niHmAcSoDzaekKTUpLR3qkQf6djC7A
 
 func handleIssueToken(d []byte, evm *EVM, contract *Contract, mem []byte) (bool, error) {
 	offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-	len := new(big.Int).SetBytes(mem[offset:offset+32]).Uint64()
+	len := new(big.Int).SetBytes(mem[offset : offset+32]).Uint64()
 	if len == 0 {
 		return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "nameLen is zero")
 	}
@@ -990,8 +996,14 @@ func handleIssueToken(d []byte, evm *EVM, contract *Contract, mem []byte) (bool,
 				asset := assets.Asset{Tkn: &assets.Token{
 					Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 					Value:    utils.U256(*fee),
-				},
+				}}
+
+				if evm.BlockNumber.Uint64() >= seroparam.SIP5() {
+					if e := c_superzk.IsTknValid(&asset.Tkn.Currency); e != nil {
+						return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "coinName has no base")
+					}
 				}
+
 				if evm.BlockNumber.Uint64() >= 300000 {
 					evm.StateDB.NextZState().AddTxOut(foundationAccount2, asset, evm.TxHash)
 				} else {
@@ -1017,7 +1029,7 @@ func handleSend(d []byte, evm *EVM, contract *Contract, mem []byte) ([]byte, uin
 		return nil, 0, fmt.Errorf("handleSend error , contract : %s, toAddr : %s, error : %s", contract.Address(), toAddr, "not load toAddrss"), false
 	}
 	currency_offset := new(big.Int).SetBytes(d[32:64]).Uint64()
-	length := new(big.Int).SetBytes(mem[currency_offset:currency_offset+32]).Uint64()
+	length := new(big.Int).SetBytes(mem[currency_offset : currency_offset+32]).Uint64()
 	var currency string
 	if length != 0 {
 		currency = string(mem[currency_offset+32 : currency_offset+32+length])
@@ -1025,7 +1037,7 @@ func handleSend(d []byte, evm *EVM, contract *Contract, mem []byte) ([]byte, uin
 
 	var category string
 	category_offset := new(big.Int).SetBytes(d[96:128]).Uint64()
-	length = new(big.Int).SetBytes(mem[category_offset:category_offset+32]).Uint64()
+	length = new(big.Int).SetBytes(mem[category_offset : category_offset+32]).Uint64()
 	if length != 0 {
 		category = string(mem[category_offset+32 : category_offset+32+length])
 	}
@@ -1097,28 +1109,27 @@ func makeLog(size int) executionFunc {
 			}
 		}
 		if topics[0] == topic_allotTicket {
-			//hash, returnGas, err, alarm := handleAllotTicket(d, interpreter.evm, contract, data)
-			//contract.Gas += returnGas
-			//if alarm {
-			//	contract.UseGas(contract.Gas)
-			//}
-			//if err != nil {
-			//	log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
-			//}
-			hash := common.Hash{}
+			hash, returnGas, err, alarm := handleAllotTicket(d, interpreter.evm, contract, data)
+			contract.Gas += returnGas
+			if alarm {
+				contract.UseGas(contract.Gas)
+			}
+			if err != nil {
+				log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
+			}
+			// hash := common.Hash{}
 			memory.Set(mStart.Uint64()+length-32, 32, hash[:])
 		} else if topics[0] == topic_issueToken {
 			if ok, err := handleIssueToken(d, interpreter.evm, contract, data); ok {
-				log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
 				memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
 			} else {
-				log.Trace(err.Error())
+				log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
 				memory.Set(mStart.Uint64()+length-32, 32, hashFalse)
 			}
 			contract.Gas += interpreter.evm.callGasTemp
 		} else if topics[0] == topic_balanceOf {
 			offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-			len := new(big.Int).SetBytes(data[offset:offset+32]).Uint64()
+			len := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
 			balance := new(big.Int)
 			if len != 0 {
 				coinName := string(data[offset+32 : offset+32+len])
@@ -1166,7 +1177,7 @@ func makeLog(size int) executionFunc {
 			contract.Gas += interpreter.evm.callGasTemp
 		} else if topics[0] == topic_setTokenRate {
 			offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-			len := new(big.Int).SetBytes(data[offset:offset+32]).Uint64()
+			len := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
 			if len == 0 {
 				return nil, fmt.Errorf("setTokenRate error , contract : %s, error : %s", contract.Address(), "coinName len=0")
 			}
@@ -1184,10 +1195,10 @@ func makeLog(size int) executionFunc {
 			}
 			contract.Gas += interpreter.evm.callGasTemp
 		} else if topics[0] == topic_closePkg {
-			id := keys.Uint256{}
+			id := c_type.Uint256{}
 			copy(id[:], d[0:32])
 
-			key := keys.Uint256{}
+			key := c_type.Uint256{}
 			copy(key[:], d[32:64])
 			pkg, err := interpreter.evm.StateDB.NextZState().Pkgs.Close(&id, contract.Address().ToPKr(), &key)
 			if err != nil {
@@ -1223,7 +1234,7 @@ func makeLog(size int) executionFunc {
 			}
 			contract.Gas += interpreter.evm.callGasTemp
 		} else if topics[0] == topic_transferPkg {
-			id := keys.Uint256{}
+			id := c_type.Uint256{}
 			copy(id[:], d[0:32])
 
 			toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BytesToContractAddress(d[32:64]))
@@ -1255,14 +1266,14 @@ func makeLog(size int) executionFunc {
 
 func setCallValues(d []byte, data []byte, contract *Contract) {
 	currency_offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-	length := new(big.Int).SetBytes(data[currency_offset:currency_offset+32]).Uint64()
+	length := new(big.Int).SetBytes(data[currency_offset : currency_offset+32]).Uint64()
 	var currency string
 	if length != 0 {
 		currency = string(data[currency_offset+32 : currency_offset+32+length])
 	}
 	var category string
 	category_offset := new(big.Int).SetBytes(d[64:96]).Uint64()
-	length = new(big.Int).SetBytes(data[category_offset:category_offset+32]).Uint64()
+	length = new(big.Int).SetBytes(data[category_offset : category_offset+32]).Uint64()
 	if length != 0 {
 		category = string(data[category_offset+32 : category_offset+32+length])
 	}

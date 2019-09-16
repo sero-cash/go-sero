@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/crypto"
@@ -23,7 +23,7 @@ func newState() (*StakeState, *state.StateDB) {
 
 func TestAddShare(t *testing.T) {
 	state, stateDB := newState()
-	var pkr keys.PKr
+	var pkr c_type.PKr
 	copy(pkr[:], crypto.Keccak512([]byte("123")))
 	share1 := &Share{PKr: pkr, Value: big.NewInt(10000), InitNum: 10, Num: 10}
 	state.AddPendingShare(share1)
@@ -42,9 +42,9 @@ func TestAddShare(t *testing.T) {
 
 func TestCaleAvePrice(t *testing.T) {
 	state, _ := newState()
-	//var pkr keys.PKr
+	//var pkr c_type.PKr
 	//copy(pkr[:], crypto.Keccak512([]byte("123")))
-	//share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 10, Num: 10}
+	//share := &Share{PKr: c_type.PKr{}, Value: big.NewInt(10000), InitNum: 10, Num: 10}
 	//state.AddPendingShare(share)
 	//root := stateDB.IntermediateRoot(true)
 	//fmt.Println("root:", root.String())
@@ -79,9 +79,9 @@ func TestSeleteShare(t *testing.T) {
 func TestPosRewad(t *testing.T) {
 	state, _ := newState()
 
-	var pkr keys.PKr
+	var pkr c_type.PKr
 	copy(pkr[:], crypto.Keccak512([]byte("123")))
-	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 326592+10, Num: 326592+10}
+	share := &Share{PKr: c_type.PKr{}, Value: big.NewInt(10000), InitNum: 326592 + 10, Num: 326592 + 10}
 	//state.AddPendingShare(share)
 	//fmt.Println("root:", root.String())
 
@@ -97,9 +97,9 @@ func TestPosRewad(t *testing.T) {
 func TestPosDif(t *testing.T) {
 	state, _ := newState()
 
-	var pkr keys.PKr
+	var pkr c_type.PKr
 	copy(pkr[:], crypto.Keccak512([]byte("123")))
-	share := &Share{PKr: keys.PKr{}, Value: big.NewInt(10000), InitNum: 10000, Num: 10000}
+	share := &Share{PKr: c_type.PKr{}, Value: big.NewInt(10000), InitNum: 10000, Num: 10000}
 	//state.AddPendingShare(share)
 	//fmt.Println("root:", root.String())
 

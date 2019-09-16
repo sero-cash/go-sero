@@ -37,9 +37,11 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/btcsuite/btcutil/base58"
-
 	"github.com/sero-cash/go-sero/common/address"
+
+	"github.com/sero-cash/go-sero/accounts"
+
+	"github.com/btcsuite/btcutil/base58"
 
 	"github.com/pborman/uuid"
 	"github.com/sero-cash/go-sero/common/math"
@@ -80,7 +82,7 @@ type keyStorePassphrase struct {
 	scryptP     int
 }
 
-func (ks keyStorePassphrase) GetKey(addr address.AccountAddress, filename, auth string) (*Key, error) {
+func (ks keyStorePassphrase) GetKey(address address.PKAddress, filename, auth string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 
 	keyjson, err := ioutil.ReadFile(filename)
@@ -93,16 +95,16 @@ func (ks keyStorePassphrase) GetKey(addr address.AccountAddress, filename, auth 
 		return nil, err
 	}
 	// Make sure we're really operating on the requested key (no swap attacks)
-	if key.Address != addr {
-		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
+	if key.Address != address {
+		return nil, fmt.Errorf("key content mismatch: have account %s, want %s", key.Address.String(), address.String())
 	}
 	return key, nil
 }
 
 // StoreKey generates a key, encrypts with 'auth' and stores in the given directory
-func StoreKey(dir, auth string, scryptN, scryptP int) (address.AccountAddress, error) {
-	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP}, rand.Reader, auth, 0)
-	return a.Address, err
+func StoreKey(dir, auth string, scryptN, scryptP int, at uint64) (accounts.Account, error) {
+	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP}, rand.Reader, auth, at, version)
+	return a, err
 }
 
 func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) error {
@@ -169,12 +171,12 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 		}
 	}
 	encryptedKeyJSONV1 := encryptedKeyJSONV1{
-		base58.Encode(key.Address.Bytes()),
-		base58.Encode(key.Tk.Bytes()),
-		cryptoStruct,
-		key.Id.String(),
-		version,
-		key.At,
+		Address: base58.Encode(key.Address[:]),
+		Tk:      base58.Encode(key.Tk[:]),
+		Crypto:  cryptoStruct,
+		Id:      key.Id.String(),
+		Version: key.Version,
+		At:      key.At,
 	}
 	return json.Marshal(encryptedKeyJSONV1)
 }
@@ -217,13 +219,14 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		return nil, err
 	}
 	key := crypto.ToECDSAUnsafe(keyBytes)
-
+	tk := crypto.PrivkeyToTk(key, k.Version)
 	return &Key{
 		Id:         uuid.UUID(keyId),
-		Address:    crypto.PrivkeyToAddress(key),
-		Tk:         crypto.PrivkeyToTk(key),
+		Address:    tk.ToPk(),
+		Tk:         tk,
 		PrivateKey: key,
 		At:         k.At,
+		Version:    k.Version,
 	}, nil
 }
 
@@ -232,7 +235,7 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV1, auth string) (keyBytes []byt
 	if keyProtected.Crypto.CipherText == "" {
 		return nil, nil, fmt.Errorf("has no privatekey for tk:%v", keyProtected.Tk)
 	}
-	if keyProtected.Version != version {
+	if keyProtected.Version > version {
 		return nil, nil, fmt.Errorf("Version not supported: %v", keyProtected.Version)
 	}
 

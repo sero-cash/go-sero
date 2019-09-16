@@ -1,7 +1,7 @@
 package data
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/localdb"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
@@ -9,7 +9,7 @@ import (
 type Data struct {
 	Id2Hash  utils.H2Hash
 	IdDirtys utils.Dirtys
-	Hash2Pkg map[keys.Uint256]localdb.ZPkg
+	Hash2Pkg map[c_type.Uint256]localdb.ZPkg
 }
 
 func NewData() (ret *Data) {
@@ -20,7 +20,7 @@ func NewData() (ret *Data) {
 func (self *Data) Clear() {
 	self.Id2Hash.Clear()
 	self.IdDirtys.Clear()
-	self.Hash2Pkg = make(map[keys.Uint256]localdb.ZPkg)
+	self.Hash2Pkg = make(map[c_type.Uint256]localdb.ZPkg)
 }
 func (self *Data) Add(pkg *localdb.ZPkg) {
 	hash := pkg.ToHash()
@@ -29,7 +29,7 @@ func (self *Data) Add(pkg *localdb.ZPkg) {
 	self.IdDirtys.Append(&pkg.Pack.Id)
 }
 
-func (self *Data) GetHashes() (ret []keys.Uint256) {
+func (self *Data) GetHashes() (ret []c_type.Uint256) {
 	for _, id := range self.IdDirtys.List() {
 		hash := self.Id2Hash.Get(&id)
 		ret = append(ret, hash)

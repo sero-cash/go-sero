@@ -28,13 +28,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sero-cash/go-sero/common/addrutil"
+	"github.com/sero-cash/go-czero-import/c_type"
+
+	"github.com/btcsuite/btcutil/base58"
+
+	"github.com/sero-cash/go-sero/zero/proofservice"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/rpc"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
-	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/accounts/keystore"
@@ -100,7 +104,7 @@ func NewApp(gitCommit, usage string) *cli.App {
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
 	app.Author = ""
-	//app.Authors = nil
+	// app.Authors = nil
 	app.Email = ""
 	app.Version = params.VersionWithMeta
 	if len(gitCommit) >= 8 {
@@ -321,19 +325,19 @@ var (
 		Usage: "The balance will be confirmed after the current block of number,default is 12",
 	}
 
-	ResetBlockNumber =  cli.Uint64Flag{
+	ResetBlockNumber = cli.Uint64Flag{
 		Name:  "resetBlockNumber",
 		Usage: "reset currentblock, gcmode must be archive",
 	}
 
 	// Miner settings
-	MiningModeFlag = cli.BoolFlag{
-		Name:  "mineMode",
-		Usage: "Enable mining",
-	}
 	MiningEnabledFlag = cli.BoolFlag{
 		Name:  "mine",
 		Usage: "Enable mining",
+	}
+	MineModeEnabledFlag = cli.BoolFlag{
+		Name:  "mineMode",
+		Usage: "NoUsed",
 	}
 	MinerThreadsFlag = cli.IntFlag{
 		Name:  "minerthreads",
@@ -599,6 +603,42 @@ var (
 		Usage: "InfluxDB `host` tag attached to all measurements",
 		Value: "localhost",
 	}
+
+	// proof settings
+	ProofEnabledFlag = cli.BoolFlag{
+		Name:  "proof",
+		Usage: "Enable the HTTP-RPC server",
+	}
+	ProofMaxThreadFlag = cli.IntFlag{
+		Name:  "maxthread",
+		Usage: "max work number",
+		Value: 5,
+	}
+	ProofMaxQueueFlag = cli.IntFlag{
+		Name:  "maxqueue",
+		Usage: "max work queue length",
+		Value: 10,
+	}
+	ProofzinFeeFlag = cli.StringFlag{
+		Name:  "zinFee",
+		Usage: "proof for tx zin fee",
+		Value: "0sero",
+	}
+	ProofoinFeeFlag = cli.StringFlag{
+		Name:  "oinFee",
+		Usage: "proof for tx oin fee",
+		Value: "0sero",
+	}
+	ProofoutFeeFlag = cli.StringFlag{
+		Name:  "outFee",
+		Usage: "proof for tx out fee",
+		Value: "0sero",
+	}
+	ProofFixedFeeFlag = cli.StringFlag{
+		Name:  "fixedFee",
+		Usage: "proof for tx out fee",
+		Value: "0sero",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -830,10 +870,24 @@ func makeDatabaseHandles() int {
 // a key index in the key store to an internal account representation.
 func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
 	// If the specified account is a valid address, return it
-	_, err := addrutil.IsValidAccountAddress([]byte(account))
-	if err == nil {
-		return accounts.Account{Address: address.Base58ToAccount(account)}, nil
+
+	splitStrs := strings.Split(account, ".")
+	var addr string
+	if len(splitStrs) == 3 {
+		addr = splitStrs[1]
+	} else {
+		addr = account
 	}
+	PkByte := base58.Decode(addr)
+	pk := c_type.Uint512{}
+	copy(pk[:], PkByte)
+	wallets := ks.Wallets()
+	for _, wallet := range wallets {
+		if wallet.Accounts()[0].IsMyPk(pk) {
+			return wallet.Accounts()[0], nil
+		}
+	}
+
 	// Otherwise try to interpret the account as a keystore index
 	index, err := strconv.Atoi(account)
 	if err != nil || index < 0 {
@@ -850,18 +904,6 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 		return accounts.Account{}, fmt.Errorf("index %d higher than number of accounts %d", index, len(accs))
 	}
 	return accs[index], nil
-}
-
-// setSerobase retrieves the serobase either from the directly specified
-// command line flags or from the keystore if CLI indexed.
-func setSerobase(ctx *cli.Context, ks *keystore.KeyStore, cfg *sero.Config) {
-	if ctx.GlobalIsSet(SerobaseFlag.Name) {
-		account, err := MakeAddress(ks, ctx.GlobalString(SerobaseFlag.Name))
-		if err != nil {
-			Fatalf("Option %q: %v", SerobaseFlag.Name, err)
-		}
-		cfg.Serobase = account.Address
-	}
 }
 
 // MakePasswordList reads password lines from the file specified by the global --password flag.
@@ -895,32 +937,32 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 	log.Info("Maximum peer count", "SERO", cfg.MaxPeers)
 
-	//lightClient := ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalString(SyncModeFlag.Name) == "light"
-	////lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
-	//lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
+	// lightClient := ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalString(SyncModeFlag.Name) == "light"
+	// //lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
+	// lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
 	//
-	//if ctx.GlobalIsSet(MaxPeersFlag.Name) {
+	// if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 	//	cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
 	//	//if lightServer && !ctx.GlobalIsSet(LightPeersFlag.Name) {
 	//	//	cfg.MaxPeers += lightPeers
 	//	//}
-	//} else {
+	// } else {
 	//	//if lightServer {
 	//	//	cfg.MaxPeers += lightPeers
 	//	//}
 	//	if lightClient && ctx.GlobalIsSet(LightPeersFlag.Name) && cfg.MaxPeers < lightPeers {
 	//		cfg.MaxPeers = lightPeers
 	//	}
-	//}
-	////if !(lightClient || lightServer) {
-	//if !(lightClient) {
+	// }
+	// //if !(lightClient || lightServer) {
+	// if !(lightClient) {
 	//	lightPeers = 0
-	//}
-	//ethPeers := cfg.MaxPeers - lightPeers
-	//if lightClient {
+	// }
+	// ethPeers := cfg.MaxPeers - lightPeers
+	// if lightClient {
 	//	ethPeers = 0
-	//}
-	//log.Info("Maximum peer count", "ETH", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
+	// }
+	// log.Info("Maximum peer count", "ETH", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
 
 	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
@@ -932,7 +974,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	// if we're running a light client or server, force enable the v5 peer discovery
 	// unless it is explicitly disabled with --nodiscover note that explicitly specifying
 	// --v5disc overrides --nodiscover, in which case the later only disables v4 discovery
-	//forceV5Discovery := (lightClient || lightServer) && !ctx.GlobalBool(NoDiscoverFlag.Name)
+	// forceV5Discovery := (lightClient || lightServer) && !ctx.GlobalBool(NoDiscoverFlag.Name)
 	forceV5Discovery := !ctx.GlobalBool(NoDiscoverFlag.Name)
 	if ctx.GlobalIsSet(DiscoveryV5Flag.Name) {
 		cfg.DiscoveryV5 = ctx.GlobalBool(DiscoveryV5Flag.Name)
@@ -950,7 +992,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 	if ctx.GlobalIsSet(ConfirmedBlockFlag.Name) {
 		balanceDelay := ctx.GlobalUint64(ConfirmedBlockFlag.Name)
-		if balanceDelay > 0 {
+		if balanceDelay >= 0 {
 			seroparam.InitComfirmedBlock(balanceDelay)
 		}
 	}
@@ -962,7 +1004,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 	if ctx.GlobalBool(DeveloperFlag.Name) {
 		// --dev mode can't use p2p networking.
-		//cfg.MaxPeers = 0
+		// cfg.MaxPeers = 0
 		cfg.ListenAddr = ":0"
 		cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
@@ -1029,6 +1071,50 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 }
 
+func initProof(ctx *cli.Context) (cfg *proofservice.Config) {
+	if !ctx.GlobalIsSet(ProofEnabledFlag.Name) {
+		return
+	}
+
+	cfg = &proofservice.Config{}
+	cfg.MaxWorkNumber = ctx.GlobalInt(ProofMaxThreadFlag.Name)
+	cfg.MaxQueueNumber = ctx.GlobalInt(ProofMaxQueueFlag.Name)
+	cfg.Fee = proofservice.ServiceFee{}
+
+	if ctx.GlobalIsSet(ProofzinFeeFlag.Name) {
+		zinFee, err := utils.ParseAmount(ctx.GlobalString(ProofzinFeeFlag.Name))
+		if err != nil {
+			panic(err)
+		}
+		cfg.Fee.ZinFee = zinFee
+	}
+
+	if ctx.GlobalIsSet(ProofoinFeeFlag.Name) {
+		oinFee, err := utils.ParseAmount(ctx.GlobalString(ProofoinFeeFlag.Name))
+		if err != nil {
+			panic(err)
+		}
+		cfg.Fee.OinFee = oinFee
+	}
+
+	if ctx.GlobalIsSet(ProofoutFeeFlag.Name) {
+		outFee, err := utils.ParseAmount(ctx.GlobalString(ProofoutFeeFlag.Name))
+		if err != nil {
+			panic(err)
+		}
+		cfg.Fee.OutFee = outFee
+	}
+
+	if ctx.GlobalIsSet(ProofFixedFeeFlag.Name) {
+		fixedFee, err := utils.ParseAmount(ctx.GlobalString(ProofFixedFeeFlag.Name))
+		if err != nil {
+			panic(err)
+		}
+		cfg.Fee.FixedFee = fixedFee
+	}
+	return
+}
+
 func setEthash(ctx *cli.Context, cfg *sero.Config) {
 	if ctx.GlobalIsSet(EthashCacheDirFlag.Name) {
 		cfg.Ethash.CacheDir = ctx.GlobalString(EthashCacheDirFlag.Name)
@@ -1092,14 +1178,13 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	// Avoid conflicting network flags
 	checkExclusive(ctx, AlphanetFlag, DeveloperFlag)
-	//checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
+	// checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	setSerobase(ctx, ks, cfg)
 	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
 	setEthash(ctx, cfg)
 
+	cfg.Proof = initProof(ctx)
 	cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
 	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
@@ -1137,10 +1222,6 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
-	}
-
-	if ctx.GlobalIsSet(MiningModeFlag.Name) {
-		cfg.MineMode = true
 	}
 
 	if ctx.GlobalIsSet(ExchangeFlag.Name) {

@@ -1,7 +1,7 @@
 package exchange
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
@@ -14,7 +14,7 @@ var (
 	id_2_pkg_KeyPrefix        = []byte("ID_2_PKG")
 )
 
-func pk_from_id_2_id_Key(pk *keys.Uint512, from *bool, id *keys.Uint256) []byte {
+func pk_from_id_2_id_Key(pk *c_type.Uint512, from *bool, id *c_type.Uint256) []byte {
 	ret := append(pk_from_id_2_id_KeyPrefix, pk[:]...)
 	if from != nil {
 		f := byte(0)
@@ -31,21 +31,21 @@ func pk_from_id_2_id_Key(pk *keys.Uint512, from *bool, id *keys.Uint256) []byte 
 
 type Pkg struct {
 	z    localdb.ZPkg
-	to   *keys.Uint512 `rlp: nil`
-	from *keys.Uint512 `rlp: nil`
+	to   *c_type.Uint512 `rlp: nil`
+	from *c_type.Uint512 `rlp: nil`
 }
 
-func id_2_pkg_key(id *keys.Uint256) []byte {
+func id_2_pkg_key(id *c_type.Uint256) []byte {
 	ret := append(id_2_pkg_KeyPrefix, id[:]...)
 	return ret
 }
 
-func (self *Exchange) FindPkgs(pk *keys.Uint512, from bool) (pkgs []Pkg) {
+func (self *Exchange) FindPkgs(pk *c_type.Uint512, from bool) (pkgs []Pkg) {
 	prefix := pk_from_id_2_id_Key(pk, &from, nil)
 	iterator := self.db.NewIteratorWithPrefix(prefix)
 	for iterator.Next() {
 		if id := iterator.Value(); len(id) == 32 {
-			i := keys.Uint256{}
+			i := c_type.Uint256{}
 			copy(i[:], id[:])
 			if pkg := self.FindPkgById(&i); pkg != nil {
 				pkgs = append(pkgs, *pkg)
@@ -59,7 +59,7 @@ func (self *Exchange) FindPkgs(pk *keys.Uint512, from bool) (pkgs []Pkg) {
 	return
 }
 
-func (self *Exchange) FindPkgById(id *keys.Uint256) (pkg *Pkg) {
+func (self *Exchange) FindPkgById(id *c_type.Uint256) (pkg *Pkg) {
 	if bs, e := self.db.Get(id_2_pkg_key(id)); e != nil {
 		return
 	} else {
@@ -74,10 +74,10 @@ func (self *Exchange) FindPkgById(id *keys.Uint256) (pkg *Pkg) {
 
 type pkgIndexes struct {
 	deleteKeys      [][]byte
-	pk_from_id_maps map[string]keys.Uint256
+	pk_from_id_maps map[string]c_type.Uint256
 }
 
-func (self *Exchange) indexPkgs(pks []keys.Uint512, batch serodb.Batch, blocks []txtool.Block) {
+func (self *Exchange) indexPkgs(pks []c_type.Uint512, batch serodb.Batch, blocks []txtool.Block) {
 	for _, block := range blocks {
 		for _, pkg := range block.Pkgs {
 			if p := self.FindPkgById(&pkg.Pack.Id); p != nil {

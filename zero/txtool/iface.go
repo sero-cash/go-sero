@@ -3,53 +3,62 @@ package txtool
 import (
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/utils"
+
 	"github.com/sero-cash/go-sero/common/hexutil"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 )
 
 type GIn struct {
-	SKr     keys.PKr
+	SKr     c_type.PKr
 	Out     Out
 	Witness Witness
+	A       *c_type.Uint256
+	Ar      *c_type.Uint256
+	ArOld   *c_type.Uint256
+	Vskr    *c_type.Uint256
+	CC      *c_type.Uint256
 }
 
 type GOut struct {
-	PKr   keys.PKr
+	PKr   c_type.PKr
 	Asset assets.Asset
-	Memo  keys.Uint512
+	Memo  c_type.Uint512
+	Ar    *c_type.Uint256
 }
 
 type GTx struct {
 	Gas      hexutil.Uint64
 	GasPrice hexutil.Big
 	Tx       stx.T
-	Hash     keys.Uint256
-	Roots    []keys.Uint256
-	Keys     []keys.Uint256
-	Bases    []keys.Uint256
+	Hash     c_type.Uint256
+	Roots    []c_type.Uint256
+	Keys     []c_type.Uint256
+	Bases    []c_type.Uint256
 }
 
 type GPkgCloseCmd struct {
-	Id      keys.Uint256
-	Owner   keys.PKr
-	AssetCM keys.Uint256
-	Ar      keys.Uint256
+	Id      c_type.Uint256
+	Owner   c_type.PKr
+	AssetCM c_type.Uint256
+	Ar      c_type.Uint256
 }
 
 type GPkgTransferCmd struct {
-	Id    keys.Uint256
-	Owner keys.PKr
-	PKr   keys.PKr
+	Id    c_type.Uint256
+	Owner c_type.PKr
+	PKr   c_type.PKr
 }
 
 type GPkgCreateCmd struct {
-	Id    keys.Uint256
-	PKr   keys.PKr
+	Id    c_type.Uint256
+	PKr   c_type.PKr
 	Asset assets.Asset
-	Memo  keys.Uint512
+	Memo  c_type.Uint512
+	Ar    c_type.Uint256
 }
 
 type Cmds struct {
@@ -74,4 +83,17 @@ type GTxParam struct {
 	Ins      []GIn
 	Outs     []GOut
 	Cmds     Cmds
+	Z        *bool
+}
+
+func (self *GTxParam) IsSzk() (ret bool) {
+	check := utils.NewPKrChecker()
+	check.AddPKr(&self.From.PKr)
+	for _, in := range self.Ins {
+		check.AddPKr(in.Out.State.OS.ToPKr())
+	}
+	for _, out := range self.Outs {
+		check.AddPKr(&out.PKr)
+	}
+	return check.IsSzk()
 }
