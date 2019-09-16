@@ -157,6 +157,14 @@ func (self *Desc_Z) ToHash_for_sign() (ret keys.Uint256) {
 	return
 }
 
+type Tx1 struct {
+	Desc_Z Desc_Z
+	Desc_O Desc_O
+}
+
+type Tx2 struct {
+}
+
 type T struct {
 	Ehash    keys.Uint256
 	From     keys.PKr
@@ -164,14 +172,56 @@ type T struct {
 	Sign     keys.Uint512
 	Bcr      keys.Uint256
 	Bsign    keys.Uint512
-	Desc_Z   Desc_Z
-	Desc_O   Desc_O
 	Desc_Pkg PkgDesc_Z
 	Desc_Cmd DescCmd
+
+	Tx1 *Tx1 `rlp:"nil"`
 
 	//cache
 	hash  atomic.Value
 	feeCC atomic.Value
+}
+
+func (self *T) ContractAsset() *assets.Asset {
+	if self.Desc_Cmd.Contract != nil {
+		return &self.Desc_Cmd.Contract.Asset
+	} else {
+		if self.Tx1 != nil {
+			for _, desc_o := range self.Tx1.Desc_O.Outs {
+				return &desc_o.Asset
+			}
+		}
+	}
+	return nil
+}
+
+func (self *T) ContractAddress() *keys.PKr {
+	if self.Desc_Cmd.Contract != nil {
+		return self.Desc_Cmd.Contract.To
+	} else {
+		if self.Tx1 != nil {
+			for _, out := range self.Tx1.Desc_O.Outs {
+				if out.Addr != (keys.PKr{}) {
+					return &out.Addr
+				}
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
+func (self *T) IsOpContract() bool {
+	if self.Desc_Cmd.Contract != nil {
+		return true
+	} else {
+		if self.Tx1 != nil {
+			if len(self.Tx1.Desc_O.Outs) > 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (self *T) ToFeeCC() keys.Uint256 {
@@ -205,8 +255,10 @@ func (self *T) _ToHash() (ret keys.Uint256) {
 	d.Write(self.Ehash[:])
 	d.Write(self.From[:])
 	d.Write(self.Fee.ToHash().NewRef()[:])
-	d.Write(self.Desc_Z.ToHash().NewRef()[:])
-	d.Write(self.Desc_O.ToHash().NewRef()[:])
+	if self.Tx1 != nil {
+		d.Write(self.Tx1.Desc_Z.ToHash().NewRef()[:])
+		d.Write(self.Tx1.Desc_O.ToHash().NewRef()[:])
+	}
 	d.Write(self.Desc_Pkg.ToHash().NewRef()[:])
 	d.Write(self.Sign[:])
 	d.Write(self.Bcr[:])
@@ -223,8 +275,10 @@ func (self *T) ToHash_for_gen() (ret keys.Uint256) {
 	d.Write(self.Ehash[:])
 	d.Write(self.From[:])
 	d.Write(self.Fee.ToHash().NewRef()[:])
-	d.Write(self.Desc_Z.ToHash_for_gen().NewRef()[:])
-	d.Write(self.Desc_O.ToHash_for_gen().NewRef()[:])
+	if self.Tx1 != nil {
+		d.Write(self.Tx1.Desc_Z.ToHash_for_gen().NewRef()[:])
+		d.Write(self.Tx1.Desc_O.ToHash_for_gen().NewRef()[:])
+	}
 	d.Write(self.Desc_Pkg.ToHash_for_gen().NewRef()[:])
 	if self.Desc_Cmd.Count() > 0 {
 		d.Write(self.Desc_Cmd.ToHash().NewRef()[:])
@@ -238,8 +292,10 @@ func (self *T) ToHash_for_sign() (ret keys.Uint256) {
 	d.Write(self.Ehash[:])
 	d.Write(self.From[:])
 	d.Write(self.Fee.ToHash().NewRef()[:])
-	d.Write(self.Desc_Z.ToHash_for_sign().NewRef()[:])
-	d.Write(self.Desc_O.ToHash_for_sign().NewRef()[:])
+	if self.Tx1 != nil {
+		d.Write(self.Tx1.Desc_Z.ToHash_for_sign().NewRef()[:])
+		d.Write(self.Tx1.Desc_O.ToHash_for_sign().NewRef()[:])
+	}
 	d.Write(self.Desc_Pkg.ToHash_for_sign().NewRef()[:])
 	if self.Desc_Cmd.Count() > 0 {
 		d.Write(self.Desc_Cmd.ToHash().NewRef()[:])

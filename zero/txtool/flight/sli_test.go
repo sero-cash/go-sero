@@ -13,7 +13,6 @@ func TestDecOut(t *testing.T) {
 	var outs []txtool.Out
 	outs = append(outs, txtool.Out{})
 	bs, err := json.Marshal(outs)
-
 	err := json.Unmarshal([]byte(outs_str), &outs)
 	fmt.Println(err)
 }

@@ -210,15 +210,7 @@ func NewCreatePkg(Pkr keys.PKr, currency string, value *big.Int, catg string, tk
 }
 
 func (tx *Transaction) Pkg() *assets.Asset {
-	if tx.GetZZSTX().Desc_Cmd.Contract != nil {
-		return &tx.GetZZSTX().Desc_Cmd.Contract.Asset
-	} else {
-		for _, desc_o := range tx.data.Stxt.Desc_O.Outs {
-			return &desc_o.Asset
-		}
-	}
-
-	return nil
+	return tx.GetZZSTX().ContractAsset()
 }
 
 // EncodeRLP implements rlp.Encoder
@@ -273,35 +265,17 @@ func (tx *Transaction) GetZZSTX() *zstx.T {
 }
 
 func (tx *Transaction) To() *common.Address {
-	if tx.GetZZSTX().Desc_Cmd.Contract != nil {
-		to := tx.GetZZSTX().Desc_Cmd.Contract.To
-		if to == nil {
-			return nil
-		}
+	if pkr := tx.GetZZSTX().ContractAddress(); pkr != nil {
 		addr := &common.Address{}
-		copy(addr[:], to[:])
+		copy(addr[:], pkr[:])
 		return addr
 	} else {
-		for _, out := range tx.data.Stxt.Desc_O.Outs {
-			if out.Addr != (keys.PKr{}) {
-				addr := common.BytesToAddress(out.Addr[:])
-				return &addr
-			}
-		}
+		return nil
 	}
-
-	return nil
 }
 
 func (tx Transaction) IsOpContract() bool {
-	if tx.data.Stxt.Desc_Cmd.Contract != nil {
-		return true
-	} else {
-		if len(tx.data.Stxt.Desc_O.Outs) > 0 {
-			return true
-		}
-	}
-	return false
+	return tx.GetZZSTX().IsOpContract()
 }
 
 func (tx *Transaction) Stxt() *zstx.T {

@@ -23,32 +23,32 @@ type Version struct {
 
 type VSerial struct {
 	Versions []interface{}
+	V        Version
 }
 
 func (self *VSerial) DecodeRLP(s *rlp.Stream) error {
-	v := Version{}
 	_, size, _ := s.Kind()
 	if size == 0 {
-		v.V = VERSION_NIL
+		self.V.V = VERSION_NIL
 	} else {
 		if size > 10 {
-			v.V = VERSION_0
+			self.V.V = VERSION_0
 		} else {
-			if e := s.Decode(&v); e != nil {
+			if e := s.Decode(&self.V); e != nil {
 				return e
 			}
 		}
 	}
-	if int(v.V) > len(self.Versions) {
-		log.Error("VSerial DecodeRLP ERROR: version num is error", "version", v.V, "len", len(self.Versions))
+	if int(self.V.V) > len(self.Versions) {
+		log.Error("VSerial DecodeRLP ERROR: version num is error", "version", self.V.V, "len", len(self.Versions))
 		return errors.New("VSerial DecodeRLP ERROR: version num is error")
 	}
-	if v.V == VERSION_NIL {
+	if self.V.V == VERSION_NIL {
 		if e := s.Decode(self.Versions[0]); e != nil {
 			return e
 		}
 	} else {
-		for i := 0; i <= int(v.V); i++ {
+		for i := 0; i <= int(self.V.V); i++ {
 			if e := s.Decode(self.Versions[i]); e != nil {
 				return e
 			}

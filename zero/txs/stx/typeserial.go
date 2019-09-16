@@ -45,14 +45,18 @@ func (b *T) DecodeRLP(s *rlp.Stream) error {
 	b.Sign = v0.Sign
 	b.Bcr = v0.Bcr
 	b.Bsign = v0.Bsign
-	b.Desc_Z = v0.Desc_Z
-	b.Desc_O = v0.Desc_O
 	b.Desc_Pkg = v0.Desc_Pkg
-	b.Desc_Cmd.BuyShare = v1.BuyShare
-	b.Desc_Cmd.RegistPool = v1.RegistPool
-	b.Desc_Cmd.ClosePool = v1.ClosePool
-	b.Desc_Cmd.Contract = v1.Contract
-
+	if vs.V.V <= vserial.VERSION_1 {
+		b.Tx1 = &Tx1{}
+		b.Tx1.Desc_Z = v0.Desc_Z
+		b.Tx1.Desc_O = v0.Desc_O
+	}
+	if vs.V.V >= vserial.VERSION_1 {
+		b.Desc_Cmd.BuyShare = v1.BuyShare
+		b.Desc_Cmd.RegistPool = v1.RegistPool
+		b.Desc_Cmd.ClosePool = v1.ClosePool
+		b.Desc_Cmd.Contract = v1.Contract
+	}
 	return nil
 }
 
@@ -67,8 +71,10 @@ func (b *T) EncodeRLP(w io.Writer) error {
 	v0.Sign = b.Sign
 	v0.Bcr = b.Bcr
 	v0.Bsign = b.Bsign
-	v0.Desc_Z = b.Desc_Z
-	v0.Desc_O = b.Desc_O
+	if b.Tx1 != nil {
+		v0.Desc_Z = b.Tx1.Desc_Z
+		v0.Desc_O = b.Tx1.Desc_O
+	}
 	v0.Desc_Pkg = b.Desc_Pkg
 	vs.Versions = append(vs.Versions, &v0)
 
