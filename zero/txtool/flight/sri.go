@@ -30,7 +30,7 @@ type SRI struct {
 
 var SRI_Inst = SRI{}
 
-func Trace2Root(tk *keys.Uint512, trace *keys.Uint256) (root *keys.Uint256) {
+func Trace2Root(tk *keys.Uint512, trace *keys.Uint256, base *keys.Uint256) (root *keys.Uint256) {
 	root_cm := cpt.FetchRootCM(tk, trace)
 	root = localdb.GetRootByRootCM(txtool.Ref_inst.Bc.GetDB(), &root_cm)
 	return

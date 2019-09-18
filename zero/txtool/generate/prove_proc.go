@@ -197,7 +197,7 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 				in_z.Trace = desc.Til_ret
 				in_z.Proof = desc.Proof_ret
 				self.s.Desc_Z.Ins[input_desc.index] = in_z
-
+				self.Bases = append(self.Bases, keys.Empty_Uint256)
 				self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, desc.Asset_cm_ret[:]...)
 				self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, desc.Ar_ret[:]...)
 			}

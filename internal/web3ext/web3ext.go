@@ -935,7 +935,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'Trace2Root',
 			call: 'flight_trace2Root',
-			params: 2
+			params: 3
 		}),
 		new web3._extend.Method({
 			name: 'getOut',

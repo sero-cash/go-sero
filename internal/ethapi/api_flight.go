@@ -76,8 +76,8 @@ func (s *PublicFlightAPI) CommitTx(ctx context.Context, args *txtool.GTx) error 
 	return s.exchange.CommitTx(ctx, args)
 }
 
-func (s *PublicFlightAPI) Trace2Root(ctx context.Context, tk TKAddress, trace keys.Uint256) (root keys.Uint256, e error) {
-	if r := flight.Trace2Root(tk.ToUint512().NewRef(), &trace); r != nil {
+func (s *PublicFlightAPI) Trace2Root(ctx context.Context, tk TKAddress, trace keys.Uint256, base keys.Uint256) (root keys.Uint256, e error) {
+	if r := flight.Trace2Root(tk.ToUint512().NewRef(), &trace, &base); r != nil {
 		root = *r
 		return
 	} else {
