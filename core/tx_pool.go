@@ -25,13 +25,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/zero/stake"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 
 	"github.com/sero-cash/go-sero/zero/txtool/verify"
 
+	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/common"
@@ -547,7 +547,7 @@ func (pool *TxPool) checkDescCmd(tx *stx.T, state *state.StateDB) (err error) {
 				return
 			}
 		}
-		if !keys.PKrValid(&cmd.RegistPool.Vote) {
+		if !c_czero.PKrValid(&cmd.RegistPool.Vote) {
 			err = errors.New("registPool Vote is invalid")
 			return
 		}

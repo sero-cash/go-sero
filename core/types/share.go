@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/rlp"
@@ -19,7 +19,7 @@ type Vote struct {
 	ShareId   common.Hash
 	PosHash   common.Hash
 	IsPool    bool
-	Sign      keys.Uint512
+	Sign      c_type.Uint512
 }
 
 func (s Vote) Hash() common.Hash {
@@ -41,5 +41,5 @@ func (s Vote) Hash() common.Hash {
 type HeaderVote struct {
 	Id     common.Hash
 	IsPool bool
-	Sign   keys.Uint512
+	Sign   c_type.Uint512
 }

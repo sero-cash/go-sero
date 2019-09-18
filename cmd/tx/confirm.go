@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
 )
@@ -47,7 +47,7 @@ func Confirm(key_str string, out_str string) {
 	}
 	if key_bs, e := hexutil.Decode(key_str); e == nil {
 		if len(key_bs) == 32 {
-			key := keys.Uint256{}
+			key := c_type.Uint256{}
 			copy(key[:], key_bs)
 			var out stx.Out_Z
 			if e := json.Unmarshal([]byte(out_str), &out); e == nil {

@@ -12,7 +12,8 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/pkg/errors"
 
@@ -121,8 +122,8 @@ func (b *Big) ToInt() *big.Int {
 
 type PKAddress [64]byte
 
-func (b PKAddress) ToUint512() keys.Uint512 {
-	result := keys.Uint512{}
+func (b PKAddress) ToUint512() c_type.Uint512 {
+	result := c_type.Uint512{}
 	copy(result[:], b[:])
 
 	return result
@@ -142,9 +143,9 @@ func (b *PKAddress) UnmarshalText(input []byte) error {
 
 		out := base58.Decode(string(input))
 		if len(out) == 64 {
-			pk := keys.Uint512{}
+			pk := c_type.Uint512{}
 			copy(pk[:], out[:])
-			if keys.IsPKValid(&pk) {
+			if c_czero.IsPKValid(&pk) {
 				copy(b[:], out[:])
 			} else {
 				return errors.New("invalid PK")
@@ -165,9 +166,9 @@ func (b *PKAddress) UnmarshalText(input []byte) error {
 			if len(dec) != 64 {
 				return errors.New("PKAddress must be length 64 ")
 			}
-			pk := keys.Uint512{}
+			pk := c_type.Uint512{}
 			copy(pk[:], dec[:])
-			if keys.IsPKValid(&pk) {
+			if c_czero.IsPKValid(&pk) {
 				copy(b[:], pk[:])
 			} else {
 				return errors.New("invalid PK")
@@ -179,8 +180,8 @@ func (b *PKAddress) UnmarshalText(input []byte) error {
 
 type TKAddress [64]byte
 
-func (b TKAddress) ToUint512() keys.Uint512 {
-	result := keys.Uint512{}
+func (b TKAddress) ToUint512() c_type.Uint512 {
+	result := c_type.Uint512{}
 	copy(result[:], b[:])
 
 	return result
@@ -225,8 +226,8 @@ func (b *TKAddress) UnmarshalText(input []byte) error {
 
 type PKrAddress [96]byte
 
-func (b PKrAddress) ToPKr() *keys.PKr {
-	result := &keys.PKr{}
+func (b PKrAddress) ToPKr() *c_type.PKr {
+	result := &c_type.PKr{}
 	copy(result[:], b[:])
 
 	return result
@@ -244,9 +245,9 @@ func (b *PKrAddress) UnmarshalText(input []byte) error {
 	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
 		out := base58.Decode(string(input))
 		if len(out) == 96 {
-			pkr := keys.PKr{}
+			pkr := c_type.PKr{}
 			copy(pkr[:], out[:])
-			if keys.PKrValid(&pkr) {
+			if c_czero.PKrValid(&pkr) {
 				copy(b[:], out[:])
 			} else {
 				return errors.New("invalid PKr")
@@ -267,9 +268,9 @@ func (b *PKrAddress) UnmarshalText(input []byte) error {
 			if len(dec) != 96 {
 				return errors.New("PKrAddress must be length 96")
 			}
-			pkr := keys.PKr{}
+			pkr := c_type.PKr{}
 			copy(pkr[:], dec[:])
-			if keys.PKrValid(&pkr) {
+			if c_czero.PKrValid(&pkr) {
 				copy(b[:], pkr[:])
 			} else {
 				return errors.New("invalid PKr")
@@ -295,17 +296,17 @@ func (b *MixAdrress) UnmarshalText(input []byte) error {
 	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
 		out := base58.Decode(string(input))
 		if len(out) == 96 {
-			pkr := keys.PKr{}
+			pkr := c_type.PKr{}
 			copy(pkr[:], out[:])
-			if keys.PKrValid(&pkr) {
+			if c_czero.PKrValid(&pkr) {
 				*b = out[:]
 			} else {
 				return errors.New("invalid PKr")
 			}
 		} else if len(out) == 64 {
-			pk := keys.Uint512{}
+			pk := c_type.Uint512{}
 			copy(pk[:], out[:])
-			if keys.IsPKValid(&pk) {
+			if c_czero.IsPKValid(&pk) {
 				*b = out[:]
 			} else {
 				return errors.New("invalid PK")
@@ -348,17 +349,17 @@ func (b *MixBase58Adrress) UnmarshalText(input []byte) error {
 	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
 		out := base58.Decode(string(input))
 		if len(out) == 96 {
-			pkr := keys.PKr{}
+			pkr := c_type.PKr{}
 			copy(pkr[:], out[:])
-			if keys.PKrValid(&pkr) {
+			if c_czero.PKrValid(&pkr) {
 				*b = out[:]
 			} else {
 				return errors.New("invalid PKr")
 			}
 		} else if len(out) == 64 {
-			pk := keys.Uint512{}
+			pk := c_type.Uint512{}
 			copy(pk[:], out[:])
-			if keys.IsPKValid(&pk) {
+			if c_czero.IsPKValid(&pk) {
 				*b = out[:]
 			} else {
 				return errors.New("invalid PK")
@@ -385,7 +386,7 @@ func (b AllMixedAddress) IsContract() bool {
 	return false
 }
 
-func (b AllMixedAddress) ToPKr() (ret keys.PKr) {
+func (b AllMixedAddress) ToPKr() (ret c_type.PKr) {
 	copy(ret[:], b[:])
 	return
 }
@@ -427,9 +428,9 @@ func (b *AllMixedAddress) UnmarshalText(input []byte) error {
 				*b = out[:]
 				return nil
 			} else {
-				pkr := keys.PKr{}
+				pkr := c_type.PKr{}
 				copy(pkr[:], out[:])
-				if keys.PKrValid(&pkr) {
+				if c_czero.PKrValid(&pkr) {
 					*b = out[:]
 					return nil
 				} else {
@@ -447,10 +448,10 @@ func (b *AllMixedAddress) UnmarshalText(input []byte) error {
 				*b = contract_addr[:]
 				return nil
 			} else {
-				pk := keys.Uint512{}
+				pk := c_type.Uint512{}
 				copy(pk[:], out[:])
-				if keys.IsPKValid(&pk) {
-					pkr := keys.Addr2PKr(&pk, nil)
+				if c_czero.IsPKValid(&pk) {
+					pkr := c_czero.Addr2PKr(&pk, nil)
 					*b = pkr[:]
 					return nil
 				} else {
@@ -465,7 +466,7 @@ func (b *AllMixedAddress) UnmarshalText(input []byte) error {
 
 }
 
-type ContractAddress keys.PKr
+type ContractAddress c_type.PKr
 
 func (b ContractAddress) MarshalText() ([]byte, error) {
 	return []byte(base58.Encode(b[:])), nil

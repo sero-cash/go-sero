@@ -1,7 +1,8 @@
 package assets
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
@@ -9,6 +10,33 @@ import (
 type Asset struct {
 	Tkn *Token  `rlp:"nil"`
 	Tkt *Ticket `rlp:"nil"`
+}
+
+func (self *Asset) ToSzkAssetDesc() (ret c_superzk.AssetDesc) {
+	asset := self.ToFlatAsset()
+	ret = c_superzk.AssetDesc{
+		Asset: c_type.Asset{
+			Tkn_currency: asset.Tkn.Currency,
+			Tkn_value:    asset.Tkn.Value.ToUint256(),
+			Tkt_category: asset.Tkt.Category,
+			Tkt_value:    asset.Tkt.Value,
+		},
+	}
+	return
+}
+
+func NewAssetBySzkDecInfo(info *c_superzk.DecInfoDesc) (ret Asset) {
+	ret = NewAsset(
+		&Token{
+			info.Asset_ret.Tkn_currency,
+			utils.NewU256_ByKey(&info.Asset_ret.Tkn_value),
+		},
+		&Ticket{
+			info.Asset_ret.Tkt_category,
+			info.Asset_ret.Tkt_value,
+		},
+	)
+	return
 }
 
 func (self *Asset) HasAsset() bool {
@@ -19,7 +47,7 @@ func (self *Asset) HasAsset() bool {
 			}
 		}
 		if self.Tkt != nil {
-			if self.Tkt.Value != keys.Empty_Uint256 {
+			if self.Tkt.Value != c_type.Empty_Uint256 {
 				return true
 			}
 		}
@@ -34,7 +62,7 @@ func NewAsset(tkn *Token, tkt *Ticket) (ret Asset) {
 		}
 	}
 	if tkt != nil {
-		if tkt.Value != keys.Empty_Uint256 {
+		if tkt.Value != c_type.Empty_Uint256 {
 			ret.Tkt = tkt.Clone().ToRef()
 		}
 	}
@@ -45,7 +73,7 @@ func (self Asset) ToRef() (ret *Asset) {
 	return &self
 }
 
-func (self *Asset) ToHash() (ret keys.Uint256) {
+func (self *Asset) ToHash() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	if self.Tkn != nil {
 		d.Write(self.Tkn.ToHash().NewRef()[:])

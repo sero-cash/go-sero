@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/cpt"
 
 	"github.com/sero-cash/go-sero/cmd/utils"
@@ -58,7 +59,7 @@ var (
 )
 
 func main() {
-	cpt.ZeroInit("", cpt.NET_Beta)
+	cpt.ZeroInit("", c_czero.NET_Beta)
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

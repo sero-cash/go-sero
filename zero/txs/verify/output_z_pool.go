@@ -5,7 +5,8 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
-	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
@@ -13,14 +14,14 @@ import (
 var verify_output_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_v_thread_num })
 
 type verify_output_desc struct {
-	desc cpt.OutputVerifyDesc
-	pkr  keys.PKr
+	desc c_czero.OutputVerifyDesc
+	pkr  c_type.PKr
 	e    error
 }
 
 func (self *verify_output_desc) Run() error {
 	if keys.PKrValid(&self.pkr) {
-		if err := cpt.VerifyOutput(&self.desc); err != nil {
+		if err := c_czero.VerifyOutput(&self.desc); err != nil {
 			self.e = err
 			return err
 		} else {

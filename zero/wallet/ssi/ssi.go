@@ -9,7 +9,8 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
 
-	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
 
@@ -17,7 +18,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/localdb"
 )
 
@@ -27,22 +27,22 @@ type SSI struct {
 var SSI_Inst = SSI{}
 
 func (self *SSI) CreateKr() (kr txtool.Kr) {
-	rnd := keys.RandUint256()
-	zsk := keys.RandUint256()
-	vsk := keys.RandUint256()
-	zsk = cpt.Force_Fr(&zsk)
-	vsk = cpt.Force_Fr(&vsk)
+	rnd := c_type.RandUint256()
+	zsk := c_type.RandUint256()
+	vsk := c_type.RandUint256()
+	zsk = c_czero.Force_Fr(&zsk)
+	vsk = c_czero.Force_Fr(&vsk)
 
-	skr := keys.PKr{}
+	skr := c_type.PKr{}
 	copy(skr[:], zsk[:])
 	copy(skr[32:], vsk[:])
 	copy(skr[64:], rnd[:])
 
-	sk := keys.Uint512{}
+	sk := c_type.Uint512{}
 	copy(sk[:], skr[:])
-	pk := keys.Sk2PK(&sk)
+	pk := c_czero.Sk2PK(&sk)
 
-	pkr := keys.Addr2PKr(&pk, &rnd)
+	pkr := c_czero.Addr2PKr(&pk, &rnd)
 	kr.PKr = pkr
 	kr.SKr = skr
 	return
@@ -76,7 +76,7 @@ func (self *SSI) GetBlocksInfo(start uint64, count uint64) (blocks []Block, e er
 	return
 }
 
-func (self *SSI) Detail(roots []keys.Uint256, skr *keys.PKr) (douts []txtool.DOut, e error) {
+func (self *SSI) Detail(roots []c_type.Uint256, skr *c_type.PKr) (douts []txtool.DOut, e error) {
 
 	outs := []txtool.Out{}
 	for _, r := range roots {
@@ -105,11 +105,11 @@ func (self *SSI) GenTxParam(param *PreTxParam) (p txtool.GTxParam, e error) {
 	p.From = param.From
 	p.Outs = param.Outs
 
-	roots := []keys.Uint256{}
+	roots := []c_type.Uint256{}
 	outs := []txtool.Out{}
 
 	amounts := make(map[string]*big.Int)
-	ticekts := make(map[keys.Uint256]keys.Uint256)
+	ticekts := make(map[c_type.Uint256]c_type.Uint256)
 	for _, in := range param.Ins {
 		roots = append(roots, in.Root)
 		if root := localdb.GetRoot(txtool.Ref_inst.Bc.GetDB(), &in.Root); root == nil {
@@ -206,12 +206,12 @@ func (self *SSI) GenTxParam(param *PreTxParam) (p txtool.GTxParam, e error) {
 	return
 }
 
-func (self *SSI) GenTx(param *PreTxParam) (hash keys.Uint256, e error) {
+func (self *SSI) GenTx(param *PreTxParam) (hash c_type.Uint256, e error) {
 	if p, err := self.GenTxParam(param); err != nil {
 		e = err
 		return
 	} else {
-		if gtx, err := flight.SLI_Inst.GenTx(&p); err != nil {
+		if gtx, err := flight.GenTx(&p); err != nil {
 			e = err
 			log.Printf("genTx error : %v", err)
 			return
@@ -224,7 +224,7 @@ func (self *SSI) GenTx(param *PreTxParam) (hash keys.Uint256, e error) {
 	}
 }
 
-func (self *SSI) GetTx(txhash keys.Uint256) (tx *txtool.GTx, e error) {
+func (self *SSI) GetTx(txhash c_type.Uint256) (tx *txtool.GTx, e error) {
 	if ld, ok := txMap.Load(txhash); !ok {
 		e = fmt.Errorf("SSI GetTx Failed : %v", txhash)
 	} else {

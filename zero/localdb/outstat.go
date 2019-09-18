@@ -3,7 +3,7 @@ package localdb
 import (
 	"time"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
@@ -43,18 +43,18 @@ func (self *OutStatGet) Unserial(v []byte) (e error) {
 	}
 }
 
-func outStatName(root *keys.Uint256) (ret []byte) {
+func outStatName(root *c_type.Uint256) (ret []byte) {
 	ret = []byte("$ZSTATE_OUT_STAT$")
 	ret = append(ret, root[:]...)
 	return
 }
 
-func UpdateOutStat(db serodb.Putter, root *keys.Uint256, os *OutStat) {
+func UpdateOutStat(db serodb.Putter, root *c_type.Uint256, os *OutStat) {
 	os.Time = time.Now().UnixNano()
 	tri.UpdateDBObj(db, outStatName(root), os)
 }
 
-func GetOutStat(db serodb.Getter, root *keys.Uint256) (ret *OutStat) {
+func GetOutStat(db serodb.Getter, root *c_type.Uint256) (ret *OutStat) {
 	get := OutStatGet{}
 	tri.GetDBObj(db, outStatName(root), &get)
 	if get.out != nil {

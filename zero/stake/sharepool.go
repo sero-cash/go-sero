@@ -8,7 +8,8 @@ import (
 
 	"github.com/sero-cash/go-sero/consensus/ethash"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
@@ -32,8 +33,8 @@ const (
 )
 
 type Share struct {
-	PKr             keys.PKr
-	VotePKr         keys.PKr
+	PKr             c_type.PKr
+	VotePKr         c_type.PKr
 	TransactionHash common.Hash
 	PoolId          *common.Hash `rlp:"nil"`
 	Value           *big.Int     `rlp:"nil"`
@@ -139,8 +140,8 @@ func (s *Share) setIncomeZero() {
 }
 
 type StakePool struct {
-	PKr             keys.PKr
-	VotePKr         keys.PKr
+	PKr             c_type.PKr
+	VotePKr         c_type.PKr
 	BlockNumber     uint64
 	TransactionHash common.Hash
 	Amount          *big.Int `rlp:"nil"`
@@ -720,7 +721,7 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 		// check repeated vote
 		parentPosHash := parentblock.HashPos()
 		blockPosHash := block.HashPos()
-		voteNumMap := map[keys.Uint512]bool{}
+		voteNumMap := map[c_type.Uint512]bool{}
 		for _, vote := range header.CurrentVotes {
 			ret := types.StakeHash(&blockPosHash, &parentPosHash, vote.IsPool)
 			if err := self.verifyVote(vote, ret); err != nil {
@@ -746,7 +747,7 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 			shareMapNum[common.BytesToHash(share.Id())] += 1
 		}
 
-		parentVoteMap := map[keys.Uint512]types.HeaderVote{}
+		parentVoteMap := map[c_type.Uint512]types.HeaderVote{}
 		for _, vote := range preHeader.CurrentVotes {
 			if shareMapNum[vote.Id] == 0 {
 				return errors.New("vote error")
@@ -793,11 +794,11 @@ func (self *StakeState) verifyVote(vote types.HeaderVote, stakeHash common.Hash)
 		if pool.CurrentShareNum+pool.WishVoteNum == 0 {
 			return errors.New("the pool current share num is 0")
 		}
-		if !keys.VerifyPKr(stakeHash.HashToUint256(), &vote.Sign, &pool.VotePKr) {
+		if !c_czero.VerifyPKr(stakeHash.HashToUint256(), &vote.Sign, &pool.VotePKr) {
 			return errors.New("Verify header votes error")
 		}
 	} else {
-		if !keys.VerifyPKr(stakeHash.HashToUint256(), &vote.Sign, &share.VotePKr) {
+		if !c_czero.VerifyPKr(stakeHash.HashToUint256(), &vote.Sign, &share.VotePKr) {
 			return errors.New("Verify header votes error")
 		}
 	}

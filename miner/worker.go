@@ -23,13 +23,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/zero/stake"
 
 	"github.com/sero-cash/go-sero/common/address"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core"
@@ -307,7 +307,7 @@ func (self *worker) update() {
 				self.currentMu.Lock()
 				txset := types.NewTransactionsByPrice(ev.Txs)
 				addr := common.Address{}
-				pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
+				pkr := c_czero.Addr2PKr(self.coinbase.ToUint512(), nil)
 				addr.SetBytes(pkr[:])
 
 				self.current.commitTransactions(self.mux, txset, self.chain, addr)
@@ -493,8 +493,8 @@ func (self *worker) commitNewWork() {
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
 	if atomic.LoadInt32(&self.mining) == 1 {
 		addr := common.Address{}
-		//pkr := keys.Addr2PKr(self.coinbase.ToUint512(), nil)
-		pkr, licr, ret := keys.Addr2PKrAndLICr(self.coinbase.ToUint512(), header.Number.Uint64())
+		//pkr := c_czero.Addr2PKr(self.coinbase.ToUint512(), nil)
+		pkr, licr, ret := c_czero.Addr2PKrAndLICr(self.coinbase.ToUint512(), header.Number.Uint64())
 		if !ret {
 			log.Error("Failed to Addr2PKrAndLICr")
 			return

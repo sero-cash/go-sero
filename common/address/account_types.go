@@ -26,7 +26,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common/hexutil"
 )
 
@@ -63,8 +63,8 @@ func Base58ToAccount(s string) AccountAddress {
 // Bytes gets the string representation of the underlying Data.
 func (a AccountAddress) Bytes() []byte { return a[:] }
 
-func (a AccountAddress) ToUint512() *keys.Uint512 {
-	pubKey := keys.Uint512{}
+func (a AccountAddress) ToUint512() *c_type.Uint512 {
+	pubKey := c_type.Uint512{}
 	copy(pubKey[:], a[:])
 	return &pubKey
 }
@@ -155,8 +155,8 @@ func (self Accountes) Swap(i, j int) {
 
 type Seed [SeedLength]byte
 
-func (priv *Seed) SeedToUint256() *keys.Uint256 {
-	seed := keys.Uint256{}
+func (priv *Seed) SeedToUint256() *c_type.Uint256 {
+	seed := c_type.Uint256{}
 	copy(seed[:], priv[:])
 	return &seed
 

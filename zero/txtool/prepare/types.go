@@ -9,7 +9,7 @@ import (
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/localdb"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -17,13 +17,13 @@ import (
 )
 
 type Reception struct {
-	Addr  keys.PKr
+	Addr  c_type.PKr
 	Asset assets.Asset
 }
 
 type PkgCloseCmd struct {
-	Id  keys.Uint256
-	Key keys.Uint256
+	Id  c_type.Uint256
+	Key c_type.Uint256
 }
 
 func (self *PkgCloseCmd) Asset() (ret assets.Asset, e error) {
@@ -42,15 +42,15 @@ func (self *PkgCloseCmd) Asset() (ret assets.Asset, e error) {
 }
 
 type PkgTransferCmd struct {
-	Id  keys.Uint256
-	PKr keys.PKr
+	Id  c_type.Uint256
+	PKr c_type.PKr
 }
 
 type PkgCreateCmd struct {
-	Id    keys.Uint256
-	PKr   keys.PKr
+	Id    c_type.Uint256
+	PKr   c_type.PKr
 	Asset assets.Asset
-	Memo  keys.Uint512
+	Memo  c_type.Uint512
 }
 
 type Cmds struct {
@@ -130,23 +130,23 @@ func (self *Cmds) Valid() bool {
 }
 
 type PreTxParam struct {
-	From       keys.Uint512
-	RefundTo   *keys.PKr
+	From       c_type.Uint512
+	RefundTo   *c_type.PKr
 	Receptions []Reception
 	Cmds       Cmds
 	Fee        assets.Token
 	GasPrice   *big.Int
-	Roots      []keys.Uint256
+	Roots      []c_type.Uint256
 }
 
 type Utxo struct {
-	Root  keys.Uint256
+	Root  c_type.Uint256
 	Asset assets.Asset
 }
 
 type Utxos []Utxo
 
-func (self *Utxos) Roots() (roots []keys.Uint256) {
+func (self *Utxos) Roots() (roots []c_type.Uint256) {
 	for _, utxo := range *self {
 		roots = append(roots, utxo.Root)
 	}
@@ -154,31 +154,31 @@ func (self *Utxos) Roots() (roots []keys.Uint256) {
 }
 
 type TxParamGenerator interface {
-	FindRoots(pk *keys.Uint512, currency string, amount *big.Int) (utxos Utxos, remain big.Int)
-	FindRootsByTicket(pk *keys.Uint512, tickets map[keys.Uint256]keys.Uint256) (roots Utxos, remain map[keys.Uint256]keys.Uint256)
-	GetRoot(root *keys.Uint256) (utxos *Utxo)
-	DefaultRefundTo(from *keys.Uint512) (ret *keys.PKr)
+	FindRoots(pk *c_type.Uint512, currency string, amount *big.Int) (utxos Utxos, remain big.Int)
+	FindRootsByTicket(pk *c_type.Uint512, tickets map[c_type.Uint256]c_type.Uint256) (roots Utxos, remain map[c_type.Uint256]c_type.Uint256)
+	GetRoot(root *c_type.Uint256) (utxos *Utxo)
+	DefaultRefundTo(from *c_type.Uint512) (ret *c_type.PKr)
 }
 
 type TxParamState interface {
-	GetAnchor(roots []keys.Uint256) (wits []txtool.Witness, e error)
-	GetOut(root *keys.Uint256) (out *localdb.RootState)
-	GetPkgById(id *keys.Uint256) (ret *localdb.ZPkg)
+	GetAnchor(roots []c_type.Uint256) (wits []txtool.Witness, e error)
+	GetOut(root *c_type.Uint256) (out *localdb.RootState)
+	GetPkgById(id *c_type.Uint256) (ret *localdb.ZPkg)
 	GetSeroGasLimit(to *common.Address, tfee *assets.Token, gasPrice *big.Int) (gaslimit uint64, e error)
 }
 
 type DefaultTxParamState struct {
 }
 
-func (self *DefaultTxParamState) GetAnchor(roots []keys.Uint256) (wits []txtool.Witness, e error) {
+func (self *DefaultTxParamState) GetAnchor(roots []c_type.Uint256) (wits []txtool.Witness, e error) {
 	return flight.SRI_Inst.GetAnchor(roots)
 }
 
-func (self *DefaultTxParamState) GetOut(root *keys.Uint256) (out *localdb.RootState) {
+func (self *DefaultTxParamState) GetOut(root *c_type.Uint256) (out *localdb.RootState) {
 	return flight.GetOut(root, 0)
 }
 
-func (self *DefaultTxParamState) GetPkgById(id *keys.Uint256) (ret *localdb.ZPkg) {
+func (self *DefaultTxParamState) GetPkgById(id *c_type.Uint256) (ret *localdb.ZPkg) {
 	return txtool.Ref_inst.CurrentState().Pkgs.GetPkgById(id)
 }
 

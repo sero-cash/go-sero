@@ -2,7 +2,8 @@ package light
 
 import (
 	"bytes"
-	"github.com/sero-cash/go-czero-import/keys"
+
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -14,7 +15,7 @@ func (self *LightNode) CurrentLight() *LightNode {
 	return current_light
 }
 
-func (self *LightNode) GetOutsByPKr(pkrs []keys.PKr, start, end uint64) (br BlockOutResp, e error) {
+func (self *LightNode) GetOutsByPKr(pkrs []c_type.PKr, start, end uint64) (br BlockOutResp, e error) {
 	br.CurrentNum = self.getLastNumber()
 	blockOuts := []BlockOut{}
 	for _, pkr := range pkrs {
@@ -43,7 +44,7 @@ func (self *LightNode) GetOutsByPKr(pkrs []keys.PKr, start, end uint64) (br Bloc
 	return br, nil
 }
 
-func (self *LightNode) CheckNil(Nils []keys.Uint256) (nilResps []NilValue, e error) {
+func (self *LightNode) CheckNil(Nils []c_type.Uint256) (nilResps []NilValue, e error) {
 	if len(Nils) == 0 {
 		return
 	}
@@ -53,9 +54,9 @@ func (self *LightNode) CheckNil(Nils []keys.Uint256) (nilResps []NilValue, e err
 		} else {
 
 			nilResp := NilValue{}
-			if err:=rlp.DecodeBytes(data,&nilResp);err!=nil{
+			if err := rlp.DecodeBytes(data, &nilResp); err != nil {
 				continue
-			}else{
+			} else {
 				nilResp.Nil = Nil
 				nilResps = append(nilResps, nilResp)
 			}
@@ -73,4 +74,3 @@ type BlockOut struct {
 	Num  uint64
 	Outs []txtool.Out
 }
-

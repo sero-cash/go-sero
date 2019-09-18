@@ -8,7 +8,7 @@ import (
 
 	"github.com/sero-cash/go-sero/core/types/vserial"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/crypto/sha3"
@@ -49,7 +49,7 @@ type Header struct {
 	//Data
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
-	Licr        keys.LICr      `json:"licr"            	gencodec:"required"`
+	Licr        c_czero.LICr   `json:"licr"            	gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
@@ -120,7 +120,7 @@ func (h *Header) HashPos() (ret common.Hash) {
 	return
 }
 
-func StakeHash(currentHashPos *common.Hash, parentHashPos *common.Hash,isPool bool) (ret common.Hash) {
+func StakeHash(currentHashPos *common.Hash, parentHashPos *common.Hash, isPool bool) (ret common.Hash) {
 	m := sha3.NewKeccak256()
 	m.Write(currentHashPos[:])
 	m.Write(parentHashPos[:])
@@ -188,7 +188,7 @@ type Header_Version_0 struct {
 	//Data
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
-	Licr        keys.LICr      `json:"licr"            	gencodec:"required"`
+	Licr        c_czero.LICr   `json:"licr"            	gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
@@ -214,9 +214,9 @@ type Header_Version_1 struct {
 func (b *Header) DecodeRLP(s *rlp.Stream) error {
 	h0 := Header_Version_0{}
 	h1 := Header_Version_1{}
-	vs := vserial.VSerial{}
-	vs.Versions = append(vs.Versions, &h0)
-	vs.Versions = append(vs.Versions, &h1)
+	vs := vserial.NewVSerial()
+	vs.Add(&h0, vserial.VERSION_0)
+	vs.Add(&h1, vserial.VERSION_1)
 
 	if e := s.Decode(&vs); e != nil {
 		return e
@@ -245,7 +245,7 @@ func (b *Header) DecodeRLP(s *rlp.Stream) error {
 
 // EncodeRLP serializes b into the Ethereum RLP block format.
 func (b *Header) EncodeRLP(w io.Writer) error {
-	vs := vserial.VSerial{}
+	vs := vserial.NewVSerial()
 
 	h0 := Header_Version_0{}
 	h0.ParentHash = b.ParentHash
@@ -264,13 +264,13 @@ func (b *Header) EncodeRLP(w io.Writer) error {
 	h0.MixDigest = b.MixDigest
 	h0.Nonce = b.Nonce
 
-	vs.Versions = append(vs.Versions, &h0)
+	vs.Add(&h0, vserial.VERSION_0)
 
 	if len(b.CurrentVotes) > 0 || len(b.ParentVotes) > 0 {
 		h1 := Header_Version_1{}
 		h1.CurrentVotes = b.CurrentVotes
 		h1.ParentVotes = b.ParentVotes
-		vs.Versions = append(vs.Versions, &h1)
+		vs.Add(&h1, vserial.VERSION_1)
 	}
 
 	return rlp.Encode(w, &vs)

@@ -4,9 +4,9 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_type"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -14,13 +14,13 @@ import (
 
 type BuyShareCmd struct {
 	Value utils.U256
-	Vote  keys.PKr
-	Pool  *keys.Uint256 `rlp:"nil"`
+	Vote  c_type.PKr
+	Pool  *c_type.Uint256 `rlp:"nil"`
 }
 
-func (self *BuyShareCmd) ToHash() (ret keys.Uint256) {
+func (self *BuyShareCmd) ToHash() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
-	d.Write(self.Value.ToInt().Bytes())
+	d.Write(self.Value.ToBEBytes())
 	d.Write(self.Vote[:])
 	if self.Pool != nil {
 		d.Write(self.Pool[:])
@@ -39,13 +39,13 @@ func (self *BuyShareCmd) Asset() (ret assets.Asset) {
 
 type RegistPoolCmd struct {
 	Value   utils.U256
-	Vote    keys.PKr
+	Vote    c_type.PKr
 	FeeRate uint32
 }
 
-func (self *RegistPoolCmd) ToHash() (ret keys.Uint256) {
+func (self *RegistPoolCmd) ToHash() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
-	d.Write(self.Value.ToInt().Bytes())
+	d.Write(self.Value.ToBEBytes())
 	d.Write(self.Vote[:])
 	d.Write(big.NewInt(int64(self.FeeRate)).Bytes())
 	copy(ret[:], d.Sum(nil))
@@ -64,18 +64,18 @@ type ClosePoolCmd struct {
 	None byte
 }
 
-func (self *ClosePoolCmd) ToHash() (ret keys.Uint256) {
+func (self *ClosePoolCmd) ToHash() (ret c_type.Uint256) {
 	ret[0] = 1
 	return
 }
 
 type ContractCmd struct {
 	Asset assets.Asset
-	To    *keys.PKr `rlp:"nil"`
+	To    *c_type.PKr `rlp:"nil"`
 	Data  []byte
 }
 
-func (self *ContractCmd) ToHash() (ret keys.Uint256) {
+func (self *ContractCmd) ToHash() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Asset.ToHash().NewRef()[:])
 	if self.To != nil {
@@ -96,7 +96,7 @@ type DescCmd struct {
 	assetCC atomic.Value
 }
 
-func (self *DescCmd) ToPkr() *keys.PKr {
+func (self *DescCmd) ToPkr() *c_type.PKr {
 	if self.BuyShare != nil {
 		return &self.BuyShare.Vote
 	}
@@ -106,19 +106,19 @@ func (self *DescCmd) ToPkr() *keys.PKr {
 	return nil
 }
 
-func (self *DescCmd) ToAssetCC() *keys.Uint256 {
+func (self *DescCmd) ToAssetCC() *c_type.Uint256 {
 	if asset := self.OutAsset(); asset != nil {
-		if cc, ok := self.assetCC.Load().(keys.Uint256); ok {
+		if cc, ok := self.assetCC.Load().(c_type.Uint256); ok {
 			return &cc
 		}
 		asset := asset.ToFlatAsset()
-		asset_desc := cpt.AssetDesc{
+		asset_desc := c_czero.AssetDesc{
 			Tkn_currency: asset.Tkn.Currency,
 			Tkn_value:    asset.Tkn.Value.ToUint256(),
 			Tkt_category: asset.Tkt.Category,
 			Tkt_value:    asset.Tkt.Value,
 		}
-		cpt.GenAssetCC(&asset_desc)
+		c_czero.GenAssetCC(&asset_desc)
 		v := asset_desc.Asset_cc
 		self.assetCC.Store(v)
 		return &v
@@ -142,7 +142,7 @@ func (self *DescCmd) OutAsset() *assets.Asset {
 	return nil
 }
 
-func (self *DescCmd) ToHash() (ret keys.Uint256) {
+func (self *DescCmd) ToHash() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	if self.BuyShare != nil {
 		d.Write(self.BuyShare.ToHash().NewRef()[:])

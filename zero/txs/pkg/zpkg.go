@@ -1,16 +1,15 @@
 package pkg
 
 import (
-	"github.com/sero-cash/go-czero-import/cpt"
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type Pkg_Z struct {
-	AssetCM keys.Uint256
-	PkgCM   keys.Uint256
-	EInfo   cpt.Einfo
+	AssetCM c_type.Uint256
+	PkgCM   c_type.Uint256
+	EInfo   c_type.Einfo
 }
 
 func (this Pkg_Z) ToRef() (ret *Pkg_Z) {
@@ -18,7 +17,7 @@ func (this Pkg_Z) ToRef() (ret *Pkg_Z) {
 	return
 }
 
-func (self *Pkg_Z) ToHash() (ret keys.Uint256) {
+func (self *Pkg_Z) ToHash() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.AssetCM[:])
 	d.Write(self.PkgCM[:])

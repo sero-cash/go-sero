@@ -20,6 +20,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -49,7 +51,7 @@ func Verify(s *stx.T, state *zstate.ZState) (e error) {
 
 	t := utils.TR_enter("Miner-Verify-----Pre")
 
-	balance_desc := cpt.BalanceDesc{}
+	balance_desc := c_type.BalanceDesc{}
 
 	hash_z := s.ToHash_for_sign()
 	balance_desc.Hash = hash_z
@@ -60,11 +62,11 @@ func Verify(s *stx.T, state *zstate.ZState) (e error) {
 	}
 
 	{
-		asset_desc := cpt.AssetDesc{
+		asset_desc := c_czero.AssetDesc{
 			Tkn_currency: s.Fee.Currency,
 			Tkn_value:    s.Fee.Value.ToUint256(),
-			Tkt_category: keys.Empty_Uint256,
-			Tkt_value:    keys.Empty_Uint256,
+			Tkt_category: c_type.Empty_Uint256,
+			Tkt_value:    c_type.Empty_Uint256,
 		}
 		cpt.GenAssetCC(&asset_desc)
 		balance_desc.Oout_accs = append(balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
@@ -139,7 +141,7 @@ func Verify(s *stx.T, state *zstate.ZState) (e error) {
 		}
 		{
 			asset := out_o.Asset.ToFlatAsset()
-			asset_desc := cpt.AssetDesc{
+			asset_desc := c_czero.AssetDesc{
 				Tkn_currency: asset.Tkn.Currency,
 				Tkn_value:    asset.Tkn.Value.ToUint256(),
 				Tkt_category: asset.Tkt.Category,
@@ -204,7 +206,7 @@ func Verify(s *stx.T, state *zstate.ZState) (e error) {
 
 	if s.Desc_Cmd.BuyShare != nil {
 		asset := s.Desc_Cmd.BuyShare.Asset().ToRef().ToFlatAsset()
-		asset_desc := cpt.AssetDesc{
+		asset_desc := c_czero.AssetDesc{
 			Tkn_currency: asset.Tkn.Currency,
 			Tkn_value:    asset.Tkn.Value.ToUint256(),
 			Tkt_category: asset.Tkt.Category,
@@ -216,7 +218,7 @@ func Verify(s *stx.T, state *zstate.ZState) (e error) {
 
 	if s.Desc_Cmd.RegistPool != nil {
 		asset := s.Desc_Cmd.RegistPool.Asset().ToRef().ToFlatAsset()
-		asset_desc := cpt.AssetDesc{
+		asset_desc := c_czero.AssetDesc{
 			Tkn_currency: asset.Tkn.Currency,
 			Tkn_value:    asset.Tkn.Value.ToUint256(),
 			Tkt_category: asset.Tkt.Category,
@@ -228,7 +230,7 @@ func Verify(s *stx.T, state *zstate.ZState) (e error) {
 
 	if s.Desc_Cmd.Contract != nil {
 		asset := s.Desc_Cmd.Contract.Asset.ToFlatAsset()
-		asset_desc := cpt.AssetDesc{
+		asset_desc := c_czero.AssetDesc{
 			Tkn_currency: asset.Tkn.Currency,
 			Tkn_value:    asset.Tkn.Value.ToUint256(),
 			Tkt_category: asset.Tkt.Category,
@@ -282,7 +284,7 @@ func Verify(s *stx.T, state *zstate.ZState) (e error) {
 			return
 		}
 	}
-	if err := cpt.VerifyBalance(&balance_desc); err != nil {
+	if err := c_czero.VerifyBalance(&balance_desc); err != nil {
 		e = err
 		return
 	} else {

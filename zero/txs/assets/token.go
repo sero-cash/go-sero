@@ -1,13 +1,13 @@
 package assets
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type Token struct {
-	Currency keys.Uint256
+	Currency c_type.Uint256
 	Value    utils.U256
 }
 
@@ -21,7 +21,7 @@ func (this Token) ToRef() (ret *Token) {
 	return
 }
 
-func (self *Token) ToHash() (ret keys.Uint256) {
+func (self *Token) ToHash() (ret c_type.Uint256) {
 	if self == nil {
 		return
 	} else {

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -77,7 +77,7 @@ func SelectUtxos(param *PreTxParam, generator TxParamGenerator) (utxos Utxos, e 
 func BuildTxParam(
 	state TxParamState,
 	utxos Utxos,
-	refundTo *keys.PKr,
+	refundTo *c_type.PKr,
 	receptions []Reception,
 	cmds *Cmds,
 	fee *assets.Token,

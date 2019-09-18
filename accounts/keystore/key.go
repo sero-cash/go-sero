@@ -25,9 +25,11 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/c_czero"
+
 	"github.com/btcsuite/btcutil/base58"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/sero-cash/go-sero/common/address"
 	bip39 "github.com/tyler-smith/go-bip39"
@@ -97,11 +99,11 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, at uint64) *Key {
 	return key
 }
 
-func newKeyFromTk(tk *keys.Uint512) *Key {
+func newKeyFromTk(tk *c_type.Uint512) *Key {
 	id := uuid.NewRandom()
 	tkaddress := address.AccountAddress{}
 	copy(tkaddress[:], tk[:])
-	pk := keys.Tk2Pk(tk)
+	pk := c_czero.Tk2Pk(tk)
 	address := address.AccountAddress{}
 	copy(address[:], pk[:])
 	key := &Key{

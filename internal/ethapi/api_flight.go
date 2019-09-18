@@ -10,7 +10,7 @@ import (
 
 	"github.com/sero-cash/go-sero/common"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -38,7 +38,7 @@ func (s *PublicFlightAPI) GetBlockByNumber(ctx context.Context, blockNum *int64)
 type GOutArgs struct {
 	PKr   PKrAddress
 	Asset assets.Asset
-	Memo  keys.Uint512
+	Memo  c_type.Uint512
 }
 
 func (self *GOutArgs) ToOut() (ret txtool.GOut) {
@@ -52,7 +52,7 @@ type PreTxParamArgs struct {
 	Gas      uint64
 	GasPrice uint64
 	From     PKrAddress
-	Ins      []keys.Uint256
+	Ins      []c_type.Uint256
 	Outs     []GOutArgs
 }
 
@@ -86,7 +86,7 @@ func (s *PublicFlightAPI) Trace2Root(ctx context.Context, tk TKAddress, trace ke
 	}
 }
 
-func (s *PublicFlightAPI) GetOut(ctx context.Context, root keys.Uint256) (out *txtool.Out, e error) {
+func (s *PublicFlightAPI) GetOut(ctx context.Context, root c_type.Uint256) (out *txtool.Out, e error) {
 	rt := flight.GetOut(&root, 0)
 	if rt == nil {
 		return
@@ -98,7 +98,7 @@ func (s *PublicFlightAPI) GetOut(ctx context.Context, root keys.Uint256) (out *t
 	}
 }
 
-func (s *PublicFlightAPI) GetTx(ctx context.Context, txhash keys.Uint256) (gtx txtool.GTx, e error) {
+func (s *PublicFlightAPI) GetTx(ctx context.Context, txhash c_type.Uint256) (gtx txtool.GTx, e error) {
 	hash := common.Hash{}
 	copy(hash[:], txhash[:])
 
@@ -121,17 +121,17 @@ func (s *PublicFlightAPI) GetTx(ctx context.Context, txhash keys.Uint256) (gtx t
 
 type TxReceipt struct {
 	State   uint64
-	TxHash  keys.Uint256
+	TxHash  c_type.Uint256
 	BNum    uint64
-	BHash   keys.Uint256
-	Outs    []keys.Uint256
-	Nils    []keys.Uint256
-	Pkgs    []keys.Uint256
-	ShareId *keys.Uint256
-	PoolId  *keys.Uint256
+	BHash   c_type.Uint256
+	Outs    []c_type.Uint256
+	Nils    []c_type.Uint256
+	Pkgs    []c_type.Uint256
+	ShareId *c_type.Uint256
+	PoolId  *c_type.Uint256
 }
 
-func (s *PublicFlightAPI) GetTxReceipt(ctx context.Context, txhash keys.Uint256) (ret *TxReceipt, e error) {
+func (s *PublicFlightAPI) GetTxReceipt(ctx context.Context, txhash c_type.Uint256) (ret *TxReceipt, e error) {
 	hash := common.Hash{}
 	copy(hash[:], txhash[:])
 
@@ -172,12 +172,14 @@ func (s *PublicFlightAPI) GetTxReceipt(ctx context.Context, txhash keys.Uint256)
 		}
 	}
 
-	for _, oin := range tx.GetZZSTX().Desc_O.Ins {
-		ret.Nils = append(ret.Nils, oin.Root)
-	}
+	if tx.GetZZSTX().Tx0 != nil {
+		for _, oin := range tx.GetZZSTX().Tx0.Desc_O.Ins {
+			ret.Nils = append(ret.Nils, oin.Root)
+		}
 
-	for _, oin := range tx.GetZZSTX().Desc_Z.Ins {
-		ret.Nils = append(ret.Nils, oin.Trace)
+		for _, oin := range tx.GetZZSTX().Tx0.Desc_Z.Ins {
+			ret.Nils = append(ret.Nils, oin.Trace)
+		}
 	}
 
 	if receipt.ShareId != nil {

@@ -1,19 +1,33 @@
 package localdb
 
 import (
-	"github.com/sero-cash/go-czero-import/cpt"
-	"github.com/sero-cash/go-czero-import/keys"
+	"math/big"
+
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/rlp"
-	"github.com/sero-cash/go-sero/zero/txs/stx"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v2"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type OutState struct {
 	Index  uint64
-	Out_O  *stx.Out_O    `rlp:"nil"`
-	Out_Z  *stx.Out_Z    `rlp:"nil"`
-	OutCM  *keys.Uint256 `rlp:"nil"`
-	RootCM *keys.Uint256 `rlp:"nil"`
+	Out_O  *stx_v1.Out_O   `rlp:"nil"`
+	Out_Z  *stx_v1.Out_Z   `rlp:"nil"`
+	Out_P  *stx_v2.Out_P   `rlp:"nil"`
+	Out_C  *stx_v2.Out_C   `rlp:"nil"`
+	OutCM  *c_type.Uint256 `rlp:"nil"`
+	RootCM *c_type.Uint256 `rlp:"nil"`
+}
+
+func (out *OutState) IsSzk() bool {
+	if out.Out_P != nil || out.Out_C != nil {
+		return true
+	}
+	return false
 }
 
 func (self *OutState) Clone() (ret OutState) {
@@ -21,23 +35,15 @@ func (self *OutState) Clone() (ret OutState) {
 	return
 }
 
-func (out *OutState) IsO() bool {
-	if out.Out_Z == nil {
-		return true
-	} else {
-		return false
-	}
-}
-
-func (self *OutState) ToIndexRsk() (ret keys.Uint256) {
+func (self *OutState) ToIndexRsk() (ret c_type.Uint256) {
 	ret = utils.NewU256(self.Index).ToRef().ToUint256()
 	return
 }
-func (self *OutState) ToOutCM() *keys.Uint256 {
-	if self.IsO() {
-		if self.OutCM == nil {
+func (self *OutState) toOutCM() *c_type.Uint256 {
+	if self.OutCM == nil {
+		if self.Out_O != nil {
 			asset := self.Out_O.Asset.ToFlatAsset()
-			cm := cpt.GenOutCM(
+			cm := c_czero.GenOutCM(
 				asset.Tkn.Currency.NewRef(),
 				asset.Tkn.Value.ToUint256().NewRef(),
 				asset.Tkt.Category.NewRef(),
@@ -47,28 +53,53 @@ func (self *OutState) ToOutCM() *keys.Uint256 {
 				self.ToIndexRsk().NewRef(),
 			)
 			self.OutCM = &cm
+		} else if self.Out_Z != nil {
+			self.OutCM = self.Out_Z.OutCM.NewRef()
 		}
-		return self.OutCM
-	} else {
-		return self.Out_Z.OutCM.NewRef()
 	}
+	return self.OutCM
 }
 
-func (self *OutState) ToRootCM() *keys.Uint256 {
+func (self *OutState) ToRootCM() *c_type.Uint256 {
 	if self.RootCM == nil {
-		out_cm := self.ToOutCM()
-		cm := cpt.GenRootCM(self.Index, out_cm)
-		self.RootCM = &cm
+		if self.Out_O != nil || self.Out_Z != nil {
+			out_cm := self.toOutCM()
+			cm := c_czero.GenRootCM(self.Index, out_cm)
+			self.RootCM = &cm
+		} else if self.Out_P != nil {
+			rsk_bs := crypto.Keccak256(big.NewInt(int64(self.Index)).Bytes())
+			rsk := c_type.Uint256{}
+			copy(rsk[:], rsk_bs)
+			type_asset := self.Out_P.Asset.ToTypeAsset()
+			self.RootCM = c_superzk.GenRootCM_P(
+				self.Index,
+				&type_asset,
+				&self.Out_P.PKr,
+				&rsk,
+			).NewRef()
+		} else if self.Out_C != nil {
+			self.RootCM = c_superzk.GenRootCM_C(
+				self.Index,
+				&self.Out_C.AssetCM,
+				&self.Out_C.PKr,
+				&self.Out_C.RPK,
+			).NewRef()
+		}
 	}
 	return self.RootCM
 }
 
-func (self *OutState) ToPKr() *keys.PKr {
-	if self.IsO() {
+func (self *OutState) ToPKr() *c_type.PKr {
+	if self.Out_O != nil {
 		return &self.Out_O.Addr
-	} else {
+	} else if self.Out_Z != nil {
 		return &self.Out_Z.PKr
+	} else if self.Out_P != nil {
+		return &self.Out_P.PKr
+	} else if self.Out_C != nil {
+		return &self.Out_C.PKr
 	}
+	return nil
 }
 
 func (self *OutState) Serial() (ret []byte, e error) {
@@ -97,24 +128,3 @@ func (self *OutState0Get) Unserial(v []byte) (e error) {
 		}
 	}
 }
-
-func OutKey(root *keys.Uint256) []byte {
-	key := []byte("$SERO_LOCALDB_OUTSTATE$")
-	key = append(key, root[:]...)
-	return key
-}
-
-/*
-func PutOut(db serodb.Putter, root *keys.Uint256, out *OutState) {
-	outkey := OutKey(root)
-	tri.UpdateDBObj(db, outkey, out)
-}
-
-func GetOut(db serodb.Getter, root *keys.Uint256) (ret *OutState) {
-	outkey := OutKey(root)
-	outget := OutState0Get{}
-	tri.GetDBObj(db, outkey, &outget)
-	ret = outget.Out
-	return
-}
-*/

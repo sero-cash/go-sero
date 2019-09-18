@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/sero-cash/go-sero/zero/utils"
 
@@ -17,11 +17,11 @@ import (
 func TestLoad(t *testing.T) {
 	h := atomic.Value{}
 
-	v, ok := h.Load().(keys.Uint256)
+	v, ok := h.Load().(c_type.Uint256)
 	fmt.Println(v, ok)
 
-	h.Store(keys.RandUint256())
-	v, ok = h.Load().(keys.Uint256)
+	h.Store(c_type.RandUint256())
+	v, ok = h.Load().(c_type.Uint256)
 	fmt.Println(v, ok)
 }
 

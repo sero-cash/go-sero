@@ -1,14 +1,17 @@
 package stakeservice
 
 import (
+	"sync"
+	"sync/atomic"
+
+	"github.com/sero-cash/go-czero-import/c_czero"
+
 	"github.com/robfig/cron"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"sync"
-	"sync/atomic"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/core"
@@ -19,8 +22,8 @@ import (
 )
 
 type Account struct {
-	pk *keys.Uint512
-	tk *keys.Uint512
+	pk *c_type.Uint512
+	tk *c_type.Uint512
 }
 
 type StakeService struct {
@@ -110,7 +113,7 @@ func (self *StakeService) getShareByHash(hash []byte) *stake.Share {
 	return ret.(*stake.Share)
 }
 
-func (self *StakeService) SharesByPk(pk keys.Uint512) (shares []*stake.Share) {
+func (self *StakeService) SharesByPk(pk c_type.Uint512) (shares []*stake.Share) {
 	iterator := self.db.NewIteratorWithPrefix(pk[:])
 	for iterator.Next() {
 		value := iterator.Value()
@@ -120,7 +123,7 @@ func (self *StakeService) SharesByPk(pk keys.Uint512) (shares []*stake.Share) {
 	return
 }
 
-func (self *StakeService) SharesByPkr(pkr keys.PKr) (shares []*stake.Share) {
+func (self *StakeService) SharesByPkr(pkr c_type.PKr) (shares []*stake.Share) {
 	iterator := self.db.NewIteratorWithPrefix(pkr[:])
 	for iterator.Next() {
 		value := iterator.Value()
@@ -148,7 +151,7 @@ func (self *StakeService) stakeIndex() {
 		return
 	}
 	if start < 1300000 {
-		start = 1300000;
+		start = 1300000
 	}
 
 	header := self.bc.CurrentHeader()
@@ -172,8 +175,8 @@ func (self *StakeService) stakeIndex() {
 		sharesCount += len(shares)
 		poolsCount += len(pools)
 		blocNumber++
-		if (blocNumber-start >= 10000) {
-			break;
+		if blocNumber-start >= 10000 {
+			break
 		}
 	}
 	if blocNumber == start {
@@ -181,14 +184,14 @@ func (self *StakeService) stakeIndex() {
 	}
 
 	self.numbers.Range(func(key, value interface{}) bool {
-		pk := key.(keys.Uint512)
+		pk := key.(c_type.Uint512)
 		batch.Put(numKey(pk), utils.EncodeNumber(blocNumber))
 		return true
 	})
 	err := batch.Write()
 	if err == nil {
 		self.numbers.Range(func(key, value interface{}) bool {
-			pk := key.(keys.Uint512)
+			pk := key.(c_type.Uint512)
 			self.numbers.Store(pk, blocNumber)
 			return true
 		})
@@ -196,11 +199,11 @@ func (self *StakeService) stakeIndex() {
 	}
 }
 
-func (self *StakeService) ownPkr(pkr keys.PKr) (pk *keys.Uint512, ok bool) {
+func (self *StakeService) ownPkr(pkr c_type.PKr) (pk *c_type.Uint512, ok bool) {
 	var account *Account
 	self.accounts.Range(func(key, value interface{}) bool {
 		a := value.(*Account)
-		if keys.IsMyPKr(a.tk, &pkr) {
+		if c_czero.IsMyPKr(a.tk, &pkr) {
 			account = a
 			return false
 		}
@@ -260,7 +263,7 @@ func (self *StakeService) initWallet(w accounts.Wallet) {
 	}
 }
 
-func (self *StakeService) starNum(pk *keys.Uint512) uint64 {
+func (self *StakeService) starNum(pk *c_type.Uint512) uint64 {
 	value, err := self.db.Get(numKey(*pk))
 	if err != nil {
 		return 0
@@ -274,11 +277,11 @@ var (
 	poolPrefix  = []byte("POOL")
 )
 
-func pkShareKey(pk *keys.Uint512, key []byte) []byte {
+func pkShareKey(pk *c_type.Uint512, key []byte) []byte {
 	return append(pk[:], key[:]...)
 }
 
-func pkrShareKey(pk keys.PKr, key []byte) []byte {
+func pkrShareKey(pk c_type.PKr, key []byte) []byte {
 	return append(pk[:], key[:]...)
 }
 
@@ -290,7 +293,7 @@ func poolKey(key []byte) []byte {
 	return append(poolPrefix, key[:]...)
 }
 
-func numKey(pk keys.Uint512) []byte {
+func numKey(pk c_type.Uint512) []byte {
 	return append(numPrefix, pk[:]...)
 }
 

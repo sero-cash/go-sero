@@ -20,8 +20,8 @@ type receiptForStorage_Version_0 struct {
 }
 
 type receiptForStorage_Version_1 struct {
-	PoolId  *common.Hash  `rlp:"nil"`
-	ShareId *common.Hash  `rlp:"nil"`
+	PoolId  *common.Hash `rlp:"nil"`
+	ShareId *common.Hash `rlp:"nil"`
 }
 
 // ReceiptForStorage is a wrapper around a Receipt that flattens and parses the
@@ -31,7 +31,7 @@ type ReceiptForStorage Receipt
 // EncodeRLP implements rlp.Encoder, and flattens all content fields of a receipt
 // into an RLP stream.
 func (r *ReceiptForStorage) EncodeRLP(w io.Writer) error {
-	vs := vserial.VSerial{}
+	vs := vserial.NewVSerial()
 	{
 		v0 := &receiptForStorage_Version_0{
 			PostStateOrStatus: (*Receipt)(r).statusEncoding(),
@@ -45,13 +45,13 @@ func (r *ReceiptForStorage) EncodeRLP(w io.Writer) error {
 		for i, log := range r.Logs {
 			v0.Logs[i] = (*LogForStorage)(log)
 		}
-		vs.Versions = append(vs.Versions, &v0)
+		vs.Add(&v0, vserial.VERSION_0)
 	}
 	if r.PoolId != nil || r.ShareId != nil {
 		v1 := &receiptForStorage_Version_1{}
 		v1.ShareId = r.ShareId
 		v1.PoolId = r.PoolId
-		vs.Versions = append(vs.Versions, &v1)
+		vs.Add(&v1, vserial.VERSION_1)
 	}
 	return rlp.Encode(w, &vs)
 }
@@ -61,9 +61,9 @@ func (r *ReceiptForStorage) EncodeRLP(w io.Writer) error {
 func (r *ReceiptForStorage) DecodeRLP(s *rlp.Stream) error {
 	var v0 receiptForStorage_Version_0
 	var v1 receiptForStorage_Version_1
-	vs := vserial.VSerial{}
-	vs.Versions = append(vs.Versions, &v0)
-	vs.Versions = append(vs.Versions, &v1)
+	vs := vserial.NewVSerial()
+	vs.Add(&v0, vserial.VERSION_0)
+	vs.Add(&v1, vserial.VERSION_1)
 	if err := s.Decode(&vs); err != nil {
 		return err
 	}

@@ -3,16 +3,16 @@ package localdb
 import (
 	"math/big"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 )
 
 type Block struct {
-	Roots []keys.Uint256
-	Dels  []keys.Uint256
-	Pkgs  []keys.Uint256
+	Roots []c_type.Uint256
+	Dels  []c_type.Uint256
+	Pkgs  []c_type.Uint256
 }
 
 func (self *Block) Serial() (ret []byte, e error) {
@@ -46,7 +46,7 @@ func (self *BlockGet) Unserial(v []byte) (e error) {
 		}
 	}
 }
-func BlockKey(num uint64, hash *keys.Uint256) []byte {
+func BlockKey(num uint64, hash *c_type.Uint256) []byte {
 	block_key := []byte("$SERO_ZSTATE_BLOCK_SHOOTCUT$")
 	block_key = append(block_key, big.NewInt(int64(num)).Bytes()...)
 	block_key = append(block_key, []byte("$")...)
@@ -54,12 +54,12 @@ func BlockKey(num uint64, hash *keys.Uint256) []byte {
 	return block_key
 }
 
-func PutBlock(db serodb.Putter, num uint64, hash *keys.Uint256, block *Block) {
+func PutBlock(db serodb.Putter, num uint64, hash *c_type.Uint256, block *Block) {
 	blockkey := BlockKey(num, hash)
 	tri.UpdateDBObj(db, blockkey, block)
 }
 
-func GetBlock(db serodb.Database, num uint64, hash *keys.Uint256) (ret *Block) {
+func GetBlock(db serodb.Database, num uint64, hash *c_type.Uint256) (ret *Block) {
 	blockkey := BlockKey(num, hash)
 	blockget := BlockGet{}
 	tri.GetDBObj(db, blockkey, &blockget)

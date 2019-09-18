@@ -1,19 +1,18 @@
 package data
 
 import (
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/localdb"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 )
 
-
 type Log interface {
-	Op(state IData);
+	Op(state IData)
 }
 
 type AddTxOutLog struct {
-	Pkr *keys.PKr
+	Pkr *c_type.PKr
 }
 
 func (log AddTxOutLog) Op(state IData) {
@@ -21,9 +20,9 @@ func (log AddTxOutLog) Op(state IData) {
 }
 
 type AddOutLog struct {
-	Root   *keys.Uint256
+	Root   *c_type.Uint256
 	Out    *localdb.OutState
-	Txhash *keys.Uint256
+	Txhash *c_type.Uint256
 }
 
 func (log AddOutLog) Op(state IData) {
@@ -31,7 +30,7 @@ func (log AddOutLog) Op(state IData) {
 }
 
 type AddNilLog struct {
-	In *keys.Uint256
+	In *c_type.Uint256
 }
 
 func (log AddNilLog) Op(state IData) {
@@ -39,7 +38,7 @@ func (log AddNilLog) Op(state IData) {
 }
 
 type AddDelLog struct {
-	In *keys.Uint256
+	In *c_type.Uint256
 }
 
 func (log AddDelLog) Op(state IData) {
@@ -54,18 +53,18 @@ type Revision struct {
 type IData interface {
 	Clear()
 
-	AddTxOut(pkr *keys.PKr) int
-	AddOut(root *keys.Uint256, out *localdb.OutState, txhash *keys.Uint256)
-	AddNil(in *keys.Uint256)
-	AddDel(in *keys.Uint256)
+	AddTxOut(pkr *c_type.PKr) int
+	AddOut(root *c_type.Uint256, out *localdb.OutState, txhash *c_type.Uint256)
+	AddNil(in *c_type.Uint256)
+	AddDel(in *c_type.Uint256)
 
 	LoadState(tr tri.Tri)
 	SaveState(tr tri.Tri)
-	RecordState(putter serodb.Putter, root *keys.Uint256)
+	RecordState(putter serodb.Putter, root *c_type.Uint256)
 
-	HasIn(tr tri.Tri, hash *keys.Uint256) (exists bool)
-	GetOut(tr tri.Tri, root *keys.Uint256) (src *localdb.OutState)
+	HasIn(tr tri.Tri, hash *c_type.Uint256) (exists bool)
+	GetOut(tr tri.Tri, root *c_type.Uint256) (src *localdb.OutState)
 
-	GetRoots() (roots []keys.Uint256)
-	GetDels() (dels []keys.Uint256)
+	GetRoots() (roots []c_type.Uint256)
+	GetDels() (dels []c_type.Uint256)
 }

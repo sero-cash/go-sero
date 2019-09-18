@@ -34,7 +34,8 @@ import (
 
 	"github.com/sero-cash/go-sero/crypto/sha3"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common/hexutil"
 )
 
@@ -149,8 +150,8 @@ func (h Hash) Value() (driver.Value, error) {
 	return h[:], nil
 }
 
-func (h Hash) HashToUint256() *keys.Uint256 {
-	u256 := keys.Uint256{}
+func (h Hash) HashToUint256() *c_type.Uint256 {
+	u256 := c_type.Uint256{}
 	copy(u256[:], h[:])
 	return &u256
 }
@@ -193,9 +194,9 @@ type ContractAddress [20]byte
 
 func (a Address) ToCaddr() ContractAddress {
 	var addr ContractAddress
-	pkr := new(keys.PKr)
+	pkr := new(c_type.PKr)
 	copy(pkr[:], a[:])
-	hash := keys.HashPKr(pkr)
+	hash := c_czero.HashPKr(pkr)
 	addr.SetBytes(hash[:])
 	return addr
 }
@@ -255,14 +256,14 @@ func Base58ToAddress(s string) Address {
 // Bytes gets the string representation of the underlying Data.
 func (a Address) Bytes() []byte { return a[:] }
 
-func (a Address) ToPKr() *keys.PKr {
-	pubKey := keys.PKr{}
+func (a Address) ToPKr() *c_type.PKr {
+	pubKey := c_type.PKr{}
 	copy(pubKey[:], a[:])
 	return &pubKey
 }
 
-func (a Address) ToUint512() *keys.Uint512 {
-	pubKey := keys.Uint512{}
+func (a Address) ToUint512() *c_type.Uint512 {
+	pubKey := c_type.Uint512{}
 	copy(pubKey[:], a[:])
 	return &pubKey
 }

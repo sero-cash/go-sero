@@ -3,7 +3,7 @@ package prepare
 import (
 	"fmt"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
@@ -12,9 +12,9 @@ type cyState struct {
 	balance utils.I256
 }
 
-type cyStateMap map[keys.Uint256]*cyState
+type cyStateMap map[c_type.Uint256]*cyState
 
-func (self cyStateMap) add(key *keys.Uint256, value *utils.U256) {
+func (self cyStateMap) add(key *c_type.Uint256, value *utils.U256) {
 	if _, ok := self[*key]; ok {
 		self[*key].balance.AddU(value)
 	} else {
@@ -24,7 +24,7 @@ func (self cyStateMap) add(key *keys.Uint256, value *utils.U256) {
 	}
 }
 
-func (self cyStateMap) sub(key *keys.Uint256, value *utils.U256) {
+func (self cyStateMap) sub(key *c_type.Uint256, value *utils.U256) {
 	if _, ok := self[*key]; ok {
 		self[*key].balance.SubU(value)
 	} else {
@@ -34,14 +34,14 @@ func (self cyStateMap) sub(key *keys.Uint256, value *utils.U256) {
 }
 
 func newcyStateMap() (ret cyStateMap) {
-	ret = make(map[keys.Uint256]*cyState)
+	ret = make(map[c_type.Uint256]*cyState)
 	return
 }
 
 type CKState struct {
 	outPlus bool
 	cy      cyStateMap
-	tk      map[keys.Uint256]keys.Uint256
+	tk      map[c_type.Uint256]c_type.Uint256
 }
 
 func (self *CKState) GetList() (tkns []assets.Token, tkts []assets.Ticket) {
@@ -62,15 +62,15 @@ func NewCKState(outPlus bool, fee *assets.Token) (ret CKState) {
 	} else {
 		ret.cy.sub(&fee.Currency, &fee.Value)
 	}
-	ret.tk = make(map[keys.Uint256]keys.Uint256)
+	ret.tk = make(map[c_type.Uint256]c_type.Uint256)
 	return
 }
 
 func (self *CKState) AddIn(asset *assets.Asset) (added bool, e error) {
 	added = false
 	if asset.Tkn != nil {
-		if asset.Tkn.Currency != keys.Empty_Uint256 {
-			if asset.Tkn.Value.ToUint256() != keys.Empty_Uint256 {
+		if asset.Tkn.Currency != c_type.Empty_Uint256 {
+			if asset.Tkn.Value.ToUint256() != c_type.Empty_Uint256 {
 				if self.outPlus {
 					self.cy.sub(&asset.Tkn.Currency, &asset.Tkn.Value)
 				} else {
@@ -81,8 +81,8 @@ func (self *CKState) AddIn(asset *assets.Asset) (added bool, e error) {
 		}
 	}
 	if asset.Tkt != nil {
-		if asset.Tkt.Category != keys.Empty_Uint256 {
-			if asset.Tkt.Value != keys.Empty_Uint256 {
+		if asset.Tkt.Category != c_type.Empty_Uint256 {
+			if asset.Tkt.Value != c_type.Empty_Uint256 {
 				if _, ok := self.tk[asset.Tkt.Value]; !ok {
 					if self.outPlus {
 						added = true

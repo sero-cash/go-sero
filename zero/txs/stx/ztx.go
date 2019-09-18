@@ -19,175 +19,48 @@ package stx
 import (
 	"sync/atomic"
 
-	"github.com/sero-cash/go-czero-import/cpt"
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/superzk"
+
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v2"
+
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/utils"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 )
-
-type In_Z struct {
-	Anchor  keys.Uint256
-	Nil     keys.Uint256
-	Trace   keys.Uint256
-	AssetCM keys.Uint256
-	Proof   cpt.Proof
-}
-
-func (self *In_Z) ToHash() (ret keys.Uint256) {
-	d := sha3.NewKeccak256()
-	d.Write(self.Anchor[:])
-	d.Write(self.Nil[:])
-	d.Write(self.Trace[:])
-	d.Write(self.AssetCM[:])
-	d.Write(self.Proof.ToHash().NewRef()[:])
-	copy(ret[:], d.Sum(nil))
-	return
-}
-
-func (self *In_Z) ToHash_for_sign() (ret keys.Uint256) {
-	d := sha3.NewKeccak256()
-	d.Write(self.Anchor[:])
-	d.Write(self.Nil[:])
-	d.Write(self.Trace[:])
-	d.Write(self.AssetCM[:])
-	d.Write(self.Proof.ToHash().NewRef()[:])
-	copy(ret[:], d.Sum(nil))
-	return
-}
-
-type Out_Z struct {
-	AssetCM keys.Uint256
-	OutCM   keys.Uint256
-	RPK     keys.Uint256
-	EInfo   cpt.Einfo
-	PKr     keys.PKr
-	Proof   cpt.Proof
-}
-
-func ConfirmOut_Z(deInfo *cpt.InfoDesc, out_z *Out_Z) (e error) {
-	desc := cpt.ConfirmOutputDesc{}
-	desc.Memo = deInfo.Memo
-	desc.Tkn_currency = deInfo.Tkn_currency
-	desc.Tkn_value = deInfo.Tkn_value
-	desc.Tkt_category = deInfo.Tkt_category
-	desc.Tkt_value = deInfo.Tkt_value
-	desc.Rsk = deInfo.Rsk
-	desc.Pkr = out_z.PKr
-	desc.Out_cm = out_z.OutCM
-	e = cpt.ConfirmOutput(&desc)
-	return
-}
-
-func (self *Out_Z) Clone() (ret Out_Z) {
-	utils.DeepCopy(&ret, self)
-	return
-}
-
-func (this Out_Z) ToRef() (ret *Out_Z) {
-	ret = &Out_Z{}
-	*ret = this
-	return
-}
-
-func (self *Out_Z) ToHash() (ret keys.Uint256) {
-	d := sha3.NewKeccak256()
-	d.Write(self.AssetCM[:])
-	d.Write(self.OutCM[:])
-	d.Write(self.EInfo[:])
-	d.Write(self.PKr[:])
-	d.Write(self.Proof.ToHash().NewRef()[:])
-	copy(ret[:], d.Sum(nil))
-	return
-}
-
-func (self *Out_Z) ToHash_for_gen() (ret keys.Uint256) {
-	d := sha3.NewKeccak256()
-	d.Write(self.PKr[:])
-	copy(ret[:], d.Sum(nil))
-	return
-}
-
-func (self *Out_Z) ToHash_for_sign() (ret keys.Uint256) {
-	d := sha3.NewKeccak256()
-	d.Write(self.AssetCM[:])
-	d.Write(self.OutCM[:])
-	d.Write(self.EInfo[:])
-	d.Write(self.PKr[:])
-	d.Write(self.Proof.ToHash().NewRef()[:])
-	copy(ret[:], d.Sum(nil))
-	return
-}
-
-type Desc_Z struct {
-	Ins  []In_Z
-	Outs []Out_Z
-}
-
-func (self *Desc_Z) ToHash() (ret keys.Uint256) {
-	d := sha3.NewKeccak256()
-	for _, in := range self.Ins {
-		d.Write(in.ToHash().NewRef()[:])
-	}
-	for _, out := range self.Outs {
-		d.Write(out.ToHash().NewRef()[:])
-	}
-	copy(ret[:], d.Sum(nil))
-	return
-}
-
-func (self *Desc_Z) ToHash_for_gen() (ret keys.Uint256) {
-	d := sha3.NewKeccak256()
-	for _, out := range self.Outs {
-		d.Write(out.ToHash_for_gen().NewRef()[:])
-	}
-	copy(ret[:], d.Sum(nil))
-	return
-}
-
-func (self *Desc_Z) ToHash_for_sign() (ret keys.Uint256) {
-	d := sha3.NewKeccak256()
-	for _, in := range self.Ins {
-		d.Write(in.ToHash_for_sign().NewRef()[:])
-	}
-	for _, out := range self.Outs {
-		d.Write(out.ToHash_for_sign().NewRef()[:])
-	}
-	copy(ret[:], d.Sum(nil))
-	return
-}
-
-type Tx1 struct {
-	Desc_Z Desc_Z
-	Desc_O Desc_O
-}
 
 type Tx2 struct {
 }
 
 type T struct {
-	Ehash    keys.Uint256
-	From     keys.PKr
+	Ehash    c_type.Uint256
+	From     c_type.PKr
 	Fee      assets.Token
-	Sign     keys.Uint512
-	Bcr      keys.Uint256
-	Bsign    keys.Uint512
+	Sign     c_type.Uint512
+	Bcr      c_type.Uint256
+	Bsign    c_type.Uint512
 	Desc_Pkg PkgDesc_Z
 	Desc_Cmd DescCmd
 
-	Tx1 *Tx1 `rlp:"nil"`
+	Tx0 *stx_v1.Tx `rlp:"nil"`
+	Tx1 *stx_v2.Tx `rlp:"nil"`
 
 	//cache
 	hash  atomic.Value
 	feeCC atomic.Value
 }
 
+func (self *T) IsSzk() bool {
+	return superzk.IsSzkPKr(&self.From)
+}
+
 func (self *T) ContractAsset() *assets.Asset {
 	if self.Desc_Cmd.Contract != nil {
 		return &self.Desc_Cmd.Contract.Asset
 	} else {
-		if self.Tx1 != nil {
-			for _, desc_o := range self.Tx1.Desc_O.Outs {
+		if self.Tx0 != nil {
+			for _, desc_o := range self.Tx0.Desc_O.Outs {
 				return &desc_o.Asset
 			}
 		}
@@ -195,13 +68,13 @@ func (self *T) ContractAsset() *assets.Asset {
 	return nil
 }
 
-func (self *T) ContractAddress() *keys.PKr {
+func (self *T) ContractAddress() *c_type.PKr {
 	if self.Desc_Cmd.Contract != nil {
 		return self.Desc_Cmd.Contract.To
 	} else {
-		if self.Tx1 != nil {
-			for _, out := range self.Tx1.Desc_O.Outs {
-				if out.Addr != (keys.PKr{}) {
+		if self.Tx0 != nil {
+			for _, out := range self.Tx0.Desc_O.Outs {
+				if out.Addr != (c_type.PKr{}) {
 					return &out.Addr
 				}
 				return nil
@@ -215,8 +88,8 @@ func (self *T) IsOpContract() bool {
 	if self.Desc_Cmd.Contract != nil {
 		return true
 	} else {
-		if self.Tx1 != nil {
-			if len(self.Tx1.Desc_O.Outs) > 0 {
+		if self.Tx0 != nil {
+			if len(self.Tx0.Desc_O.Outs) > 0 {
 				return true
 			}
 		}
@@ -224,24 +97,24 @@ func (self *T) IsOpContract() bool {
 	return false
 }
 
-func (self *T) ToFeeCC() keys.Uint256 {
-	if cc, ok := self.feeCC.Load().(keys.Uint256); ok {
+func (self *T) ToFeeCC() c_type.Uint256 {
+	if cc, ok := self.feeCC.Load().(c_type.Uint256); ok {
 		return cc
 	}
-	asset_desc := cpt.AssetDesc{
+	asset_desc := c_czero.AssetDesc{
 		Tkn_currency: self.Fee.Currency,
 		Tkn_value:    self.Fee.Value.ToUint256(),
-		Tkt_category: keys.Empty_Uint256,
-		Tkt_value:    keys.Empty_Uint256,
+		Tkt_category: c_type.Empty_Uint256,
+		Tkt_value:    c_type.Empty_Uint256,
 	}
-	cpt.GenAssetCC(&asset_desc)
+	c_czero.GenAssetCC(&asset_desc)
 	v := asset_desc.Asset_cc
 	self.feeCC.Store(v)
 	return v
 }
 
-func (self *T) ToHash() (ret keys.Uint256) {
-	if h, ok := self.hash.Load().(keys.Uint256); ok {
+func (self *T) ToHash() (ret c_type.Uint256) {
+	if h, ok := self.hash.Load().(c_type.Uint256); ok {
 		ret = h
 		return
 	}
@@ -250,14 +123,17 @@ func (self *T) ToHash() (ret keys.Uint256) {
 	return v
 }
 
-func (self *T) _ToHash() (ret keys.Uint256) {
+func (self *T) _ToHash() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Ehash[:])
 	d.Write(self.From[:])
 	d.Write(self.Fee.ToHash().NewRef()[:])
+	if self.Tx0 != nil {
+		d.Write(self.Tx0.Desc_Z.ToHash().NewRef()[:])
+		d.Write(self.Tx0.Desc_O.ToHash().NewRef()[:])
+	}
 	if self.Tx1 != nil {
-		d.Write(self.Tx1.Desc_Z.ToHash().NewRef()[:])
-		d.Write(self.Tx1.Desc_O.ToHash().NewRef()[:])
+		d.Write(self.Tx1.ToHash().NewRef()[:])
 	}
 	d.Write(self.Desc_Pkg.ToHash().NewRef()[:])
 	d.Write(self.Sign[:])
@@ -270,14 +146,14 @@ func (self *T) _ToHash() (ret keys.Uint256) {
 	return
 }
 
-func (self *T) ToHash_for_gen() (ret keys.Uint256) {
+func (self *T) ToHash_for_gen() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Ehash[:])
 	d.Write(self.From[:])
 	d.Write(self.Fee.ToHash().NewRef()[:])
-	if self.Tx1 != nil {
-		d.Write(self.Tx1.Desc_Z.ToHash_for_gen().NewRef()[:])
-		d.Write(self.Tx1.Desc_O.ToHash_for_gen().NewRef()[:])
+	if self.Tx0 != nil {
+		d.Write(self.Tx0.Desc_Z.ToHash_for_gen().NewRef()[:])
+		d.Write(self.Tx0.Desc_O.ToHash_for_gen().NewRef()[:])
 	}
 	d.Write(self.Desc_Pkg.ToHash_for_gen().NewRef()[:])
 	if self.Desc_Cmd.Count() > 0 {
@@ -287,14 +163,14 @@ func (self *T) ToHash_for_gen() (ret keys.Uint256) {
 	return
 }
 
-func (self *T) ToHash_for_sign() (ret keys.Uint256) {
+func (self *T) ToHash_for_sign() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Ehash[:])
 	d.Write(self.From[:])
 	d.Write(self.Fee.ToHash().NewRef()[:])
-	if self.Tx1 != nil {
-		d.Write(self.Tx1.Desc_Z.ToHash_for_sign().NewRef()[:])
-		d.Write(self.Tx1.Desc_O.ToHash_for_sign().NewRef()[:])
+	if self.Tx0 != nil {
+		d.Write(self.Tx0.Desc_Z.ToHash_for_sign().NewRef()[:])
+		d.Write(self.Tx0.Desc_O.ToHash_for_sign().NewRef()[:])
 	}
 	d.Write(self.Desc_Pkg.ToHash_for_sign().NewRef()[:])
 	if self.Desc_Cmd.Count() > 0 {

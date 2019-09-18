@@ -15,13 +15,13 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txtool"
 
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/pkg/errors"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/localdb"
 )
 
@@ -36,7 +36,7 @@ func Trace2Root(tk *keys.Uint512, trace *keys.Uint256, base *keys.Uint256) (root
 	return
 }
 
-func GetOut(root *keys.Uint256, num uint64) (out *localdb.RootState) {
+func GetOut(root *c_type.Uint256, num uint64) (out *localdb.RootState) {
 	rs := localdb.GetRoot(txtool.Ref_inst.Bc.GetDB(), root)
 	if rs != nil {
 		return rs
@@ -47,7 +47,7 @@ func GetOut(root *keys.Uint256, num uint64) (out *localdb.RootState) {
 		} else {
 			out := localdb.RootState{
 				*os,
-				keys.Uint256{},
+				c_type.Uint256{},
 				num,
 			}
 			return &out
@@ -120,7 +120,7 @@ func (self *SRI) GetBlocksInfo(start uint64, count uint64) (blocks []txtool.Bloc
 	return self.GetBlocksInfoByDelay(start, count, seroparam.DefaultConfirmedBlock())
 }
 
-func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []txtool.Witness, e error) {
+func (self *SRI) GetAnchor(roots []c_type.Uint256) (wits []txtool.Witness, e error) {
 	state := txtool.Ref_inst.CurrentState()
 	if state != nil {
 		for _, root := range roots {
@@ -129,7 +129,7 @@ func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []txtool.Witness, e error
 				e = errors.New("GetAnchor use root but out is nil !!!")
 				return
 			} else {
-				pos, paths, anchor := state.State.MTree.GetPaths(*out.OS.RootCM)
+				pos, paths, anchor := state.State.CzeroTree.GetPaths(*out.OS.RootCM)
 				wit.Pos = hexutil.Uint64(pos)
 				wit.Paths = paths
 				wit.Anchor = anchor
@@ -144,7 +144,7 @@ func (self *SRI) GetAnchor(roots []keys.Uint256) (wits []txtool.Witness, e error
 	return
 }
 
-func GenTxParam(param *PreTxParam, tk keys.Uint512) (p txtool.GTxParam, e error) {
+func GenTxParam(param *PreTxParam, tk c_type.Uint512) (p txtool.GTxParam, e error) {
 	log.Debug("genTx start")
 	p.Gas = param.Gas
 	p.GasPrice = big.NewInt(0).SetUint64(param.GasPrice)
@@ -156,14 +156,14 @@ func GenTxParam(param *PreTxParam, tk keys.Uint512) (p txtool.GTxParam, e error)
 
 	p.Outs = param.Outs
 
-	skr := keys.PKr{}
+	skr := c_type.PKr{}
 	copy(skr[:], tk[:])
 
-	roots := []keys.Uint256{}
+	roots := []c_type.Uint256{}
 	outs := []txtool.Out{}
 
 	amounts := make(map[string]*big.Int)
-	ticekts := make(map[keys.Uint256]keys.Uint256)
+	ticekts := make(map[c_type.Uint256]c_type.Uint256)
 	for _, in := range param.Ins {
 		roots = append(roots, in)
 		if root := localdb.GetRoot(txtool.Ref_inst.Bc.GetDB(), &in); root == nil {
@@ -171,7 +171,9 @@ func GenTxParam(param *PreTxParam, tk keys.Uint512) (p txtool.GTxParam, e error)
 			return
 		} else {
 			out := txtool.Out{in, *root}
-			dOuts := DecTraceOuts([]txtool.Out{out}, &skr)
+			tk := c_type.Uint512{}
+			copy(tk[:], skr[:])
+			dOuts := DecOut(&tk, []txtool.Out{out})
 			if len(dOuts) == 0 {
 				e = fmt.Errorf("SRI.GenTxParam dec outs Error for root %v", in)
 				return

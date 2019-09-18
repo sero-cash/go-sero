@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/cpt"
-
-	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/accounts/keystore"
 	"github.com/sero-cash/go-sero/cmd/utils"
@@ -57,15 +57,15 @@ var commandRegister = cli.Command{
 			utils.Fatalf("Failed to get address '%v'", err)
 		}
 
-		address := keys.Uint512{}
+		address := c_type.Uint512{}
 
-		if err := cpt.Base58Decode(&kstr, address[:]); err != nil {
+		if err := c_czero.Base58Decode(&kstr, address[:]); err != nil {
 			utils.Fatalf("Failed to decode address '%v'", err)
 		}
 
 		// Output all relevant information we can retrieve.
-		r := keys.RandUint256()
-		pkr := keys.Addr2PKr(&address, &r)
+		r := c_type.RandUint256()
+		pkr := c_czero.Addr2PKr(&address, &r)
 		out := outputRegister{
 			*cpt.Base58Encode(pkr[:]),
 		}

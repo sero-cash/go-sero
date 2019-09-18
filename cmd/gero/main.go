@@ -31,7 +31,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 
-	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"gopkg.in/urfave/cli.v1"
@@ -213,14 +213,14 @@ func init() {
 		}
 
 		if !strings.EqualFold(subCommandName, "attach") && !strings.EqualFold(subCommandName, "version") {
-			netType := cpt.NET_Beta
+			netType := c_czero.NET_Beta
 			switch {
 			case ctx.GlobalBool(utils.AlphanetFlag.Name):
-				netType = cpt.NET_Alpha
+				netType = c_czero.NET_Alpha
 			case ctx.GlobalBool(utils.DeveloperFlag.Name):
-				netType = cpt.NET_Dev
+				netType = c_czero.NET_Dev
 			}
-			cpt.ZeroInit(getKeyStore(ctx), netType)
+			c_czero.ZeroInit(getKeyStore(ctx), netType)
 
 		}
 

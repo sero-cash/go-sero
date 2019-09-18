@@ -27,7 +27,7 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/sero-cash/go-sero/miner"
 
@@ -86,22 +86,22 @@ type Backend interface {
 	GetMiner() *miner.Miner
 
 	GetBlocksInfo(start uint64, count uint64) ([]txtool.Block, error)
-	GetAnchor(roots []keys.Uint256) ([]txtool.Witness, error)
+	GetAnchor(roots []c_type.Uint256) ([]txtool.Witness, error)
 	CommitTx(tx *txtool.GTx) error
 
-	GetPkNumber(pk keys.Uint512) (number uint64, e error)
-	GetPkr(address *keys.Uint512, index *keys.Uint256) (keys.PKr, error)
-	GetBalances(address keys.Uint512) (balances map[string]*big.Int)
+	GetPkNumber(pk c_type.Uint512) (number uint64, e error)
+	GetPkr(address *c_type.Uint512, index *c_type.Uint256) (c_type.PKr, error)
+	GetBalances(address c_type.Uint512) (balances map[string]*big.Int)
 	GenTx(param prepare.PreTxParam) (*txtool.GTxParam, error)
-	GetRecordsByPk(pk *keys.Uint512, begin, end uint64) (records []exchange.Utxo, err error)
-	GetRecordsByPkr(pkr keys.PKr, begin, end uint64) (records []exchange.Utxo, err error)
-	GetLockedBalances(address keys.Uint512) (balances map[string]*big.Int)
-	GetMaxAvailable(pk keys.Uint512, currency string) (amount *big.Int)
-	GetRecordsByTxHash(txHash keys.Uint256) (records []exchange.Utxo, err error)
+	GetRecordsByPk(pk *c_type.Uint512, begin, end uint64) (records []exchange.Utxo, err error)
+	GetRecordsByPkr(pkr c_type.PKr, begin, end uint64) (records []exchange.Utxo, err error)
+	GetLockedBalances(address c_type.Uint512) (balances map[string]*big.Int)
+	GetMaxAvailable(pk c_type.Uint512, currency string) (amount *big.Int)
+	GetRecordsByTxHash(txHash c_type.Uint256) (records []exchange.Utxo, err error)
 
 	//Light node api
-	GetOutByPKr(pkrs []keys.PKr, start, end uint64) (br light.BlockOutResp, e error)
-	CheckNil(Nils []keys.Uint256) (nilResps []light.NilValue, e error)
+	GetOutByPKr(pkrs []c_type.PKr, start, end uint64) (br light.BlockOutResp, e error)
+	CheckNil(Nils []c_type.Uint256) (nilResps []light.NilValue, e error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

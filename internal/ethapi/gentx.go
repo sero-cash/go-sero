@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/sero-cash/go-czero-import/c_czero"
+
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 
 	"github.com/pkg/errors"
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -16,8 +18,8 @@ import (
 )
 
 type PkgCloseArgs struct {
-	Id  keys.Uint256
-	Key keys.Uint256
+	Id  c_type.Uint256
+	Key c_type.Uint256
 }
 
 func (self *PkgCloseArgs) toCmd() *prepare.PkgCloseCmd {
@@ -31,7 +33,7 @@ func (self *PkgCloseArgs) toCmd() *prepare.PkgCloseCmd {
 }
 
 type PkgTransferArgs struct {
-	Id  keys.Uint256
+	Id  c_type.Uint256
 	PKr AllMixedAddress
 }
 
@@ -46,11 +48,11 @@ func (self *PkgTransferArgs) toCmd() *prepare.PkgTransferCmd {
 }
 
 type PkgCreateArgs struct {
-	Id       keys.Uint256
+	Id       c_type.Uint256
 	PKr      AllMixedAddress
 	Currency Smbol
 	Value    *Big
-	Memo     keys.Uint512
+	Memo     c_type.Uint512
 }
 
 func (self *PkgCreateArgs) toCmd() *prepare.PkgCreateCmd {
@@ -75,7 +77,7 @@ func (self *PkgCreateArgs) toCmd() *prepare.PkgCreateCmd {
 type BuyShareArgs struct {
 	Value Big
 	Vote  PKrAddress
-	Pool  *keys.Uint256
+	Pool  *c_type.Uint256
 }
 
 func (self *BuyShareArgs) toCmd() *stx.BuyShareCmd {
@@ -134,9 +136,9 @@ func (self *ContractArgs) toCmd() *stx.ContractCmd {
 			utils.U256(*self.Value.ToInt()),
 		}
 	}
-	var pkr *keys.PKr
+	var pkr *c_type.PKr
 	if self.To != nil {
-		temp := keys.PKr(*self.To)
+		temp := c_type.PKr(*self.To)
 		pkr = &temp
 
 	}
@@ -180,7 +182,7 @@ type GenTxArgs struct {
 	Cmds       *CmdsArgs
 	Gas        uint64
 	GasPrice   *Big
-	Roots      []keys.Uint256
+	Roots      []c_type.Uint256
 }
 
 func (args GenTxArgs) check() error {
@@ -192,7 +194,7 @@ func (args GenTxArgs) check() error {
 	}
 
 	if args.RefundTo != nil {
-		if !keys.PKrValid(args.RefundTo.ToPKr()) {
+		if !c_czero.PKrValid(args.RefundTo.ToPKr()) {
 			return errors.New("RefundTo is not a valid pkr")
 		}
 	}
@@ -230,7 +232,7 @@ func (args GenTxArgs) toTxParam() prepare.PreTxParam {
 	receptions := []prepare.Reception{}
 	for _, rec := range args.Receptions {
 		pkr := MixAdrressToPkr(rec.Addr)
-		var currency keys.Uint256
+		var currency c_type.Uint256
 		bytes := common.LeftPadBytes([]byte(string(rec.Currency)), 32)
 		copy(currency[:], bytes)
 		receptions = append(receptions, prepare.Reception{
@@ -241,7 +243,7 @@ func (args GenTxArgs) toTxParam() prepare.PreTxParam {
 			},
 		})
 	}
-	var refundPkr *keys.PKr
+	var refundPkr *c_type.PKr
 	if args.RefundTo != nil {
 		refundPkr = args.RefundTo.ToPKr()
 	}

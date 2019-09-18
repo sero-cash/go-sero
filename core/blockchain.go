@@ -34,13 +34,13 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/zero/stake"
 
 	"github.com/hashicorp/golang-lru"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/mclock"
@@ -288,8 +288,8 @@ func (self *State1BlockChain) CurrentState(hash *common.Hash) *zstate.ZState {
 	}
 	return st.CurrentZState()
 }
-func (self *State1BlockChain) GetTks() []keys.Uint512 {
-	tks := []keys.Uint512{}
+func (self *State1BlockChain) GetTks() []c_type.Uint512 {
+	tks := []c_type.Uint512{}
 	for _, w := range self.Bc.accountManager.Wallets() {
 		tk := w.Accounts()[0].Tk
 		tks = append(tks, *tk.ToUint512())
@@ -297,7 +297,7 @@ func (self *State1BlockChain) GetTks() []keys.Uint512 {
 	return tks
 }
 
-func (self *State1BlockChain) GetTkAt(tk *keys.Uint512) uint64 {
+func (self *State1BlockChain) GetTkAt(tk *c_type.Uint512) uint64 {
 	for _, w := range self.Bc.accountManager.Wallets() {
 		if *w.Accounts()[0].Tk.ToUint512() == *tk {
 			return w.Accounts()[0].At

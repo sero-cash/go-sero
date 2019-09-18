@@ -24,9 +24,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
-
-	"github.com/sero-cash/go-czero-import/keys"
 )
 
 func Uint64ToBytes(r uint64) []byte {
@@ -37,7 +36,7 @@ func Int64ToBytes(r int64) []byte {
 	value := new(big.Int).SetInt64(r)
 	return value.Bytes()
 }
-func Uint256SliceCut(is []keys.Uint256, l int) (ret []keys.Uint256) {
+func Uint256SliceCut(is []c_type.Uint256, l int) (ret []c_type.Uint256) {
 	is_l := len(is)
 	if is_l < l {
 		l = is_l
@@ -46,7 +45,7 @@ func Uint256SliceCut(is []keys.Uint256, l int) (ret []keys.Uint256) {
 	return
 }
 
-type Uint256s []keys.Uint256
+type Uint256s []c_type.Uint256
 
 func (self Uint256s) Len() int {
 	return len(self)
@@ -58,13 +57,13 @@ func (self Uint256s) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
 }
 
-func CurrencyToUint256(str string) (ret keys.Uint256) {
+func CurrencyToUint256(str string) (ret c_type.Uint256) {
 	bs := CurrencyToBytes(str)
 	copy(ret[:], bs)
 	return
 }
 
-func Uint256ToCurrency(u *keys.Uint256) (ret string) {
+func Uint256ToCurrency(u *c_type.Uint256) (ret string) {
 	return BytesToCurrency(u[:])
 }
 

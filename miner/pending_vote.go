@@ -3,9 +3,8 @@ package miner
 import (
 	"sync"
 
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/log"
-
-	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
@@ -16,7 +15,7 @@ type voteKey struct {
 	posHash      common.Hash
 }
 
-type shareSet map[keys.Uint512]types.Vote
+type shareSet map[c_type.Uint512]types.Vote
 
 type voteSet map[common.Hash]shareSet
 

@@ -2,12 +2,14 @@ package prepare
 
 import (
 	"bytes"
+
 	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/pkg/errors"
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
 )
 
@@ -29,17 +31,17 @@ func GenTxParam(param *PreTxParam, gen TxParamGenerator, state TxParamState) (tx
 	return
 }
 
-func IsPk(addr keys.PKr) bool {
+func IsPk(addr c_type.PKr) bool {
 	byte32 := common.Hash{}
 	return bytes.Equal(byte32[:], addr[64:96])
 }
 
-func CreatePkr(pk *keys.Uint512, index uint64) keys.PKr {
-	r := keys.Uint256{}
+func CreatePkr(pk *c_type.Uint512, index uint64) c_type.PKr {
+	r := c_type.Uint256{}
 	copy(r[:], common.LeftPadBytes(utils.EncodeNumber(index), 32))
 	if index == 0 {
-		return keys.Addr2PKr(pk, nil)
+		return c_czero.Addr2PKr(pk, nil)
 	} else {
-		return keys.Addr2PKr(pk, &r)
+		return c_czero.Addr2PKr(pk, &r)
 	}
 }

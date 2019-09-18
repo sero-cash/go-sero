@@ -32,12 +32,10 @@ import (
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
-	"github.com/sero-cash/go-sero/zero/wallet/lstate"
-
 	"github.com/sero-cash/go-sero/internal/ethapi"
 	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_czero"
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
@@ -166,9 +164,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	sero.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, sero.chainConfig, sero.engine, vmConfig, sero.accountManager)
 
 	txtool.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain})
-	if !config.MineMode {
-		lstate.InitLState()
-	}
 
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
@@ -369,10 +364,10 @@ func (s *Sero) StartMining(local bool) error {
 		return fmt.Errorf("serobase missing: %v", err)
 	}
 	current_height := s.blockchain.CurrentHeader().Number.Uint64()
-	pkr, lic, ret := keys.Addr2PKrAndLICr(eb.ToUint512(), current_height)
-	ret = keys.CheckLICr(&pkr, &lic, current_height)
+	pkr, lic, ret := c_czero.Addr2PKrAndLICr(eb.ToUint512(), current_height)
+	ret = c_czero.CheckLICr(&pkr, &lic, current_height)
 	if !ret {
-		lic_t := keys.LICr{}
+		lic_t := c_czero.LICr{}
 		if bytes.Equal(lic.Proof[:32], lic_t.Proof[:32]) {
 			log.Error("Cannot start mining , miner license does not exists ", "", "")
 			return fmt.Errorf(" miner license does not exists")
