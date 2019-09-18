@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/sero-cash/go-czero-import/cpt"
+
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -27,6 +29,12 @@ type SRI struct {
 }
 
 var SRI_Inst = SRI{}
+
+func Trace2Root(tk *keys.Uint512, trace *keys.Uint256) (root *keys.Uint256) {
+	root_cm := cpt.FetchRootCM(tk, trace)
+	root = localdb.GetRootByRootCM(txtool.Ref_inst.Bc.GetDB(), &root_cm)
+	return
+}
 
 func GetOut(root *keys.Uint256, num uint64) (out *localdb.RootState) {
 	rs := localdb.GetRoot(txtool.Ref_inst.Bc.GetDB(), root)

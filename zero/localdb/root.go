@@ -46,9 +46,17 @@ func Root2TxHashKey(root *keys.Uint256) []byte {
 	return key
 }
 
+func RootCM2RootKey(root_cm *keys.Uint256) []byte {
+	key := []byte("$SERO_LOCALDB_ROOTCM2ROOT$")
+	key = append(key, root_cm[:]...)
+	return key
+}
+
 func PutRoot(db serodb.Putter, root *keys.Uint256, rs *RootState) {
 	rootkey := Root2TxHashKey(root)
 	tri.UpdateDBObj(db, rootkey, rs)
+	rootcmkey := RootCM2RootKey(rs.OS.ToRootCM())
+	db.Put(rootcmkey, root[:])
 }
 
 func GetRoot(db serodb.Getter, root *keys.Uint256) (ret *RootState) {
@@ -57,4 +65,15 @@ func GetRoot(db serodb.Getter, root *keys.Uint256) (ret *RootState) {
 	tri.GetDBObj(db, rootkey, &rootget)
 	ret = rootget.Out
 	return
+}
+
+func GetRootByRootCM(db serodb.Getter, root_cm *keys.Uint256) (root *keys.Uint256) {
+	rootcmkey := RootCM2RootKey(root_cm)
+	if root_bs, err := db.Get(rootcmkey); err != nil {
+		return
+	} else {
+		root = &keys.Uint256{}
+		copy(root[:], root_bs)
+		return
+	}
 }

@@ -76,6 +76,16 @@ func (s *PublicFlightAPI) CommitTx(ctx context.Context, args *txtool.GTx) error 
 	return s.exchange.CommitTx(ctx, args)
 }
 
+func (s *PublicFlightAPI) Trace2Root(ctx context.Context, tk TKAddress, trace keys.Uint256) (root keys.Uint256, e error) {
+	if r := flight.Trace2Root(tk.ToUint512().NewRef(), &trace); r != nil {
+		root = *r
+		return
+	} else {
+		e = errors.New("can not find the root")
+		return
+	}
+}
+
 func (s *PublicFlightAPI) GetOut(ctx context.Context, root keys.Uint256) (out *txtool.Out, e error) {
 	rt := flight.GetOut(&root, 0)
 	if rt == nil {
