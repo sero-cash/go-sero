@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/sero-cash/go-czero-import/c_czero"
+
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
-	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/seroparam"
 )
 
@@ -58,17 +59,17 @@ func main() {
 	flag.Parse()
 
 	if method == "sign" {
-		cpt.ZeroInit_OnlyInOuts()
+		c_czero.ZeroInit_OnlyInOuts()
 		Sign(sk, txParam)
 		return
 	}
 	if method == "dec" {
-		cpt.ZeroInit_NoCircuit()
+		c_czero.ZeroInit_NoCircuit()
 		Dec(tk, out)
 		return
 	}
 	if method == "confirm" {
-		cpt.ZeroInit_NoCircuit()
+		c_czero.ZeroInit_NoCircuit()
 		Confirm(key, out)
 		return
 	}

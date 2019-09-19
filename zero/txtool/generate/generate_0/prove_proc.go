@@ -19,6 +19,8 @@ package generate_0
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-czero-import/c_type"
+
 	"github.com/sero-cash/go-czero-import/c_czero"
 
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
@@ -198,7 +200,7 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 				in_z.Trace = desc.Til_ret
 				in_z.Proof = desc.Proof_ret
 				self.s.Tx0.Desc_Z.Ins[input_desc.index] = in_z
-				self.Bases = append(self.Bases, keys.Empty_Uint256)
+				self.Bases = append(self.Bases, c_type.Empty_Uint256)
 				self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, desc.Asset_cm_ret[:]...)
 				self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, desc.Ar_ret[:]...)
 			}

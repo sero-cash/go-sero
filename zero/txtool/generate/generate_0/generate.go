@@ -22,10 +22,11 @@ type gen_ctx struct {
 	Z_Ins        []txtool.GIn
 	balance_desc c_type.BalanceDesc
 	Keys         []c_type.Uint256
+	Bases        []c_type.Uint256
 	s            stx.T
 }
 
-func GenTx(param *txtool.GTxParam) (ret stx.T, keys []c_type.Uint256, e error) {
+func GenTx(param *txtool.GTxParam) (ret stx.T, keys []c_type.Uint256, Bases []c_type.Uint256, e error) {
 	if param.IsSzk() {
 		e = errors.New("param is szk, must use gnerate_1")
 		return
@@ -48,6 +49,7 @@ func GenTx(param *txtool.GTxParam) (ret stx.T, keys []c_type.Uint256, e error) {
 	}
 	ret = ctx.s
 	keys = ctx.Keys
+	Bases = ctx.Bases
 	return
 }
 

@@ -10,12 +10,13 @@ import (
 )
 
 func SignTx0(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
-	if tx, keys, err := generate_0.GenTx(param); err != nil {
+	if tx, keys, bases, err := generate_0.GenTx(param); err != nil {
 		e = err
 		return
 	} else {
 		gtx.Tx = tx
 		gtx.Keys = keys
+		gtx.Bases = bases
 		gtx.Gas = hexutil.Uint64(param.Gas)
 		gtx.GasPrice = hexutil.Big(*param.GasPrice)
 		gtx.Hash = gtx.Tx.ToHash()
