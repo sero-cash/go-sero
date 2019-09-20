@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/superzk"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/zero/stake"
@@ -307,7 +309,7 @@ func (self *worker) update() {
 				self.currentMu.Lock()
 				txset := types.NewTransactionsByPrice(ev.Txs)
 				addr := common.Address{}
-				pkr := c_czero.Addr2PKr(self.coinbase.ToUint512(), nil)
+				pkr := superzk.Pk2PKr(self.coinbase.ToUint512(), nil)
 				addr.SetBytes(pkr[:])
 
 				self.current.commitTransactions(self.mux, txset, self.chain, addr)
@@ -493,8 +495,8 @@ func (self *worker) commitNewWork() {
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
 	if atomic.LoadInt32(&self.mining) == 1 {
 		addr := common.Address{}
-		//pkr := c_czero.Addr2PKr(self.coinbase.ToUint512(), nil)
-		pkr, licr, ret := c_czero.Addr2PKrAndLICr(self.coinbase.ToUint512(), header.Number.Uint64())
+		//pkr :=  superzk.Pk2PKr(self.coinbase.ToUint512(), nil)
+		pkr, licr, ret := c_czero.Pk2PKrAndLICr(self.coinbase.ToUint512(), header.Number.Uint64())
 		if !ret {
 			log.Error("Failed to Addr2PKrAndLICr")
 			return

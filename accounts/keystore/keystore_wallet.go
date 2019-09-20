@@ -17,9 +17,9 @@
 package keystore
 
 import (
+	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/common/address"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
@@ -155,6 +155,6 @@ func (w *keystoreWallet) GetSeedWithPassphrase(passphrase string) (*address.Seed
 
 func (w *keystoreWallet) IsMine(onceAddress common.Address) bool {
 	tk := w.account.Tk.ToUint512()
-	succ := c_czero.IsMyPKr(tk, onceAddress.ToPKr())
+	succ := superzk.IsMyPKr(tk, onceAddress.ToPKr())
 	return succ
 }

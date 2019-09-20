@@ -3,9 +3,11 @@ package flight
 import (
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_0"
+	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_1"
 
 	"github.com/sero-cash/go-czero-import/c_type"
 )
@@ -46,6 +48,7 @@ func SignLight(sk *c_type.Uint512, paramTx *txtool.GTxParam) (tx stx.T, param tx
 
 func DecOut(tk *c_type.Uint512, outs []txtool.Out) (douts []txtool.TDOut) {
 	for _, out := range outs {
+
 		dout := txtool.TDOut{}
 
 		if out.State.OS.Out_O != nil {
@@ -67,11 +70,24 @@ func DecOut(tk *c_type.Uint512, outs []txtool.Out) (douts []txtool.TDOut) {
 
 		} else if out.State.OS.Out_P != nil {
 
+			dout.Asset = out.State.OS.Out_P.Asset
+			dout.Memo = out.State.OS.Out_P.Memo
+			dout.Nils = append(dout.Nils, c_superzk.GenNil(tk, out.State.OS.ToRootCM().NewRef(), &out.State.OS.Out_P.PKr))
+
 		} else if out.State.OS.Out_C != nil {
 
+			key := c_superzk.FetchKey(&out.State.OS.Out_C.PKr, tk, &out.State.OS.Out_C.RPK)
+			if confirm_out := generate_1.ConfirmOutC(&key, out.State.OS.Out_C); confirm_out != nil {
+				dout = *confirm_out
+				dout.Nils = append(dout.Nils, c_superzk.GenNil(tk, out.State.OS.ToRootCM().NewRef(), &out.State.OS.Out_C.PKr))
+			}
+
 		} else {
+
 			panic(errors.New("OutState has no Out_X"))
+
 		}
+
 		douts = append(douts, dout)
 	}
 	return

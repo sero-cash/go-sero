@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/crypto"
@@ -24,7 +24,7 @@ func Test_getPoolId(t *testing.T) {
 	randHash := crypto.Keccak256Hash(tk[:])
 	var rand c_type.Uint256
 	copy(rand[:], randHash[:])
-	pkr := c_czero.Addr2PKr(pk.ToUint512(), &rand)
+	pkr := superzk.Pk2PKr(pk.ToUint512(), &rand)
 	id := crypto.Keccak256Hash(pkr[:])
 	fmt.Println(hexutil.Encode(id[:]))
 }

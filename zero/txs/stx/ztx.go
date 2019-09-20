@@ -19,11 +19,10 @@ package stx
 import (
 	"sync/atomic"
 
-	"github.com/sero-cash/go-czero-import/superzk"
-
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v2"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -52,7 +51,7 @@ type T struct {
 }
 
 func (self *T) IsSzk() bool {
-	return superzk.IsSzkPKr(&self.From)
+	return c_superzk.IsSzkPKr(&self.From)
 }
 
 func (self *T) ContractAsset() *assets.Asset {

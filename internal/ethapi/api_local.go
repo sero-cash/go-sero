@@ -3,6 +3,8 @@ package ethapi
 import (
 	"context"
 
+	"github.com/sero-cash/go-czero-import/superzk"
+
 	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_0"
 
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
@@ -73,11 +75,11 @@ func (s *PublicLocalAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes) (c_typ
 	}
 	var sd c_type.Uint256
 	copy(sd[:], seed[:])
-	return c_czero.Seed2Sk(&sd), nil
+	return superzk.Seed2Sk(&sd), nil
 }
 
 func (s *PublicLocalAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (address.AccountAddress, error) {
-	tk := c_czero.Sk2Tk(&sk)
+	tk := superzk.Sk2Tk(&sk)
 	return address.BytesToAccount(tk[:]), nil
 }
 
@@ -85,6 +87,7 @@ func (s *PublicLocalAPI) Tk2Pk(ctx context.Context, tk TKAddress) (address.Accou
 	pk := c_czero.Tk2Pk(tk.ToUint512().NewRef())
 	return address.BytesToAccount(pk[:]), nil
 }
+
 func (s *PublicLocalAPI) Pk2Pkr(ctx context.Context, pk PKAddress, index *c_type.Uint256) (PKrAddress, error) {
 	empty := c_type.Uint256{}
 	if index != nil {
@@ -92,7 +95,7 @@ func (s *PublicLocalAPI) Pk2Pkr(ctx context.Context, pk PKAddress, index *c_type
 			*index = c_type.RandUint256()
 		}
 	}
-	pkr := c_czero.Addr2PKr(pk.ToUint512().NewRef(), index)
+	pkr := superzk.Pk2PKr(pk.ToUint512().NewRef(), index)
 	var pkrAddress PKrAddress
 	copy(pkrAddress[:], pkr[:])
 	return pkrAddress, nil

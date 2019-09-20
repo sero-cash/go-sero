@@ -1,14 +1,14 @@
 package merkle
 
 import (
-	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
 )
 
 const DEPTH = c_type.DEPTH
 
 func Combine(l *c_type.Uint256, r *c_type.Uint256) (out c_type.Uint256) {
-	return c_czero.Combine(l, r)
+	return c_superzk.Combine(l, r)
 }
 
 func createEmpty() (ret [c_type.DEPTH + 1]c_type.Uint256) {

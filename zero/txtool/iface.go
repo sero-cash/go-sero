@@ -5,8 +5,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
-	"github.com/sero-cash/go-czero-import/superzk"
-
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -89,5 +87,5 @@ type GTxParam struct {
 }
 
 func (self *GTxParam) IsSzk() bool {
-	return superzk.IsSzkPKr(&self.From.PKr)
+	return c_superzk.IsSzkPKr(&self.From.PKr)
 }

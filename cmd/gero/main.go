@@ -29,10 +29,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/c_type"
+
 	"github.com/btcsuite/btcutil/base58"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"gopkg.in/urfave/cli.v1"
 
@@ -213,14 +215,14 @@ func init() {
 		}
 
 		if !strings.EqualFold(subCommandName, "attach") && !strings.EqualFold(subCommandName, "version") {
-			netType := c_czero.NET_Beta
+			netType := c_type.NET_Beta
 			switch {
 			case ctx.GlobalBool(utils.AlphanetFlag.Name):
-				netType = c_czero.NET_Alpha
+				netType = c_type.NET_Alpha
 			case ctx.GlobalBool(utils.DeveloperFlag.Name):
-				netType = c_czero.NET_Dev
+				netType = c_type.NET_Dev
 			}
-			c_czero.ZeroInit(getKeyStore(ctx), netType)
+			superzk.ZeroInit(getKeyStore(ctx), netType)
 
 		}
 

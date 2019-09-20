@@ -7,6 +7,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
+	"github.com/sero-cash/go-czero-import/superzk"
+
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
@@ -30,8 +34,8 @@ func (self *SSI) CreateKr() (kr txtool.Kr) {
 	rnd := c_type.RandUint256()
 	zsk := c_type.RandUint256()
 	vsk := c_type.RandUint256()
-	zsk = c_czero.Force_Fr(&zsk)
-	vsk = c_czero.Force_Fr(&vsk)
+	zsk = c_superzk.Force_Fr(&zsk)
+	vsk = c_superzk.Force_Fr(&vsk)
 
 	skr := c_type.PKr{}
 	copy(skr[:], zsk[:])
@@ -40,9 +44,10 @@ func (self *SSI) CreateKr() (kr txtool.Kr) {
 
 	sk := c_type.Uint512{}
 	copy(sk[:], skr[:])
-	pk := c_czero.Sk2PK(&sk)
+	tk := superzk.Sk2Tk(&sk)
+	pk := c_czero.Tk2Pk(&tk)
 
-	pkr := c_czero.Addr2PKr(&pk, &rnd)
+	pkr := superzk.Pk2PKr(&pk, &rnd)
 	kr.PKr = pkr
 	kr.SKr = skr
 	return

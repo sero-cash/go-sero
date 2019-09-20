@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
-	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
@@ -59,7 +59,7 @@ var (
 )
 
 func main() {
-	cpt.ZeroInit("", c_czero.NET_Beta)
+	superzk.ZeroInit("", c_type.NET_Beta)
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

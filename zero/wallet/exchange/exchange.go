@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/superzk"
+
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -20,7 +22,6 @@ import (
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/robfig/cron"
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
@@ -273,7 +274,7 @@ func (self *Exchange) GetPkr(pk *c_type.Uint512, index *c_type.Uint256) (pkr c_t
 		return pkr, errors.New("not found Pk")
 	}
 
-	return c_czero.Addr2PKr(pk, index), nil
+	return superzk.Pk2PKr(pk, index), nil
 }
 
 func (self *Exchange) ClearUsedFlagForPK(pk *c_type.Uint512) (count int) {
@@ -476,7 +477,33 @@ func (self *Exchange) GenTxWithSign(param prepare.PreTxParam) (pretx *txtool.GTx
 		return
 	}
 
-	if pretx, tx, e = self.genTx(roots, account, param.RefundTo, param.Receptions, &param.Cmds, &param.Fee, param.GasPrice); e != nil {
+	if param.RefundTo == nil {
+		if av, err := param.IsSzk(); err != nil {
+			e = err
+			return
+		} else {
+			if param.RefundTo = self.DefaultRefundTo(&param.From, av); param.RefundTo == nil {
+				e = errors.New("can not find default refund to")
+				return
+			}
+		}
+	} else {
+		if _, err := param.IsSzk(); err != nil {
+			e = err
+			return
+		}
+	}
+
+	bparam := prepare.BeforeTxParam{
+		Fee:        param.Fee,
+		GasPrice:   *param.GasPrice,
+		Utxos:      roots,
+		RefundTo:   *param.RefundTo,
+		Receptions: param.Receptions,
+		Cmds:       prepare.Cmds{},
+	}
+
+	if pretx, tx, e = self.genTx(account, &bparam); e != nil {
 		log.Error("Exchange genTx", "error", e)
 		return
 	}
@@ -495,7 +522,7 @@ func (self *Exchange) getAccountByPk(pk c_type.Uint512) *Account {
 func (self *Exchange) getAccountByPkr(pkr c_type.PKr) (a *Account) {
 	self.accounts.Range(func(pk, value interface{}) bool {
 		account := value.(*Account)
-		if c_czero.IsMyPKr(account.tk, &pkr) {
+		if superzk.IsMyPKr(account.tk, &pkr) {
 			a = account
 			return false
 		}
@@ -517,12 +544,8 @@ func (self *Exchange) ClearTxParam(txParam *txtool.GTxParam) (count int) {
 	return
 }
 
-func (self *Exchange) genTx(utxos prepare.Utxos, account *Account, refundTo *c_type.PKr, receptions []prepare.Reception, cmds *prepare.Cmds, fee *assets.Token, gasPrice *big.Int) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
-	if refundTo == nil {
-		refundTo = &account.mainPkr
-	}
-
-	if txParam, e = self.buildTxParam(utxos, refundTo, receptions, cmds, fee, gasPrice); e != nil {
+func (self *Exchange) genTx(account *Account, param *prepare.BeforeTxParam) (txParam *txtool.GTxParam, tx *txtool.GTx, e error) {
+	if txParam, e = self.buildTxParam(param); e != nil {
 		return
 	}
 
@@ -532,7 +555,7 @@ func (self *Exchange) genTx(utxos prepare.Utxos, account *Account, refundTo *c_t
 		return
 	}
 
-	sk := c_czero.Seed2Sk(seed.SeedToUint256())
+	sk := superzk.Seed2Sk(seed.SeedToUint256())
 	gtx, err := flight.SignTx(&sk, txParam)
 	if err != nil {
 		self.ClearTxParam(txParam)
@@ -1009,7 +1032,7 @@ func (self *Exchange) ownPkr(pks []c_type.Uint512, pkr c_type.PKr) (account *Acc
 			continue
 		}
 		account = value.(*Account)
-		if c_czero.IsMyPKr(account.tk, &pkr) {
+		if superzk.IsMyPKr(account.tk, &pkr) {
 			return account, true
 		}
 	}
@@ -1107,17 +1130,20 @@ func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e er
 			receptions = append(receptions, prepare.Reception{Addr: *mp.To, Asset: assets.Asset{Tkt: &assets.Ticket{category, value}}})
 		}
 	}
-	txParam, e = self.buildTxParam(
-		mu.list.Roots(),
-		mp.To,
-		receptions,
-		&prepare.Cmds{},
-		&assets.Token{
+
+	bparam := prepare.BeforeTxParam{
+		Fee: assets.Token{
 			utils.CurrencyToUint256("SERO"),
 			utils.U256(*default_fee_value),
 		},
-		big.NewInt(1000000000),
-	)
+		GasPrice:   *big.NewInt(1000000000),
+		Utxos:      mu.list.Roots(),
+		RefundTo:   *mp.To,
+		Receptions: receptions,
+		Cmds:       prepare.Cmds{},
+	}
+
+	txParam, e = self.buildTxParam(&bparam)
 	if e != nil {
 		return
 	}
@@ -1157,18 +1183,19 @@ func (self *Exchange) Merge(pk *c_type.Uint512, currency string, force bool) (co
 			}
 		}
 
-		pretx, gtx, err := self.genTx(
-			mu.list.Roots(),
-			account,
-			nil,
-			receptions,
-			&prepare.Cmds{},
-			&assets.Token{
+		bparam := prepare.BeforeTxParam{
+			Fee: assets.Token{
 				utils.CurrencyToUint256("SERO"),
 				utils.U256(*default_fee_value),
 			},
-			big.NewInt(1000000000),
-		)
+			GasPrice:   *big.NewInt(1000000000),
+			Utxos:      mu.list.Roots(),
+			RefundTo:   account.mainPkr,
+			Receptions: receptions,
+			Cmds:       prepare.Cmds{},
+		}
+
+		pretx, gtx, err := self.genTx(account, &bparam)
 		if err != nil {
 			account.nextMergeTime = time.Now().Add(time.Hour * 6)
 			e = err
@@ -1198,9 +1225,9 @@ func (self *Exchange) merge() {
 	self.accounts.Range(func(key, value interface{}) bool {
 		account := value.(*Account)
 		if count, txhash, err := self.Merge(account.pk, "SERO", false); err != nil {
-			log.Error("autoMerge fail", "PK", c_czero.Base58Encode(account.pk[:]), "count", count, "error", err)
+			log.Error("autoMerge fail", "PK", utils.Base58Encode(account.pk[:]), "count", count, "error", err)
 		} else {
-			log.Info("autoMerge succ", "PK", c_czero.Base58Encode(account.pk[:]), "tx", hexutil.Encode(txhash[:]), "count", count)
+			log.Info("autoMerge succ", "PK", utils.Base58Encode(account.pk[:]), "tx", hexutil.Encode(txhash[:]), "count", count)
 		}
 		return true
 	})

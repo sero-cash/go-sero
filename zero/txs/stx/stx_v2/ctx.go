@@ -3,6 +3,7 @@ package stx_v2
 import (
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type Out_C struct {
@@ -11,6 +12,11 @@ type Out_C struct {
 	RPK     c_type.Uint256
 	EInfo   c_type.Einfo
 	Proof   c_type.Proof
+}
+
+func (self *Out_C) Clone() (ret Out_C) {
+	utils.DeepCopy(&ret, self)
+	return
 }
 
 func (self *Out_C) Tx1_Hash() (ret c_type.Uint256) {

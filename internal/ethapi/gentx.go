@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
-
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -194,7 +193,7 @@ func (args GenTxArgs) check() error {
 	}
 
 	if args.RefundTo != nil {
-		if !c_czero.PKrValid(args.RefundTo.ToPKr()) {
+		if !superzk.IsPKrValid(args.RefundTo.ToPKr()) {
 			return errors.New("RefundTo is not a valid pkr")
 		}
 	}

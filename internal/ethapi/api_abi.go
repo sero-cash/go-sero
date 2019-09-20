@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -94,7 +94,7 @@ func encodeStringParams(abiArgs abi.Arguments, args []string) ([]interface{}, []
 			if err != nil {
 				return nil, nil, err
 			}
-			caddr := (c_czero.HashPKr(addr.ToPKr().NewRef()))
+			caddr := (superzk.HashPKr(addr.ToPKr().NewRef()))
 			packArgs[index] = common.BytesToContractAddress(caddr[:])
 			address = append(address, common.BytesToAddress(addr[:]))
 		case "address[]":
@@ -214,7 +214,7 @@ func (s *PublicAbiAPI) PackMethod(abi *abi.ABI, contractAddr ContractAddress, me
 
 func convertToContractAddr(addrs []AllMixedAddress) (result []common.ContractAddress) {
 	for _, addr := range addrs {
-		caddr := (c_czero.HashPKr(addr.ToPKr().NewRef()))
+		caddr := (superzk.HashPKr(addr.ToPKr().NewRef()))
 		result = append(result, common.BytesToContractAddress(caddr[:]))
 	}
 	return

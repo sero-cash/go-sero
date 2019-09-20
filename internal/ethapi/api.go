@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-sero/zero/stake"
 
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
@@ -44,9 +46,9 @@ import (
 	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/accounts/keystore"
 	"github.com/sero-cash/go-sero/common"
@@ -216,6 +218,19 @@ func NewPublicAccountAPI(am *accounts.Manager) *PublicAccountAPI {
 	return &PublicAccountAPI{am: am}
 }
 
+func (s *PublicAccountAPI) GetSzkAccounts() []string {
+	addresses := make([]string, 0) // return [] instead of nil if empty
+	for _, wallet := range s.am.Wallets() {
+		for _, account := range wallet.Accounts() {
+			pk := c_superzk.Tk2Pk(account.Tk.ToUint512().NewRef())
+			addr := utils.NewAddressByBytes(pk[:])
+			addr.SetProtocol("SP")
+			addresses = append(addresses, addr.ToCode())
+		}
+	}
+	return addresses
+}
+
 // Accounts returns the collection of accounts this node manages
 func (s *PublicAccountAPI) Accounts() []address.AccountAddress {
 	addresses := make([]address.AccountAddress, 0) // return [] instead of nil if empty
@@ -264,7 +279,7 @@ func getLocalAccountAddressByPkr(wallets []accounts.Wallet, PKr common.Address) 
 	if len(wallets) == 0 {
 		return nil
 	}
-	if c_czero.PKrValid(PKr.ToPKr()) {
+	if superzk.IsPKrValid(PKr.ToPKr()) {
 		for _, wallet := range wallets {
 			if wallet.IsMine(PKr) {
 				return &wallet.Accounts()[0].Address
@@ -561,7 +576,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 			e = err
 			return
 		}
-		sk := c_czero.Seed2Sk(seed.SeedToUint256())
+		sk := superzk.Seed2Sk(seed.SeedToUint256())
 		gtx, err := flight.SignTx(&sk, pretx)
 		if err != nil {
 			exchange.CurrentExchange().ClearTxParam(pretx)
@@ -681,14 +696,14 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *c_
 		if state.IsContract(common.BytesToAddress(addr[:])) {
 			onceAddr = common.BytesToAddress(addr[:])
 		} else {
-			if !c_czero.IsPKValid(addr.ToUint512()) {
+			if !superzk.IsPKValid(addr.ToUint512()) {
 				return nil, errors.New("address must be accountAddress")
 			}
-			pkr := c_czero.Addr2PKr(addr.ToUint512(), randSeed.NewRef())
+			pkr := superzk.Pk2PKr(addr.ToUint512(), randSeed.NewRef())
 			onceAddr.SetBytes(pkr[:])
 		}
 		addrMap[addr] = onceAddr
-		shortAddr := c_czero.HashPKr(onceAddr.ToPKr())
+		shortAddr := superzk.HashPKr(onceAddr.ToPKr())
 		shortAddrMap[onceAddr] = common.BytesToContractAddress(shortAddr[:])
 	}
 	return &ConvertAddress{addrMap, shortAddrMap, rand}, nil
@@ -721,7 +736,7 @@ func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses
 }
 
 func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk PKAddress) (common.Address, error) {
-	PKr := c_czero.Addr2PKr(Pk.ToUint512().NewRef(), nil)
+	PKr := superzk.Pk2PKr(Pk.ToUint512().NewRef(), nil)
 	result := common.Address{}
 	copy(result[:], PKr[:])
 	return result, nil
@@ -1138,7 +1153,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		} else {
 			if args.To.IsAccountAddress() {
 				pk := common.AddrToAccountAddr(*args.To)
-				pkr := (c_czero.Addr2PKr(pk.ToUint512(), nil))
+				pkr := (superzk.Pk2PKr(pk.ToUint512(), nil))
 				t := common.BytesToAddress(pkr[:])
 				to = &t
 			} else {
@@ -1162,7 +1177,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 	var fromPkr c_type.PKr
 	if addr.IsAccountAddress() {
-		fromPkr = c_czero.Addr2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
+		fromPkr = superzk.Pk2PKr(addr.ToUint512(), rand.ToUint256().NewRef())
 	} else {
 		fromPkr = *addr.ToPKr()
 	}
@@ -1733,7 +1748,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			return errors.New(`not create or call contract data must be nil`)
 		}
 		if args.To.IsAccountAddress() {
-			if !c_czero.IsPKValid(args.To.ToUint512()) {
+			if !superzk.IsPKValid(args.To.ToUint512()) {
 				return errors.New("invalid to address")
 			}
 		}
@@ -1829,14 +1844,14 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB) (txParam prepare.PreTxPa
 		txParam.Cmds = prepare.Cmds{}
 		contractCmd := stx.ContractCmd{asset, nil, *args.Data}
 		txParam.Cmds.Contract = &contractCmd
-		refundPkr = c_czero.Addr2PKr(args.From.ToUint512(), &fromRand)
+		refundPkr = superzk.Pk2PKr(args.From.ToUint512(), &fromRand)
 	} else if state.IsContract(common.BytesToAddress(args.To[:])) {
 		fromRand := c_type.Uint256{}
 		copy(fromRand[:16], args.To[:16])
 		if args.Dynamic {
-			refundPkr = c_czero.Addr2PKr(args.From.ToUint512(), nil)
+			refundPkr = superzk.Pk2PKr(args.From.ToUint512(), nil)
 		} else {
-			refundPkr = c_czero.Addr2PKr(args.From.ToUint512(), &fromRand)
+			refundPkr = superzk.Pk2PKr(args.From.ToUint512(), &fromRand)
 		}
 		if args.GasCurrency.IsNotSero() {
 			m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
@@ -1849,15 +1864,15 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB) (txParam prepare.PreTxPa
 		}
 		contractCmd := stx.ContractCmd{asset, args.To.ToPKr(), data}
 		txParam.Cmds.Contract = &contractCmd
-		refundPkr = c_czero.Addr2PKr(args.From.ToUint512(), &fromRand)
+		refundPkr = superzk.Pk2PKr(args.From.ToUint512(), &fromRand)
 	} else {
 		var topkr c_type.PKr
 		if args.To.IsAccountAddress() {
-			topkr = c_czero.Addr2PKr(args.To.ToUint512(), nil)
+			topkr = superzk.Pk2PKr(args.To.ToUint512(), nil)
 		} else {
 			topkr = *args.To.ToPKr()
 		}
-		refundPkr = c_czero.Addr2PKr(args.From.ToUint512(), nil)
+		refundPkr = superzk.Pk2PKr(args.From.ToUint512(), nil)
 		receptions := []prepare.Reception{{Addr: topkr, Asset: asset}}
 		txParam.Receptions = receptions
 	}
@@ -1960,7 +1975,7 @@ func (args *SendTxArgs) toCreatePkg(state *state.StateDB) (txParam prepare.PreTx
 		utils.U256(*feevalue),
 	}
 	txParam.From = *args.From.ToUint512()
-	txParam.RefundTo = c_czero.Addr2PKr(args.From.ToUint512(), c_type.RandUint256().NewRef()).NewRef()
+	txParam.RefundTo = superzk.Pk2PKr(args.From.ToUint512(), c_type.RandUint256().NewRef()).NewRef()
 	txParam.Fee = feeToken
 	pkgCreateCmd := prepare.PkgCreateCmd{c_type.RandUint256(), toPkr, asset, stringToUint512(args.Memo)}
 	txParam.Cmds.PkgCreate = &pkgCreateCmd
@@ -2187,7 +2202,7 @@ func (args *ClosePkgArgs) toTxParam() (txParam prepare.PreTxParam) {
 		utils.U256(*feevalue),
 	}
 	txParam.From = *args.From.ToUint512()
-	txParam.RefundTo = c_czero.Addr2PKr(args.From.ToUint512(), c_type.RandUint256().NewRef()).NewRef()
+	txParam.RefundTo = superzk.Pk2PKr(args.From.ToUint512(), c_type.RandUint256().NewRef()).NewRef()
 	txParam.Fee = feeToken
 	pkgCloseCmd := prepare.PkgCloseCmd{*args.PkgId, *args.Key}
 	txParam.Cmds.PkgClose = &pkgCloseCmd

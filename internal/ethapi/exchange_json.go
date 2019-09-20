@@ -7,13 +7,15 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/sero-cash/go-sero/zero/utils"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/btcsuite/btcutil/base58"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/pkg/errors"
 
@@ -135,18 +137,20 @@ func (b PKAddress) MarshalText() ([]byte, error) {
 
 // UnmarshalText implements encoding.TextUnmarshaler.
 func (b *PKAddress) UnmarshalText(input []byte) error {
-
 	if len(input) == 0 {
 		return nil
 	}
-	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
-
-		out := base58.Decode(string(input))
-		if len(out) == 64 {
+	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+		return e
+	} else {
+		if !addr.MatchProtocol("SP") {
+			return errors.New("address protocol is not pk")
+		}
+		if len(addr.Bytes) == 64 {
 			pk := c_type.Uint512{}
-			copy(pk[:], out[:])
-			if c_czero.IsPKValid(&pk) {
-				copy(b[:], out[:])
+			copy(pk[:], addr.Bytes)
+			if superzk.IsPKValid(&pk) {
+				copy(b[:], pk[:])
 			} else {
 				return errors.New("invalid PK")
 			}
@@ -154,27 +158,6 @@ func (b *PKAddress) UnmarshalText(input []byte) error {
 			return errors.New("ivalid PK")
 		}
 		return nil
-	} else {
-		raw, err := checkText(input, true)
-		if err != nil {
-			return err
-		}
-		dec := make([]byte, len(raw)/2)
-		if _, err = hex.Decode(dec, raw); err != nil {
-			err = mapError(err)
-		} else {
-			if len(dec) != 64 {
-				return errors.New("PKAddress must be length 64 ")
-			}
-			pk := c_type.Uint512{}
-			copy(pk[:], dec[:])
-			if c_czero.IsPKValid(&pk) {
-				copy(b[:], pk[:])
-			} else {
-				return errors.New("invalid PK")
-			}
-		}
-		return err
 	}
 }
 
@@ -197,30 +180,18 @@ func (b *TKAddress) UnmarshalText(input []byte) error {
 	if len(input) == 0 {
 		return nil
 	}
-	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
-
-		out := base58.Decode(string(input))
-		if len(out) == 64 {
-			copy(b[:], out[:])
+	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+		return e
+	} else {
+		if !addr.MatchProtocol("ST") {
+			return errors.New("address protocol is not tk")
+		}
+		if len(addr.Bytes) == 64 {
+			copy(b[:], addr.Bytes)
 		} else {
 			return errors.New("ivalid TK")
 		}
 		return nil
-	} else {
-		raw, err := checkText(input, true)
-		if err != nil {
-			return err
-		}
-		dec := make([]byte, len(raw)/2)
-		if _, err = hex.Decode(dec, raw); err != nil {
-			err = mapError(err)
-		} else {
-			if len(dec) != 64 {
-				return errors.New("TKAddress must be length 64 ")
-			}
-			copy(b[:], dec)
-		}
-		return err
 	}
 }
 
@@ -242,41 +213,24 @@ func (b *PKrAddress) UnmarshalText(input []byte) error {
 	if len(input) == 0 {
 		return nil
 	}
-	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
-		out := base58.Decode(string(input))
-		if len(out) == 96 {
+	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+		return e
+	} else {
+		if !addr.MatchProtocol("SC") {
+			return errors.New("address protocol is not pkr")
+		}
+		if len(addr.Bytes) == 96 {
 			pkr := c_type.PKr{}
-			copy(pkr[:], out[:])
-			if c_czero.PKrValid(&pkr) {
-				copy(b[:], out[:])
+			copy(pkr[:], addr.Bytes[:])
+			if superzk.IsPKrValid(&pkr) {
+				copy(b[:], pkr[:])
+				return nil
 			} else {
 				return errors.New("invalid PKr")
 			}
 		} else {
 			return errors.New("ivalid PKr")
 		}
-		return nil
-	} else {
-		raw, err := checkText(input, true)
-		if err != nil {
-			return err
-		}
-		dec := make([]byte, len(raw)/2)
-		if _, err = hex.Decode(dec, raw); err != nil {
-			err = mapError(err)
-		} else {
-			if len(dec) != 96 {
-				return errors.New("PKrAddress must be length 96")
-			}
-			pkr := c_type.PKr{}
-			copy(pkr[:], dec[:])
-			if c_czero.PKrValid(&pkr) {
-				copy(b[:], pkr[:])
-			} else {
-				return errors.New("invalid PKr")
-			}
-		}
-		return err
 	}
 }
 
@@ -293,44 +247,31 @@ func (b *MixAdrress) UnmarshalText(input []byte) error {
 		return nil
 	}
 
-	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
-		out := base58.Decode(string(input))
+	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+		return e
+	} else {
+		out := addr.Bytes
 		if len(out) == 96 {
 			pkr := c_type.PKr{}
 			copy(pkr[:], out[:])
-			if c_czero.PKrValid(&pkr) {
+			if superzk.IsPKrValid(&pkr) {
 				*b = out[:]
+				return nil
 			} else {
 				return errors.New("invalid PKr")
 			}
 		} else if len(out) == 64 {
 			pk := c_type.Uint512{}
 			copy(pk[:], out[:])
-			if c_czero.IsPKValid(&pk) {
+			if superzk.IsPKValid(&pk) {
 				*b = out[:]
+				return nil
 			} else {
 				return errors.New("invalid PK")
 			}
 		} else {
 			return errors.New("invalid mix address")
 		}
-		return nil
-
-	} else {
-		raw, err := checkText(input, true)
-		if err != nil {
-			return err
-		}
-		dec := make([]byte, len(raw)/2)
-		if _, err = hex.Decode(dec, raw); err != nil {
-			err = mapError(err)
-		} else {
-			if len(dec) != 64 && len(dec) != 96 {
-				return errors.New("MixAddress must be length 64 or 96")
-			}
-			*b = dec
-		}
-		return err
 	}
 }
 
@@ -346,31 +287,35 @@ func (b *MixBase58Adrress) UnmarshalText(input []byte) error {
 	if len(input) == 0 {
 		return ErrEmptyString
 	}
-	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
-		out := base58.Decode(string(input))
+
+	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+		return e
+	} else {
+		if addr.IsHex {
+			return errors.New("is not base58 address")
+		}
+		out := addr.Bytes
 		if len(out) == 96 {
 			pkr := c_type.PKr{}
 			copy(pkr[:], out[:])
-			if c_czero.PKrValid(&pkr) {
+			if superzk.IsPKrValid(&pkr) {
 				*b = out[:]
+				return nil
 			} else {
 				return errors.New("invalid PKr")
 			}
 		} else if len(out) == 64 {
 			pk := c_type.Uint512{}
 			copy(pk[:], out[:])
-			if c_czero.IsPKValid(&pk) {
+			if superzk.IsPKValid(&pk) {
 				*b = out[:]
+				return nil
 			} else {
 				return errors.New("invalid PK")
 			}
 		} else {
 			return errors.New("invalid mix address")
 		}
-		return nil
-
-	} else {
-		return errors.New("not base58 string")
 	}
 }
 
@@ -402,66 +347,56 @@ func (b *AllMixedAddress) UnmarshalText(input []byte) error {
 		return ErrEmptyString
 	}
 
-	var out []byte
-	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
-		out = base58.Decode(string(input))
+	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+		return e
 	} else {
-		if raw, err := checkText(input, true); err != nil {
-			return err
-		} else {
-			dec := make([]byte, len(raw)/2)
-			if _, err = hex.Decode(dec, raw); err != nil {
-				return mapError(err)
+		out := addr.Bytes
+		if len(out) == 96 {
+			addr := common.Address{}
+			copy(addr[:], out)
+			if isContract, err := txtool.Ref_inst.Bc.IsContract(addr); err != nil {
+				return err
 			} else {
-				out = dec
-			}
-		}
-	}
-
-	if len(out) == 96 {
-		addr := common.Address{}
-		copy(addr[:], out)
-		if isContract, err := txtool.Ref_inst.Bc.IsContract(addr); err != nil {
-			return err
-		} else {
-			if isContract {
-				*b = out[:]
-				return nil
-			} else {
-				pkr := c_type.PKr{}
-				copy(pkr[:], out[:])
-				if c_czero.PKrValid(&pkr) {
+				if isContract {
 					*b = out[:]
 					return nil
 				} else {
-					return errors.New("invalid PKr")
+					pkr := c_type.PKr{}
+					copy(pkr[:], out[:])
+					if superzk.IsPKrValid(&pkr) {
+						*b = out[:]
+						return nil
+					} else {
+						return errors.New("invalid PKr")
+					}
 				}
 			}
-		}
-	} else if len(out) == 64 {
-		contract_addr := common.Address{}
-		copy(contract_addr[:], out)
-		if isContract, err := txtool.Ref_inst.Bc.IsContract(contract_addr); err != nil {
-			return err
-		} else {
-			if isContract {
-				*b = contract_addr[:]
-				return nil
+		} else if len(out) == 64 {
+			contract_addr := common.Address{}
+			copy(contract_addr[:], out)
+			if isContract, err := txtool.Ref_inst.Bc.IsContract(contract_addr); err != nil {
+				return err
 			} else {
-				pk := c_type.Uint512{}
-				copy(pk[:], out[:])
-				if c_czero.IsPKValid(&pk) {
-					pkr := c_czero.Addr2PKr(&pk, nil)
-					*b = pkr[:]
+				if isContract {
+					*b = contract_addr[:]
 					return nil
 				} else {
-					return errors.New("invalid PK")
+					pk := c_type.Uint512{}
+					copy(pk[:], out[:])
+					if superzk.IsPKValid(&pk) {
+						pkr := superzk.Pk2PKr(&pk, nil)
+						*b = pkr[:]
+						return nil
+					} else {
+						return errors.New("invalid PK")
+					}
 				}
 			}
+		} else {
+			return errors.New("AllMixedAddress must be length 64 or 96")
 		}
-	} else {
-		return errors.New("AllMixedAddress must be length 64 or 96")
 	}
+
 	return nil
 
 }
@@ -479,50 +414,42 @@ func (b *ContractAddress) UnmarshalText(input []byte) error {
 		return ErrEmptyString
 	}
 
-	var out []byte
-	if IsBase58Str(string(input)) && !bytesHave0xPrefix(input) {
-		out = base58.Decode(string(input))
+	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+		return e
 	} else {
-		if raw, err := checkText(input, true); err != nil {
-			return err
-		} else {
-			dec := make([]byte, len(raw)/2)
-			if _, err = hex.Decode(dec, raw); err != nil {
-				return mapError(err)
-			} else {
-				out = dec
-			}
+		if !addr.MatchProtocol("SS") {
+			return errors.New("address protocol is not contract")
 		}
-	}
-
-	if len(out) == 96 {
-		addr := common.Address{}
-		copy(addr[:], out)
-		if isContract, err := txtool.Ref_inst.Bc.IsContract(addr); err != nil {
-			return err
-		} else {
-			if isContract {
-				copy(b[:], out)
-				return nil
+		out := addr.Bytes
+		if len(out) == 96 {
+			addr := common.Address{}
+			copy(addr[:], out)
+			if isContract, err := txtool.Ref_inst.Bc.IsContract(addr); err != nil {
+				return err
 			} else {
-				return errors.New("this 96 bytes not contract address")
+				if isContract {
+					copy(b[:], out)
+					return nil
+				} else {
+					return errors.New("this 96 bytes not contract address")
+				}
 			}
-		}
-	} else if len(out) == 64 {
-		contract_addr := common.Address{}
-		copy(contract_addr[:], out)
-		if isContract, err := txtool.Ref_inst.Bc.IsContract(contract_addr); err != nil {
-			return err
-		} else {
-			if isContract {
-				copy(b[:], contract_addr[:])
-				return nil
+		} else if len(out) == 64 {
+			contract_addr := common.Address{}
+			copy(contract_addr[:], out)
+			if isContract, err := txtool.Ref_inst.Bc.IsContract(contract_addr); err != nil {
+				return err
 			} else {
-				return errors.New("this 64 bytes not contract address")
+				if isContract {
+					copy(b[:], contract_addr[:])
+					return nil
+				} else {
+					return errors.New("this 64 bytes not contract address")
+				}
 			}
+		} else {
+			return errors.New("ContractAddress must be length 64 or 96")
 		}
-	} else {
-		return errors.New("ContractAddress must be length 64 or 96")
 	}
 
 }

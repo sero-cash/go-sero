@@ -157,6 +157,12 @@ func (state *State) AddOut_O(out_o *stx_v1.Out_O, txhash *c_type.Uint256) (root 
 	return state.addOut_O(out_o, txhash)
 }
 
+func (state *State) AddOut_P(out_p *stx_v2.Out_P, txhash *c_type.Uint256) (root c_type.Uint256) {
+	state.rw.Lock()
+	defer state.rw.Unlock()
+	return state.addOut_P(out_p, txhash)
+}
+
 func (state *State) AddOut_Z(out_z *stx_v1.Out_Z, txhash *c_type.Uint256) (root c_type.Uint256) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
@@ -164,10 +170,17 @@ func (state *State) AddOut_Z(out_z *stx_v1.Out_Z, txhash *c_type.Uint256) (root 
 }
 
 func (state *State) insertOS(os *localdb.OutState, txhash *c_type.Uint256) (root c_type.Uint256) {
-	os.Index = state.CzeroTree.GetLeafSize()
-	commitment := os.ToRootCM()
-	root = state.CzeroTree.AppendLeaf(*commitment)
-	state.AddOut_Log(&root, os, txhash)
+	if os.Out_O != nil || os.Out_Z != nil {
+		os.Index = state.CzeroTree.GetLeafSize()
+		commitment := os.ToRootCM()
+		root = state.CzeroTree.AppendLeaf(*commitment)
+		state.AddOut_Log(&root, os, txhash)
+	} else {
+		os.Index = state.SzkTree.GetLeafSize()
+		commitment := os.ToRootCM()
+		root = state.CzeroTree.AppendLeaf(*commitment)
+		state.AddOut_Log(&root, os, txhash)
+	}
 	return
 }
 
@@ -185,6 +198,24 @@ func (state *State) addOut_Z(out_z *stx_v1.Out_Z, txhash *c_type.Uint256) (root 
 	if out_z != nil {
 		o := out_z.Clone()
 		os.Out_Z = &o
+	}
+	return state.insertOS(&os, txhash)
+}
+
+func (state *State) addOut_C(out_c *stx_v2.Out_C, txhash *c_type.Uint256) (root c_type.Uint256) {
+	os := localdb.OutState{}
+	if out_c != nil {
+		o := out_c.Clone()
+		os.Out_C = &o
+	}
+	return state.insertOS(&os, txhash)
+}
+
+func (state *State) addOut_P(out_p *stx_v2.Out_P, txhash *c_type.Uint256) (root c_type.Uint256) {
+	os := localdb.OutState{}
+	if out_p != nil {
+		o := out_p.Clone()
+		os.Out_P = &o
 	}
 	return state.insertOS(&os, txhash)
 }
@@ -237,6 +268,45 @@ func (state *State) addTx0(tx *stx_v1.Tx, txhash *c_type.Uint256) (e error) {
 }
 
 func (state *State) addTx1(tx *stx_v2.Tx, txhash *c_type.Uint256) (e error) {
+	for _, in := range tx.Ins_P0 {
+		if !state.data.HasIn(state.tri, &in.Nil) {
+			if !state.data.HasIn(state.tri, &in.Root) {
+				state.AddNil_Log(&in.Nil)
+				state.AddNil_Log(&in.Root)
+			} else {
+				e = errors.New("tx1.in_p0.root already be used !")
+				return
+			}
+		} else {
+			e = errors.New("tx1.in_p0.nil already be used !")
+			return
+		}
+	}
+	for _, in := range tx.Ins_P {
+		if !state.data.HasIn(state.tri, &in.Nil) {
+			if !state.data.HasIn(state.tri, &in.Root) {
+				state.AddNil_Log(&in.Nil)
+				state.AddNil_Log(&in.Root)
+			} else {
+				e = errors.New("tx1.in_p.root already be used !")
+				return
+			}
+		} else {
+			e = errors.New("tx1.in_p.nil already be used !")
+			return
+		}
+	}
+	for _, in := range tx.Ins_C {
+		if !state.data.HasIn(state.tri, &in.Nil) {
+			state.AddNil_Log(&in.Nil)
+		} else {
+			e = errors.New("tx1.in_p.nil already be used !")
+			return
+		}
+	}
+	for _, out := range tx.Outs_C {
+		state.addOut_C(&out, txhash)
+	}
 	return
 }
 

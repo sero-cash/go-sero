@@ -4,8 +4,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
-
 	"github.com/robfig/cron"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/math"
@@ -13,6 +11,7 @@ import (
 
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/event"
@@ -203,7 +202,7 @@ func (self *StakeService) ownPkr(pkr c_type.PKr) (pk *c_type.Uint512, ok bool) {
 	var account *Account
 	self.accounts.Range(func(key, value interface{}) bool {
 		a := value.(*Account)
-		if c_czero.IsMyPKr(a.tk, &pkr) {
+		if superzk.IsMyPKr(a.tk, &pkr) {
 			account = a
 			return false
 		}

@@ -7,9 +7,9 @@ import (
 	"math/big"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rpc"
@@ -102,7 +102,7 @@ func (args *BuyShareTxArg) setDefaults(ctx context.Context, b Backend) error {
 func (args *BuyShareTxArg) toPreTxParam() prepare.PreTxParam {
 	preTx := prepare.PreTxParam{}
 	preTx.From = *args.From.ToUint512()
-	preTx.RefundTo = c_czero.Addr2PKr(args.From.ToUint512(), nil).NewRef()
+	preTx.RefundTo = superzk.Pk2PKr(args.From.ToUint512(), nil).NewRef()
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
 		utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(*args.Gas)), args.GasPrice.ToInt())),
@@ -269,7 +269,7 @@ func getStakePoolPkr(account accounts.Account) c_type.PKr {
 	randHash := crypto.Keccak256Hash(account.Tk[:])
 	var rand c_type.Uint256
 	copy(rand[:], randHash[:])
-	return c_czero.Addr2PKr(account.Address.ToUint512(), &rand)
+	return superzk.Pk2PKr(account.Address.ToUint512(), &rand)
 
 }
 func getStakePoolId(from c_type.PKr) common.Hash {

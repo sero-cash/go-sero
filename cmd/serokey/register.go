@@ -20,12 +20,12 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
-	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/accounts/keystore"
 	"github.com/sero-cash/go-sero/cmd/utils"
+	zutils "github.com/sero-cash/go-sero/zero/utils"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -59,15 +59,15 @@ var commandRegister = cli.Command{
 
 		address := c_type.Uint512{}
 
-		if err := c_czero.Base58Decode(&kstr, address[:]); err != nil {
+		if err := zutils.Base58Decode(kstr, address[:]); err != nil {
 			utils.Fatalf("Failed to decode address '%v'", err)
 		}
 
 		// Output all relevant information we can retrieve.
 		r := c_type.RandUint256()
-		pkr := c_czero.Addr2PKr(&address, &r)
+		pkr := superzk.Pk2PKr(&address, &r)
 		out := outputRegister{
-			*cpt.Base58Encode(pkr[:]),
+			*zutils.Base58Encode(pkr[:]),
 		}
 
 		if ctx.Bool(jsonFlag.Name) {

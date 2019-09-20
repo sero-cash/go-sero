@@ -31,8 +31,8 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txtool/verify"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
@@ -547,7 +547,7 @@ func (pool *TxPool) checkDescCmd(tx *stx.T, state *state.StateDB) (err error) {
 				return
 			}
 		}
-		if !c_czero.PKrValid(&cmd.RegistPool.Vote) {
+		if !superzk.IsPKrValid(&cmd.RegistPool.Vote) {
 			err = errors.New("registPool Vote is invalid")
 			return
 		}

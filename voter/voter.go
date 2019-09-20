@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/accounts"
 
@@ -333,7 +333,8 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 func (self *Voter) sign(info voteInfo) {
 	data := c_type.Uint256{}
 	copy(data[:], info.statkeHash[:])
-	sign, err := c_czero.SignPKr(info.seed.SeedToUint256(), &data, &info.votePKr)
+	sk := superzk.Seed2Sk(info.seed.SeedToUint256())
+	sign, err := superzk.SignPKrBySk(&sk, &data, &info.votePKr)
 	if err != nil {
 		log.Error("voter sign", "sign err", err)
 		return

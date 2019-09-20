@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
@@ -59,17 +59,17 @@ func main() {
 	flag.Parse()
 
 	if method == "sign" {
-		c_czero.ZeroInit_OnlyInOuts()
+		superzk.ZeroInit_OnlyInOuts()
 		Sign(sk, txParam)
 		return
 	}
 	if method == "dec" {
-		c_czero.ZeroInit_NoCircuit()
+		superzk.ZeroInit_NoCircuit()
 		Dec(tk, out)
 		return
 	}
 	if method == "confirm" {
-		c_czero.ZeroInit_NoCircuit()
+		superzk.ZeroInit_NoCircuit()
 		Confirm(key, out)
 		return
 	}

@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/consensus"
@@ -42,7 +42,7 @@ var MerkleParam = NewParam(&Address)
 
 func TestOutTree(t *testing.T) {
 	// Create an empty state database
-	c_czero.ZeroInit("", 0)
+	superzk.ZeroInit("", 0)
 
 	ft := consensus.NewFakeTri()
 	outState := MerkleParam.NewMerkleTree(&TreeState{db: &ft})

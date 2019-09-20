@@ -3,9 +3,8 @@ package miner
 import (
 	"time"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
-
 	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -118,7 +117,7 @@ func (self *votesFilter) verify(vote *types.Vote, share *stake.Share) bool {
 	if votePkr != nil {
 		parentPosHash := self.parentBlock.HashPos()
 		stakHash := types.StakeHash(&vote.PosHash, &parentPosHash, vote.IsPool)
-		if c_czero.VerifyPKr(stakHash.HashToUint256(), &vote.Sign, votePkr) {
+		if superzk.VerifyPKr(stakHash.HashToUint256(), &vote.Sign, votePkr) {
 			return true
 		}
 	}

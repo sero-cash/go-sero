@@ -5,6 +5,7 @@ import (
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type In_P struct {
@@ -68,4 +69,14 @@ type Out_P struct {
 	PKr   c_type.PKr
 	Asset assets.Asset
 	Memo  c_type.Uint512
+}
+
+func (self *Out_P) Clone() (ret Out_P) {
+	utils.DeepCopy(&ret, self)
+	return
+}
+
+func (this Out_P) ToRef() (ret *Out_P) {
+	ret = &this
+	return
 }

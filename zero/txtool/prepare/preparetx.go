@@ -3,12 +3,13 @@ package prepare
 import (
 	"bytes"
 
+	"github.com/sero-cash/go-czero-import/superzk"
+
 	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/pkg/errors"
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
 )
@@ -23,11 +24,24 @@ func GenTxParam(param *PreTxParam, gen TxParamGenerator, state TxParamState) (tx
 	}
 
 	if param.RefundTo == nil {
-		if param.RefundTo = gen.DefaultRefundTo(&param.From); param.RefundTo == nil {
-			return nil, errors.New("can not find default refund to")
+		if av, err := param.IsSzk(); err != nil {
+			e = err
+			return
+		} else {
+			if param.RefundTo = gen.DefaultRefundTo(&param.From, av); param.RefundTo == nil {
+				return nil, errors.New("can not find default refund to")
+			}
 		}
 	}
-	txParam, e = BuildTxParam(state, utxos, param.RefundTo, param.Receptions, &param.Cmds, &param.Fee, param.GasPrice)
+	bparam := BeforeTxParam{
+		Fee:        param.Fee,
+		GasPrice:   *param.GasPrice,
+		Utxos:      utxos,
+		RefundTo:   *param.RefundTo,
+		Receptions: param.Receptions,
+		Cmds:       param.Cmds,
+	}
+	txParam, e = BuildTxParam(state, &bparam)
 	return
 }
 
@@ -40,8 +54,8 @@ func CreatePkr(pk *c_type.Uint512, index uint64) c_type.PKr {
 	r := c_type.Uint256{}
 	copy(r[:], common.LeftPadBytes(utils.EncodeNumber(index), 32))
 	if index == 0 {
-		return c_czero.Addr2PKr(pk, nil)
+		return superzk.Pk2PKr(pk, nil)
 	} else {
-		return c_czero.Addr2PKr(pk, &r)
+		return superzk.Pk2PKr(pk, &r)
 	}
 }

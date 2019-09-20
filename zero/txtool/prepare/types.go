@@ -4,6 +4,8 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
 
 	"github.com/sero-cash/go-sero/common"
@@ -65,6 +67,30 @@ type Cmds struct {
 	PkgCreate   *PkgCreateCmd
 	PkgTransfer *PkgTransferCmd
 	PkgClose    *PkgCloseCmd
+}
+
+func (self *Cmds) ToPkr() (ret *c_type.PKr) {
+	if self.BuyShare != nil {
+		return &self.BuyShare.Vote
+	}
+	if self.RegistPool != nil {
+		return &self.RegistPool.Vote
+	}
+	if self.PkgCreate != nil {
+		if self.PkgCreate.PKr.IsEndEmpty() {
+			return
+		} else {
+			return &self.PkgCreate.PKr
+		}
+	}
+	if self.PkgTransfer != nil {
+		if self.PkgTransfer.PKr.IsEndEmpty() {
+			return
+		} else {
+			return &self.PkgTransfer.PKr
+		}
+	}
+	return
 }
 
 func (self *Cmds) InAsset() (asset *assets.Asset, e error) {
@@ -139,6 +165,46 @@ type PreTxParam struct {
 	Roots      []c_type.Uint256
 }
 
+type ADDRESS_VERSION int
+
+const (
+	AV_UNKNOW  = ADDRESS_VERSION(0)
+	AV_CZERO   = ADDRESS_VERSION(1)
+	AV_SUPERZK = ADDRESS_VERSION(2)
+)
+
+func (self *PreTxParam) IsSzk() (ret ADDRESS_VERSION, e error) {
+	pkrs := []c_type.PKr{}
+	if self.RefundTo != nil {
+		pkrs = append(pkrs, *self.RefundTo)
+	}
+	for _, recept := range self.Receptions {
+		pkrs = append(pkrs, recept.Addr)
+	}
+	if pkr := self.Cmds.ToPkr(); pkr != nil {
+		pkrs = append(pkrs, *pkr)
+	}
+	for _, pkr := range pkrs {
+		if ret != AV_UNKNOW {
+			temp := AV_CZERO
+			if c_superzk.IsSzkPKr(&pkr) {
+				temp = AV_SUPERZK
+			}
+			if ret != temp {
+				e = errors.New("the address mode is inconsistency")
+				return
+			}
+		} else {
+			if c_superzk.IsSzkPKr(&pkr) {
+				ret = AV_SUPERZK
+			} else {
+				ret = AV_CZERO
+			}
+		}
+	}
+	return
+}
+
 type Utxo struct {
 	Root  c_type.Uint256
 	Asset assets.Asset
@@ -157,7 +223,7 @@ type TxParamGenerator interface {
 	FindRoots(pk *c_type.Uint512, currency string, amount *big.Int) (utxos Utxos, remain big.Int)
 	FindRootsByTicket(pk *c_type.Uint512, tickets map[c_type.Uint256]c_type.Uint256) (roots Utxos, remain map[c_type.Uint256]c_type.Uint256)
 	GetRoot(root *c_type.Uint256) (utxos *Utxo)
-	DefaultRefundTo(from *c_type.Uint512) (ret *c_type.PKr)
+	DefaultRefundTo(from *c_type.Uint512, av ADDRESS_VERSION) (ret *c_type.PKr)
 }
 
 type TxParamState interface {

@@ -55,6 +55,19 @@ func (self *Asset) HasAsset() bool {
 	return false
 }
 
+func NewAssetByType(asset *c_type.Asset) (ret Asset) {
+	ret = NewAsset(
+		&Token{
+			asset.Tkn_currency,
+			utils.NewU256_ByKey(&asset.Tkn_value),
+		},
+		&Ticket{
+			asset.Tkt_category,
+			asset.Tkt_value,
+		},
+	)
+	return
+}
 func NewAsset(tkn *Token, tkt *Ticket) (ret Asset) {
 	if tkn != nil {
 		if tkn.Value.Cmp(&utils.U256_0) > 0 {

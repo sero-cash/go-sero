@@ -406,6 +406,11 @@ web3._extend({
 	property: 'sero',
 	methods: [
 		new web3._extend.Method({
+			name: 'getSzkAccounts',
+			call: 'sero_getSzkAccounts',
+			params: 0
+		}),
+		new web3._extend.Method({
 			name: 'sign',
 			call: 'sero_sign',
 			params: 2,

@@ -8,9 +8,9 @@ import (
 
 	"github.com/sero-cash/go-sero/consensus/ethash"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
@@ -794,11 +794,11 @@ func (self *StakeState) verifyVote(vote types.HeaderVote, stakeHash common.Hash)
 		if pool.CurrentShareNum+pool.WishVoteNum == 0 {
 			return errors.New("the pool current share num is 0")
 		}
-		if !c_czero.VerifyPKr(stakeHash.HashToUint256(), &vote.Sign, &pool.VotePKr) {
+		if !superzk.VerifyPKr(stakeHash.HashToUint256(), &vote.Sign, &pool.VotePKr) {
 			return errors.New("Verify header votes error")
 		}
 	} else {
-		if !c_czero.VerifyPKr(stakeHash.HashToUint256(), &vote.Sign, &share.VotePKr) {
+		if !superzk.VerifyPKr(stakeHash.HashToUint256(), &vote.Sign, &share.VotePKr) {
 			return errors.New("Verify header votes error")
 		}
 	}

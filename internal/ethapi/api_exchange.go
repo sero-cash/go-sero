@@ -24,6 +24,7 @@ import (
 	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/zero/wallet/exchange"
 
@@ -110,7 +111,7 @@ func MixAdrressToPkr(addr MixAdrress) c_type.PKr {
 	if len(addr) == 64 {
 		pk := c_type.Uint512{}
 		copy(pk[:], addr[:])
-		pkr = c_czero.Addr2PKr(&pk, nil)
+		pkr = superzk.Pk2PKr(&pk, nil)
 	} else {
 		copy(pkr[:], addr[:])
 	}
@@ -280,7 +281,7 @@ func (args MergeArgs) Check() error {
 		return errors.New("cy can not be nil")
 	}
 	if args.To != nil {
-		if !c_czero.PKrValid(args.To.ToPKr()) {
+		if !superzk.IsPKrValid(args.To.ToPKr()) {
 			return errors.New("To is not a valid pkr")
 		}
 	}
@@ -333,14 +334,14 @@ func validAddress(addr MixAdrress) (bool, error) {
 	if len(addr) == 64 {
 		pk := c_type.Uint512{}
 		copy(pk[:], addr[:])
-		if !c_czero.IsPKValid(&pk) {
+		if !superzk.IsPKValid(&pk) {
 			return false, errors.Errorf("invalid pk %v", hexutil.Encode(addr[:]))
 		}
 	}
 	if len(addr) == 96 {
 		pkr := c_type.PKr{}
 		copy(pkr[:], addr[:])
-		if !c_czero.PKrValid(&pkr) {
+		if !superzk.IsPKrValid(&pkr) {
 			return false, errors.Errorf("invalid  pkr %v", hexutil.Encode(addr[:]))
 		}
 	}
@@ -355,14 +356,14 @@ func (s *PublicExchangeAPI) ValidAddress(ctx context.Context, addr MixBase58Adrr
 	if len(addr) == 64 {
 		pk := c_type.Uint512{}
 		copy(pk[:], addr[:])
-		if !c_czero.IsPKValid(&pk) {
+		if !superzk.IsPKValid(&pk) {
 			return false, errors.Errorf("invalid pk %v", base58.Encode(addr[:]))
 		}
 	}
 	if len(addr) == 96 {
 		pkr := c_type.PKr{}
 		copy(pkr[:], addr[:])
-		if !c_czero.PKrValid(&pkr) {
+		if !superzk.IsPKrValid(&pkr) {
 			return false, errors.Errorf("invalid  pkr %v", base58.Encode(addr[:]))
 		}
 	}
@@ -452,7 +453,7 @@ func (s *PublicExchangeAPI) GetPkByPkr(ctx context.Context, pkr PKrAddress) (*ad
 		return nil, nil
 	}
 	for _, wallet := range wallets {
-		if c_czero.IsMyPKr(wallet.Accounts()[0].Tk.ToUint512(), pkr.ToPKr()) {
+		if superzk.IsMyPKr(wallet.Accounts()[0].Tk.ToUint512(), pkr.ToPKr()) {
 			return &wallet.Accounts()[0].Address, nil
 		}
 	}
@@ -499,7 +500,7 @@ func (s *PublicExchangeAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes) (c_
 	}
 	var sd c_type.Uint256
 	copy(sd[:], seed[:])
-	return c_czero.Seed2Sk(&sd), nil
+	return superzk.Seed2Sk(&sd), nil
 }
 
 func (s *PublicExchangeAPI) SignTxWithSk(param txtool.GTxParam, SK c_type.Uint512) (txtool.GTx, error) {
@@ -507,7 +508,7 @@ func (s *PublicExchangeAPI) SignTxWithSk(param txtool.GTxParam, SK c_type.Uint51
 }
 
 func (s *PublicExchangeAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (address.AccountAddress, error) {
-	tk := c_czero.Sk2Tk(&sk)
+	tk := superzk.Sk2Tk(&sk)
 	return address.BytesToAccount(tk[:]), nil
 }
 
@@ -522,7 +523,7 @@ func (s *PublicExchangeAPI) Pk2Pkr(ctx context.Context, pk PKAddress, index *c_t
 			*index = c_type.RandUint256()
 		}
 	}
-	pkr := c_czero.Addr2PKr(pk.ToUint512().NewRef(), index)
+	pkr := superzk.Pk2PKr(pk.ToUint512().NewRef(), index)
 	var pkrAddress PKrAddress
 	copy(pkrAddress[:], pkr[:])
 	return pkrAddress, nil

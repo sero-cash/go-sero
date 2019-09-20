@@ -4,7 +4,7 @@ import (
 	"errors"
 	"regexp"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -45,7 +45,7 @@ func IsValidBase58Address(input []byte) ([]byte, error) {
 			} else {
 				pkr := c_type.PKr{}
 				copy(pkr[:], out[:])
-				if !c_czero.PKrValid(&pkr) {
+				if !superzk.IsPKrValid(&pkr) {
 					return nil, errors.New("invalid PKr base58")
 				} else {
 					return out, nil
@@ -78,7 +78,7 @@ func IsValidAccountAddress(input []byte) ([]byte, error) {
 		if len(out) == 64 {
 			pk := c_type.Uint512{}
 			copy(pk[:], out[:])
-			if !c_czero.IsPKValid(&pk) {
+			if !superzk.IsPKValid(&pk) {
 				return nil, errors.New("invalid PK base58")
 			} else {
 				return out, nil

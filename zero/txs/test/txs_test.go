@@ -33,6 +33,7 @@ import (
 	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
@@ -101,7 +102,7 @@ func newUser(i int) (ret user) {
 }
 
 func (self *user) getAR() (pkr c_type.PKr) {
-	pkr = c_czero.Addr2PKr(&self.addr, nil)
+	pkr = superzk.Pk2PKr(&self.addr, nil)
 	fmt.Printf("\nuser(%v):get pkr: ", self.i)
 	pkr.LogOut()
 	return
