@@ -172,12 +172,12 @@ func (s *PublicFlightAPI) GetTxReceipt(ctx context.Context, txhash c_type.Uint25
 		}
 	}
 
-	if tx.GetZZSTX().Tx0 != nil {
-		for _, oin := range tx.GetZZSTX().Tx0.Desc_O.Ins {
+	if tx.GetZZSTX().Tx0() != nil {
+		for _, oin := range tx.GetZZSTX().Tx0().Desc_O.Ins {
 			ret.Nils = append(ret.Nils, oin.Root)
 		}
 
-		for _, oin := range tx.GetZZSTX().Tx0.Desc_Z.Ins {
+		for _, oin := range tx.GetZZSTX().Tx0().Desc_Z.Ins {
 			ret.Nils = append(ret.Nils, oin.Trace)
 		}
 	}

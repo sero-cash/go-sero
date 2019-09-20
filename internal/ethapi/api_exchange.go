@@ -208,11 +208,11 @@ func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash c_type.Uint256) (m
 	fields["Outs"] = outs
 
 	ins := []c_type.Uint256{}
-	if tx.Stxt().Tx0 != nil {
-		for _, in := range tx.Stxt().Tx0.Desc_O.Ins {
+	if tx.Stxt().Tx0() != nil {
+		for _, in := range tx.Stxt().Tx0().Desc_O.Ins {
 			ins = append(ins, in.Root)
 		}
-		for _, in := range tx.Stxt().Tx0.Desc_Z.Ins {
+		for _, in := range tx.Stxt().Tx0().Desc_Z.Ins {
 			if root := exchange.CurrentExchange().GetRootByNil(in.Trace); root != nil {
 				ins = append(ins, *root)
 			}

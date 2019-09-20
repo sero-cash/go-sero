@@ -36,16 +36,18 @@ func (self *In_P) ToHash() (ret c_type.Uint256) {
 }
 
 type In_P0 struct {
-	Root c_type.Uint256
-	Nil  c_type.Uint256
-	Key  *c_type.Uint256 `rlp:"nil"`
-	Sign c_type.Uint512
+	Root  c_type.Uint256
+	Nil   c_type.Uint256
+	Trace c_type.Uint256
+	Key   *c_type.Uint256 `rlp:"nil"`
+	Sign  c_type.Uint512
 }
 
 func (self *In_P0) Tx1_Hash() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Root[:])
 	d.Write(self.Nil[:])
+	d.Write(self.Trace[:])
 	if self.Key != nil {
 		d.Write(self.Key[:])
 	}
@@ -57,6 +59,7 @@ func (self *In_P0) ToHash() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.Root[:])
 	d.Write(self.Nil[:])
+	d.Write(self.Trace[:])
 	if self.Key != nil {
 		d.Write(self.Key[:])
 	}

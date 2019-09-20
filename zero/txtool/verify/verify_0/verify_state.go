@@ -49,8 +49,8 @@ func (self *verifyWithStateCtx) verifyFee() (e error) {
 }
 
 func (self *verifyWithStateCtx) verifyOs() (e error) {
-	if self.tx.Tx0 != nil {
-		for _, in_o := range self.tx.Tx0.Desc_O.Ins {
+	if self.tx.Tx0() != nil {
+		for _, in_o := range self.tx.Tx0().Desc_O.Ins {
 			if self.state.Num() >= seroparam.SIP2() {
 				if ok := self.state.State.HasIn(&in_o.Nil); ok {
 					e = verify_utils.ReportError("txs.verify in_o already in nils", self.tx)
@@ -75,7 +75,7 @@ func (self *verifyWithStateCtx) verifyOs() (e error) {
 			}
 		}
 
-		for _, out_o := range self.tx.Tx0.Desc_O.Outs {
+		for _, out_o := range self.tx.Tx0().Desc_O.Outs {
 			assetCC := out_o.ToAssetCC()
 			self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, assetCC[:]...)
 		}
@@ -99,8 +99,8 @@ func (self *verifyWithStateCtx) Wait() (e error) {
 }
 
 func (self *verifyWithStateCtx) verifyZs() (e error) {
-	if self.tx.Tx0 != nil {
-		for _, in_z := range self.tx.Tx0.Desc_Z.Ins {
+	if self.tx.Tx0() != nil {
+		for _, in_z := range self.tx.Tx0().Desc_Z.Ins {
 			self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, in_z.AssetCM[:]...)
 			if ok := self.state.State.HasIn(&in_z.Nil); ok {
 				e = verify_utils.ReportError("txs.verify in already in nils", self.tx)
@@ -113,7 +113,7 @@ func (self *verifyWithStateCtx) verifyZs() (e error) {
 				}
 			}
 		}
-		for _, out_z := range self.tx.Tx0.Desc_Z.Outs {
+		for _, out_z := range self.tx.Tx0().Desc_Z.Outs {
 			self.balance_desc.Zout_acms = append(self.balance_desc.Zout_acms, out_z.AssetCM[:]...)
 		}
 	}

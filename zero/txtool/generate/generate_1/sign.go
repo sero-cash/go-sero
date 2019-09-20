@@ -208,12 +208,15 @@ func (self *sign_ctx) genInsP0() (e error) {
 		t_in := stx_v2.In_P0{}
 		t_in.Root = in.Out.Root
 		sk := in.SKr.ToUint512()
+		tk := superzk.Sk2Tk(&sk)
+
+		t_in.Trace = c_superzk.GenCzeroTrace(&tk, in.Out.State.OS.ToRootCM())
 		t_in.Nil = c_superzk.GenCzeroNil(&sk, in.Out.State.OS.ToRootCM())
+
 		if in.Out.State.OS.Out_O != nil {
 			asset_desc := GenAssetCC(&in.Out.State.OS.Out_O.Asset)
 			self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, asset_desc.Asset_cc_ret[:]...)
 		} else {
-			tk := in.SKr.ToUint512()
 			key, flag := c_superzk.FetchCzeroKey(&tk, &in.Out.State.OS.Out_Z.RPK)
 			t_in.Key = &key
 			if out := generate_0.ConfirmOutZ(&key, flag, in.Out.State.OS.Out_Z); out == nil {
@@ -225,7 +228,6 @@ func (self *sign_ctx) genInsP0() (e error) {
 			}
 		}
 		self.s.Tx1.Ins_P0 = append(self.s.Tx1.Ins_P0, t_in)
-
 	}
 	return
 }

@@ -65,7 +65,6 @@ func (self *gen_ctx) prepare() {
 			continue
 		}
 	}
-	self.s.Tx0 = &stx_v1.Tx{}
 }
 
 func (self *gen_ctx) check() (e error) {
@@ -101,7 +100,7 @@ func (self *gen_ctx) setInsData() {
 			if in.Out.State.OS.Out_O != nil {
 				s_in_o := stx_v1.In_S{}
 				s_in_o.Root = in.Out.Root
-				self.s.Tx0.Desc_O.Ins = append(self.s.Tx0.Desc_O.Ins, s_in_o)
+				self.s.Desc_O.Ins = append(self.s.Desc_O.Ins, s_in_o)
 				{
 					asset := in.Out.State.OS.Out_O.Asset.ToFlatAsset()
 					asset_desc := c_czero.AssetDesc{
@@ -115,7 +114,7 @@ func (self *gen_ctx) setInsData() {
 				}
 			} else {
 				in := stx_v1.In_Z{}
-				self.s.Tx0.Desc_Z.Ins = append(self.s.Tx0.Desc_Z.Ins, in)
+				self.s.Desc_Z.Ins = append(self.s.Desc_Z.Ins, in)
 			}
 		}
 	}
@@ -126,7 +125,7 @@ func (self *gen_ctx) setOutsData() {
 		for _, out_z := range self.param.Outs {
 			out := stx_v1.Out_Z{}
 			out.PKr = out_z.PKr
-			self.s.Tx0.Desc_Z.Outs = append(self.s.Tx0.Desc_Z.Outs, out)
+			self.s.Desc_Z.Outs = append(self.s.Desc_Z.Outs, out)
 		}
 	}
 }
@@ -219,7 +218,7 @@ func (self *gen_ctx) signTxIns() error {
 			in.Sign = g.Sign_ret
 			in.Nil = g.Nil_ret
 			in.Root = s_in_o.Out.Root
-			self.s.Tx0.Desc_O.Ins[i] = in
+			self.s.Desc_O.Ins[i] = in
 		}
 	}
 	return nil

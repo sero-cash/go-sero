@@ -46,12 +46,8 @@ func SetTxForVersion0(b *T, v0 *ZtxVersion_0) {
 	b.Bcr = v0.Bcr
 	b.Bsign = v0.Bsign
 	b.Desc_Pkg = v0.Desc_Pkg
-
-	if v0.Desc_Z.HasContent() || v0.Desc_O.HasContent() {
-		b.Tx0 = &stx_v1.Tx{}
-		b.Tx0.Desc_Z = v0.Desc_Z
-		b.Tx0.Desc_O = v0.Desc_O
-	}
+	b.Desc_Z = v0.Desc_Z
+	b.Desc_O = v0.Desc_O
 }
 
 func SetTxForVersion1(b *T, v1 *ZtxVersion_1) {
@@ -98,10 +94,8 @@ func SetVersion0ForTx(v0 *ZtxVersion_0, b *T) {
 	v0.Sign = b.Sign
 	v0.Bcr = b.Bcr
 	v0.Bsign = b.Bsign
-	if b.Tx0 != nil {
-		v0.Desc_Z = b.Tx0.Desc_Z
-		v0.Desc_O = b.Tx0.Desc_O
-	}
+	v0.Desc_Z = b.Desc_Z
+	v0.Desc_O = b.Desc_O
 	v0.Desc_Pkg = b.Desc_Pkg
 }
 

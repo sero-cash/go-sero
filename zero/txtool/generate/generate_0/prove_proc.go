@@ -178,7 +178,7 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 				out_z.EInfo = desc.Einfo_ret
 				out_z.Proof = desc.Proof_ret
 				out_z.PKr = desc.Pkr
-				self.s.Tx0.Desc_Z.Outs[output_desc.index] = out_z
+				self.s.Desc_Z.Outs[output_desc.index] = out_z
 				self.Keys = append(self.Keys, desc.Key_ret)
 
 				self.balance_desc.Zout_acms = append(self.balance_desc.Zout_acms, desc.Asset_cm_ret[:]...)
@@ -200,7 +200,7 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 				in_z.Nil = desc.Nil_ret
 				in_z.Trace = desc.Til_ret
 				in_z.Proof = desc.Proof_ret
-				self.s.Tx0.Desc_Z.Ins[input_desc.index] = in_z
+				self.s.Desc_Z.Ins[input_desc.index] = in_z
 				self.Bases = append(self.Bases, c_type.Empty_Uint256)
 				self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, desc.Asset_cm_ret[:]...)
 				self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, desc.Ar_ret[:]...)

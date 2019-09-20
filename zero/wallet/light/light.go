@@ -143,12 +143,12 @@ func (self *LightNode) fetchBlockInfo() {
 			if nilValue, err := rlp.EncodeToBytes(nilValue); err != nil {
 				return
 			} else {
-				if tx.Stxt().Tx0 != nil {
-					for _, in := range tx.Stxt().Tx0.Desc_O.Ins {
+				if tx.Stxt().Tx0() != nil {
+					for _, in := range tx.Stxt().Tx0().Desc_O.Ins {
 						batch.Put(nilKey(in.Nil), nilValue)
 						batch.Put(nilKey(in.Root), nilValue)
 					}
-					for _, in := range tx.Stxt().Tx0.Desc_Z.Ins {
+					for _, in := range tx.Stxt().Tx0().Desc_Z.Ins {
 						batch.Put(nilKey(in.Trace), nilValue)
 						batch.Put(nilKey(in.Nil), nilValue)
 					}

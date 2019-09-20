@@ -2,8 +2,8 @@ package verify_0
 
 func (self *verifyWithoutStateCtx) ProcessVerifyProof() {
 
-	if self.tx.Tx0 != nil {
-		for _, in_z := range self.tx.Tx0.Desc_Z.Ins {
+	if self.tx.Tx0() != nil {
+		for _, in_z := range self.tx.Tx0().Desc_Z.Ins {
 			g := verify_input_desc{}
 			g.desc.Nil = in_z.Nil
 			g.desc.Anchor = in_z.Anchor
@@ -12,7 +12,7 @@ func (self *verifyWithoutStateCtx) ProcessVerifyProof() {
 			self.zin_proof_proc.StartProc(&g)
 		}
 
-		for _, out_z := range self.tx.Tx0.Desc_Z.Outs {
+		for _, out_z := range self.tx.Tx0().Desc_Z.Outs {
 			g := verify_output_desc{}
 			g.desc.AssetCM = out_z.AssetCM
 			g.desc.RPK = out_z.RPK

@@ -74,14 +74,14 @@ func (self *verifyWithoutStateCtx) verifyFrom() (e error) {
 }
 
 func (self *verifyWithoutStateCtx) verifyOs() (e error) {
-	if self.tx.Tx0 != nil {
+	if self.tx.Tx0() != nil {
 		if self.num >= seroparam.SIP4() {
-			if len(self.tx.Tx0.Desc_O.Outs) > 0 {
+			if len(self.tx.Tx0().Desc_O.Outs) > 0 {
 				e = verify_utils.ReportError("after SIP4, o_outs can not used", self.tx)
 				return
 			}
 		}
-		for i, out := range self.tx.Tx0.Desc_O.Outs {
+		for i, out := range self.tx.Tx0().Desc_O.Outs {
 			self.oout_count++
 			if out.Asset.Tkn != nil {
 				if !verify_utils.CheckUint(&out.Asset.Tkn.Value) {
@@ -89,16 +89,16 @@ func (self *verifyWithoutStateCtx) verifyOs() (e error) {
 					return
 				}
 			}
-			self.tx.Tx0.Desc_O.Outs[i].ToAssetCC()
+			self.tx.Tx0().Desc_O.Outs[i].ToAssetCC()
 		}
 
 		if self.num >= seroparam.VP0() {
-			if len(self.tx.Tx0.Desc_O.Ins) > seroparam.MAX_O_INS_LENGTH {
-				e = verify_utils.ReportError(fmt.Sprintf("txs.verify O ins length > %v, current is %v", seroparam.MAX_O_INS_LENGTH, len(self.tx.Tx0.Desc_O.Ins)), self.tx)
+			if len(self.tx.Tx0().Desc_O.Ins) > seroparam.MAX_O_INS_LENGTH {
+				e = verify_utils.ReportError(fmt.Sprintf("txs.verify O ins length > %v, current is %v", seroparam.MAX_O_INS_LENGTH, len(self.tx.Tx0().Desc_O.Ins)), self.tx)
 				return
 			}
 		}
-		for range self.tx.Tx0.Desc_O.Ins {
+		for range self.tx.Tx0().Desc_O.Ins {
 			self.oin_count++
 		}
 	}
@@ -106,8 +106,8 @@ func (self *verifyWithoutStateCtx) verifyOs() (e error) {
 }
 
 func (self *verifyWithoutStateCtx) verifyZs() (e error) {
-	if self.tx.Tx0 != nil {
-		for _, out := range self.tx.Tx0.Desc_Z.Outs {
+	if self.tx.Tx0() != nil {
+		for _, out := range self.tx.Tx0().Desc_Z.Outs {
 			self.zout_count++
 			if !superzk.IsPKrValid(&out.PKr) {
 				e = verify_utils.ReportError("z_out pkr invalid", self.tx)

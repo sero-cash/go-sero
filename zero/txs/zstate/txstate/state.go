@@ -273,6 +273,7 @@ func (state *State) addTx1(tx *stx_v2.Tx, txhash *c_type.Uint256) (e error) {
 			if !state.data.HasIn(state.tri, &in.Root) {
 				state.AddNil_Log(&in.Nil)
 				state.AddNil_Log(&in.Root)
+				state.AddDel_Log(&in.Trace)
 			} else {
 				e = errors.New("tx1.in_p0.root already be used !")
 				return
@@ -314,12 +315,12 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	txhash := st.ToHash()
-	if st.Tx0 != nil && st.Tx1 != nil {
+	if st.Tx0() != nil && st.Tx1 != nil {
 		return fmt.Errorf("add stx, tx0 & tx1 only one can has value ")
 	}
 
-	if st.Tx0 != nil {
-		return state.addTx0(st.Tx0, &txhash)
+	if st.Tx0() != nil {
+		return state.addTx0(st.Tx0(), &txhash)
 	}
 
 	if st.Tx1 != nil {
@@ -354,22 +355,22 @@ func AnalyzeNils(header *types.Header, ch Chain) {
 	for {
 		b := ch.GetBlock(hash, number)
 		for _, tx := range b.Transactions() {
-			if tx.Stxt().Tx0 != nil {
-				for _, in := range tx.Stxt().Tx0.Desc_O.Ins {
+			if tx.Stxt().Tx0() != nil {
+				for _, in := range tx.Stxt().Tx0().Desc_O.Ins {
 					if v, ok := m[in.Root]; ok {
 						fmt.Printf("num=%v,block=%v,tx=%v,current=%v,hit=%v\n", number, hexutil.Encode(hash[:]), hexutil.Encode(in.ToHash().NewRef()[:]), 1, v)
 					} else {
 						m[in.Root] = 1
 					}
 				}
-				for _, in := range tx.Stxt().Tx0.Desc_O.Ins {
+				for _, in := range tx.Stxt().Tx0().Desc_O.Ins {
 					if v, ok := m[in.Nil]; ok {
 						fmt.Printf("num=%v,block=%v,tx=%v,current=%v,hit=%v\n", number, hexutil.Encode(hash[:]), hexutil.Encode(in.ToHash().NewRef()[:]), 2, v)
 					} else {
 						m[in.Nil] = 2
 					}
 				}
-				for _, in := range tx.Stxt().Tx0.Desc_Z.Ins {
+				for _, in := range tx.Stxt().Tx0().Desc_Z.Ins {
 					if v, ok := m[in.Nil]; ok {
 						fmt.Printf("num=%v,block=%v,tx=%v,current=%v,hit=%v\n", number, hexutil.Encode(hash[:]), hexutil.Encode(in.ToHash().NewRef()[:]), 3, v)
 					} else {
@@ -396,8 +397,8 @@ func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
 		for {
 			b := ch.GetBlock(hash, number)
 			for _, tx := range b.Transactions() {
-				if tx.Stxt().Tx0 != nil {
-					for _, in := range tx.Stxt().Tx0.Desc_O.Ins {
+				if tx.Stxt().Tx0() != nil {
+					for _, in := range tx.Stxt().Tx0().Desc_O.Ins {
 						self.AddNil_Log(&in.Nil)
 						count++
 					}
