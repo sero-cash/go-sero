@@ -290,6 +290,7 @@ func (self *sign_ctx) genOutsC() (e error) {
 		t_out.EInfo = info_desc.Einfo
 		self.balance_desc.Zout_acms = append(self.balance_desc.Zout_acms, asset_desc.Asset_cm_ret[:]...)
 		self.balance_desc.Zout_ars = append(self.balance_desc.Zout_ars, asset_desc.Ar[:]...)
+		self.s.Tx1.Outs_C = append(self.s.Tx1.Outs_C, t_out)
 	}
 	return
 }

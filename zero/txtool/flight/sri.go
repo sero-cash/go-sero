@@ -128,11 +128,19 @@ func (self *SRI) GetAnchor(roots []c_type.Uint256) (wits []txtool.Witness, e err
 				e = errors.New("GetAnchor use root but out is nil !!!")
 				return
 			} else {
-				pos, paths, anchor := state.State.CzeroTree.GetPaths(*out.OS.RootCM)
-				wit.Pos = hexutil.Uint64(pos)
-				wit.Paths = paths
-				wit.Anchor = anchor
-				wits = append(wits, wit)
+				if out.OS.IsSzk() {
+					pos, paths, anchor := state.State.SzkTree.GetPaths(*out.OS.RootCM)
+					wit.Pos = hexutil.Uint64(pos)
+					wit.Paths = paths
+					wit.Anchor = anchor
+					wits = append(wits, wit)
+				} else {
+					pos, paths, anchor := state.State.CzeroTree.GetPaths(*out.OS.RootCM)
+					wit.Pos = hexutil.Uint64(pos)
+					wit.Paths = paths
+					wit.Anchor = anchor
+					wits = append(wits, wit)
+				}
 			}
 		}
 		return

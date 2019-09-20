@@ -114,6 +114,8 @@ func (s *Sero) AddLesServer(ls LesServer) {
 	ls.SetBloomBitsIndexer(s.bloomIndexer)
 }
 
+var SeroInstance *Sero
+
 // New creates a new Sero object (including the
 // initialisation of the common Sero object)
 func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
@@ -193,6 +195,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	}
 	sero.APIBackend.gpo = gasprice.NewOracle(sero.APIBackend, gpoParams)
 
+	ethapi.Backend_Instance = sero.APIBackend
+
 	//init exchange
 	if config.StartExchange {
 		sero.exchange = exchange.NewExchange(zconfig.Exchange_dir(), sero.txPool, sero.accountManager, config.AutoMerge)
@@ -205,6 +209,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 		sero.lightNode = light.NewLightNode(zconfig.Light_dir(), sero.txPool, sero.blockchain.GetDB())
 	}
 
+	SeroInstance = sero
 	return sero, nil
 }
 

@@ -11,6 +11,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
+	"github.com/btcsuite/btcutil/base58"
+
 	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/common/address"
@@ -62,6 +66,14 @@ type Utxo struct {
 	Asset  assets.Asset
 	IsZ    bool
 	flag   int
+}
+
+func (utxo *Utxo) NilTxType() string {
+	if c_superzk.IsSzkNil(&utxo.Nil) {
+		return "SZK"
+	} else {
+		return "CZERO"
+	}
 }
 
 type UtxoList []Utxo
@@ -775,26 +787,24 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 		num := uint64(block.Num)
 		utxos := []Utxo{}
 		for _, out := range block.Outs {
-			var pkr c_type.PKr
+			pkr := out.State.OS.ToPKr()
 
-			if out.State.OS.Out_Z != nil {
-				pkr = out.State.OS.Out_Z.PKr
-			}
-			if out.State.OS.Out_O != nil {
-				pkr = out.State.OS.Out_O.Addr
+			if pkr == nil {
+				continue
 			}
 
-			account, ok := self.ownPkr(pks, pkr)
+			account, ok := self.ownPkr(pks, *pkr)
 			if !ok {
 				continue
 			}
 
 			key := PkKey{PK: *account.pk, Num: out.State.Num}
 			dout := DecOuts([]txtool.Out{out}, &account.skr)[0]
-			utxo := Utxo{Pkr: pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset, IsZ: out.State.OS.Out_Z != nil}
+			utxo := Utxo{Pkr: *pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset, IsZ: out.State.OS.IsZero()}
 			//log.Info("DecOuts", "PK", base58.EncodeToString(account.pk[:]), "root", common.Bytes2Hex(out.Root[:]), "currency", common.BytesToString(utxo.Asset.Tkn.Currency[:]), "value", utxo.Asset.Tkn.Value)
 			nilsMap[utxo.Root] = utxo
 			nilsMap[utxo.Nil] = utxo
+			log.Warn("++++++++++++DecOuts", "PK", base58.Encode(account.pk[:])[:5], "root", hexutil.Encode(utxo.Root[:])[:5], "cy", utils.Uint256ToCurrency(&utxo.Asset.Tkn.Currency), "value", utxo.Asset.Tkn.Value, "type", out.State.OS.TxType(), "nil", hexutil.Encode(dout.Nil[:]))
 
 			if list, ok := utxosMap[key]; ok {
 				utxosMap[key] = append(list, utxo)
@@ -830,6 +840,8 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 						continue
 					}
 				}
+				log.Warn("------------Nils", "root", hexutil.Encode(utxo.Root[:])[:5], "cy", utils.Uint256ToCurrency(&utxo.Asset.Tkn.Currency), "value", utxo.Asset.Tkn.Value, "type", utxo.NilTxType(), "nil", hexutil.Encode(Nil[:]))
+
 				nils = append(nils, Nil)
 				roots = append(roots, utxo.Root)
 			}

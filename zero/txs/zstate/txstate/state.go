@@ -178,7 +178,7 @@ func (state *State) insertOS(os *localdb.OutState, txhash *c_type.Uint256) (root
 	} else {
 		os.Index = state.SzkTree.GetLeafSize()
 		commitment := os.ToRootCM()
-		root = state.CzeroTree.AppendLeaf(*commitment)
+		root = state.SzkTree.AppendLeaf(*commitment)
 		state.AddOut_Log(&root, os, txhash)
 	}
 	return

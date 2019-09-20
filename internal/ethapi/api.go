@@ -1832,6 +1832,8 @@ func (args *SendTxArgs) toAsset() assets.Asset {
 
 func (args *SendTxArgs) toTxParam(state *state.StateDB) (txParam prepare.PreTxParam) {
 
+	account, _ := Backend_Instance.AccountManager().FindByKey(&args.From)
+
 	var refundPkr c_type.PKr
 	txParam.GasPrice = (*big.Int)(args.GasPrice)
 	txParam.From = *args.From.ToUint512()
@@ -1839,19 +1841,21 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB) (txParam prepare.PreTxPa
 	feevalue := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	asset := args.toAsset()
 	if args.To == nil {
+		from := account.Accounts()[0].GetPKByHeight(Backend_Instance.CurrentBlock().NumberU64())
 		fromRand := c_type.Uint256{}
 		copy(fromRand[:16], (*args.Data)[:16])
 		txParam.Cmds = prepare.Cmds{}
 		contractCmd := stx.ContractCmd{asset, nil, *args.Data}
 		txParam.Cmds.Contract = &contractCmd
-		refundPkr = superzk.Pk2PKr(args.From.ToUint512(), &fromRand)
+		refundPkr = superzk.Pk2PKr(from.ToUint512(), &fromRand)
 	} else if state.IsContract(common.BytesToAddress(args.To[:])) {
+		from := account.Accounts()[0].GetPKByHeight(Backend_Instance.CurrentBlock().NumberU64())
 		fromRand := c_type.Uint256{}
 		copy(fromRand[:16], args.To[:16])
 		if args.Dynamic {
-			refundPkr = superzk.Pk2PKr(args.From.ToUint512(), nil)
+			refundPkr = superzk.Pk2PKr(from.ToUint512(), nil)
 		} else {
-			refundPkr = superzk.Pk2PKr(args.From.ToUint512(), &fromRand)
+			refundPkr = superzk.Pk2PKr(from.ToUint512(), &fromRand)
 		}
 		if args.GasCurrency.IsNotSero() {
 			m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
@@ -1864,15 +1868,18 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB) (txParam prepare.PreTxPa
 		}
 		contractCmd := stx.ContractCmd{asset, args.To.ToPKr(), data}
 		txParam.Cmds.Contract = &contractCmd
-		refundPkr = superzk.Pk2PKr(args.From.ToUint512(), &fromRand)
+		refundPkr = superzk.Pk2PKr(from.ToUint512(), &fromRand)
 	} else {
+		var from address.AccountAddress
 		var topkr c_type.PKr
 		if args.To.IsAccountAddress() {
 			topkr = superzk.Pk2PKr(args.To.ToUint512(), nil)
+			from = account.Accounts()[0].GetPKByPK(args.To)
 		} else {
 			topkr = *args.To.ToPKr()
+			from = account.Accounts()[0].GetPKByPKr(args.To)
 		}
-		refundPkr = superzk.Pk2PKr(args.From.ToUint512(), nil)
+		refundPkr = superzk.Pk2PKr(from.ToUint512(), nil)
 		receptions := []prepare.Reception{{Addr: topkr, Asset: asset}}
 		txParam.Receptions = receptions
 	}

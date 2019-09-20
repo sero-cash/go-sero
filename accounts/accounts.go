@@ -18,7 +18,11 @@
 package accounts
 
 import (
-	sero "github.com/sero-cash/go-sero"
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/core/state"
@@ -34,6 +38,49 @@ type Account struct {
 	Tk      address.AccountAddress `json:"tk"`      // Sero account tk derived from the key
 	URL     URL                    `json:"url"`     // Optional resource locator within a backend
 	At      uint64                 `json:'at'`      //account create at blocknum
+}
+
+func (self *Account) GetPKByPK(pkr *common.Address) (ret address.AccountAddress) {
+	c_pkr := c_type.Uint512{}
+	copy(c_pkr[:], pkr[:])
+	c_tk := c_type.Uint512{}
+	copy(c_tk[:], self.Tk[:])
+	var c_pk c_type.Uint512
+	if c_superzk.IsSzkPK(&c_pkr) {
+		c_pk = c_superzk.Tk2Pk(&c_tk)
+	} else {
+		c_pk = c_czero.Tk2Pk(&c_tk)
+	}
+	copy(ret[:], c_pk[:])
+	return
+}
+
+func (self *Account) GetPKByPKr(pkr *common.Address) (ret address.AccountAddress) {
+	c_pkr := c_type.PKr{}
+	copy(c_pkr[:], pkr[:])
+	c_tk := c_type.Uint512{}
+	copy(c_tk[:], self.Tk[:])
+	var c_pk c_type.Uint512
+	if c_superzk.IsSzkPKr(&c_pkr) {
+		c_pk = c_superzk.Tk2Pk(&c_tk)
+	} else {
+		c_pk = c_czero.Tk2Pk(&c_tk)
+	}
+	copy(ret[:], c_pk[:])
+	return
+}
+
+func (self *Account) GetPKByHeight(height uint64) (ret address.AccountAddress) {
+	c_tk := c_type.Uint512{}
+	copy(c_tk[:], self.Tk[:])
+	var c_pk c_type.Uint512
+	if height >= seroparam.SIP5() {
+		c_pk = c_superzk.Tk2Pk(&c_tk)
+	} else {
+		c_pk = c_czero.Tk2Pk(&c_tk)
+	}
+	copy(ret[:], c_pk[:])
+	return
 }
 
 // Wallet represents a software or hardware wallet that might contain one or more

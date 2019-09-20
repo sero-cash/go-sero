@@ -21,6 +21,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/event"
 )
 
@@ -159,6 +160,11 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 		}
 	}
 	return nil, ErrUnknownAccount
+}
+
+func (am *Manager) FindByKey(key *address.AccountAddress) (Wallet, error) {
+	account := Account{Address: *key}
+	return am.Find(account)
 }
 
 // Subscribe creates an async subscription to receive notifications when the

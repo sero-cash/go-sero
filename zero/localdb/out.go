@@ -23,6 +23,29 @@ type OutState struct {
 	RootCM *c_type.Uint256 `rlp:"nil"`
 }
 
+func (out *OutState) TxType() string {
+	if out.Out_O != nil {
+		return "Out_O"
+	}
+	if out.Out_Z != nil {
+		return "Out_Z"
+	}
+	if out.Out_P != nil {
+		return "Out_P"
+	}
+	if out.Out_C != nil {
+		return "Out_C"
+	}
+	return "EMPTY"
+}
+
+func (out *OutState) IsZero() bool {
+	if out.Out_Z != nil || out.Out_C != nil {
+		return true
+	} else {
+		return false
+	}
+}
 func (out *OutState) IsSzk() bool {
 	if out.Out_P != nil || out.Out_C != nil {
 		return true

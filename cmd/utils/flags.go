@@ -321,7 +321,7 @@ var (
 		Usage: "The balance will be confirmed after the current block of number,default is 12",
 	}
 
-	ResetBlockNumber =  cli.Uint64Flag{
+	ResetBlockNumber = cli.Uint64Flag{
 		Name:  "resetBlockNumber",
 		Usage: "reset currentblock, gcmode must be archive",
 	}
@@ -950,7 +950,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 	if ctx.GlobalIsSet(ConfirmedBlockFlag.Name) {
 		balanceDelay := ctx.GlobalUint64(ConfirmedBlockFlag.Name)
-		if balanceDelay > 0 {
+		if balanceDelay >= 0 {
 			seroparam.InitComfirmedBlock(balanceDelay)
 		}
 	}
