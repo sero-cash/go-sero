@@ -5,9 +5,8 @@ import (
 
 	"github.com/sero-cash/go-czero-import/superzk"
 
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_0"
-
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 
 	"github.com/sero-cash/go-sero/zero/utils"
 
@@ -32,7 +31,7 @@ func (s *PublicLocalAPI) DecOut(ctx context.Context, outs []txtool.Out, tk TKAdd
 	return
 }
 
-func (s *PublicLocalAPI) ConfirmOutZ(ctx context.Context, key c_type.Uint256, outz stx_v1.Out_Z) (dout txtool.TDOut, e error) {
+func (s *PublicLocalAPI) ConfirmOutZ(ctx context.Context, key c_type.Uint256, outz stx_v0.Out_Z) (dout txtool.TDOut, e error) {
 	if out := generate_0.ConfirmOutZ(&key, true, &outz); out != nil {
 		dout = *out
 		return

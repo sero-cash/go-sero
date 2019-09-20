@@ -7,7 +7,7 @@ import (
 	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
@@ -37,7 +37,7 @@ func DecNilOuts(outs []txtool.Out, skr *c_type.PKr) (douts []txtool.DOut) {
 			data, _ := json.Marshal(info_desc)
 			log.Printf("DecOuts info_desc : %s", string(data))
 
-			if e := stx_v1.ConfirmOut_Z(&info_desc, out.State.OS.Out_Z); e == nil {
+			if e := stx_v0.ConfirmOut_Z(&info_desc, out.State.OS.Out_Z); e == nil {
 				dout.Asset = assets.NewAsset(
 					&assets.Token{
 						info_desc.Tkn_currency,

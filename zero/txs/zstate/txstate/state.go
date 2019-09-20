@@ -21,11 +21,10 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v2"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 
 	"github.com/sero-cash/go-sero/zero/txs/zstate/merkle"
-
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -151,19 +150,19 @@ func (self *State) AddTxOut_Log(pkr *c_type.PKr) int {
 	return self.data.AddTxOut(pkr)
 }
 
-func (state *State) AddOut_O(out_o *stx_v1.Out_O, txhash *c_type.Uint256) (root c_type.Uint256) {
+func (state *State) AddOut_O(out_o *stx_v0.Out_O, txhash *c_type.Uint256) (root c_type.Uint256) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	return state.addOut_O(out_o, txhash)
 }
 
-func (state *State) AddOut_P(out_p *stx_v2.Out_P, txhash *c_type.Uint256) (root c_type.Uint256) {
+func (state *State) AddOut_P(out_p *stx_v1.Out_P, txhash *c_type.Uint256) (root c_type.Uint256) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	return state.addOut_P(out_p, txhash)
 }
 
-func (state *State) AddOut_Z(out_z *stx_v1.Out_Z, txhash *c_type.Uint256) (root c_type.Uint256) {
+func (state *State) AddOut_Z(out_z *stx_v0.Out_Z, txhash *c_type.Uint256) (root c_type.Uint256) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	return state.addOut_Z(out_z, txhash)
@@ -184,7 +183,7 @@ func (state *State) insertOS(os *localdb.OutState, txhash *c_type.Uint256) (root
 	return
 }
 
-func (state *State) addOut_O(out_o *stx_v1.Out_O, txhash *c_type.Uint256) (root c_type.Uint256) {
+func (state *State) addOut_O(out_o *stx_v0.Out_O, txhash *c_type.Uint256) (root c_type.Uint256) {
 	os := localdb.OutState{}
 	if out_o != nil {
 		o := *out_o
@@ -193,7 +192,7 @@ func (state *State) addOut_O(out_o *stx_v1.Out_O, txhash *c_type.Uint256) (root 
 	return state.insertOS(&os, txhash)
 }
 
-func (state *State) addOut_Z(out_z *stx_v1.Out_Z, txhash *c_type.Uint256) (root c_type.Uint256) {
+func (state *State) addOut_Z(out_z *stx_v0.Out_Z, txhash *c_type.Uint256) (root c_type.Uint256) {
 	os := localdb.OutState{}
 	if out_z != nil {
 		o := out_z.Clone()
@@ -202,7 +201,7 @@ func (state *State) addOut_Z(out_z *stx_v1.Out_Z, txhash *c_type.Uint256) (root 
 	return state.insertOS(&os, txhash)
 }
 
-func (state *State) addOut_C(out_c *stx_v2.Out_C, txhash *c_type.Uint256) (root c_type.Uint256) {
+func (state *State) addOut_C(out_c *stx_v1.Out_C, txhash *c_type.Uint256) (root c_type.Uint256) {
 	os := localdb.OutState{}
 	if out_c != nil {
 		o := out_c.Clone()
@@ -211,7 +210,7 @@ func (state *State) addOut_C(out_c *stx_v2.Out_C, txhash *c_type.Uint256) (root 
 	return state.insertOS(&os, txhash)
 }
 
-func (state *State) addOut_P(out_p *stx_v2.Out_P, txhash *c_type.Uint256) (root c_type.Uint256) {
+func (state *State) addOut_P(out_p *stx_v1.Out_P, txhash *c_type.Uint256) (root c_type.Uint256) {
 	os := localdb.OutState{}
 	if out_p != nil {
 		o := out_p.Clone()
@@ -226,7 +225,7 @@ func (self *State) HasIn(hash *c_type.Uint256) (exists bool) {
 	return self.data.HasIn(self.tri, hash)
 }
 
-func (state *State) addTx0(tx *stx_v1.Tx, txhash *c_type.Uint256) (e error) {
+func (state *State) addTx0(tx *stx_v0.Tx, txhash *c_type.Uint256) (e error) {
 	t := utils.TR_enter("AddStx---ins")
 	for _, in := range tx.Desc_O.Ins {
 		if state.num >= seroparam.SIP2() {
@@ -267,7 +266,7 @@ func (state *State) addTx0(tx *stx_v1.Tx, txhash *c_type.Uint256) (e error) {
 	return
 }
 
-func (state *State) addTx1(tx *stx_v2.Tx, txhash *c_type.Uint256) (e error) {
+func (state *State) addTx1(tx *stx_v1.Tx, txhash *c_type.Uint256) (e error) {
 	for _, in := range tx.Ins_P0 {
 		if !state.data.HasIn(state.tri, &in.Nil) {
 			if !state.data.HasIn(state.tri, &in.Root) {

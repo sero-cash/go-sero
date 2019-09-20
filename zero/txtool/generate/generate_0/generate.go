@@ -14,7 +14,7 @@ import (
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 )
 
 type gen_ctx struct {
@@ -98,7 +98,7 @@ func (self *gen_ctx) setInsData() {
 	{
 		for _, in := range self.param.Ins {
 			if in.Out.State.OS.Out_O != nil {
-				s_in_o := stx_v1.In_S{}
+				s_in_o := stx_v0.In_S{}
 				s_in_o.Root = in.Out.Root
 				self.s.Desc_O.Ins = append(self.s.Desc_O.Ins, s_in_o)
 				{
@@ -113,7 +113,7 @@ func (self *gen_ctx) setInsData() {
 					self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
 				}
 			} else {
-				in := stx_v1.In_Z{}
+				in := stx_v0.In_Z{}
 				self.s.Desc_Z.Ins = append(self.s.Desc_Z.Ins, in)
 			}
 		}
@@ -123,7 +123,7 @@ func (self *gen_ctx) setInsData() {
 func (self *gen_ctx) setOutsData() {
 	{
 		for _, out_z := range self.param.Outs {
-			out := stx_v1.Out_Z{}
+			out := stx_v0.Out_Z{}
 			out.PKr = out_z.PKr
 			self.s.Desc_Z.Outs = append(self.s.Desc_Z.Outs, out)
 		}
@@ -214,7 +214,7 @@ func (self *gen_ctx) signTxIns() error {
 		if err := c_czero.GenInputSProofBySk(&g); err != nil {
 			return err
 		} else {
-			in := stx_v1.In_S{}
+			in := stx_v0.In_S{}
 			in.Sign = g.Sign_ret
 			in.Nil = g.Nil_ret
 			in.Root = s_in_o.Out.Root

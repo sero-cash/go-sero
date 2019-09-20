@@ -9,7 +9,7 @@ import (
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v2"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_0"
 )
@@ -121,7 +121,7 @@ func (self *sign_ctx) check() (e error) {
 }
 
 func (self *sign_ctx) prepare() (e error) {
-	self.s.Tx1 = &stx_v2.Tx{}
+	self.s.Tx1 = &stx_v1.Tx{}
 	for i := range self.param.Ins {
 		in := &self.param.Ins[i]
 		if in.Out.State.OS.Out_O != nil {
@@ -205,7 +205,7 @@ func (self *sign_ctx) genCmd() (e error) {
 
 func (self *sign_ctx) genInsP0() (e error) {
 	for _, in := range self.p0_ins {
-		t_in := stx_v2.In_P0{}
+		t_in := stx_v1.In_P0{}
 		t_in.Root = in.Out.Root
 		sk := in.SKr.ToUint512()
 		tk := superzk.Sk2Tk(&sk)
@@ -234,7 +234,7 @@ func (self *sign_ctx) genInsP0() (e error) {
 
 func (self *sign_ctx) genInsP() (e error) {
 	for _, in := range self.p_ins {
-		t_in := stx_v2.In_P{}
+		t_in := stx_v1.In_P{}
 		t_in.Root = in.Out.Root
 		sk := in.SKr.ToUint512()
 		tk := superzk.Sk2Tk(&sk)
@@ -248,7 +248,7 @@ func (self *sign_ctx) genInsP() (e error) {
 
 func (self *sign_ctx) genInsC() (e error) {
 	for _, in := range self.c_ins {
-		t_in := stx_v2.In_C{}
+		t_in := stx_v1.In_C{}
 		sk := in.SKr.ToUint512()
 		tk := superzk.Sk2Tk(&sk)
 
@@ -278,7 +278,7 @@ func (self *sign_ctx) genInsC() (e error) {
 
 func (self *sign_ctx) genOutsC() (e error) {
 	for _, out := range self.param.Outs {
-		t_out := stx_v2.Out_C{}
+		t_out := stx_v1.Out_C{}
 		asset_desc := out.Asset.ToSzkAssetDesc()
 		asset_desc.Ar = c_type.RandUint256()
 		c_superzk.GenAssetCM(&asset_desc)

@@ -21,8 +21,8 @@ import (
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v2"
 
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/serodb"
@@ -105,11 +105,11 @@ func (self *ZState) Revert(revid int) {
 	return
 }
 
-func (state *ZState) AddOut_O(out *stx_v1.Out_O, txhash common.Hash) {
+func (state *ZState) AddOut_O(out *stx_v0.Out_O, txhash common.Hash) {
 	state.State.AddOut_O(out.Clone().ToRef(), txhash.HashToUint256())
 }
 
-func (state *ZState) AddOut_P(out *stx_v2.Out_P, txhash common.Hash) {
+func (state *ZState) AddOut_P(out *stx_v1.Out_P, txhash common.Hash) {
 	state.State.AddOut_P(out.Clone().ToRef(), txhash.HashToUint256())
 }
 
@@ -173,10 +173,10 @@ func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset, txhash co
 	if need_add {
 		pkr := addr.ToPKr()
 		if c_superzk.IsSzkPKr(pkr) {
-			o := stx_v2.Out_P{PKr: *addr.ToPKr(), Asset: asset, Memo: c_type.Uint512{}}
+			o := stx_v1.Out_P{PKr: *addr.ToPKr(), Asset: asset, Memo: c_type.Uint512{}}
 			state.AddOut_P(&o, txhash)
 		} else {
-			o := stx_v1.Out_O{Addr: *addr.ToPKr(), Asset: asset, Memo: c_type.Uint512{}}
+			o := stx_v0.Out_O{Addr: *addr.ToPKr(), Asset: asset, Memo: c_type.Uint512{}}
 			state.AddOut_O(&o, txhash)
 		}
 	}

@@ -6,21 +6,21 @@ import (
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/core/types/vserial"
 	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v2"
 )
 
 type OutState_Version0 struct {
 	Index  uint64
-	Out_O  *stx_v1.Out_O   `rlp:"nil"`
-	Out_Z  *stx_v1.Out_Z   `rlp:"nil"`
+	Out_O  *stx_v0.Out_O   `rlp:"nil"`
+	Out_Z  *stx_v0.Out_Z   `rlp:"nil"`
 	OutCM  *c_type.Uint256 `rlp:"nil"`
 	RootCM *c_type.Uint256 `rlp:"nil"`
 }
 
 type OutState_Version1 struct {
-	Out_P *stx_v2.Out_P `rlp:"nil"`
-	Out_C *stx_v2.Out_C `rlp:"nil"`
+	Out_P *stx_v1.Out_P `rlp:"nil"`
+	Out_C *stx_v1.Out_C `rlp:"nil"`
 }
 
 func (b *OutState) DecodeRLP(s *rlp.Stream) error {

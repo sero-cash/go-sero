@@ -19,14 +19,14 @@ package stx
 import (
 	"sync/atomic"
 
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v2"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 )
 
 type Tx2 struct {
@@ -39,21 +39,21 @@ type T struct {
 	Sign     c_type.Uint512
 	Bcr      c_type.Uint256
 	Bsign    c_type.Uint512
-	Desc_O   stx_v1.Desc_O
-	Desc_Z   stx_v1.Desc_Z
+	Desc_O   stx_v0.Desc_O
+	Desc_Z   stx_v0.Desc_Z
 	Desc_Pkg PkgDesc_Z
 	Desc_Cmd DescCmd
 
-	Tx1 *stx_v2.Tx `rlp:"nil"`
+	Tx1 *stx_v1.Tx `rlp:"nil"`
 
 	//cache
 	hash  atomic.Value
 	feeCC atomic.Value
 }
 
-func (self *T) Tx0() (ret *stx_v1.Tx) {
+func (self *T) Tx0() (ret *stx_v0.Tx) {
 	if self.Desc_O.HasContent() || self.Desc_Z.HasContent() {
-		ret = &stx_v1.Tx{}
+		ret = &stx_v0.Tx{}
 		ret.Desc_Z = self.Desc_Z
 		ret.Desc_O = self.Desc_O
 		return

@@ -4,7 +4,7 @@ import (
 	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v2"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 	"github.com/sero-cash/go-sero/zero/txtool"
 )
 
@@ -40,7 +40,7 @@ func GenTokenCC(t *assets.Token) (ret c_superzk.AssetDesc) {
 	return
 }
 
-func ConfirmOutC(key *c_type.Uint256, outc *stx_v2.Out_C) (dout *txtool.TDOut) {
+func ConfirmOutC(key *c_type.Uint256, outc *stx_v1.Out_C) (dout *txtool.TDOut) {
 	info := c_superzk.DecInfoDesc{}
 	info.Key = *key
 	info.Einfo = outc.EInfo

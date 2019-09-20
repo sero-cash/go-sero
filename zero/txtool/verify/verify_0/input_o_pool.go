@@ -1,7 +1,7 @@
 package verify_0
 
 import (
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
@@ -15,7 +15,7 @@ var verify_input_o_procs_pool = utils.NewProcsPool(func() int { return zconfig.G
 type verify_input_o_desc struct {
 	hash_z   c_type.Uint256
 	src      localdb.OutState
-	in       stx_v1.In_S
+	in       stx_v0.In_S
 	asset_cc c_type.Uint256
 	e        error
 }

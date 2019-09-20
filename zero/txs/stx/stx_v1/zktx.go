@@ -1,4 +1,4 @@
-package stx_v2
+package stx_v1
 
 import (
 	"github.com/sero-cash/go-czero-import/c_type"

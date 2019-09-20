@@ -24,11 +24,10 @@ import (
 
 	"github.com/sero-cash/go-czero-import/c_czero"
 
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
-
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
@@ -171,7 +170,7 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 			for _, g := range gen_output_procs.Runs {
 				output_desc := g.(*gen_output_desc)
 				desc := output_desc.desc
-				out_z := stx_v1.Out_Z{}
+				out_z := stx_v0.Out_Z{}
 				out_z.AssetCM = desc.Asset_cm_ret
 				out_z.OutCM = desc.Out_cm_ret
 				out_z.RPK = desc.RPK_ret
@@ -194,7 +193,7 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 			for _, g := range gen_input_procs.Runs {
 				input_desc := g.(*gen_input_desc)
 				desc := input_desc.desc
-				in_z := stx_v1.In_Z{}
+				in_z := stx_v0.In_Z{}
 				in_z.Anchor = desc.Anchor
 				in_z.AssetCM = desc.Asset_cm_ret
 				in_z.Nil = desc.Nil_ret

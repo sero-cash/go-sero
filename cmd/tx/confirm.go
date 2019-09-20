@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_0"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -50,7 +50,7 @@ func Confirm(key_str string, out_str string) {
 		if len(key_bs) == 32 {
 			key := c_type.Uint256{}
 			copy(key[:], key_bs)
-			var out stx_v1.Out_Z
+			var out stx_v0.Out_Z
 			if e := json.Unmarshal([]byte(out_str), &out); e == nil {
 				if dout := generate_0.ConfirmOutZ(&key, true, &out); dout != nil {
 					if dout_bs, e := json.Marshal(dout); e == nil {

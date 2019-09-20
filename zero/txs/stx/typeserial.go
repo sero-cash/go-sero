@@ -3,8 +3,7 @@ package stx
 import (
 	"io"
 
-	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v2"
-
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -20,8 +19,8 @@ type ZtxVersion_0 struct {
 	Sign     c_type.Uint512
 	Bcr      c_type.Uint256
 	Bsign    c_type.Uint512
-	Desc_Z   stx_v1.Desc_Z
-	Desc_O   stx_v1.Desc_O
+	Desc_Z   stx_v0.Desc_Z
+	Desc_O   stx_v0.Desc_O
 	Desc_Pkg PkgDesc_Z
 }
 
@@ -35,7 +34,7 @@ type ZtxVersion_1 struct {
 type ZtxVersion_2 struct {
 	Version0 ZtxVersion_0
 	Version1 ZtxVersion_1
-	Tx2      stx_v2.Tx
+	Tx2      stx_v1.Tx
 }
 
 func SetTxForVersion0(b *T, v0 *ZtxVersion_0) {
