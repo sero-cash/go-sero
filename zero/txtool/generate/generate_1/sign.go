@@ -261,8 +261,10 @@ func (self *sign_ctx) genInsC() (e error) {
 		c_superzk.DecOutput(&info)
 		self.keys = append(self.keys, key)
 
-		asset := assets.NewAssetBySzkDecInfo(&info)
-		asset_desc := asset.ToSzkAssetDesc()
+		asset := assets.NewAssetByType(&info.Asset_ret)
+		asset_desc := c_superzk.AssetDesc{
+			Asset: asset.ToTypeAsset(),
+		}
 		asset_desc.Ar = c_type.RandUint256()
 		c_superzk.GenAssetCM(&asset_desc)
 		t_in.AssetCM = asset_desc.Asset_cm_ret
@@ -279,7 +281,9 @@ func (self *sign_ctx) genInsC() (e error) {
 func (self *sign_ctx) genOutsC() (e error) {
 	for _, out := range self.param.Outs {
 		t_out := stx_v1.Out_C{}
-		asset_desc := out.Asset.ToSzkAssetDesc()
+		asset_desc := c_superzk.AssetDesc{
+			Asset: out.Asset.ToTypeAsset(),
+		}
 		asset_desc.Ar = c_type.RandUint256()
 		c_superzk.GenAssetCM(&asset_desc)
 		t_out.AssetCM = asset_desc.Asset_cm_ret

@@ -11,6 +11,15 @@ type Token struct {
 	Value    utils.U256
 }
 
+func (self *Token) ToTypeAsset() c_type.Asset {
+	return c_type.Asset{
+		Tkn_currency: self.Currency,
+		Tkn_value:    self.Value.ToUint256(),
+		Tkt_category: c_type.Empty_Uint256,
+		Tkt_value:    c_type.Empty_Uint256,
+	}
+}
+
 func (self *Token) Clone() (ret Token) {
 	utils.DeepCopy(&ret, self)
 	return

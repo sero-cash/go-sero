@@ -1,7 +1,6 @@
 package assets
 
 import (
-	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -10,33 +9,6 @@ import (
 type Asset struct {
 	Tkn *Token  `rlp:"nil"`
 	Tkt *Ticket `rlp:"nil"`
-}
-
-func (self *Asset) ToSzkAssetDesc() (ret c_superzk.AssetDesc) {
-	asset := self.ToFlatAsset()
-	ret = c_superzk.AssetDesc{
-		Asset: c_type.Asset{
-			Tkn_currency: asset.Tkn.Currency,
-			Tkn_value:    asset.Tkn.Value.ToUint256(),
-			Tkt_category: asset.Tkt.Category,
-			Tkt_value:    asset.Tkt.Value,
-		},
-	}
-	return
-}
-
-func NewAssetBySzkDecInfo(info *c_superzk.DecInfoDesc) (ret Asset) {
-	ret = NewAsset(
-		&Token{
-			info.Asset_ret.Tkn_currency,
-			utils.NewU256_ByKey(&info.Asset_ret.Tkn_value),
-		},
-		&Ticket{
-			info.Asset_ret.Tkt_category,
-			info.Asset_ret.Tkt_value,
-		},
-	)
-	return
 }
 
 func (self *Asset) HasAsset() bool {
