@@ -22,7 +22,7 @@ import (
 
 type Account struct {
 	pk *c_type.Uint512
-	tk *c_type.Uint512
+	tk *c_type.Tk
 }
 
 type StakeService struct {
@@ -250,7 +250,7 @@ func (self *StakeService) initWallet(w accounts.Wallet) {
 	if _, ok := self.accounts.Load(*w.Accounts()[0].Address.ToUint512()); !ok {
 		account := Account{}
 		account.pk = w.Accounts()[0].Address.ToUint512()
-		account.tk = w.Accounts()[0].Tk.ToUint512()
+		account.tk = w.Accounts()[0].Tk.ToTK()
 		self.accounts.Store(*account.pk, &account)
 
 		var num uint64

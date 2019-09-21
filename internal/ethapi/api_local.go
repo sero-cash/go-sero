@@ -26,7 +26,7 @@ type PublicLocalAPI struct {
 }
 
 func (s *PublicLocalAPI) DecOut(ctx context.Context, outs []txtool.Out, tk TKAddress) (douts []txtool.TDOut, e error) {
-	tk_u64 := tk.ToUint512()
+	tk_u64 := tk.ToTk()
 	douts = flight.DecOut(&tk_u64, outs)
 	return
 }
@@ -83,7 +83,7 @@ func (s *PublicLocalAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (address.
 }
 
 func (s *PublicLocalAPI) Tk2Pk(ctx context.Context, tk TKAddress) (address.AccountAddress, error) {
-	pk := c_czero.Tk2Pk(tk.ToUint512().NewRef())
+	pk := c_czero.Tk2Pk(tk.ToTk().NewRef())
 	return address.BytesToAccount(pk[:]), nil
 }
 

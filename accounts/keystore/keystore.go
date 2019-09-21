@@ -430,7 +430,7 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (acco
 }
 
 func (ks *KeyStore) ImportTk(tk address.AccountAddress) (accounts.Account, error) {
-	key := newKeyFromTk(tk.ToUint512())
+	key := newKeyFromTk(tk.ToTK())
 	if ks.cache.hasAddress(key.Address) {
 		return accounts.Account{}, fmt.Errorf("account already exists")
 	}

@@ -42,7 +42,7 @@ import (
 type Account struct {
 	wallet        accounts.Wallet
 	pk            *c_type.Uint512
-	tk            *c_type.Uint512
+	tk            *c_type.Tk
 	skr           c_type.PKr
 	mainPkr       c_type.PKr
 	balances      map[string]*big.Int
@@ -189,7 +189,7 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 		account := Account{}
 		account.wallet = w
 		account.pk = w.Accounts()[0].Address.ToUint512()
-		account.tk = w.Accounts()[0].Tk.ToUint512()
+		account.tk = w.Accounts()[0].Tk.ToTK()
 		copy(account.skr[:], account.tk[:])
 		account.mainPkr = prepare.CreatePkr(account.pk, 1)
 		account.isChanged = true
@@ -694,7 +694,7 @@ func (self *Exchange) findUtxos(pk *c_type.Uint512, currency string, amount *big
 }
 
 func DecOuts(outs []txtool.Out, skr *c_type.PKr) (douts []txtool.DOut) {
-	tk := c_type.Uint512{}
+	tk := c_type.Tk{}
 	copy(tk[:], skr[:])
 	tdouts := flight.DecOut(&tk, outs)
 	for _, tdout := range tdouts {

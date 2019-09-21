@@ -154,7 +154,7 @@ func (w *keystoreWallet) GetSeedWithPassphrase(passphrase string) (*address.Seed
 }
 
 func (w *keystoreWallet) IsMine(onceAddress common.Address) bool {
-	tk := w.account.Tk.ToUint512()
+	tk := w.account.Tk.ToTK()
 	succ := superzk.IsMyPKr(tk, onceAddress.ToPKr())
 	return succ
 }

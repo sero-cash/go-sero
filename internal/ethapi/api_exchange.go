@@ -453,7 +453,7 @@ func (s *PublicExchangeAPI) GetPkByPkr(ctx context.Context, pkr PKrAddress) (*ad
 		return nil, nil
 	}
 	for _, wallet := range wallets {
-		if superzk.IsMyPKr(wallet.Accounts()[0].Tk.ToUint512(), pkr.ToPKr()) {
+		if superzk.IsMyPKr(wallet.Accounts()[0].Tk.ToTK(), pkr.ToPKr()) {
 			return &wallet.Accounts()[0].Address, nil
 		}
 	}
@@ -513,7 +513,7 @@ func (s *PublicExchangeAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (addre
 }
 
 func (s *PublicExchangeAPI) Tk2Pk(ctx context.Context, tk TKAddress) (address.AccountAddress, error) {
-	pk := c_czero.Tk2Pk(tk.ToUint512().NewRef())
+	pk := c_czero.Tk2Pk(tk.ToTk().NewRef())
 	return address.BytesToAccount(pk[:]), nil
 }
 func (s *PublicExchangeAPI) Pk2Pkr(ctx context.Context, pk PKAddress, index *c_type.Uint256) (PKrAddress, error) {

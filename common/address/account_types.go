@@ -69,6 +69,12 @@ func (a AccountAddress) ToUint512() *c_type.Uint512 {
 	return &pubKey
 }
 
+func (a AccountAddress) ToTK() *c_type.Tk {
+	tk := c_type.Tk{}
+	copy(tk[:], a[:])
+	return &tk
+}
+
 // Big converts an Data to a big integer.
 func (a AccountAddress) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
 

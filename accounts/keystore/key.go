@@ -99,7 +99,7 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, at uint64) *Key {
 	return key
 }
 
-func newKeyFromTk(tk *c_type.Uint512) *Key {
+func newKeyFromTk(tk *c_type.Tk) *Key {
 	id := uuid.NewRandom()
 	tkaddress := address.AccountAddress{}
 	copy(tkaddress[:], tk[:])

@@ -163,8 +163,8 @@ func (b *PKAddress) UnmarshalText(input []byte) error {
 
 type TKAddress [64]byte
 
-func (b TKAddress) ToUint512() c_type.Uint512 {
-	result := c_type.Uint512{}
+func (b TKAddress) ToTk() c_type.Tk {
+	result := c_type.Tk{}
 	copy(result[:], b[:])
 
 	return result

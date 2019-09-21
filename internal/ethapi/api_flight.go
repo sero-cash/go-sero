@@ -69,7 +69,7 @@ func (self *PreTxParamArgs) ToParam() (ret flight.PreTxParam) {
 
 func (s *PublicFlightAPI) GenTxParam(ctx context.Context, param PreTxParamArgs, tk TKAddress) (p txtool.GTxParam, e error) {
 	preTxParam := param.ToParam()
-	return flight.GenTxParam(&preTxParam, tk.ToUint512())
+	return flight.GenTxParam(&preTxParam, tk.ToTk())
 }
 
 func (s *PublicFlightAPI) CommitTx(ctx context.Context, args *txtool.GTx) error {
@@ -77,7 +77,7 @@ func (s *PublicFlightAPI) CommitTx(ctx context.Context, args *txtool.GTx) error 
 }
 
 func (s *PublicFlightAPI) Trace2Root(ctx context.Context, tk TKAddress, trace c_type.Uint256, base c_type.Uint256) (root c_type.Uint256, e error) {
-	if r := flight.Trace2Root(tk.ToUint512().NewRef(), &trace, &base); r != nil {
+	if r := flight.Trace2Root(tk.ToTk().NewRef(), &trace, &base); r != nil {
 		root = *r
 		return
 	} else {
