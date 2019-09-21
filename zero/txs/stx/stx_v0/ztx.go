@@ -49,10 +49,7 @@ type Out_Z struct {
 func ConfirmOut_Z(deInfo *c_czero.InfoDesc, out_z *Out_Z) (e error) {
 	desc := c_czero.ConfirmOutputDesc{}
 	desc.Memo = deInfo.Memo
-	desc.Tkn_currency = deInfo.Tkn_currency
-	desc.Tkn_value = deInfo.Tkn_value
-	desc.Tkt_category = deInfo.Tkt_category
-	desc.Tkt_value = deInfo.Tkt_value
+	desc.Asset = deInfo.Asset
 	desc.Rsk = deInfo.Rsk
 	desc.Pkr = out_z.PKr
 	desc.Out_cm = out_z.OutCM

@@ -42,12 +42,12 @@ func NewAssetByType(asset *c_type.Asset) (ret Asset) {
 }
 func NewAsset(tkn *Token, tkt *Ticket) (ret Asset) {
 	if tkn != nil {
-		if tkn.Value.Cmp(&utils.U256_0) > 0 {
+		if tkn.Value.Cmp(&utils.U256_0) > 0 && tkn.Currency != c_type.Empty_Uint256 {
 			ret.Tkn = tkn.Clone().ToRef()
 		}
 	}
 	if tkt != nil {
-		if tkt.Value != c_type.Empty_Uint256 {
+		if tkt.Value != c_type.Empty_Uint256 && tkt.Category != c_type.Empty_Uint256 {
 			ret.Tkt = tkt.Clone().ToRef()
 		}
 	}

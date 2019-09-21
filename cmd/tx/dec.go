@@ -48,7 +48,7 @@ func Dec(tk_str string, out_str string) {
 	}
 	if tk_bs, e := hexutil.Decode(tk_str); e == nil {
 		if len(tk_bs) == 64 {
-			tk := c_type.Uint512{}
+			tk := c_type.Tk{}
 			copy(tk[:], tk_bs)
 			var outs []txtool.Out
 			if e := json.Unmarshal([]byte(out_str), &outs); e == nil {

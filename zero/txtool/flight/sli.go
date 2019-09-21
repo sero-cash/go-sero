@@ -46,7 +46,7 @@ func SignLight(sk *c_type.Uint512, paramTx *txtool.GTxParam) (tx stx.T, param tx
 	return SignTx1(paramTx)
 }
 
-func DecOut(tk *c_type.Uint512, outs []txtool.Out) (douts []txtool.TDOut) {
+func DecOut(tk *c_type.Tk, outs []txtool.Out) (douts []txtool.TDOut) {
 	for _, out := range outs {
 
 		dout := txtool.TDOut{}
@@ -56,7 +56,7 @@ func DecOut(tk *c_type.Uint512, outs []txtool.Out) (douts []txtool.TDOut) {
 			dout.Asset = out.State.OS.Out_O.Asset.Clone()
 			dout.Memo = out.State.OS.Out_O.Memo
 			dout.Nils = append(dout.Nils, c_czero.GenTil(tk, out.State.OS.RootCM))
-			dout.Nils = append(dout.Nils, c_czero.GenNil(tk, out.State.OS.RootCM))
+			//dout.Nils = append(dout.Nils, c_czero.GenNil(tk, out.State.OS.RootCM))
 			dout.Nils = append(dout.Nils, out.Root)
 
 		} else if out.State.OS.Out_Z != nil {
@@ -65,7 +65,7 @@ func DecOut(tk *c_type.Uint512, outs []txtool.Out) (douts []txtool.TDOut) {
 			if confirm_out := generate_0.ConfirmOutZ(&key, flag, out.State.OS.Out_Z); confirm_out != nil {
 				dout = *confirm_out
 				dout.Nils = append(dout.Nils, c_czero.GenTil(tk, out.State.OS.RootCM))
-				dout.Nils = append(dout.Nils, c_czero.GenNil(tk, out.State.OS.RootCM))
+				//dout.Nils = append(dout.Nils, c_czero.GenNil(tk, out.State.OS.RootCM))
 			}
 
 		} else if out.State.OS.Out_P != nil {

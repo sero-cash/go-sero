@@ -29,7 +29,7 @@ type SRI struct {
 
 var SRI_Inst = SRI{}
 
-func Trace2Root(tk *c_type.Uint512, trace *c_type.Uint256, base *c_type.Uint256) (root *c_type.Uint256) {
+func Trace2Root(tk *c_type.Tk, trace *c_type.Uint256, base *c_type.Uint256) (root *c_type.Uint256) {
 	root_cm := c_czero.FetchRootCM(tk, trace)
 	root = localdb.GetRootByRootCM(txtool.Ref_inst.Bc.GetDB(), &root_cm)
 	return
@@ -151,7 +151,7 @@ func (self *SRI) GetAnchor(roots []c_type.Uint256) (wits []txtool.Witness, e err
 	return
 }
 
-func GenTxParam(param *PreTxParam, tk c_type.Uint512) (p txtool.GTxParam, e error) {
+func GenTxParam(param *PreTxParam, tk c_type.Tk) (p txtool.GTxParam, e error) {
 	log.Debug("genTx start")
 	p.Gas = param.Gas
 	p.GasPrice = big.NewInt(0).SetUint64(param.GasPrice)
@@ -162,9 +162,6 @@ func GenTxParam(param *PreTxParam, tk c_type.Uint512) (p txtool.GTxParam, e erro
 	p.From.PKr = param.From
 
 	p.Outs = param.Outs
-
-	skr := c_type.PKr{}
-	copy(skr[:], tk[:])
 
 	roots := []c_type.Uint256{}
 	outs := []txtool.Out{}
@@ -178,8 +175,6 @@ func GenTxParam(param *PreTxParam, tk c_type.Uint512) (p txtool.GTxParam, e erro
 			return
 		} else {
 			out := txtool.Out{in, *root}
-			tk := c_type.Uint512{}
-			copy(tk[:], skr[:])
 			dOuts := DecOut(&tk, []txtool.Out{out})
 			if len(dOuts) == 0 {
 				e = fmt.Errorf("SRI.GenTxParam dec outs Error for root %v", in)

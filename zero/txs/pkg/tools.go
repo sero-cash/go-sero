@@ -5,7 +5,6 @@ import (
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 func DePkg(key *c_type.Uint256, pkg *Pkg_Z) (ret Pkg_O, e error) {
@@ -15,23 +14,12 @@ func DePkg(key *c_type.Uint256, pkg *Pkg_Z) (ret Pkg_O, e error) {
 	desc.Einfo = pkg.EInfo
 	c_czero.DecOutput(&desc)
 	ret.Memo = desc.Memo
-	if desc.Tkn_currency != c_type.Empty_Uint256 {
-		ret.Asset.Tkn = &assets.Token{
-			desc.Tkn_currency,
-			utils.NewU256_ByKey(&desc.Tkn_value),
-		}
-	}
-	if desc.Tkt_category != c_type.Empty_Uint256 {
-		ret.Asset.Tkt = &assets.Ticket{
-			desc.Tkt_category,
-			desc.Tkt_value,
-		}
-	}
+	ret.Asset = assets.NewAssetByType(&desc.Asset)
 	ret.Ar = desc.Rsk
 	return
 }
 
-func GetKey(pkr *c_type.PKr, tk *c_type.Uint512) (ret c_type.Uint256) {
+func GetKey(pkr *c_type.PKr, tk *c_type.Tk) (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(pkr[:])
 	d.Write(tk[:])

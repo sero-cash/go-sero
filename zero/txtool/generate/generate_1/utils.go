@@ -36,7 +36,7 @@ func ConfirmOutC(key *c_type.Uint256, outc *stx_v1.Out_C) (dout *txtool.TDOut) {
 	if asset_desc.Asset_cm_ret == outc.AssetCM {
 		dout = &txtool.TDOut{}
 		dout.Asset = assets.NewAssetByType(&info.Asset_ret)
-		dout.Memo = info.Memo
+		dout.Memo = info.Memo_ret
 		return
 	} else {
 		return

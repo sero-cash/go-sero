@@ -43,7 +43,7 @@ type Account struct {
 func (self *Account) GetPKByPK(pkr *common.Address) (ret address.AccountAddress) {
 	c_pkr := c_type.Uint512{}
 	copy(c_pkr[:], pkr[:])
-	c_tk := c_type.Uint512{}
+	c_tk := c_type.Tk{}
 	copy(c_tk[:], self.Tk[:])
 	var c_pk c_type.Uint512
 	if c_superzk.IsSzkPK(&c_pkr) {
@@ -58,7 +58,7 @@ func (self *Account) GetPKByPK(pkr *common.Address) (ret address.AccountAddress)
 func (self *Account) GetPKByPKr(pkr *common.Address) (ret address.AccountAddress) {
 	c_pkr := c_type.PKr{}
 	copy(c_pkr[:], pkr[:])
-	c_tk := c_type.Uint512{}
+	c_tk := c_type.Tk{}
 	copy(c_tk[:], self.Tk[:])
 	var c_pk c_type.Uint512
 	if c_superzk.IsSzkPKr(&c_pkr) {
@@ -71,7 +71,7 @@ func (self *Account) GetPKByPKr(pkr *common.Address) (ret address.AccountAddress
 }
 
 func (self *Account) GetPKByHeight(height uint64) (ret address.AccountAddress) {
-	c_tk := c_type.Uint512{}
+	c_tk := c_type.Tk{}
 	copy(c_tk[:], self.Tk[:])
 	var c_pk c_type.Uint512
 	if height >= seroparam.SIP5() {

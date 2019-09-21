@@ -6,7 +6,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/txtool"
-	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 func ConfirmOutZ(key *c_type.Uint256, flag bool, outz *stx_v0.Out_Z) (dout *txtool.TDOut) {
@@ -17,16 +16,7 @@ func ConfirmOutZ(key *c_type.Uint256, flag bool, outz *stx_v0.Out_Z) (dout *txto
 	c_czero.DecOutput(&info)
 	if e := stx_v0.ConfirmOut_Z(&info, outz); e == nil {
 		dout = &txtool.TDOut{}
-		dout.Asset = assets.NewAsset(
-			&assets.Token{
-				info.Tkn_currency,
-				utils.NewU256_ByKey(&info.Tkn_value),
-			},
-			&assets.Ticket{
-				info.Tkt_category,
-				info.Tkt_value,
-			},
-		)
+		dout.Asset = assets.NewAssetByType(&info.Asset)
 		dout.Memo = info.Memo
 	}
 	return
