@@ -108,6 +108,12 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 	nonceLock := new(AddrLocker)
 	return []rpc.API{
 		{
+			Namespace: "proof",
+			Version:   "1.0",
+			Service:   NewProofServiceApi(),
+			Public:    true,
+		},
+		{
 			Namespace: "stake",
 			Version:   "1.0",
 			Service:   NewPublicStakeApI(apiBackend, nonceLock),

@@ -17,6 +17,7 @@
 package sero
 
 import (
+	"github.com/sero-cash/go-sero/zero/proofservice"
 	"math/big"
 	"os"
 	"os/user"
@@ -113,6 +114,8 @@ type Config struct {
 
 	// Transaction pool options
 	TxPool core.TxPoolConfig
+
+	Proof *proofservice.Config
 
 	// Gas Price Oracle options
 	GPO gasprice.Config

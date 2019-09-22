@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/proofservice"
 	"math/big"
 	"runtime"
 	"sync"
@@ -207,6 +208,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	//init light
 	if config.StartLight {
 		sero.lightNode = light.NewLightNode(zconfig.Light_dir(), sero.txPool, sero.blockchain.GetDB())
+	}
+
+	if config.Proof != nil {
+		proofservice.NewProofService("", sero.APIBackend, config.Proof);
 	}
 
 	SeroInstance = sero

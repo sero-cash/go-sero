@@ -20,6 +20,8 @@ package utils
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/proofservice"
+	"github.com/sero-cash/go-sero/zero/utils"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -599,6 +601,42 @@ var (
 		Usage: "InfluxDB `host` tag attached to all measurements",
 		Value: "localhost",
 	}
+
+	// proof settings
+	ProofEnabledFlag = cli.BoolFlag{
+		Name:  "proof",
+		Usage: "Enable the HTTP-RPC server",
+	}
+	ProofMaxThreadFlag = cli.IntFlag{
+		Name:  "maxthread",
+		Usage: "max work number",
+		Value: 5,
+	}
+	ProofMaxQueueFlag = cli.IntFlag{
+		Name:  "maxqueue",
+		Usage: "max work queue length",
+		Value: 10,
+	}
+	ProofzinFeeFlag = cli.StringFlag{
+		Name:  "zinFee",
+		Usage: "proof for tx zin fee",
+		Value: "1sero",
+	}
+	ProofoinFeeFlag = cli.StringFlag{
+		Name:  "oinFee",
+		Usage: "proof for tx oin fee",
+		Value: "0.5sero",
+	}
+	ProofoutFeeFlag = cli.StringFlag{
+		Name:  "outFee",
+		Usage: "proof for tx out fee",
+		Value: "0.5sero",
+	}
+	ProofFixedFeeFlag = cli.StringFlag{
+		Name:  "fixedFee",
+		Usage: "proof for tx out fee",
+		Value: "0sero",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -1029,6 +1067,50 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 }
 
+func initProof(ctx *cli.Context) (cfg *proofservice.Config) {
+	if !ctx.GlobalIsSet(ProofEnabledFlag.Name) {
+		return
+	}
+
+	cfg = &proofservice.Config{}
+	cfg.MaxWorkNumber = ctx.GlobalInt(ProofMaxThreadFlag.Name)
+	cfg.MaxQueueNumber = ctx.GlobalInt(ProofMaxQueueFlag.Name)
+	cfg.Fee = proofservice.ServiceFee{}
+
+	if ctx.GlobalIsSet(ProofzinFeeFlag.Name) {
+		zinFee, err := utils.ParseAmount(ctx.GlobalString(ProofzinFeeFlag.Name))
+		if err != nil {
+			panic(err);
+		}
+		cfg.Fee.ZinFee = zinFee
+	}
+
+	if ctx.GlobalIsSet(ProofoinFeeFlag.Name) {
+		oinFee, err := utils.ParseAmount(ctx.GlobalString(ProofoinFeeFlag.Name))
+		if err != nil {
+			panic(err);
+		}
+		cfg.Fee.OinFee = oinFee
+	}
+
+	if ctx.GlobalIsSet(ProofoutFeeFlag.Name) {
+		outFee, err := utils.ParseAmount(ctx.GlobalString(ProofoutFeeFlag.Name))
+		if err != nil {
+			panic(err);
+		}
+		cfg.Fee.OutFee = outFee
+	}
+
+	if ctx.GlobalIsSet(ProofFixedFeeFlag.Name) {
+		fixedFee, err := utils.ParseAmount(ctx.GlobalString(ProofFixedFeeFlag.Name))
+		if err != nil {
+			panic(err);
+		}
+		cfg.Fee.FixedFee = fixedFee
+	}
+	return;
+}
+
 func setEthash(ctx *cli.Context, cfg *sero.Config) {
 	if ctx.GlobalIsSet(EthashCacheDirFlag.Name) {
 		cfg.Ethash.CacheDir = ctx.GlobalString(EthashCacheDirFlag.Name)
@@ -1100,6 +1182,7 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	setTxPool(ctx, &cfg.TxPool)
 	setEthash(ctx, cfg)
 
+	cfg.Proof = initProof(ctx);
 	cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
 	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
