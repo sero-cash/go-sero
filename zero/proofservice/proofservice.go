@@ -1,13 +1,14 @@
 package proofservice
 
 import (
+	"errors"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/zero/wallet/light"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
+	"github.com/sero-cash/go-sero/zero/wallet/light"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -25,14 +26,13 @@ type Job struct {
 	TxHash    common.Hash
 	Timestamp time.Time
 	Error     error
-	Status    int // 1:penging,2 handing, 3 doned, 4:timeout, 5:error
 
 	tx    *stx.T
 	param *txtool.GTxParam
 }
 
 func newJob(tx *stx.T, param *txtool.GTxParam) *Job {
-	return &Job{tx: tx, param: param, Status: 1};
+	return &Job{tx: tx, param: param};
 }
 
 var instance *ProofService
@@ -49,12 +49,13 @@ type ProofService struct {
 	rpc    string
 	config *Config
 
-	queueChan   chan *Job
-	workChan    chan *Job
-	jobs        sync.Map
-	workNum     int32;
-	client      SeroClient
-	redisClient *RedisClient
+	queueChan chan *Job
+	workChan  chan *Job
+	jobs      sync.Map
+	workNum   int32;
+	client    SeroClient
+	// redisClient *RedisClient
+	storage Storage
 }
 
 func Instance() *ProofService {
@@ -66,26 +67,62 @@ type Backend interface {
 	CheckNil(Nils []c_type.Uint256) (nilResps []light.NilValue, e error)
 }
 
+type SeroClient interface {
+	CheckNils(nils []c_type.Uint256) bool
+	CommitTx(tx *txtool.GTx) error
+}
+
+type Storage interface {
+	Exists(common.Hash) bool
+	Save(job *Job)
+	Get(hash common.Hash) *Job
+}
+
+type MapStorage struct {
+	cache map[common.Hash]*Job
+}
+
+func newMapStorage() *MapStorage {
+	return &MapStorage{make(map[common.Hash]*Job)}
+}
+
+func (storage *MapStorage) Exists(hash common.Hash) bool {
+	_, ok := storage.cache[hash];
+	return ok;
+}
+
+func (storage *MapStorage) Save(job *Job) {
+	hash := job.tx.Tx1.Tx1_Hash()
+	storage.cache[common.BytesToHash(hash[:])] = job
+}
+
+func (storage *MapStorage) Get(hash common.Hash) *Job {
+	return storage.cache[hash]
+}
+
 func NewProofService(rpc string, backend Backend, config *Config) *ProofService {
 	proof := &ProofService{
 		rpc:       rpc,
 		config:    config,
 		queueChan: make(chan *Job, config.MaxQueueNumber),
 	}
+
 	if rpc != "" {
 		proof.client = NewRemoteClient(rpc)
+		proof.storage = NewRedisClient(&config.RedisConfig, "proof")
 	} else {
 		proof.client = NewLocalClient(backend)
+		proof.storage = newMapStorage()
 	}
-	// proof.redisClient = NewRedisClient()
+
 	instance = proof
 	go proof.loop()
 	log.Info("ProofService start", "config:", config)
 	return proof
 }
 
-func (self *ProofService) FindTxHash(hash common.Hash) common.Hash {
-	job := self.redisClient.GetJob(hash)
+func (proof *ProofService) FindTxHash(hash common.Hash) common.Hash {
+	job := proof.storage.Get(hash)
 	if job != nil {
 		return job.TxHash
 	}
@@ -94,14 +131,14 @@ func (self *ProofService) FindTxHash(hash common.Hash) common.Hash {
 
 var sero = *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256()
 
-func (self *ProofService) checkFee(param *txtool.GTxParam) bool {
-	if self.config.Fee.FixedFee.Sign() > 0 {
+func (proof *ProofService) checkFee(param *txtool.GTxParam) bool {
+	if proof.config.Fee.FixedFee.Sign() > 0 {
 		for _, out := range param.Outs {
-			if out.PKr == self.config.PKr {
+			if out.PKr == proof.config.PKr {
 				if out.Asset.Tkn != nil {
 					if out.Asset.Tkn.Currency == sero {
 						amount := out.Asset.Tkn.Value.ToInt()
-						return amount.Cmp(self.config.Fee.FixedFee) >= 0
+						return amount.Cmp(proof.config.Fee.FixedFee) >= 0
 					}
 				}
 				break
@@ -111,16 +148,16 @@ func (self *ProofService) checkFee(param *txtool.GTxParam) bool {
 		fee := big.NewInt(0)
 		for _, in := range param.Ins {
 			if in.Out.State.OS.Out_P != nil {
-				fee = new(big.Int).Add(fee, self.config.Fee.ZinFee)
+				fee = new(big.Int).Add(fee, proof.config.Fee.ZinFee)
 			} else if in.Out.State.OS.Out_C != nil {
-				fee = new(big.Int).Add(fee, self.config.Fee.OinFee)
+				fee = new(big.Int).Add(fee, proof.config.Fee.OinFee)
 			} else {
 				return false
 			}
 		}
-		fee = new(big.Int).Add(fee, new(big.Int).Mul(self.config.Fee.OutFee, big.NewInt(int64(len(param.Outs)-1))))
+		fee = new(big.Int).Add(fee, new(big.Int).Mul(proof.config.Fee.OutFee, big.NewInt(int64(len(param.Outs)-1))))
 		for _, out := range param.Outs {
-			if out.PKr == self.config.PKr {
+			if out.PKr == proof.config.PKr {
 				if out.Asset.Tkn != nil {
 					if out.Asset.Tkn.Currency == sero {
 						amount := out.Asset.Tkn.Value.ToInt()
@@ -135,81 +172,69 @@ func (self *ProofService) checkFee(param *txtool.GTxParam) bool {
 	return false
 }
 
-func (self *ProofService) Fee() ServiceFee {
-	return self.config.Fee
+func (proof *ProofService) Fee() ServiceFee {
+	return proof.config.Fee
 }
 
-func (self *ProofService) SubmitWork(tx *stx.T, param *txtool.GTxParam) bool {
+func (proof *ProofService) SubmitWork(tx *stx.T, param *txtool.GTxParam) error {
 	hash := tx.Tx1_Hash()
-	if !self.checkFee(param) {
+	if !proof.checkFee(param) {
 		log.Error("check fee error", "txHash", common.Bytes2Hex(hash[:]))
-		return false
+		errors.New("checkFee error")
 	}
 
-	if self.redisClient.Exists(common.BytesToHash(hash[:])) {
-		job := newJob(tx, param)
-		if TryEnqueue(job, self.queueChan) {
-			self.redisClient.SetJob(job);
-			return true
-		}
+	if proof.storage.Exists(common.BytesToHash(hash[:])) {
+		log.Warn("already exists", "txHash", common.Bytes2Hex(hash[:]))
+		return errors.New("already exists")
 	}
-	return false
+
+	job := newJob(tx, param)
+	if TryEnqueue(job, proof.queueChan) {
+		proof.storage.Save(job);
+		return nil
+	}
+	return errors.New("server is busy")
 }
 
-type SeroClient interface {
-	CheckNils(nils []c_type.Uint256) bool
-	CommitTx(tx *txtool.GTx) error
-}
-
-func (self *ProofService) processJob(job *Job) {
-	job.Status = 2;
+func (proof *ProofService) processJob(job *Job) {
 	gtx, err := flight.ProveTx1(job.tx, job.param)
 	if err != nil {
 		log.Error("processJob error", "error", err)
 		job.Error = err
-		job.Status = 5;
-		self.redisClient.UpdateJob(job);
+		proof.storage.Save(job);
 		return
 	}
-	if err := self.client.CommitTx(&gtx); err != nil {
+	if err := proof.client.CommitTx(&gtx); err != nil {
 		log.Error("processJob error", "error", err)
 		job.Error = err
-		job.Status = 5
-		self.redisClient.UpdateJob(job);
+		proof.storage.Save(job);
 		return
 	}
 	txHash := gtx.Tx.ToHash()
 	job.TxHash = common.BytesToHash(txHash[:])
-	job.Status = 3;
-	self.redisClient.UpdateJob(job);
+	proof.storage.Save(job);
 }
 
-func (self *ProofService) loop() {
+func (proof *ProofService) loop() {
 	clear := time.NewTicker(time.Minute * 10)
 	defer clear.Stop()
 
 	for {
-		for self.workNum >= 5 {
+		for proof.workNum >= 5 {
 			time.Sleep(time.Second)
 		}
 		select {
-		case job := <-self.queueChan:
-			if job.Status == 1 {
-				atomic.AddInt32(&self.workNum, 1)
-				go func() {
-					defer atomic.AddInt32(&self.workNum, -1);
-					self.processJob(job)
-				}()
-			}
+		case job := <-proof.queueChan:
+			atomic.AddInt32(&proof.workNum, 1)
+			go func() {
+				defer atomic.AddInt32(&proof.workNum, -1);
+				proof.processJob(job)
+			}()
 		case <-clear.C:
-			self.jobs.Range(func(key, value interface{}) bool {
+			proof.jobs.Range(func(key, value interface{}) bool {
 				job := value.(*Job)
 				if job.Timestamp.Add(time.Hour * 2).Before(time.Now()) {
-					if job.Status == 1 || job.Status == 2 {
-						job.Status = 4;
-					}
-
-					self.jobs.Delete(key);
+					proof.jobs.Delete(key);
 				}
 				return true
 			})

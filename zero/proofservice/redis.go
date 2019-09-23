@@ -47,25 +47,24 @@ func (r *RedisClient) Exists(txHash common.Hash) bool {
 	return ret.Val()
 }
 
-func (r *RedisClient) SetJob(job *Job) bool {
-	bytes, err := rlp.EncodeToBytes(job)
-	if err != nil {
-		return false
-	}
-	ret := r.client.SetNX(r.formatKey(job.TxHash), string(bytes), 0)
-	return ret.Val()
-}
+// func (r *RedisClient) Save(job *Job) bool {
+// 	bytes, err := rlp.EncodeToBytes(job)
+// 	if err != nil {
+// 		return false
+// 	}
+// 	ret := r.client.SetNX(r.formatKey(job.TxHash), string(bytes), 0)
+// 	return ret.Val()
+// }
 
-func (r *RedisClient) UpdateJob(job *Job) bool {
+func (r *RedisClient) Save(job *Job) {
 	bytes, err := rlp.EncodeToBytes(job)
 	if err != nil {
-		return false
+		log.Error("redis save err", err)
 	}
 	r.client.Set(r.formatKey(job.TxHash), string(bytes), time.Hour*2)
-	return true
 }
 
-func (r *RedisClient) GetJob(txHash common.Hash) *Job {
+func (r *RedisClient) Get(txHash common.Hash) *Job {
 	ret := r.client.Get(r.formatKey(txHash))
 	if datas, err := ret.Bytes(); err == nil {
 		job := Job{}

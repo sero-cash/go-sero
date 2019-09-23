@@ -22,11 +22,10 @@ func (nodeApi *ProofServiceApi) Fee() map[string]hexutil.Big {
 	return ret
 }
 
-func (nodeApi *ProofServiceApi) SubmitProofWork(tx *stx.T, param *txtool.GTxParam) bool {
-	proofservice.Instance().SubmitWork(tx, param);
-	return false
+func (nodeApi *ProofServiceApi) SubmitProofWork(tx *stx.T, param *txtool.GTxParam) error {
+	return proofservice.Instance().SubmitWork(tx, param)
 }
 
 func (nodeApi *ProofServiceApi) FindTxHash(hash common.Hash) common.Hash {
-	return proofservice.Instance().FindTxHash(hash);
+	return proofservice.Instance().FindTxHash(hash)
 }
