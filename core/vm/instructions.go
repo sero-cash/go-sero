@@ -22,6 +22,9 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/seroparam"
+
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/rlp"
 
@@ -911,6 +914,10 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 			},
 		}
 
+		if e := c_superzk.IsTktValid(&asset.Tkt.Category, &asset.Tkt.Value); e != nil {
+			return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "categoryName has no base"), false
+		}
+
 		gas := evm.callGasTemp + params.CallStipend
 		_, returnGas, err, _alarm := evm.Call(contract, toAddr, nil, gas, &asset)
 		alarm = _alarm
@@ -989,8 +996,14 @@ func handleIssueToken(d []byte, evm *EVM, contract *Contract, mem []byte) (bool,
 				asset := assets.Asset{Tkn: &assets.Token{
 					Currency: *common.BytesToHash(common.LeftPadBytes([]byte("SERO"), 32)).HashToUint256(),
 					Value:    utils.U256(*fee),
-				},
+				}}
+
+				if evm.BlockNumber.Uint64() >= seroparam.SIP5() {
+					if e := c_superzk.IsTknValid(&asset.Tkn.Currency); e != nil {
+						return false, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "coinName has no base")
+					}
 				}
+
 				if evm.BlockNumber.Uint64() >= 300000 {
 					evm.StateDB.NextZState().AddTxOut(foundationAccount2, asset, evm.TxHash)
 				} else {

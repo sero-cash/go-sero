@@ -171,13 +171,13 @@ func (state *State) AddOut_Z(out_z *stx_v0.Out_Z, txhash *c_type.Uint256) (root 
 func (state *State) insertOS(os *localdb.OutState, txhash *c_type.Uint256) (root c_type.Uint256) {
 	if os.Out_O != nil || os.Out_Z != nil {
 		os.Index = state.CzeroTree.GetLeafSize()
-		commitment := os.ToRootCM()
-		root = state.CzeroTree.AppendLeaf(*commitment)
+		os.GenRootCM()
+		root = state.CzeroTree.AppendLeaf(*os.RootCM)
 		state.AddOut_Log(&root, os, txhash)
 	} else {
 		os.Index = state.SzkTree.GetLeafSize()
-		commitment := os.ToRootCM()
-		root = state.SzkTree.AppendLeaf(*commitment)
+		os.GenRootCM()
+		root = state.SzkTree.AppendLeaf(*os.RootCM)
 		state.AddOut_Log(&root, os, txhash)
 	}
 	return

@@ -47,7 +47,7 @@ func (self *Account) GetPKByPK(pkr *common.Address) (ret address.AccountAddress)
 	copy(c_tk[:], self.Tk[:])
 	var c_pk c_type.Uint512
 	if c_superzk.IsSzkPK(&c_pkr) {
-		c_pk = c_superzk.Tk2Pk(&c_tk)
+		c_pk, _ = c_superzk.Tk2Pk(&c_tk)
 	} else {
 		c_pk = c_czero.Tk2Pk(&c_tk)
 	}
@@ -62,7 +62,7 @@ func (self *Account) GetPKByPKr(pkr *common.Address) (ret address.AccountAddress
 	copy(c_tk[:], self.Tk[:])
 	var c_pk c_type.Uint512
 	if c_superzk.IsSzkPKr(&c_pkr) {
-		c_pk = c_superzk.Tk2Pk(&c_tk)
+		c_pk, _ = c_superzk.Tk2Pk(&c_tk)
 	} else {
 		c_pk = c_czero.Tk2Pk(&c_tk)
 	}
@@ -75,7 +75,7 @@ func (self *Account) GetPKByHeight(height uint64) (ret address.AccountAddress) {
 	copy(c_tk[:], self.Tk[:])
 	var c_pk c_type.Uint512
 	if height >= seroparam.SIP5() {
-		c_pk = c_superzk.Tk2Pk(&c_tk)
+		c_pk, _ = c_superzk.Tk2Pk(&c_tk)
 	} else {
 		c_pk = c_czero.Tk2Pk(&c_tk)
 	}

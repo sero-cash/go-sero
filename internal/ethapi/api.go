@@ -222,7 +222,7 @@ func (s *PublicAccountAPI) GetSzkAccounts() []string {
 	addresses := make([]string, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
 		for _, account := range wallet.Accounts() {
-			pk := c_superzk.Tk2Pk(account.Tk.ToTK().NewRef())
+			pk, _ := c_superzk.Tk2Pk(account.Tk.ToTK().NewRef())
 			addr := utils.NewAddressByBytes(pk[:])
 			addr.SetProtocol("SP")
 			addresses = append(addresses, addr.ToCode())

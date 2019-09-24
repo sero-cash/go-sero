@@ -70,16 +70,21 @@ func DecOut(tk *c_type.Tk, outs []txtool.Out) (douts []txtool.TDOut) {
 
 		} else if out.State.OS.Out_P != nil {
 
-			dout.Asset = out.State.OS.Out_P.Asset
-			dout.Memo = out.State.OS.Out_P.Memo
-			dout.Nils = append(dout.Nils, c_superzk.GenNil(tk, out.State.OS.ToRootCM().NewRef(), &out.State.OS.Out_P.PKr))
+			if nl, e := c_superzk.GenNil(tk, out.State.OS.RootCM.NewRef(), &out.State.OS.Out_P.PKr); e == nil {
+				dout.Asset = out.State.OS.Out_P.Asset
+				dout.Memo = out.State.OS.Out_P.Memo
+				dout.Nils = append(dout.Nils, nl)
+			}
 
 		} else if out.State.OS.Out_C != nil {
 
-			key := c_superzk.FetchKey(&out.State.OS.Out_C.PKr, tk, &out.State.OS.Out_C.RPK)
-			if confirm_out := generate_1.ConfirmOutC(&key, out.State.OS.Out_C); confirm_out != nil {
-				dout = *confirm_out
-				dout.Nils = append(dout.Nils, c_superzk.GenNil(tk, out.State.OS.ToRootCM().NewRef(), &out.State.OS.Out_C.PKr))
+			if key, e := c_superzk.FetchKey(&out.State.OS.Out_C.PKr, tk, &out.State.OS.Out_C.RPK); e == nil {
+				if confirm_out := generate_1.ConfirmOutC(&key, out.State.OS.Out_C); confirm_out != nil {
+					if nl, e := c_superzk.GenNil(tk, out.State.OS.RootCM.NewRef(), &out.State.OS.Out_C.PKr); e == nil {
+						dout = *confirm_out
+						dout.Nils = append(dout.Nils, nl)
+					}
+				}
 			}
 
 		} else {

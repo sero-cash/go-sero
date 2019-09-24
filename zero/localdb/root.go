@@ -55,7 +55,7 @@ func RootCM2RootKey(root_cm *c_type.Uint256) []byte {
 func PutRoot(db serodb.Putter, root *c_type.Uint256, rs *RootState) {
 	rootkey := Root2TxHashKey(root)
 	tri.UpdateDBObj(db, rootkey, rs)
-	rootcmkey := RootCM2RootKey(rs.OS.ToRootCM())
+	rootcmkey := RootCM2RootKey(rs.OS.RootCM)
 	db.Put(rootcmkey, root[:])
 }
 

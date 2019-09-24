@@ -17,19 +17,14 @@ type GIn struct {
 	Out     Out
 	Witness Witness
 	A       *c_type.Uint256
+	Ar      *c_type.Uint256
 }
 
 type GOut struct {
 	PKr   c_type.PKr
 	Asset assets.Asset
 	Memo  c_type.Uint512
-}
-
-func (self *GOut) ToSzkEncInfoDesc() (ret c_superzk.EncInfoDesc) {
-	ret.Memo = self.Memo
-	type_asset := self.Asset.ToTypeAsset()
-	ret.Asset = type_asset
-	return
+	Ar    *c_type.Uint256
 }
 
 type GTx struct {

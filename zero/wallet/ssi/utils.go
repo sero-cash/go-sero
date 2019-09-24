@@ -42,17 +42,23 @@ func DecNilOuts(outs []txtool.Out, skr *c_type.PKr) (douts []txtool.DOut) {
 			}
 			log.Printf("DecOuts Out_Z")
 		} else if out.State.OS.Out_P != nil {
-			dout.Asset = out.State.OS.Out_P.Asset.Clone()
-			dout.Memo = out.State.OS.Out_P.Memo
-			dout.Nil = c_superzk.GenNil(&tk, out.State.OS.RootCM, &out.State.OS.Out_P.PKr)
+			if nl, e := c_superzk.GenNil(&tk, out.State.OS.RootCM, &out.State.OS.Out_P.PKr); e == nil {
+				dout.Asset = out.State.OS.Out_P.Asset.Clone()
+				dout.Memo = out.State.OS.Out_P.Memo
+				dout.Nil = nl
+				log.Printf("DecOuts success")
+			}
 			log.Printf("DecOuts Out_P")
 		} else if out.State.OS.Out_C != nil {
-			key := c_superzk.FetchKey(&out.State.OS.Out_C.PKr, &tk, &out.State.OS.Out_C.RPK)
-			if o := generate_1.ConfirmOutC(&key, out.State.OS.Out_C); o != nil {
-				dout.Asset = o.Asset
-				dout.Memo = o.Memo
-				dout.Nil = c_superzk.GenNil(&tk, out.State.OS.ToRootCM().NewRef(), out.State.OS.ToPKr())
-				log.Printf("DecOuts success")
+			if key, e := c_superzk.FetchKey(&out.State.OS.Out_C.PKr, &tk, &out.State.OS.Out_C.RPK); e == nil {
+				if o := generate_1.ConfirmOutC(&key, out.State.OS.Out_C); o != nil {
+					if nl, e := c_superzk.GenNil(&tk, out.State.OS.RootCM.NewRef(), out.State.OS.ToPKr()); e == nil {
+						dout.Asset = o.Asset
+						dout.Memo = o.Memo
+						dout.Nil = nl
+						log.Printf("DecOuts success")
+					}
+				}
 			}
 			log.Printf("DecOuts Out_C")
 		}

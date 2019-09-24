@@ -24,7 +24,7 @@ func (self *verify_input_o_desc) Run() error {
 	g := c_czero.VerifyInputSDesc{}
 	g.Ehash = self.hash_z
 	g.Nil = self.in.Nil
-	g.RootCM = *self.src.ToRootCM()
+	g.RootCM = *self.src.RootCM
 	g.Sign = self.in.Sign
 	g.Pkr = *self.src.ToPKr()
 	if err := c_czero.VerifyInputS(&g); err != nil {

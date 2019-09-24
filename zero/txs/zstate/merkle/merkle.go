@@ -11,6 +11,8 @@ import (
 	"github.com/sero-cash/go-sero/rlp"
 )
 
+type CombinFunc func(*c_type.Uint256, *c_type.Uint256) (out c_type.Uint256)
+
 type Param struct {
 	emptyRoots   [c_type.DEPTH + 1]c_type.Uint256
 	obj          c_type.PKr
@@ -20,15 +22,17 @@ type Param struct {
 	cap          uint64
 	leafcap      uint64
 	startIndex   uint64
+	combine      CombinFunc
 }
 
-func NewParam(obj *c_type.PKr) (ret Param) {
+func NewParam(obj *c_type.PKr, combine CombinFunc) (ret Param) {
 	ret.obj = *obj
 	ret.indexLeafKey = c_type.Uint256(crypto.Keccak256Hash([]byte("outTreeIndex_Leaf")))
 	ret.indexTreeKey = c_type.Uint256(crypto.Keccak256Hash([]byte("outTreeIndex_Self")))
 	ret.cap = toPow2(DEPTH + 1)
 	ret.leafcap = toPow2(DEPTH)
 	ret.startIndex = toPow2(DEPTH)
+	ret.combine = combine
 	return
 }
 
@@ -79,9 +83,9 @@ func (self *MerkleTree) AppendLeaf(value c_type.Uint256) c_type.Uint256 {
 		}
 
 		if leafIndex%2 == 0 {
-			current_value = Combine(&current_value, &brotherValue)
+			current_value = self.param.combine(&current_value, &brotherValue)
 		} else {
-			current_value = Combine(&brotherValue, &current_value)
+			current_value = self.param.combine(&brotherValue, &current_value)
 		}
 
 		leafIndex = parent(leafIndex)
