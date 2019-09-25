@@ -8,19 +8,11 @@ import (
 	"github.com/sero-cash/go-sero/zero/txtool"
 )
 
-func GenAssetCC(a *assets.Asset) (ret c_superzk.AssetDesc) {
+func GenAssetCC(a *assets.Asset) (ret c_superzk.AssetDesc, e error) {
 	ret = c_superzk.AssetDesc{
 		Asset: a.ToTypeAsset(),
 	}
-	c_superzk.GenAssetCC(&ret)
-	return
-}
-
-func GenTokenCC(t *assets.Token) (ret c_superzk.AssetDesc) {
-	ret = c_superzk.AssetDesc{
-		Asset: t.ToTypeAsset(),
-	}
-	c_superzk.GenAssetCC(&ret)
+	e = c_superzk.GenAssetCC(&ret)
 	return
 }
 
@@ -32,7 +24,9 @@ func ConfirmOutC(key *c_type.Uint256, outc *stx_v1.Out_C) (dout *txtool.TDOut) {
 	asset_desc := c_superzk.AssetDesc{}
 	asset_desc.Asset = info.Asset_ret
 	asset_desc.Ar = info.Ar_ret
-	c_superzk.GenAssetCM(&asset_desc)
+	if e := c_superzk.GenAssetCM(&asset_desc); e != nil {
+		return
+	}
 	if asset_desc.Asset_cm_ret == outc.AssetCM {
 		dout = &txtool.TDOut{}
 		dout.Asset = assets.NewAssetByType(&info.Asset_ret)

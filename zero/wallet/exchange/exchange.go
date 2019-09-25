@@ -512,7 +512,7 @@ func (self *Exchange) GenTxWithSign(param prepare.PreTxParam) (pretx *txtool.GTx
 		Utxos:      roots,
 		RefundTo:   *param.RefundTo,
 		Receptions: param.Receptions,
-		Cmds:       prepare.Cmds{},
+		Cmds:       param.Cmds,
 	}
 
 	if pretx, tx, e = self.genTx(account, &bparam); e != nil {
