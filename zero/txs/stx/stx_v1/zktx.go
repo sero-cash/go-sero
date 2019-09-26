@@ -10,6 +10,7 @@ type Tx struct {
 	Ins_P0 []In_P0
 	Ins_C  []In_C
 	Outs_C []Out_C
+	Outs_P []Out_P
 }
 
 func (self *Tx) Tx1_Hash() (ret c_type.Uint256) {
@@ -25,6 +26,9 @@ func (self *Tx) Tx1_Hash() (ret c_type.Uint256) {
 	}
 	for _, out := range self.Outs_C {
 		d.Write(out.Tx1_Hash().NewRef()[:])
+	}
+	for _, out := range self.Outs_P {
+		d.Write(out.ToHash().NewRef()[:])
 	}
 	copy(ret[:], d.Sum(nil))
 	return ret
@@ -42,6 +46,9 @@ func (self *Tx) ToHash() (ret c_type.Uint256) {
 		d.Write(in.ToHash().NewRef()[:])
 	}
 	for _, out := range self.Outs_C {
+		d.Write(out.ToHash().NewRef()[:])
+	}
+	for _, out := range self.Outs_P {
 		d.Write(out.ToHash().NewRef()[:])
 	}
 	copy(ret[:], d.Sum(nil))

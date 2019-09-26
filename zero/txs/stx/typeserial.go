@@ -34,7 +34,7 @@ type ZtxVersion_1 struct {
 type ZtxVersion_2 struct {
 	Version0 ZtxVersion_0
 	Version1 ZtxVersion_1
-	Tx2      stx_v1.Tx
+	Tx1      stx_v1.Tx
 }
 
 func SetTxForVersion0(b *T, v0 *ZtxVersion_0) {
@@ -59,7 +59,7 @@ func SetTxForVersion1(b *T, v1 *ZtxVersion_1) {
 func SetTxForVersion2(b *T, v2 *ZtxVersion_2) {
 	SetTxForVersion0(b, &v2.Version0)
 	SetTxForVersion1(b, &v2.Version1)
-	b.Tx1 = &v2.Tx2
+	b.Tx1 = &v2.Tx1
 }
 
 func (b *T) DecodeRLP(s *rlp.Stream) error {
@@ -108,7 +108,7 @@ func SetVersion1ForTx(v1 *ZtxVersion_1, b *T) {
 func SetVersion2ForTx(v2 *ZtxVersion_2, b *T) {
 	SetVersion0ForTx(&v2.Version0, b)
 	SetVersion1ForTx(&v2.Version1, b)
-	v2.Tx2 = *b.Tx1
+	v2.Tx1 = *b.Tx1
 }
 
 // EncodeRLP serializes b into the Ethereum RLP block format.

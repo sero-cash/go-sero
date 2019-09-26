@@ -83,3 +83,12 @@ func (this Out_P) ToRef() (ret *Out_P) {
 	ret = &this
 	return
 }
+
+func (self *Out_P) ToHash() (ret c_type.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(self.PKr[:])
+	d.Write(self.Asset.ToHash().NewRef()[:])
+	d.Write(self.Memo[:])
+	copy(ret[:], d.Sum(nil))
+	return ret
+}

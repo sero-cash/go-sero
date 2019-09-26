@@ -24,22 +24,17 @@ func GenTxParam(param *PreTxParam, gen TxParamGenerator, state TxParamState) (tx
 	}
 
 	if param.RefundTo == nil {
-		if av, err := param.IsSzk(); err != nil {
-			e = err
-			return
-		} else {
-			if param.RefundTo = gen.DefaultRefundTo(&param.From, av); param.RefundTo == nil {
-				return nil, errors.New("can not find default refund to")
-			}
+		if param.RefundTo = gen.DefaultRefundTo(&param.From); param.RefundTo == nil {
+			return nil, errors.New("can not find default refund to")
 		}
 	}
 	bparam := BeforeTxParam{
-		Fee:        param.Fee,
-		GasPrice:   *param.GasPrice,
-		Utxos:      utxos,
-		RefundTo:   *param.RefundTo,
-		Receptions: param.Receptions,
-		Cmds:       param.Cmds,
+		param.Fee,
+		*param.GasPrice,
+		utxos,
+		*param.RefundTo,
+		param.Receptions,
+		param.Cmds,
 	}
 	txParam, e = BuildTxParam(state, &bparam)
 	return

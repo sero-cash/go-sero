@@ -21,6 +21,8 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 
@@ -306,6 +308,20 @@ func (state *State) addTx1(tx *stx_v1.Tx, txhash *c_type.Uint256) (e error) {
 	}
 	for _, out := range tx.Outs_C {
 		state.addOut_C(&out, txhash)
+	}
+	for _, out := range tx.Outs_P {
+		if c_superzk.IsSzkPKr(&out.PKr) {
+			state.addOut_O(
+				&stx_v0.Out_O{
+					Addr:  out.PKr,
+					Asset: out.Asset,
+					Memo:  out.Memo,
+				},
+				txhash,
+			)
+		} else {
+			state.addOut_P(&out, txhash)
+		}
 	}
 	return
 }

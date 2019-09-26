@@ -3,9 +3,6 @@ package exchange
 import (
 	"math/big"
 
-	"github.com/sero-cash/go-czero-import/c_superzk"
-	"github.com/sero-cash/go-sero/zero/utils"
-
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -51,17 +48,10 @@ func (self *Exchange) FindRootsByTicket(pk *c_type.Uint512, tickets map[c_type.U
 	return
 }
 
-func (self *Exchange) DefaultRefundTo(from *c_type.Uint512, av prepare.ADDRESS_VERSION) (ret *c_type.PKr) {
+func (self *Exchange) DefaultRefundTo(from *c_type.Uint512) (ret *c_type.PKr) {
 	if value, ok := self.accounts.Load(*from); ok {
 		account := value.(*Account)
-		if av == prepare.AV_CZERO {
-			return &account.mainPkr
-		} else {
-			pk, _ := c_superzk.Tk2Pk(account.tk)
-			r := utils.NewU256(1).ToRef().ToUint256()
-			pkr, _ := c_superzk.Pk2PKr(&pk, &r)
-			return &pkr
-		}
+		return prepare.CreatePkr(account.key.ToUint512(), 1).NewRef()
 	}
 	return nil
 }

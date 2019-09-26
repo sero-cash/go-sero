@@ -23,7 +23,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
-	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -63,7 +62,7 @@ func (self *T) Tx0() (ret *stx_v0.Tx) {
 }
 
 func (self *T) IsSzk() bool {
-	return c_superzk.IsSzkPKr(&self.From)
+	return self.Tx1 != nil
 }
 
 func (self *T) ContractAsset() *assets.Asset {

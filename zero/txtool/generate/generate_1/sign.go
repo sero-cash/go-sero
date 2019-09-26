@@ -19,6 +19,8 @@ type sign_ctx struct {
 	p0_ins       []*txtool.GIn
 	p_ins        []*txtool.GIn
 	c_ins        []*txtool.GIn
+	c_outs       []*txtool.GOut
+	p_outs       []*txtool.GOut
 	balance_desc c_type.BalanceDesc
 	keys         []c_type.Uint256
 	s            stx.T
@@ -68,6 +70,9 @@ func SignTx(param *txtool.GTxParam) (ctx sign_ctx, e error) {
 	if e = ctx.genOutsC(); e != nil {
 		return
 	}
+	if e = ctx.genOutsP(); e != nil {
+		return
+	}
 	if e = ctx.genSign(); e != nil {
 		return
 	}
@@ -75,10 +80,6 @@ func SignTx(param *txtool.GTxParam) (ctx sign_ctx, e error) {
 }
 
 func (self *sign_ctx) check() (e error) {
-	if !self.param.IsSzk() {
-		e = errors.New("param is czero, must use generate_0")
-		return
-	}
 	sk := self.param.From.SKr.ToUint512()
 	tk := superzk.Sk2Tk(&sk)
 	if !superzk.IsMyPKr(&tk, &self.param.From.PKr) {
@@ -117,24 +118,6 @@ func (self *sign_ctx) check() (e error) {
 			continue
 		}
 	}
-	for _, out := range self.param.Outs {
-		if !c_superzk.IsSzkPKr(&out.PKr) {
-			e = errors.New("output must be Szk pkr")
-			return
-		}
-	}
-	if self.param.Cmds.BuyShare != nil {
-		if !c_superzk.IsSzkPKr(&self.param.Cmds.BuyShare.Vote) {
-			e = errors.New("buyshare must be Szk pkr")
-			return
-		}
-	}
-	if self.param.Cmds.RegistPool != nil {
-		if !c_superzk.IsSzkPKr(&self.param.Cmds.RegistPool.Vote) {
-			e = errors.New("regist pool must be Szk pkr")
-			return
-		}
-	}
 	return
 }
 
@@ -157,6 +140,14 @@ func (self *sign_ctx) prepare() (e error) {
 		if in.Out.State.OS.Out_C != nil {
 			self.c_ins = append(self.c_ins, in)
 			continue
+		}
+	}
+	for i := range self.param.Outs {
+		out := &self.param.Outs[i]
+		if c_superzk.IsSzkPKr(&out.PKr) {
+			self.c_outs = append(self.c_outs, out)
+		} else {
+			self.p_outs = append(self.p_outs, out)
 		}
 	}
 	return
@@ -343,7 +334,7 @@ func (self *sign_ctx) genInsC() (e error) {
 }
 
 func (self *sign_ctx) genOutsC() (e error) {
-	for _, out := range self.param.Outs {
+	for _, out := range self.c_outs {
 		t_out := stx_v1.Out_C{}
 
 		asset_desc := c_superzk.AssetDesc{
@@ -382,6 +373,27 @@ func (self *sign_ctx) genOutsC() (e error) {
 	return
 }
 
+func (self *sign_ctx) genOutsP() (e error) {
+	for _, out := range self.c_outs {
+		t_out := stx_v1.Out_P{}
+		t_out.PKr = out.PKr
+		t_out.Asset = out.Asset
+		t_out.Memo = out.Memo
+
+		asset_desc := c_superzk.AssetDesc{
+			Asset: out.Asset.ToTypeAsset(),
+			Ar:    c_superzk.RandomFr(),
+		}
+		if e = c_superzk.GenAssetCM(&asset_desc); e != nil {
+			return
+		}
+
+		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, asset_desc.Asset_cc_ret[:]...)
+		self.s.Tx1.Outs_P = append(self.s.Tx1.Outs_P, t_out)
+	}
+	return
+}
+
 func (self *sign_ctx) genSign() (e error) {
 
 	self.balance_desc.Hash = self.s.Tx1_Hash()
@@ -413,6 +425,7 @@ func (self sign_ctx) signFrom() (e error) {
 	}
 	return
 }
+
 func (self sign_ctx) signInsP0() (e error) {
 	for i := range self.s.Tx1.Ins_P0 {
 		t_in := self.p0_ins[i]
@@ -430,6 +443,7 @@ func (self sign_ctx) signInsP0() (e error) {
 	}
 	return
 }
+
 func (self sign_ctx) signInsP() (e error) {
 	for i := range self.s.Tx1.Ins_P {
 		t_in := self.p_ins[i]

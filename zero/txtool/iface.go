@@ -3,7 +3,7 @@ package txtool
 import (
 	"math/big"
 
-	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
 
@@ -81,6 +81,14 @@ type GTxParam struct {
 	Cmds     Cmds
 }
 
-func (self *GTxParam) IsSzk() bool {
-	return c_superzk.IsSzkPKr(&self.From.PKr)
+func (self *GTxParam) IsSzk() (ret bool) {
+	check := utils.NewPKrChecker()
+	check.AddPKr(&self.From.PKr)
+	for _, in := range self.Ins {
+		check.AddPKr(in.Out.State.OS.ToPKr())
+	}
+	for _, out := range self.Outs {
+		check.AddPKr(&out.PKr)
+	}
+	return check.IsSzk()
 }
