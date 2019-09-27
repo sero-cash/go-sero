@@ -4,17 +4,10 @@ import (
 	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 	"github.com/sero-cash/go-sero/zero/txtool"
 )
-
-func GenAssetCC(a *assets.Asset) (ret c_superzk.AssetDesc, e error) {
-	ret = c_superzk.AssetDesc{
-		Asset: a.ToTypeAsset(),
-	}
-	e = c_superzk.GenAssetCC(&ret)
-	return
-}
 
 func ConfirmOutC(key *c_type.Uint256, outc *stx_v1.Out_C) (dout *txtool.TDOut) {
 	info := c_superzk.DecInfoDesc{}
@@ -34,5 +27,24 @@ func ConfirmOutC(key *c_type.Uint256, outc *stx_v1.Out_C) (dout *txtool.TDOut) {
 		return
 	} else {
 		return
+	}
+}
+
+func ConfirmOutZ(key *c_type.Uint256, flag bool, outz *stx_v0.Out_Z) (dout *txtool.TDOut) {
+	if asset, rsk, memo, e := c_superzk.Czero_decEInfo(key, flag, &outz.EInfo); e != nil {
+		return
+	} else {
+		if out_cm, err := c_superzk.Czero_genOutCM(&asset, &memo, &outz.PKr, &rsk); err != nil {
+			return
+		} else {
+			if out_cm != outz.OutCM {
+				return
+			} else {
+				dout = &txtool.TDOut{}
+				dout.Asset = assets.NewAssetByType(&asset)
+				dout.Memo = memo
+				return
+			}
+		}
 	}
 }

@@ -196,7 +196,7 @@ func (self *gen_ctx) signTxFrom() error {
 	if !superzk.IsMyPKr(&tk, &self.s.From) {
 		return fmt.Errorf("sign from : sk unmatch the from (%v)", hexutil.Encode(self.s.From[:]))
 	}
-	if sign, err := superzk.SignPKrBySk(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.s.From); err != nil {
+	if sign, err := superzk.SignPKr(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.s.From); err != nil {
 		return err
 	} else {
 		self.s.Sign = sign
@@ -239,14 +239,14 @@ func (self *gen_ctx) signTxBalance() error {
 
 func (self *gen_ctx) signTxCmds() error {
 	if self.param.Cmds.PkgTransfer != nil {
-		if sign, err := superzk.SignPKrBySk(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.param.Cmds.PkgTransfer.Owner); err != nil {
+		if sign, err := superzk.SignPKr(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.param.Cmds.PkgTransfer.Owner); err != nil {
 			return err
 		} else {
 			self.s.Desc_Pkg.Transfer.Sign = sign
 		}
 	}
 	if self.param.Cmds.PkgClose != nil {
-		if sign, err := superzk.SignPKrBySk(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.param.Cmds.PkgClose.Owner); err != nil {
+		if sign, err := superzk.SignPKr(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.param.Cmds.PkgClose.Owner); err != nil {
 			return err
 		} else {
 			self.s.Desc_Pkg.Transfer.Sign = sign
