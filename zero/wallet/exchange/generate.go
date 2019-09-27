@@ -51,7 +51,7 @@ func (self *Exchange) FindRootsByTicket(pk *c_type.Uint512, tickets map[c_type.U
 func (self *Exchange) DefaultRefundTo(from *c_type.Uint512) (ret *c_type.PKr) {
 	if value, ok := self.accounts.Load(*from); ok {
 		account := value.(*Account)
-		return prepare.CreatePkr(account.key.ToUint512(), 1).NewRef()
+		return prepare.CreatePkr(account.pk, 1).NewRef()
 	}
 	return nil
 }

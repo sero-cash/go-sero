@@ -1192,7 +1192,7 @@ func (self *Exchange) Merge(pk *c_type.Uint512, currency string, force bool) (co
 			},
 			*big.NewInt(1000000000),
 			mu.list.Roots(),
-			mainPkr,
+			account.mainPkr,
 			receptions,
 			prepare.Cmds{},
 		}
