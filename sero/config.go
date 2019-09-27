@@ -17,7 +17,6 @@
 package sero
 
 import (
-	"github.com/sero-cash/go-sero/zero/proofservice"
 	"math/big"
 	"os"
 	"os/user"
@@ -25,7 +24,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/sero-cash/go-sero/common/address"
+	"github.com/sero-cash/go-sero/zero/proofservice"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus/ethash"
@@ -85,10 +84,10 @@ type Config struct {
 	SyncMode  downloader.SyncMode
 	NoPruning bool
 
-	MineMode  bool
+	MineMode bool
 
 	StartExchange bool
-	AutoMerge bool
+	AutoMerge     bool
 
 	StartLight bool
 
@@ -104,9 +103,8 @@ type Config struct {
 	TrieTimeout        time.Duration
 
 	// Mining-related options
-	Serobase     address.AccountAddress `toml:",omitempty"`
-	MinerThreads int                    `toml:",omitempty"`
-	ExtraData    []byte                 `toml:",omitempty"`
+	MinerThreads int    `toml:",omitempty"`
+	ExtraData    []byte `toml:",omitempty"`
 	GasPrice     *big.Int
 
 	// Ethash options

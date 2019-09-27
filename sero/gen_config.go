@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus/ethash"
 	"github.com/sero-cash/go-sero/core"
@@ -31,9 +30,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		DatabaseCache           int
 		TrieCache               int
 		TrieTimeout             time.Duration
-		Serobase                address.AccountAddress `toml:",omitempty"`
-		MinerThreads            int                    `toml:",omitempty"`
-		ExtraData               hexutil.Bytes          `toml:",omitempty"`
+		MinerThreads            int           `toml:",omitempty"`
+		ExtraData               hexutil.Bytes `toml:",omitempty"`
 		GasPrice                *big.Int
 		Ethash                  ethash.Config
 		TxPool                  core.TxPoolConfig
@@ -54,7 +52,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.DatabaseCache = c.DatabaseCache
 	enc.TrieCache = c.TrieCache
 	enc.TrieTimeout = c.TrieTimeout
-	enc.Serobase = c.Serobase
 	enc.MinerThreads = c.MinerThreads
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
@@ -81,9 +78,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		DatabaseCache           *int
 		TrieCache               *int
 		TrieTimeout             *time.Duration
-		Serobase                *address.AccountAddress `toml:",omitempty"`
-		MinerThreads            *int                    `toml:",omitempty"`
-		ExtraData               *hexutil.Bytes          `toml:",omitempty"`
+		MinerThreads            *int           `toml:",omitempty"`
+		ExtraData               *hexutil.Bytes `toml:",omitempty"`
 		GasPrice                *big.Int
 		Ethash                  *ethash.Config
 		TxPool                  *core.TxPoolConfig
@@ -130,9 +126,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.TrieTimeout != nil {
 		c.TrieTimeout = *dec.TrieTimeout
-	}
-	if dec.Serobase != nil {
-		c.Serobase = *dec.Serobase
 	}
 	if dec.MinerThreads != nil {
 		c.MinerThreads = *dec.MinerThreads

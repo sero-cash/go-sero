@@ -20,8 +20,6 @@ package utils
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/proofservice"
-	"github.com/sero-cash/go-sero/zero/utils"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -30,13 +28,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sero-cash/go-sero/common/addrutil"
+	"github.com/sero-cash/go-czero-import/c_type"
+
+	"github.com/btcsuite/btcutil/base58"
+
+	"github.com/sero-cash/go-sero/zero/proofservice"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/rpc"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
-	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/accounts/keystore"
@@ -868,10 +870,24 @@ func makeDatabaseHandles() int {
 // a key index in the key store to an internal account representation.
 func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
 	// If the specified account is a valid address, return it
-	_, err := addrutil.IsValidAccountAddress([]byte(account))
-	if err == nil {
-		return accounts.Account{Address: address.Base58ToAccount(account)}, nil
+
+	splitStrs := strings.Split(account, ".")
+	var addr string
+	if len(splitStrs) == 3 {
+		addr = splitStrs[1]
+	} else {
+		addr = account
 	}
+	PkByte := base58.Decode(addr)
+	pk := c_type.Uint512{}
+	copy(pk[:], PkByte)
+	wallets := ks.Wallets()
+	for _, wallet := range wallets {
+		if wallet.Accounts()[0].IsMyPk(pk) {
+			return wallet.Accounts()[0], nil
+		}
+	}
+
 	// Otherwise try to interpret the account as a keystore index
 	index, err := strconv.Atoi(account)
 	if err != nil || index < 0 {
@@ -888,18 +904,6 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 		return accounts.Account{}, fmt.Errorf("index %d higher than number of accounts %d", index, len(accs))
 	}
 	return accs[index], nil
-}
-
-// setSerobase retrieves the serobase either from the directly specified
-// command line flags or from the keystore if CLI indexed.
-func setSerobase(ctx *cli.Context, ks *keystore.KeyStore, cfg *sero.Config) {
-	if ctx.GlobalIsSet(SerobaseFlag.Name) {
-		account, err := MakeAddress(ks, ctx.GlobalString(SerobaseFlag.Name))
-		if err != nil {
-			Fatalf("Option %q: %v", SerobaseFlag.Name, err)
-		}
-		cfg.Serobase = account.Address
-	}
 }
 
 // MakePasswordList reads password lines from the file specified by the global --password flag.
@@ -1080,7 +1084,7 @@ func initProof(ctx *cli.Context) (cfg *proofservice.Config) {
 	if ctx.GlobalIsSet(ProofzinFeeFlag.Name) {
 		zinFee, err := utils.ParseAmount(ctx.GlobalString(ProofzinFeeFlag.Name))
 		if err != nil {
-			panic(err);
+			panic(err)
 		}
 		cfg.Fee.ZinFee = zinFee
 	}
@@ -1088,7 +1092,7 @@ func initProof(ctx *cli.Context) (cfg *proofservice.Config) {
 	if ctx.GlobalIsSet(ProofoinFeeFlag.Name) {
 		oinFee, err := utils.ParseAmount(ctx.GlobalString(ProofoinFeeFlag.Name))
 		if err != nil {
-			panic(err);
+			panic(err)
 		}
 		cfg.Fee.OinFee = oinFee
 	}
@@ -1096,7 +1100,7 @@ func initProof(ctx *cli.Context) (cfg *proofservice.Config) {
 	if ctx.GlobalIsSet(ProofoutFeeFlag.Name) {
 		outFee, err := utils.ParseAmount(ctx.GlobalString(ProofoutFeeFlag.Name))
 		if err != nil {
-			panic(err);
+			panic(err)
 		}
 		cfg.Fee.OutFee = outFee
 	}
@@ -1104,11 +1108,11 @@ func initProof(ctx *cli.Context) (cfg *proofservice.Config) {
 	if ctx.GlobalIsSet(ProofFixedFeeFlag.Name) {
 		fixedFee, err := utils.ParseAmount(ctx.GlobalString(ProofFixedFeeFlag.Name))
 		if err != nil {
-			panic(err);
+			panic(err)
 		}
 		cfg.Fee.FixedFee = fixedFee
 	}
-	return;
+	return
 }
 
 func setEthash(ctx *cli.Context, cfg *sero.Config) {
@@ -1176,13 +1180,11 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	checkExclusive(ctx, AlphanetFlag, DeveloperFlag)
 	//checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	setSerobase(ctx, ks, cfg)
 	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
 	setEthash(ctx, cfg)
 
-	cfg.Proof = initProof(ctx);
+	cfg.Proof = initProof(ctx)
 	cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
 	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)

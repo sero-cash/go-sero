@@ -229,7 +229,7 @@ func pkrToAddress(pkr c_type.PKr) common.Address {
 
 func GetSeedByVotePkr(wallets []accounts.Wallet, pkr c_type.PKr) *address.Seed {
 	for _, w := range wallets {
-		if w.IsMine(pkrToAddress(pkr)) {
+		if w.IsMine(pkr) {
 			seed, err := w.GetSeed()
 			if err != nil {
 				log.Trace("GetSeedByVotePkr", "err", err)

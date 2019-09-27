@@ -41,7 +41,7 @@ import (
 
 type Account struct {
 	wallet        accounts.Wallet
-	pk            *c_type.Uint512
+	accountKey    *common.AccountKey
 	tk            *c_type.Tk
 	skr           c_type.PKr
 	mainPkr       c_type.PKr
@@ -105,8 +105,8 @@ type (
 	HandleUtxoFunc func(utxo Utxo)
 )
 
-type PkKey struct {
-	PK  c_type.Uint512
+type AccountKey struct {
+	key common.AccountKey
 	Num uint64
 }
 
@@ -185,29 +185,29 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 
 func (self *Exchange) initWallet(w accounts.Wallet) {
 
-	if _, ok := self.accounts.Load(*w.Accounts()[0].Address.ToUint512()); !ok {
+	if _, ok := self.accounts.Load(w.Accounts()[0].Key); !ok {
 		account := Account{}
 		account.wallet = w
-		account.pk = w.Accounts()[0].Address.ToUint512()
-		account.tk = w.Accounts()[0].Tk.ToTK()
+		account.accountKey = &w.Accounts()[0].Key
+		account.tk = w.Accounts()[0].Tk.ToTk().NewRef()
 		copy(account.skr[:], account.tk[:])
-		account.mainPkr = prepare.CreatePkr(account.pk, 1)
+		account.mainPkr = w.Accounts()[0].GetDefaultPkr(1)
 		account.isChanged = true
 		account.nextMergeTime = time.Now()
-		self.accounts.Store(*account.pk, &account)
+		self.accounts.Store(*account.accountKey, &account)
 
-		if num := self.starNum(account.pk); num > w.Accounts()[0].At {
-			self.numbers.Store(*account.pk, num)
+		if num := self.starNum(account.accountKey); num > w.Accounts()[0].At {
+			self.numbers.Store(*account.accountKey, num)
 		} else {
-			self.numbers.Store(*account.pk, w.Accounts()[0].At)
+			self.numbers.Store(*account.accountKey, w.Accounts()[0].At)
 		}
 
-		log.Info("Add PK", "address", w.Accounts()[0].Address, "At", self.GetCurrencyNumber(*account.pk))
+		log.Info("Add PK", "accountKey", w.Accounts()[0].Key, "At", self.GetCurrencyNumber(*account.accountKey))
 	}
 }
 
-func (self *Exchange) starNum(pk *c_type.Uint512) uint64 {
-	value, err := self.db.Get(numKey(*pk))
+func (self *Exchange) starNum(accountKey *common.AccountKey) uint64 {
+	value, err := self.db.Get(numKey(*accountKey))
 	if err != nil {
 		return 0
 	}
@@ -234,8 +234,8 @@ func (self *Exchange) updateAccount() {
 				//wallet := event.Wallet
 				self.initWallet(event.Wallet)
 			case accounts.WalletDropped:
-				pk := *event.Wallet.Accounts()[0].Address.ToUint512()
-				self.numbers.Delete(pk)
+				accountKey := event.Wallet.Accounts()[0].Key
+				self.numbers.Delete(accountKey)
 			}
 			self.lock.Unlock()
 
@@ -247,8 +247,8 @@ func (self *Exchange) updateAccount() {
 	}
 }
 
-func (self *Exchange) GetUtxoNum(pk c_type.Uint512) map[string]uint64 {
-	if account := self.getAccountByPk(pk); account != nil {
+func (self *Exchange) GetUtxoNum(accountKey common.AccountKey) map[string]uint64 {
+	if account := self.getAccountByAccountKey(accountKey); account != nil {
 		return account.utxoNums
 	}
 	return map[string]uint64{}
@@ -264,8 +264,8 @@ func (self *Exchange) GetRootByNil(Nil c_type.Uint256) (root *c_type.Uint256) {
 	return
 }
 
-func (self *Exchange) GetCurrencyNumber(pk c_type.Uint512) uint64 {
-	value, ok := self.numbers.Load(pk)
+func (self *Exchange) GetCurrencyNumber(accountKey common.AccountKey) uint64 {
+	value, ok := self.numbers.Load(accountKey)
 	if !ok {
 		return 0
 	}
@@ -315,9 +315,9 @@ func (self *Exchange) ClearUsedFlagForRoot(root c_type.Uint256) (count int) {
 	return
 }
 
-func (self *Exchange) GetLockedBalances(pk c_type.Uint512) (balances map[string]*big.Int) {
-	if _, ok := self.accounts.Load(pk); ok {
-		prefix := append(pkPrefix, pk[:]...)
+func (self *Exchange) GetLockedBalances(accountKey common.AccountKey) (balances map[string]*big.Int) {
+	if _, ok := self.accounts.Load(accountKey); ok {
+		prefix := append(pkPrefix, accountKey[:]...)
 		iterator := self.db.NewIteratorWithPrefix(prefix)
 		balances = map[string]*big.Int{}
 
@@ -373,11 +373,11 @@ func (self *Exchange) GetMaxAvailable(pk c_type.Uint512, currency string) (amoun
 	return
 }
 
-func (self *Exchange) GetBalances(pk c_type.Uint512) (balances map[string]*big.Int) {
-	if value, ok := self.accounts.Load(pk); ok {
+func (self *Exchange) GetBalances(accountKey common.AccountKey) (balances map[string]*big.Int) {
+	if value, ok := self.accounts.Load(accountKey); ok {
 		account := value.(*Account)
 		if account.isChanged {
-			prefix := append(pkPrefix, pk[:]...)
+			prefix := append(pkPrefix, accountKey[:]...)
 			iterator := self.db.NewIteratorWithPrefix(prefix)
 			balances = map[string]*big.Int{}
 			utxoNums := map[string]uint64{}
@@ -447,8 +447,8 @@ func (self *Exchange) GetRecordsByTxHash(txHash c_type.Uint256) (records []Utxo,
 	return
 }
 
-func (self *Exchange) GetRecordsByPk(PK *c_type.Uint512, begin, end uint64) (records []Utxo, err error) {
-	err = self.iteratorUtxo(PK, begin, end, func(utxo Utxo) {
+func (self *Exchange) GetRecordsByPk(accountKye *common.AccountKey, begin, end uint64) (records []Utxo, err error) {
+	err = self.iteratorUtxo(accountKye, begin, end, func(utxo Utxo) {
 		records = append(records, utxo)
 	})
 	return
@@ -460,9 +460,9 @@ func (self *Exchange) GetRecordsByPkr(pkr c_type.PKr, begin, end uint64) (record
 		err = errors.New("not found PK by pkr")
 		return
 	}
-	PK := account.pk
+	accountKey := account.accountKey
 
-	err = self.iteratorUtxo(PK, begin, end, func(utxo Utxo) {
+	err = self.iteratorUtxo(accountKey, begin, end, func(utxo Utxo) {
 		if pkr != utxo.Pkr {
 			return
 		}
@@ -514,8 +514,8 @@ func (self *Exchange) GenTxWithSign(param prepare.PreTxParam) (pretx *txtool.GTx
 	return
 }
 
-func (self *Exchange) getAccountByPk(pk c_type.Uint512) *Account {
-	if value, ok := self.accounts.Load(pk); ok {
+func (self *Exchange) getAccountByAccountKey(accountKey common.AccountKey) *Account {
+	if value, ok := self.accounts.Load(accountKey); ok {
 		return value.(*Account)
 	}
 	return nil
@@ -578,28 +578,28 @@ func (self *Exchange) commitTx(tx *txtool.GTx) (err error) {
 	return err
 }
 
-func (self *Exchange) iteratorUtxo(PK *c_type.Uint512, begin, end uint64, handler HandleUtxoFunc) (e error) {
-	var pk c_type.Uint512
-	if PK != nil {
-		pk = *PK
+func (self *Exchange) iteratorUtxo(AccountKey *common.AccountKey, begin, end uint64, handler HandleUtxoFunc) (e error) {
+	var accountkey common.AccountKey
+	if AccountKey != nil {
+		accountkey = *AccountKey
 	}
 	iterator := self.db.NewIteratorWithPrefix(utxoPrefix)
-	for ok := iterator.Seek(utxoKey(begin, pk)); ok; ok = iterator.Next() {
+	for ok := iterator.Seek(utxoKey(begin, accountkey)); ok; ok = iterator.Next() {
 		key := iterator.Key()
 		num := utils.DecodeNumber(key[4:12])
 		if num >= end {
 			break
 		}
-		copy(pk[:], key[12:76])
+		copy(key[:], key[12:76])
 
-		if PK != nil && *PK != pk {
+		if AccountKey != nil && *AccountKey != accountkey {
 			continue
 		}
 
 		value := iterator.Value()
 		roots := []c_type.Uint256{}
 		if err := rlp.Decode(bytes.NewReader(value), &roots); err != nil {
-			log.Error("Invalid roots RLP", "PK", common.Bytes2Hex(pk[:]), "blockNumber", num, "err", err)
+			log.Error("Invalid roots RLP", "PK", common.Bytes2Hex(accountkey[:]), "blockNumber", num, "err", err)
 			e = err
 			return
 		}
@@ -716,15 +716,15 @@ func (self *Exchange) fetchBlockInfo() {
 		return
 	}
 	for {
-		indexs := map[uint64][]c_type.Uint512{}
+		indexs := map[uint64][]common.AccountKey{}
 		orders := uint64Slice{}
 		self.numbers.Range(func(key, value interface{}) bool {
-			pk := key.(c_type.Uint512)
+			pk := key.(common.AccountKey)
 			num := value.(uint64)
 			if list, ok := indexs[num]; ok {
 				indexs[num] = append(list, pk)
 			} else {
-				indexs[num] = []c_type.Uint512{pk}
+				indexs[num] = []common.AccountKey{pk}
 				orders = append(orders, num)
 			}
 			return true
@@ -740,7 +740,7 @@ func (self *Exchange) fetchBlockInfo() {
 			end = orders[1]
 		}
 
-		pks := indexs[start]
+		accountKeys := indexs[start]
 		for end > start {
 			count := fetchCount
 			if end-start < fetchCount {
@@ -749,7 +749,7 @@ func (self *Exchange) fetchBlockInfo() {
 			if count == 0 {
 				return
 			}
-			if self.fetchAndIndexUtxo(start, count, pks) < int(count) {
+			if self.fetchAndIndexUtxo(start, count, accountKeys) < int(count) {
 				return
 			}
 			start += count
@@ -757,7 +757,7 @@ func (self *Exchange) fetchBlockInfo() {
 	}
 }
 
-func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.Uint512) (count int) {
+func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, accountKeys []common.AccountKey) (count int) {
 
 	blocks, err := flight.SRI_Inst.GetBlocksInfo(start, countBlock)
 	if err != nil {
@@ -769,7 +769,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 		return
 	}
 
-	utxosMap := map[PkKey][]Utxo{}
+	utxosMap := map[AccountKey][]Utxo{}
 	nilsMap := map[c_type.Uint256]Utxo{}
 	nils := []c_type.Uint256{}
 	blockMap := map[uint64]*BlockInfo{}
@@ -783,18 +783,18 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 				continue
 			}
 
-			account, ok := self.ownPkr(pks, *pkr)
+			account, ok := self.ownPkr(accountKeys, *pkr)
 			if !ok {
 				continue
 			}
 
-			key := PkKey{PK: *account.pk, Num: out.State.Num}
+			key := AccountKey{key: *account.accountKey, Num: out.State.Num}
 			dout := DecOuts([]txtool.Out{out}, &account.skr)[0]
 			utxo := Utxo{Pkr: *pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset, IsZ: out.State.OS.IsZero()}
 			//log.Info("DecOuts", "PK", base58.EncodeToString(account.pk[:]), "root", common.Bytes2Hex(out.Root[:]), "currency", common.BytesToString(utxo.Asset.Tkn.Currency[:]), "value", utxo.Asset.Tkn.Value)
 			nilsMap[utxo.Root] = utxo
 			nilsMap[utxo.Nil] = utxo
-			log.Warn("++++++++++++DecOuts", "PK", base58.Encode(account.pk[:])[:5], "root", hexutil.Encode(utxo.Root[:])[:5], "cy", utils.Uint256ToCurrency(&utxo.Asset.Tkn.Currency), "value", utxo.Asset.Tkn.Value, "type", out.State.OS.TxType(), "nil", hexutil.Encode(dout.Nil[:]))
+			log.Warn("++++++++++++DecOuts", "PK", base58.Encode(account.accountKey[:])[:5], "root", hexutil.Encode(utxo.Root[:])[:5], "cy", utils.Uint256ToCurrency(&utxo.Asset.Tkn.Currency), "value", utxo.Asset.Tkn.Value, "type", out.State.OS.TxType(), "nil", hexutil.Encode(dout.Nil[:]))
 
 			if list, ok := utxosMap[key]; ok {
 				utxosMap[key] = append(list, utxo)
@@ -847,7 +847,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 
 	batch := self.db.NewBatch()
 
-	self.indexPkgs(pks, batch, blocks)
+	self.indexPkgs(accountKeys, batch, blocks)
 
 	var roots []c_type.Uint256
 	if len(utxosMap) > 0 || len(nils) > 0 {
@@ -861,14 +861,14 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 	num := uint64(blocks[count-1].Num) + 1
 	// "NUM"+PK  => Num
 	data := utils.EncodeNumber(num)
-	for _, pk := range pks {
-		batch.Put(numKey(pk), data)
+	for _, accountKey := range accountKeys {
+		batch.Put(numKey(accountKey), data)
 	}
 
 	err = batch.Write()
 	if err == nil {
-		for _, pk := range pks {
-			self.numbers.Store(pk, num)
+		for _, accountKey := range accountKeys {
+			self.numbers.Store(accountKey, num)
 		}
 	}
 
@@ -879,7 +879,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 	return
 }
 
-func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo, blockMap map[uint64]*BlockInfo, nils []c_type.Uint256) (delRoots []c_type.Uint256, err error) {
+func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[AccountKey][]Utxo, blockMap map[uint64]*BlockInfo, nils []c_type.Uint256) (delRoots []c_type.Uint256, err error) {
 	ops := map[string]string{}
 
 	for num, blockInfo := range blockMap {
@@ -909,14 +909,14 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 			var pkKeys []byte
 			if utxo.Asset.Tkn != nil {
 				// "PK" + PK + currency + root
-				pkKey := utxoPkKey(key.PK, utxo.Asset.Tkn.Currency[:], &utxo.Root)
+				pkKey := utxoAccountKeyKey(key.key, utxo.Asset.Tkn.Currency[:], &utxo.Root)
 				ops[common.Bytes2Hex(pkKey)] = common.Bytes2Hex([]byte{0})
 				pkKeys = append(pkKeys, pkKey...)
 			}
 
 			if utxo.Asset.Tkt != nil {
 				// "PK" + PK + tkt + root
-				pkKey := utxoPkKey(key.PK, utxo.Asset.Tkt.Value[:], &utxo.Root)
+				pkKey := utxoAccountKeyKey(key.key, utxo.Asset.Tkt.Value[:], &utxo.Root)
 				ops[common.Bytes2Hex(pkKey)] = common.Bytes2Hex([]byte{0})
 				pkKeys = append(pkKeys, pkKey...)
 			}
@@ -947,9 +947,9 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 			return
 		}
 		// blockNumber + PK => [roots]
-		batch.Put(utxoKey(key.Num, key.PK), data)
+		batch.Put(utxoKey(key.Num, key.key), data)
 
-		if account := self.getAccountByPk(key.PK); account != nil {
+		if account := self.getAccountByAccountKey(key.key); account != nil {
 			account.isChanged = true
 		}
 	}
@@ -975,7 +975,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 
 	for _, Nil := range nils {
 
-		var pk c_type.Uint512
+		var accountKey common.AccountKey
 		key := nilKey(Nil)
 		hex := common.Bytes2Hex(key)
 		if value, ok := ops[hex]; ok {
@@ -993,7 +993,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 			//self.usedFlag.Delete(root)
 			delRoots = append(delRoots, root)
 
-			copy(pk[:], value[2:66])
+			copy(accountKey[:], value[2:66])
 		} else {
 			value, _ := self.db.Get(key)
 			if value != nil {
@@ -1011,11 +1011,11 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 				//self.usedFlag.Delete(root)
 				delRoots = append(delRoots, root)
 
-				copy(pk[:], value[2:66])
+				copy(accountKey[:], value[2:66])
 			}
 		}
 
-		if account := self.getAccountByPk(pk); account != nil {
+		if account := self.getAccountByAccountKey(accountKey); account != nil {
 			account.isChanged = true
 		}
 	}
@@ -1027,9 +1027,9 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 	return
 }
 
-func (self *Exchange) ownPkr(pks []c_type.Uint512, pkr c_type.PKr) (account *Account, ok bool) {
-	for _, pk := range pks {
-		value, ok := self.accounts.Load(pk)
+func (self *Exchange) ownPkr(accountKeys []common.AccountKey, pkr c_type.PKr) (account *Account, ok bool) {
+	for _, accountKey := range accountKeys {
+		value, ok := self.accounts.Load(accountKey)
 		if !ok {
 			continue
 		}
@@ -1051,11 +1051,11 @@ type MergeUtxos struct {
 
 var default_fee_value = new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000))
 
-func (self *Exchange) getMergeUtxos(from *c_type.Uint512, currency string, zcount int, left int) (mu MergeUtxos, e error) {
+func (self *Exchange) getMergeUtxos(from *common.AccountKey, currency string, zcount int, left int) (mu MergeUtxos, e error) {
 	if zcount > 400 {
 		e = errors.New("zout count must <= 400")
 	}
-	prefix := utxoPkKey(*from, common.LeftPadBytes([]byte(currency), 32), nil)
+	prefix := utxoAccountKeyKey(*from, common.LeftPadBytes([]byte(currency), 32), nil)
 	iterator := self.db.NewIteratorWithPrefix(prefix)
 	outxos := UtxoList{}
 	zutxos := UtxoList{}
@@ -1109,16 +1109,17 @@ type MergeParam struct {
 }
 
 func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e error) {
-	account := self.getAccountByPk(mp.From)
+	fromPkr := superzk.Pk2PKr(&mp.From, nil)
+	account := self.getAccountByPkr(fromPkr)
 	if account == nil {
 		e = errors.New("account is nil")
 		return
 	}
 	if mp.To == nil {
-		mp.To = &account.mainPkr
+		mp.To = account.wallet.Accounts()[0].GetDefaultPkr(1).NewRef()
 	}
 	var mu MergeUtxos
-	if mu, e = self.getMergeUtxos(&mp.From, mp.Currency, int(mp.Zcount), int(mp.Left)); e != nil {
+	if mu, e = self.getMergeUtxos(account.accountKey, mp.Currency, int(mp.Zcount), int(mp.Left)); e != nil {
 		return
 	}
 	bytes := common.LeftPadBytes([]byte(mp.Currency), 32)
@@ -1152,8 +1153,8 @@ func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e er
 	return
 }
 
-func (self *Exchange) Merge(pk *c_type.Uint512, currency string, force bool) (count int, txhash c_type.Uint256, e error) {
-	account := self.getAccountByPk(*pk)
+func (self *Exchange) Merge(accountKey *common.AccountKey, currency string, force bool) (count int, txhash c_type.Uint256, e error) {
+	account := self.getAccountByAccountKey(*accountKey)
 	if account == nil {
 		e = errors.New("account is nil")
 		return
@@ -1166,7 +1167,7 @@ func (self *Exchange) Merge(pk *c_type.Uint512, currency string, force bool) (co
 	}
 
 	var mu MergeUtxos
-	if mu, e = self.getMergeUtxos(pk, currency, 100, 10); e != nil {
+	if mu, e = self.getMergeUtxos(account.accountKey, currency, 100, 10); e != nil {
 		return
 	}
 
@@ -1226,10 +1227,10 @@ func (self *Exchange) merge() {
 	}
 	self.accounts.Range(func(key, value interface{}) bool {
 		account := value.(*Account)
-		if count, txhash, err := self.Merge(account.pk, "SERO", false); err != nil {
-			log.Error("autoMerge fail", "PK", utils.Base58Encode(account.pk[:]), "count", count, "error", err)
+		if count, txhash, err := self.Merge(account.accountKey, "SERO", false); err != nil {
+			log.Error("autoMerge fail", "accountKey", utils.Base58Encode(account.accountKey[:]), "count", count, "error", err)
 		} else {
-			log.Info("autoMerge succ", "PK", utils.Base58Encode(account.pk[:]), "tx", hexutil.Encode(txhash[:]), "count", count)
+			log.Info("autoMerge succ", "accountKey", utils.Base58Encode(account.accountKey[:]), "tx", hexutil.Encode(txhash[:]), "count", count)
 		}
 		return true
 	})
@@ -1261,8 +1262,8 @@ func blockKey(number uint64) []byte {
 	return append(blockPrefix, utils.EncodeNumber(number)...)
 }
 
-func numKey(pk c_type.Uint512) []byte {
-	return append(numPrefix, pk[:]...)
+func numKey(accountKey common.AccountKey) []byte {
+	return append(numPrefix, accountKey[:]...)
 }
 
 func nilKey(nil c_type.Uint256) []byte {
@@ -1278,8 +1279,8 @@ func rootKey(root c_type.Uint256) []byte {
 //}
 
 // utxoKey = PK + currency +root
-func utxoPkKey(pk c_type.Uint512, currency []byte, root *c_type.Uint256) []byte {
-	key := append(pkPrefix, pk[:]...)
+func utxoAccountKeyKey(accountKey common.AccountKey, currency []byte, root *c_type.Uint256) []byte {
+	key := append(pkPrefix, accountKey[:]...)
 	if len(currency) > 0 {
 		key = append(key, currency...)
 	}
@@ -1289,8 +1290,8 @@ func utxoPkKey(pk c_type.Uint512, currency []byte, root *c_type.Uint256) []byte 
 	return key
 }
 
-func utxoKey(number uint64, pk c_type.Uint512) []byte {
-	return append(utxoPrefix, append(utils.EncodeNumber(number), pk[:]...)...)
+func utxoKey(number uint64, accounKey common.AccountKey) []byte {
+	return append(utxoPrefix, append(utils.EncodeNumber(number), accounKey[:]...)...)
 }
 
 func AddJob(spec string, run RunFunc) *cron.Cron {

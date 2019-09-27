@@ -17,12 +17,12 @@
 package keystore
 
 import (
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/accounts"
-	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
@@ -46,7 +46,7 @@ func (w *keystoreWallet) Status() (string, error) {
 	w.keystore.mu.RLock()
 	defer w.keystore.mu.RUnlock()
 
-	if _, ok := w.keystore.unlocked[w.account.Address]; ok {
+	if _, ok := w.keystore.unlocked[w.account.Key]; ok {
 		return "Unlocked", nil
 	}
 	return "Locked", nil
@@ -69,7 +69,7 @@ func (w *keystoreWallet) Accounts() []accounts.Account {
 // Contains implements accounts.Wallet, returning whether a particular account is
 // or is not wrapped by this wallet instance.
 func (w *keystoreWallet) Contains(account accounts.Account) bool {
-	return account.Address == w.account.Address && (account.URL == (accounts.URL{}) || account.URL == w.account.URL)
+	return account.Key == w.account.Key && (account.URL == (accounts.URL{}) || account.URL == w.account.URL)
 }
 
 // Derive implements accounts.Wallet, but is a noop for plain wallets since there
@@ -82,24 +82,8 @@ func (w *keystoreWallet) Derive(path accounts.DerivationPath, pin bool) (account
 // there is no notion of hierarchical account derivation for plain keystore accounts.
 func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain sero.ChainStateReader) {}
 
-func (w *keystoreWallet) EncryptTx(account accounts.Account, tx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
-	// Make sure the requested account is contained within
-	if account.Address != w.account.Address {
-		return nil, accounts.ErrUnknownAccount
-	}
-	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
-		return nil, accounts.ErrUnknownAccount
-	}
-	seed, err := w.keystore.GetSeed(account)
-	if err != nil {
-		return nil, err
-	}
-	return w.EncryptTxWithSeed(*seed, tx, txt, state)
-
-}
-
 func (w *keystoreWallet) AddressUnlocked(account accounts.Account) (bool, error) {
-	if account.Address != w.account.Address {
+	if account.Key != w.account.Key {
 		return false, accounts.ErrUnknownAccount
 	}
 	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
@@ -114,23 +98,6 @@ func (w *keystoreWallet) AddressUnlocked(account accounts.Account) (bool, error)
 
 func (w *keystoreWallet) EncryptTxWithSeed(seed address.Seed, btx *types.Transaction, txt *tx.T, state *state.StateDB) (tx *types.Transaction, e error) {
 	return
-}
-
-func (w *keystoreWallet) EncryptTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
-	// Make sure the requested account is contained within
-	if account.Address != w.account.Address {
-		return nil, accounts.ErrUnknownAccount
-	}
-	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
-		return nil, accounts.ErrUnknownAccount
-	}
-
-	seed, err := w.keystore.GetSeedWithPassphrase(account, passphrase)
-	if err != nil {
-		return nil, err
-	}
-	return w.EncryptTxWithSeed(*seed, tx, txt, state)
-
 }
 
 func (w *keystoreWallet) GetSeed() (*address.Seed, error) {
@@ -153,8 +120,8 @@ func (w *keystoreWallet) GetSeedWithPassphrase(passphrase string) (*address.Seed
 
 }
 
-func (w *keystoreWallet) IsMine(onceAddress common.Address) bool {
-	tk := w.account.Tk.ToTK()
-	succ := superzk.IsMyPKr(tk, onceAddress.ToPKr())
+func (w *keystoreWallet) IsMine(pkr c_type.PKr) bool {
+	tk := w.account.Tk.ToTk()
+	succ := superzk.IsMyPKr(&tk, &pkr)
 	return succ
 }

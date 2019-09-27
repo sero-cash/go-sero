@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/accounts/keystore"
@@ -30,40 +29,6 @@ import (
 )
 
 var (
-	walletCommand = cli.Command{
-		Name:      "wallet",
-		Usage:     "Manage Ethereum presale wallets",
-		ArgsUsage: "",
-		Category:  "ACCOUNT COMMANDS",
-		Description: `
-    gero wallet import /path/to/my/presale.wallet
-
-will prompt for your password and imports your ether presale account.
-It can be used non-interactively with the --password option taking a
-passwordfile as argument containing the wallet password in plaintext.`,
-		Subcommands: []cli.Command{
-			{
-
-				Name:      "import",
-				Usage:     "Import Ethereum presale wallet",
-				ArgsUsage: "<keyFile>",
-				Action:    utils.MigrateFlags(importWallet),
-				Category:  "ACCOUNT COMMANDS",
-				Flags: []cli.Flag{
-					utils.DataDirFlag,
-					utils.KeyStoreDirFlag,
-					utils.PasswordFileFlag,
-				},
-				Description: `
-	gero wallet [options] /path/to/my/presale.wallet
-
-will prompt for your password and imports your ether presale account.
-It can be used non-interactively with the --password option taking a
-passwordfile as argument containing the wallet password in plaintext.`,
-			},
-		},
-	}
-
 	accountCommand = cli.Command{
 		Name:     "account",
 		Usage:    "Manage accounts",
@@ -193,7 +158,7 @@ func accountList(ctx *cli.Context) error {
 	var index int
 	for _, wallet := range stack.AccountManager().Wallets() {
 		for _, account := range wallet.Accounts() {
-			fmt.Printf("Account #%d: {%x} %s\n", index, account.Address, &account.URL)
+			fmt.Printf("Account #%d: {%x} %s\n", index, account.Key, &account.URL)
 			index++
 		}
 	}
@@ -211,11 +176,11 @@ func unlockAccount(ctx *cli.Context, ks *keystore.KeyStore, address string, i in
 		password := getPassPhrase(prompt, false, i, passwords)
 		err = ks.Unlock(account, password)
 		if err == nil {
-			log.Info("Unlocked account", "address", account.Address.Base58())
+			log.Info("Unlocked account", "address", account.PkToString())
 			return account, password
 		}
 		if err, ok := err.(*keystore.AmbiguousAddrError); ok {
-			log.Info("Unlocked account", "address", account.Address.Base58())
+			log.Info("Unlocked account", "address", account.PkToString())
 			return ambiguousAddrRecovery(ks, err, password), password
 		}
 		if err != keystore.ErrDecrypt {
@@ -260,7 +225,7 @@ func getPassPhrase(prompt string, confirmation bool, i int, passwords []string) 
 }
 
 func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrError, auth string) accounts.Account {
-	fmt.Printf("Multiple key files exist for address %x:\n", err.Addr)
+	fmt.Printf("Multiple key files exist for address %x:\n", err.Key)
 	for _, a := range err.Matches {
 		fmt.Println("  ", a.URL)
 	}
@@ -303,7 +268,7 @@ func accountCreate(ctx *cli.Context) error {
 
 	password := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
-	address, err := keystore.StoreKey(keydir, password, scryptN, scryptP)
+	address, err := keystore.StoreKey(keydir, password, scryptN, scryptP, 0)
 
 	if err != nil {
 		utils.Fatalf("Failed to create account: %v", err)
@@ -331,28 +296,6 @@ func accountUpdate(ctx *cli.Context) error {
 	return nil
 }
 
-func importWallet(ctx *cli.Context) error {
-	keyfile := ctx.Args().First()
-	if len(keyfile) == 0 {
-		utils.Fatalf("keyfile must be given as argument")
-	}
-	keyJSON, err := ioutil.ReadFile(keyfile)
-	if err != nil {
-		utils.Fatalf("Could not read wallet file: %v", err)
-	}
-
-	stack, _ := makeConfigNode(ctx)
-	passphrase := getPassPhrase("", false, 0, utils.MakePasswordList(ctx))
-
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	acct, err := ks.ImportPreSaleKey(keyJSON, passphrase)
-	if err != nil {
-		utils.Fatalf("%v", err)
-	}
-	fmt.Printf("Data: {%x}\n", acct.Address)
-	return nil
-}
-
 func accountImport(ctx *cli.Context) error {
 	keyfile := ctx.Args().First()
 	if len(keyfile) == 0 {
@@ -366,10 +309,10 @@ func accountImport(ctx *cli.Context) error {
 	passphrase := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	acct, err := ks.ImportECDSA(key, passphrase)
+	acct, err := ks.ImportECDSA(key, passphrase, 0, 2)
 	if err != nil {
 		utils.Fatalf("Could not create the account: %v", err)
 	}
-	fmt.Printf("Data: {%x}\n", acct.Address)
+	fmt.Printf("Data: {%x}\n", acct.Key)
 	return nil
 }

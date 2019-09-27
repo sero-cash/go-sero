@@ -55,12 +55,16 @@ func NewPublicSeroAPI(e *Sero) *PublicSeroAPI {
 }
 
 // Serobase is the address that mining rewards will be send to
-func (api *PublicSeroAPI) Serobase() (address.AccountAddress, error) {
-	return api.e.Serobase()
+func (api *PublicSeroAPI) Serobase() (string, error) {
+	account, err := api.e.Serobase()
+	if err != nil {
+		return "", nil
+	}
+	return account.PkToString(), nil
 }
 
 // Coinbase is the address that mining rewards will be send to (alias for Serobase)
-func (api *PublicSeroAPI) Coinbase() (address.AccountAddress, error) {
+func (api *PublicSeroAPI) Coinbase() (string, error) {
 	return api.Serobase()
 }
 

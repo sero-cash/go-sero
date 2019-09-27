@@ -18,26 +18,49 @@
 package accounts
 
 import (
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/address"
-	"github.com/sero-cash/go-sero/core/state"
-	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/event"
-	"github.com/sero-cash/go-sero/zero/txs/tx"
+	"github.com/sero-cash/go-sero/zero/txtool"
+	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 // AccountAddress represents an Sero account located at a specific location defined
 // by the optional URL field.
 type Account struct {
-	Address address.AccountAddress `json:"address"` // Sero account address derived from the key
-	Tk      address.AccountAddress `json:"tk"`      // Sero account tk derived from the key
-	URL     URL                    `json:"url"`     // Optional resource locator within a backend
-	At      uint64                 `json:'at'`      //account create at blocknum
+	Key     common.AccountKey `json:"address"` // Sero account address derived from the key
+	Tk      common.TkAddress  `json:"tk"`      // Sero account tk derived from the key
+	URL     URL               `json:"url"`     // Optional resource locator within a backend
+	At      uint64            `json:"at"`      //account create at blocknum
+	Version int               `json:"version"`
+}
+
+func (self Account) PkToString() string {
+	pk := self.GetPKByHeight()
+	if self.Version == 1 {
+		return base58.Encode(pk[:])
+	} else {
+		addr := utils.NewAddressByBytes(pk[:])
+		addr.SetProtocol("SP")
+		return addr.ToCode()
+	}
+}
+
+func (self Account) TkToString() string {
+	if self.Version == 1 {
+		return base58.Encode(self.Tk[:])
+	} else {
+		addr := utils.NewAddressByBytes(self.Tk[:])
+		addr.SetProtocol("ST")
+		return addr.ToCode()
+	}
 }
 
 func (self *Account) GetPKByPK(pkr *common.Address) (ret address.AccountAddress) {
@@ -70,17 +93,50 @@ func (self *Account) GetPKByPKr(pkr *common.Address) (ret address.AccountAddress
 	return
 }
 
-func (self *Account) GetPKByHeight(height uint64) (ret address.AccountAddress) {
+func (self *Account) GetPKByHeight() (ret c_type.Uint512) {
+	height := txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()
 	c_tk := c_type.Tk{}
 	copy(c_tk[:], self.Tk[:])
 	var c_pk c_type.Uint512
-	if height >= seroparam.SIP5() {
-		c_pk, _ = c_superzk.Tk2Pk(&c_tk)
-	} else {
+	if self.Version == 1 {
 		c_pk = c_czero.Tk2Pk(&c_tk)
+	} else {
+		if height >= seroparam.SIP5() {
+			c_pk, _ = c_superzk.Tk2Pk(&c_tk)
+		} else {
+			c_pk = c_czero.Tk2Pk(&c_tk)
+		}
 	}
 	copy(ret[:], c_pk[:])
 	return
+}
+
+func (self *Account) GetPkr(rand *c_type.Uint256) c_type.PKr {
+	pk := self.GetPKByHeight()
+	return superzk.Pk2PKr(&pk, rand)
+}
+
+func (self *Account) GetDefaultPkr(index uint64) c_type.PKr {
+	pk := self.GetPKByHeight()
+	r := c_type.Uint256{}
+	copy(r[:], common.LeftPadBytes(utils.EncodeNumber(index), 32))
+	if index == 0 {
+		return superzk.Pk2PKr(&pk, nil)
+	} else {
+		return superzk.Pk2PKr(&pk, &r)
+	}
+}
+
+func (self *Account) IsMyPk(pk c_type.Uint512) bool {
+	pkr := superzk.Pk2PKr(&pk, nil)
+	return self.IsMyPkr(pkr)
+
+}
+
+func (self *Account) IsMyPkr(pkr c_type.PKr) bool {
+	tk := c_type.Tk{}
+	copy(tk[:], self.Tk[:])
+	return superzk.IsMyPKr(&tk, &pkr)
 }
 
 // Wallet represents a software or hardware wallet that might contain one or more
@@ -137,16 +193,8 @@ type Wallet interface {
 	// chain state reader.
 	SelfDerive(base DerivationPath, chain sero.ChainStateReader)
 
-	// EncryptTx requests the wallet to encryt the given transaction and tx.t.
-	//
-	// It looks up the account specified either solely via its address contained within,
-	// or optionally with the aid of any location metadata from the embedded URL field.
-	EncryptTx(account Account, tx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error)
-
-	EncryptTxWithPassphrase(account Account, passphrase string, tx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error)
-
 	// IsMine return whether an once address is mine or not
-	IsMine(onceAddress common.Address) bool
+	IsMine(pkr c_type.PKr) bool
 
 	AddressUnlocked(account Account) (bool, error)
 

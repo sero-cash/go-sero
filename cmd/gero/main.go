@@ -193,7 +193,6 @@ func init() {
 		monitorCommand,
 		// See accountcmd.go:
 		accountCommand,
-		walletCommand,
 		// See consolecmd.go:
 		consoleCommand,
 		attachCommand,
@@ -392,7 +391,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		for _, wallet := range ks.Wallets() {
 			err := ks.Unlock(wallet.Accounts()[0], ctx.GlobalString(utils.DeveloperPasswordFlag.Name))
 			if err != nil {
-				fmt.Printf("unclock %v failed,%v", base58.Encode(wallet.Accounts()[0].Address.Bytes()), err)
+				fmt.Printf("unclock %v failed,%v", base58.Encode(wallet.Accounts()[0].Key.Bytes()), err)
 			}
 		}
 	} else {

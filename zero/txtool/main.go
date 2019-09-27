@@ -20,8 +20,8 @@ type BlockChain interface {
 	CurrentState(hash *common.Hash) *zstate.ZState
 	IsContract(address common.Address) (ret bool, e error)
 	GetSeroGasLimit(to *common.Address, tfee *assets.Token, gasPrice *big.Int) (gaslimit uint64, e error)
-	GetTks() []c_type.Uint512
-	GetTkAt(tk *c_type.Uint512) uint64
+	GetTks() []c_type.Tk
+	GetTkAt(tk *c_type.Tk) uint64
 	GetBlockByNumber(num uint64) *types.Block
 	GetHeaderByNumber(num uint64) *types.Header
 	GetDB() serodb.Database

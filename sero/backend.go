@@ -21,11 +21,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/proofservice"
 	"math/big"
 	"runtime"
 	"sync"
 	"sync/atomic"
+
+	"github.com/sero-cash/go-sero/zero/proofservice"
 
 	"github.com/sero-cash/go-sero/voter"
 	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
@@ -102,7 +103,7 @@ type Sero struct {
 
 	miner    *miner.Miner
 	gasPrice *big.Int
-	serobase address.AccountAddress
+	serobase accounts.Account
 
 	networkID     uint64
 	netRPCService *ethapi.PublicNetAPI
@@ -146,7 +147,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
 		gasPrice:       config.GasPrice,
-		serobase:       config.Serobase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
@@ -211,7 +211,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	}
 
 	if config.Proof != nil {
-		proofservice.NewProofService("", sero.APIBackend, config.Proof);
+		proofservice.NewProofService("", sero.APIBackend, config.Proof)
 	}
 
 	SeroInstance = sero
@@ -335,17 +335,17 @@ func (s *Sero) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *Sero) Serobase() (eb address.AccountAddress, err error) {
+func (s *Sero) Serobase() (eb accounts.Account, err error) {
 	s.lock.RLock()
 	serobase := s.serobase
 	s.lock.RUnlock()
 
-	if serobase != (address.AccountAddress{}) {
+	if serobase != (accounts.Account{}) {
 		return serobase, nil
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
 		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			serobase := accounts[0].Address
+			serobase := accounts[0]
 
 			s.lock.Lock()
 			s.serobase = serobase
@@ -355,16 +355,17 @@ func (s *Sero) Serobase() (eb address.AccountAddress, err error) {
 			return serobase, nil
 		}
 	}
-	return address.AccountAddress{}, fmt.Errorf("Serobase must be explicitly specified")
+	return accounts.Account{}, fmt.Errorf("Serobase must be explicitly specified")
 }
 
 // SetSerobase sets the mining reward address.
 func (s *Sero) SetSerobase(serobase address.AccountAddress) {
 	s.lock.Lock()
-	s.serobase = serobase
+	account, _ := s.accountManager.FindAccountByPk(*serobase.ToUint512())
+	s.serobase = account
 	s.lock.Unlock()
 
-	s.miner.SetSerobase(serobase)
+	s.miner.SetSerobase(account)
 }
 
 func (s *Sero) StartMining(local bool) error {
@@ -374,7 +375,7 @@ func (s *Sero) StartMining(local bool) error {
 		return fmt.Errorf("serobase missing: %v", err)
 	}
 	current_height := s.blockchain.CurrentHeader().Number.Uint64()
-	pkr, lic, ret := c_czero.Pk2PKrAndLICr(eb.ToUint512(), current_height)
+	pkr, lic, ret := c_czero.Pk2PKrAndLICr(eb.Key.ToUint512().NewRef(), current_height)
 	ret = c_czero.CheckLICr(&pkr, &lic, current_height)
 	if !ret {
 		lic_t := c_czero.LICr{}

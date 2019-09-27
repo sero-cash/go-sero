@@ -21,8 +21,8 @@ import (
 )
 
 type Account struct {
-	pk *c_type.Uint512
-	tk *c_type.Tk
+	accountKey *common.AccountKey
+	tk         *c_type.Tk
 }
 
 type StakeService struct {
@@ -112,8 +112,8 @@ func (self *StakeService) getShareByHash(hash []byte) *stake.Share {
 	return ret.(*stake.Share)
 }
 
-func (self *StakeService) SharesByPk(pk c_type.Uint512) (shares []*stake.Share) {
-	iterator := self.db.NewIteratorWithPrefix(pk[:])
+func (self *StakeService) SharesByAccountKey(accountKey common.AccountKey) (shares []*stake.Share) {
+	iterator := self.db.NewIteratorWithPrefix(accountKey[:])
 	for iterator.Next() {
 		value := iterator.Value()
 		share := stake.ShareDB.GetObject(self.bc.GetDB(), value, &stake.Share{})
@@ -163,8 +163,8 @@ func (self *StakeService) stakeIndex() {
 		for _, share := range shares {
 			batch.Put(sharekey(share.Id()), share.State())
 			batch.Put(pkrShareKey(share.PKr, share.Id()), share.State())
-			if pk, ok := self.ownPkr(share.PKr); ok {
-				batch.Put(pkShareKey(pk, share.Id()), share.State())
+			if accountKey, ok := self.ownPkr(share.PKr); ok {
+				batch.Put(pkShareKey(accountKey, share.Id()), share.State())
 			}
 		}
 
@@ -183,8 +183,8 @@ func (self *StakeService) stakeIndex() {
 	}
 
 	self.numbers.Range(func(key, value interface{}) bool {
-		pk := key.(c_type.Uint512)
-		batch.Put(numKey(pk), utils.EncodeNumber(blocNumber))
+		accountKey := key.(common.AccountKey)
+		batch.Put(numKey(accountKey), utils.EncodeNumber(blocNumber))
 		return true
 	})
 	err := batch.Write()
@@ -198,7 +198,7 @@ func (self *StakeService) stakeIndex() {
 	}
 }
 
-func (self *StakeService) ownPkr(pkr c_type.PKr) (pk *c_type.Uint512, ok bool) {
+func (self *StakeService) ownPkr(pkr c_type.PKr) (pk *common.AccountKey, ok bool) {
 	var account *Account
 	self.accounts.Range(func(key, value interface{}) bool {
 		a := value.(*Account)
@@ -209,7 +209,7 @@ func (self *StakeService) ownPkr(pkr c_type.PKr) (pk *c_type.Uint512, ok bool) {
 		return true
 	})
 	if account != nil {
-		return account.pk, true
+		return account.accountKey, true
 	}
 	return
 }
@@ -233,8 +233,8 @@ func (self *StakeService) updateAccount() {
 			case accounts.WalletArrived:
 				self.initWallet(event.Wallet)
 			case accounts.WalletDropped:
-				pk := *event.Wallet.Accounts()[0].Address.ToUint512()
-				self.numbers.Delete(pk)
+				accountKey := event.Wallet.Accounts()[0].Key
+				self.numbers.Delete(accountKey)
 			}
 			self.lock.Unlock()
 
@@ -247,23 +247,23 @@ func (self *StakeService) updateAccount() {
 }
 
 func (self *StakeService) initWallet(w accounts.Wallet) {
-	if _, ok := self.accounts.Load(*w.Accounts()[0].Address.ToUint512()); !ok {
+	if _, ok := self.accounts.Load(w.Accounts()[0].Key); !ok {
 		account := Account{}
-		account.pk = w.Accounts()[0].Address.ToUint512()
-		account.tk = w.Accounts()[0].Tk.ToTK()
-		self.accounts.Store(*account.pk, &account)
+		account.accountKey = &w.Accounts()[0].Key
+		account.tk = w.Accounts()[0].Tk.ToTk().NewRef()
+		self.accounts.Store(*account.accountKey, &account)
 
 		var num uint64
-		if num = self.starNum(account.pk); num < w.Accounts()[0].At {
+		if num = self.starNum(account.accountKey); num < w.Accounts()[0].At {
 			num = w.Accounts()[0].At
 		}
-		self.numbers.Store(*account.pk, num)
-		log.Info("Add PK", "address", w.Accounts()[0].Address, "At", num)
+		self.numbers.Store(*account.accountKey, num)
+		log.Info("Add PK", "accountKey", w.Accounts()[0].Key, "At", num)
 	}
 }
 
-func (self *StakeService) starNum(pk *c_type.Uint512) uint64 {
-	value, err := self.db.Get(numKey(*pk))
+func (self *StakeService) starNum(accountKey *common.AccountKey) uint64 {
+	value, err := self.db.Get(numKey(*accountKey))
 	if err != nil {
 		return 0
 	}
@@ -276,8 +276,8 @@ var (
 	poolPrefix  = []byte("POOL")
 )
 
-func pkShareKey(pk *c_type.Uint512, key []byte) []byte {
-	return append(pk[:], key[:]...)
+func pkShareKey(accountKey *common.AccountKey, key []byte) []byte {
+	return append(accountKey[:], key[:]...)
 }
 
 func pkrShareKey(pk c_type.PKr, key []byte) []byte {
@@ -292,8 +292,8 @@ func poolKey(key []byte) []byte {
 	return append(poolPrefix, key[:]...)
 }
 
-func numKey(pk c_type.Uint512) []byte {
-	return append(numPrefix, pk[:]...)
+func numKey(accountKey common.AccountKey) []byte {
+	return append(numPrefix, accountKey[:]...)
 }
 
 func AddJob(spec string, run RunFunc) *cron.Cron {

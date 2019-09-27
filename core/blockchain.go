@@ -288,18 +288,18 @@ func (self *State1BlockChain) CurrentState(hash *common.Hash) *zstate.ZState {
 	}
 	return st.CurrentZState()
 }
-func (self *State1BlockChain) GetTks() []c_type.Uint512 {
-	tks := []c_type.Uint512{}
+func (self *State1BlockChain) GetTks() []c_type.Tk {
+	tks := []c_type.Tk{}
 	for _, w := range self.Bc.accountManager.Wallets() {
 		tk := w.Accounts()[0].Tk
-		tks = append(tks, *tk.ToUint512())
+		tks = append(tks, tk.ToTk())
 	}
 	return tks
 }
 
-func (self *State1BlockChain) GetTkAt(tk *c_type.Uint512) uint64 {
+func (self *State1BlockChain) GetTkAt(tk *c_type.Tk) uint64 {
 	for _, w := range self.Bc.accountManager.Wallets() {
-		if *w.Accounts()[0].Tk.ToUint512() == *tk {
+		if w.Accounts()[0].Tk.ToTk() == *tk {
 			return w.Accounts()[0].At
 		}
 	}

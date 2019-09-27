@@ -85,7 +85,7 @@ If you want to encrypt an existing private key, it can be specified by setting
 		id := uuid.NewRandom()
 		key := &keystore.Key{
 			Id:         id,
-			Address:    crypto.PrivkeyToAddress(privateKey),
+			AccountKey: crypto.PrivkeyToAccoutKey(privateKey),
 			Tk:         crypto.PrivkeyToTk(privateKey),
 			PrivateKey: privateKey,
 		}
@@ -107,8 +107,8 @@ If you want to encrypt an existing private key, it can be specified by setting
 
 		// Output some information.
 		out := outputGenerate{
-			Address: key.Address.Base58(),
-			Tk:      key.Tk.Base58(),
+			Address: key.AccountKey.String(),
+			Tk:      key.Tk.String(),
 		}
 		if ctx.Bool(jsonFlag.Name) {
 			mustPrintJSON(out)
