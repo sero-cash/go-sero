@@ -465,6 +465,21 @@ func (b MixedcaseAddress) IsPkr() bool {
 func (b MixedcaseAddress) IsContract() bool {
 	return b.Contract
 }
+func (b MixedcaseAddress) ToPkr(r *c_type.Uint256) (ret c_type.PKr) {
+	if b.IsContract() {
+		copy(ret[:], b.Addr)
+		return
+	}
+	if b.IsPkr() {
+		copy(ret[:], b.Addr)
+		return
+	}
+	pk := c_type.Uint512{}
+	copy(pk[:], b.Addr)
+	pkr := superzk.Pk2PKr(&pk, r)
+	copy(ret[:], pkr[:])
+	return
+}
 
 func (b *MixedcaseAddress) UnmarshalText(input []byte) error {
 

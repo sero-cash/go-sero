@@ -1626,18 +1626,18 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	From        MixBase58Adrress `json:"from"`
-	To          *common.Address  `json:"to"`
-	Gas         *hexutil.Uint64  `json:"gas"`
-	GasCurrency Smbol            `json:"gasCy"` //default SERO
-	GasPrice    *hexutil.Big     `json:"gasPrice"`
-	Value       *hexutil.Big     `json:"value"`
-	Data        *hexutil.Bytes   `json:"data"`
-	Currency    Smbol            `json:"cy"`
-	Dynamic     bool             `json:"dy"` //contract address parameters are dynamically generated.
-	Category    Smbol            `json:"catg"`
-	Tkt         *common.Hash     `json:"tkt"`
-	Memo        string           `json:"Memo"`
+	From        MixBase58Adrress  `json:"from"`
+	To          *MixedcaseAddress `json:"to"`
+	Gas         *hexutil.Uint64   `json:"gas"`
+	GasCurrency Smbol             `json:"gasCy"` //default SERO
+	GasPrice    *hexutil.Big      `json:"gasPrice"`
+	Value       *hexutil.Big      `json:"value"`
+	Data        *hexutil.Bytes    `json:"data"`
+	Currency    Smbol             `json:"cy"`
+	Dynamic     bool              `json:"dy"` //contract address parameters are dynamically generated.
+	Category    Smbol             `json:"catg"`
+	Tkt         *common.Hash      `json:"tkt"`
+	Memo        string            `json:"Memo"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
@@ -1663,7 +1663,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		return err
 	}
 
-	if args.To != nil && !state.IsContract(common.BytesToAddress(args.To[:])) {
+	if args.To != nil && !state.IsContract(common.BytesToAddress(args.To.Addr[:])) {
 		var input []byte
 		if args.Data != nil {
 			input = *args.Data
@@ -1672,20 +1672,16 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		if len(input) > 0 {
 			return errors.New(`not create or call contract data must be nil`)
 		}
-		if args.To.IsAccountAddress() {
-			if !superzk.IsPKValid(args.To.ToUint512()) {
-				return errors.New("invalid to address")
-			}
-		}
+
 	}
 
-	if args.To == nil || !state.IsContract(common.BytesToAddress(args.To[:])) {
+	if args.To == nil || !state.IsContract(common.BytesToAddress(args.To.Addr[:])) {
 		if args.GasCurrency.IsNotEmpty() && args.GasCurrency.IsNotSero() {
 			return errors.New(`GasCurrency must be null or SERO`)
 		}
 	} else {
 		if args.GasCurrency.IsNotSero() {
-			m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
+			m, d := state.GetTokenRate(common.BytesToAddress(args.To.Addr[:]), string(args.GasCurrency))
 			if m.Sign() == 0 || d.Sign() == 0 {
 				return errors.New("the smart contract dose not support alternative payment!")
 			}
@@ -1775,9 +1771,9 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB, fromAccount accounts.Acc
 			refundPkr = fromAccount.GetPkr(&fromRand)
 		}
 
-	} else if state.IsContract(common.BytesToAddress(args.To[:])) {
+	} else if state.IsContract(common.BytesToAddress(args.To.Addr[:])) {
 		fromRand := c_type.Uint256{}
-		copy(fromRand[:16], args.To[:16])
+		copy(fromRand[:16], args.To.Addr[:16])
 		if args.From.IsPkr() {
 			refundPkr = args.From.toPkr()
 		} else {
@@ -1788,7 +1784,7 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB, fromAccount accounts.Acc
 			}
 		}
 		if args.GasCurrency.IsNotSero() {
-			m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
+			m, d := state.GetTokenRate(common.BytesToAddress(args.To.Addr[:]), string(args.GasCurrency))
 			feevalue = new(big.Int).Div(feevalue.Mul(feevalue, m), d)
 		}
 		txParam.Cmds = prepare.Cmds{}
@@ -1796,11 +1792,11 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB, fromAccount accounts.Acc
 		if args.Data != nil {
 			data = *args.Data
 		}
-		contractCmd := stx.ContractCmd{asset, args.To.ToPKr(), data}
+		contractCmd := stx.ContractCmd{asset, args.To.ToPkr(nil).NewRef(), data}
 		txParam.Cmds.Contract = &contractCmd
 	} else {
 		refundPkr = args.From.toPkr()
-		receptions := []prepare.Reception{{Addr: *args.To.ToPKr(), Asset: asset}}
+		receptions := []prepare.Reception{{Addr: args.To.ToPkr(nil), Asset: asset}}
 		txParam.Receptions = receptions
 	}
 	feeAsset := assets.Token{
@@ -1833,11 +1829,7 @@ func (args *SendTxArgs) toCreatePkg(state *state.StateDB, fromAccount accounts.A
 	txParam.From = fromAccount.Key.ToUint512()
 	feevalue := defaultFee(args.GasPrice, args.Gas)
 	asset := args.toAsset()
-	if state.IsContract(common.BytesToAddress(args.To[:])) {
-		toPkr = *(args.To.ToPKr())
-	} else {
-		toPkr = common.AddrToPKr(*args.To)
-	}
+	toPkr = args.To.ToPkr(nil)
 	feeToken := assets.Token{
 		utils.CurrencyToUint256(string(args.GasCurrency)),
 		utils.U256(*feevalue),
@@ -1899,7 +1891,7 @@ func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.H
 	}
 }
 
-func commitPreTx(txParam prepare.PreTxParam, b Backend, to *common.Address) (common.Hash, error) {
+func commitPreTx(txParam prepare.PreTxParam, b Backend, to *MixedcaseAddress) (common.Hash, error) {
 	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(txParam)
 	if err != nil {
 		return common.Hash{}, err
