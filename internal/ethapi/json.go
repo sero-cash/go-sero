@@ -492,7 +492,7 @@ func (b *MixedcaseAddress) UnmarshalText(input []byte) error {
 	} else {
 		b.Origin = string(input)
 
-		if isContract, err := IsContract(addr.Bytes); err != nil {
+		if isContract, err := IsContract(addr.Bytes); err == nil {
 			if isContract {
 				b.Contract = true
 				if !addr.MatchProtocol("SS") {

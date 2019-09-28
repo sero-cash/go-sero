@@ -3,6 +3,8 @@ package exchange
 import (
 	"math/big"
 
+	"github.com/sero-cash/go-sero/common"
+
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -31,8 +33,8 @@ func (self *Exchange) buildTxParam(param *prepare.BeforeTxParam) (txParam *txtoo
 	return
 }
 
-func (self *Exchange) FindRoots(pk *c_type.Uint512, currency string, amount *big.Int) (roots prepare.Utxos, remain big.Int) {
-	utxos, r := self.findUtxos(pk, currency, amount)
+func (self *Exchange) FindRoots(accountKey *common.AccountKey, currency string, amount *big.Int) (roots prepare.Utxos, remain big.Int) {
+	utxos, r := self.findUtxos(accountKey, currency, amount)
 	for _, utxo := range utxos {
 		roots = append(roots, prepare.Utxo{utxo.Root, utxo.Asset})
 	}
@@ -40,16 +42,16 @@ func (self *Exchange) FindRoots(pk *c_type.Uint512, currency string, amount *big
 	return
 }
 
-func (self *Exchange) FindRootsByTicket(pk *c_type.Uint512, tickets map[c_type.Uint256]c_type.Uint256) (roots prepare.Utxos, remain map[c_type.Uint256]c_type.Uint256) {
-	utxos, remain := self.findUtxosByTicket(pk, tickets)
+func (self *Exchange) FindRootsByTicket(accountKey *common.AccountKey, tickets map[c_type.Uint256]c_type.Uint256) (roots prepare.Utxos, remain map[c_type.Uint256]c_type.Uint256) {
+	utxos, remain := self.findUtxosByTicket(accountKey, tickets)
 	for _, utxo := range utxos {
 		roots = append(roots, prepare.Utxo{utxo.Root, utxo.Asset})
 	}
 	return
 }
 
-func (self *Exchange) DefaultRefundTo(from *c_type.Uint512) (ret *c_type.PKr) {
-	if value, ok := self.accounts.Load(*from); ok {
+func (self *Exchange) DefaultRefundTo(accountKey *common.AccountKey) (ret *c_type.PKr) {
+	if value, ok := self.accounts.Load(*accountKey); ok {
 		account := value.(*Account)
 		return &account.mainPkr
 	}

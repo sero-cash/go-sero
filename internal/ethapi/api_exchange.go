@@ -134,15 +134,23 @@ func (s *PublicExchangeAPI) GenTx(ctx context.Context, param GenTxArgs) (*txtool
 	if err := param.check(); err != nil {
 		return nil, err
 	}
+	fromAccount, err := s.b.AccountManager().FindAccountByPk(param.From.ToUint512())
+	if err != nil {
+		return nil, err
+	}
 
-	return s.b.GenTx(param.toTxParam())
+	return s.b.GenTx(param.toTxParam(fromAccount))
 }
 
 func (s *PublicExchangeAPI) GenTxWithSign(ctx context.Context, param GenTxArgs) (*txtool.GTx, error) {
 	if err := param.check(); err != nil {
 		return nil, err
 	}
-	txParam, tx, e := exchange.CurrentExchange().GenTxWithSign(param.toTxParam())
+	fromAccount, err := s.b.AccountManager().FindAccountByPk(param.From.ToUint512())
+	if err != nil {
+		return nil, err
+	}
+	txParam, tx, e := exchange.CurrentExchange().GenTxWithSign(param.toTxParam(fromAccount))
 	if tx != nil {
 		for _, in := range txParam.Ins {
 			tx.Roots = append(tx.Roots, in.Out.Root)

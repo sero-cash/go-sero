@@ -102,7 +102,7 @@ func (args *BuyShareTxArg) setDefaults(ctx context.Context, b Backend) error {
 
 func (args *BuyShareTxArg) toPreTxParam(fromAccount accounts.Account) prepare.PreTxParam {
 	preTx := prepare.PreTxParam{}
-	preTx.From = fromAccount.Key.ToUint512()
+	preTx.From = fromAccount.Key
 	preTx.RefundTo = args.From.toPkr().NewRef()
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
@@ -212,7 +212,7 @@ func (args *RegistStakePoolTxArg) setDefaults(ctx context.Context, b Backend) er
 
 func (args *RegistStakePoolTxArg) toPreTxParam(fromAccount accounts.Account) prepare.PreTxParam {
 	preTx := prepare.PreTxParam{}
-	preTx.From = fromAccount.Key.ToUint512()
+	preTx.From = fromAccount.Key
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
 		utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(*args.Gas)), args.GasPrice.ToInt())),
@@ -311,7 +311,7 @@ func (s *PublicStakeApI) CloseStakePool(ctx context.Context, from MixBase58Adrre
 		return common.Hash{}, errors.New("stake pool has closed")
 	}
 	preTx := prepare.PreTxParam{}
-	preTx.From = fromAccount.Key.ToUint512()
+	preTx.From = fromAccount.Key
 	preTx.RefundTo = &fromPkr
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
@@ -370,7 +370,7 @@ func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from MixBase58A
 		return common.Hash{}, errors.New("stake pool has closed")
 	}
 	preTx := prepare.PreTxParam{}
-	preTx.From = fromAccount.Key.ToUint512()
+	preTx.From = fromAccount.Key
 	preTx.RefundTo = &fromPkr
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
@@ -424,7 +424,7 @@ func (s *PublicStakeApI) ModifyStakePoolVote(ctx context.Context, from MixBase58
 	}
 	votePkr := vote.toPkr()
 	preTx := prepare.PreTxParam{}
-	preTx.From = fromAccount.Key.ToUint512()
+	preTx.From = fromAccount.Key
 	preTx.RefundTo = &fromPkr
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),

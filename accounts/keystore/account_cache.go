@@ -31,8 +31,6 @@ import (
 
 	"github.com/sero-cash/go-sero/common"
 
-	"github.com/sero-cash/go-sero/common/address"
-
 	mapset "github.com/deckarep/golang-set"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/log"
@@ -301,6 +299,7 @@ func (ac *accountCache) scanAccounts() error {
 		key.Tk = ""
 		key.At = 0
 		key.AccountKey = ""
+		key.Version = 0
 		var accountKey common.AccountKey
 		err = json.NewDecoder(buf).Decode(&key)
 		if key.Address == "" {
@@ -310,14 +309,13 @@ func (ac *accountCache) scanAccounts() error {
 			bs58Bytes := base58.Decode(key.Address)
 			copy(accountKey[:], bs58Bytes)
 		}
-		addr := address.Base58ToAccount(key.Address)
 		tk := common.Base58ToTk(key.Tk)
 		at := key.At
 		version := key.Version
 		switch {
 		case err != nil:
 			log.Debug("Failed to decode keystore key", "path", path, "err", err)
-		case (addr == address.AccountAddress{}):
+		case (accountKey == common.AccountKey{}):
 			log.Debug("Failed to decode keystore key", "path", path, "err", "missing or zero address")
 		default:
 			return &accounts.Account{Key: accountKey, Tk: tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: path}, At: at, Version: version}

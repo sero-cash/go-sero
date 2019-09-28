@@ -429,7 +429,7 @@ func (self *sign_ctx) genSign() (e error) {
 	return
 }
 
-func (self sign_ctx) signFrom() (e error) {
+func (self *sign_ctx) signFrom() (e error) {
 	if sign, err := superzk.SignPKr(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.s.From); err != nil {
 		return err
 	} else {
@@ -439,7 +439,7 @@ func (self sign_ctx) signFrom() (e error) {
 	return
 }
 
-func (self sign_ctx) signInsP0() (e error) {
+func (self *sign_ctx) signInsP0() (e error) {
 	for i := range self.s.Tx1.Ins_P0 {
 		t_in := self.p0_ins[i]
 		if sign, err := c_superzk.Czero_signNil(
@@ -457,7 +457,7 @@ func (self sign_ctx) signInsP0() (e error) {
 	return
 }
 
-func (self sign_ctx) signInsP() (e error) {
+func (self *sign_ctx) signInsP() (e error) {
 	for i := range self.s.Tx1.Ins_P {
 		t_in := self.p_ins[i]
 		if sign, err := superzk.SignPKr(t_in.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, t_in.Out.State.OS.ToPKr()); err != nil {
@@ -480,7 +480,7 @@ func (self sign_ctx) signInsP() (e error) {
 	}
 	return
 }
-func (self sign_ctx) signInsC() (e error) {
+func (self *sign_ctx) signInsC() (e error) {
 	for i := range self.s.Tx1.Ins_C {
 		t_in := self.c_ins[i]
 		if sign, err := c_superzk.SignZPKa(t_in.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, t_in.A, t_in.Out.State.OS.ToPKr()); err != nil {
@@ -492,7 +492,7 @@ func (self sign_ctx) signInsC() (e error) {
 	}
 	return
 }
-func (self sign_ctx) signBalance() (e error) {
+func (self *sign_ctx) signBalance() (e error) {
 	if e = c_superzk.SignBalance(&self.balance_desc); e != nil {
 		return
 	}

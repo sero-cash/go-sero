@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/accounts"
+
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 
 	"github.com/pkg/errors"
@@ -222,7 +224,7 @@ func (args GenTxArgs) check() error {
 
 }
 
-func (args GenTxArgs) toTxParam() prepare.PreTxParam {
+func (args GenTxArgs) toTxParam(fromAccount accounts.Account) prepare.PreTxParam {
 	gasPrice := args.GasPrice.ToInt()
 
 	if gasPrice.Sign() == 0 {
@@ -251,7 +253,7 @@ func (args GenTxArgs) toTxParam() prepare.PreTxParam {
 		cmds = args.Cmds.toCmds()
 	}
 	return prepare.PreTxParam{
-		args.From.ToUint512(),
+		fromAccount.Key,
 		refundPkr,
 		receptions,
 		cmds,

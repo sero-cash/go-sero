@@ -632,11 +632,11 @@ func (self *Exchange) getUtxo(root c_type.Uint256) (utxo Utxo, e error) {
 	return
 }
 
-func (self *Exchange) findUtxosByTicket(pk *c_type.Uint512, tickets map[c_type.Uint256]c_type.Uint256) (utxos []Utxo, remain map[c_type.Uint256]c_type.Uint256) {
+func (self *Exchange) findUtxosByTicket(accountKey *common.AccountKey, tickets map[c_type.Uint256]c_type.Uint256) (utxos []Utxo, remain map[c_type.Uint256]c_type.Uint256) {
 	remain = map[c_type.Uint256]c_type.Uint256{}
 	for value, category := range tickets {
 		remain[value] = category
-		prefix := append(pkPrefix, append(pk[:], value[:]...)...)
+		prefix := append(pkPrefix, append(accountKey[:], value[:]...)...)
 		iterator := self.db.NewIteratorWithPrefix(prefix)
 		if iterator.Next() {
 			key := iterator.Key()
@@ -656,11 +656,11 @@ func (self *Exchange) findUtxosByTicket(pk *c_type.Uint512, tickets map[c_type.U
 	return
 }
 
-func (self *Exchange) findUtxos(pk *c_type.Uint512, currency string, amount *big.Int) (utxos []Utxo, remain *big.Int) {
+func (self *Exchange) findUtxos(accountKey *common.AccountKey, currency string, amount *big.Int) (utxos []Utxo, remain *big.Int) {
 	remain = new(big.Int).Set(amount)
 
 	currency = strings.ToUpper(currency)
-	prefix := append(pkPrefix, append(pk[:], common.LeftPadBytes([]byte(currency), 32)...)...)
+	prefix := append(pkPrefix, append(accountKey[:], common.LeftPadBytes([]byte(currency), 32)...)...)
 	iterator := self.db.NewIteratorWithPrefix(prefix)
 
 	for iterator.Next() {

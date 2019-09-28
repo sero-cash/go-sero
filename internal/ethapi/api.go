@@ -1755,7 +1755,7 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB, fromAccount accounts.Acc
 
 	var refundPkr c_type.PKr
 	txParam.GasPrice = (*big.Int)(args.GasPrice)
-	txParam.From = fromAccount.Key.ToUint512()
+	txParam.From = fromAccount.Key
 
 	feevalue := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	asset := args.toAsset()
@@ -1826,7 +1826,7 @@ func stringToUint512(str string) c_type.Uint512 {
 func (args *SendTxArgs) toCreatePkg(state *state.StateDB, fromAccount accounts.Account) (txParam prepare.PreTxParam) {
 	var toPkr c_type.PKr
 	txParam.GasPrice = (*big.Int)(args.GasPrice)
-	txParam.From = fromAccount.Key.ToUint512()
+	txParam.From = fromAccount.Key
 	feevalue := defaultFee(args.GasPrice, args.Gas)
 	asset := args.toAsset()
 	toPkr = args.To.ToPkr(nil)
@@ -2030,37 +2030,20 @@ func (args *ClosePkgArgs) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
-func (args *ClosePkgArgs) toTxParam() (txParam prepare.PreTxParam) {
+func (args *ClosePkgArgs) toTxParam(fromAccount accounts.Account) (txParam prepare.PreTxParam) {
 	txParam.GasPrice = (*big.Int)(args.GasPrice)
-	txParam.From = *args.From.ToUint512()
 	feevalue := defaultFee(args.GasPrice, args.Gas)
 	feeToken := assets.Token{
 		utils.CurrencyToUint256("SERO"),
 		utils.U256(*feevalue),
 	}
-	txParam.From = *args.From.ToUint512()
+	txParam.From = fromAccount.Key
 	txParam.RefundTo = superzk.Pk2PKr(args.From.ToUint512(), c_type.RandUint256().NewRef()).NewRef()
 	txParam.Fee = feeToken
 	pkgCloseCmd := prepare.PkgCloseCmd{*args.PkgId, *args.Key}
 	txParam.Cmds.PkgClose = &pkgCloseCmd
 	return
 
-}
-
-func (args *ClosePkgArgs) toTransaction(state *state.StateDB) (*types.Transaction, *ztx.T, error) {
-	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), nil)
-	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
-	ehash := tx.Ehash()
-	txt := &ztx.T{
-		Fee: assets.Token{
-			utils.CurrencyToUint256(params.DefaultCurrency),
-			utils.U256(*fee),
-		},
-		PkgClose: &ztx.PkgClose{*args.PkgId, *args.Key},
-	}
-	txt.Ehash = ehash
-	txt.FromRnd = c_type.RandUint256().NewRef()
-	return tx, txt, nil
 }
 
 type TransferPkgArgs struct {
