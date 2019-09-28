@@ -445,3 +445,71 @@ func (b *ContractAddress) UnmarshalText(input []byte) error {
 	}
 
 }
+
+type MixedcaseAddress struct {
+	Addr     []byte
+	Origin   string
+	Contract bool
+}
+
+func (b MixedcaseAddress) String() string {
+	return b.Origin
+}
+func (b MixedcaseAddress) IsPkr() bool {
+	if b.Contract {
+		return false
+	} else {
+		return len(b.Addr) == 96
+	}
+}
+func (b MixedcaseAddress) IsContract() bool {
+	return b.Contract
+}
+
+func (b *MixedcaseAddress) UnmarshalText(input []byte) error {
+
+	if len(input) == 0 {
+		return ErrEmptyString
+	}
+
+	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+		return e
+	} else {
+		b.Origin = string(input)
+
+		if isContract, err := IsContract(addr.Bytes); err != nil {
+			if isContract {
+				b.Contract = true
+				if !addr.MatchProtocol("SS") {
+					return errors.New("address protocol is not contract")
+				}
+				b.Addr = addr.Bytes
+				return nil
+			} else {
+				if len(addr.Bytes) == 96 {
+					err := ValidPkr(addr)
+					if err != nil {
+						return nil
+					}
+					b.Addr = addr.Bytes
+					return nil
+
+				} else if len(addr.Bytes) == 64 {
+					err := ValidPk(addr)
+					if err != nil {
+						return nil
+					}
+					b.Addr = addr.Bytes
+					return nil
+				} else {
+					return errors.New("invalid address")
+				}
+
+			}
+
+		} else {
+			return err
+		}
+
+	}
+}

@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btcutil/base58"
+
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/sero-cash/go-sero/zero/stake"
@@ -609,24 +611,19 @@ func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy 
 }
 
 type ConvertAddress struct {
-	Addr      map[address.AccountAddress]common.Address `json:"addr"`
-	ShortAddr map[common.Address]common.ContractAddress `json:"shortAddr"`
-	Rand      *c_type.Uint128                           `json:"rand"`
+	Addr      map[string]string                 `json:"addr"`
+	ShortAddr map[string]common.ContractAddress `json:"shortAddr"`
+	Rand      *c_type.Uint128                   `json:"rand"`
 }
 
-func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *c_type.Uint128, addresses []address.AccountAddress, dy bool) (*ConvertAddress, error) {
+func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *c_type.Uint128, addresses []MixedcaseAddress, dy bool) (*ConvertAddress, error) {
 	empty := &c_type.Uint128{}
 	if bytes.Equal(rand[:], empty[:]) {
 		randKey := c_type.RandUint128()
 		rand = &randKey
 	}
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
-	if err != nil {
-		return nil, err
-	}
-
-	addrMap := map[address.AccountAddress]common.Address{}
-	shortAddrMap := map[common.Address]common.ContractAddress{}
+	addrMap := map[string]string{}
+	shortAddrMap := map[string]common.ContractAddress{}
 
 	randSeed := rand.ToUint256()
 
@@ -636,18 +633,21 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *c_
 	}
 	for _, addr := range addresses {
 		onceAddr := common.Address{}
-		if state.IsContract(common.BytesToAddress(addr[:])) {
-			onceAddr = common.BytesToAddress(addr[:])
+		if addr.IsContract() {
+			onceAddr = common.BytesToAddress(addr.Addr)
 		} else {
-			if !superzk.IsPKValid(addr.ToUint512()) {
-				return nil, errors.New("address must be accountAddress")
+			if addr.IsPkr() {
+				onceAddr = common.BytesToAddress(addr.Addr)
+			} else {
+				pk := c_type.Uint512{}
+				copy(pk[:], addr.Addr)
+				pkr := superzk.Pk2PKr(&pk, randSeed.NewRef())
+				onceAddr.SetBytes(pkr[:])
 			}
-			pkr := superzk.Pk2PKr(addr.ToUint512(), randSeed.NewRef())
-			onceAddr.SetBytes(pkr[:])
 		}
-		addrMap[addr] = onceAddr
+		addrMap[addr.String()] = base58.Encode(onceAddr[:])
 		shortAddr := superzk.HashPKr(onceAddr.ToPKr())
-		shortAddrMap[onceAddr] = common.BytesToContractAddress(shortAddr[:])
+		shortAddrMap[base58.Encode(onceAddr[:])] = common.BytesToContractAddress(shortAddr[:])
 	}
 	return &ConvertAddress{addrMap, shortAddrMap, rand}, nil
 }
