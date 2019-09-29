@@ -72,8 +72,12 @@ func (s *PublicExchangeAPI) GetPkSynced(ctx context.Context, pk *PKAddress) (map
 }
 
 func (s *PublicExchangeAPI) GetPkr(ctx context.Context, address PKAddress, index *c_type.Uint256) (pkrAdd PKrAddress, e error) {
-	pk := address.ToUint512()
-	pkr, err := s.b.GetPkr(&pk, index)
+	acc, err := s.b.AccountManager().FindAccountByPk(address.ToUint512())
+	if err != nil {
+		e = err
+		return
+	}
+	pkr, err := s.b.GetPkr(&acc.Key, index)
 	if err != nil {
 		e = err
 		return

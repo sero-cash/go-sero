@@ -90,7 +90,7 @@ type Backend interface {
 	CommitTx(tx *txtool.GTx) error
 
 	GetPkNumber(accountKey common.AccountKey) (number uint64, e error)
-	GetPkr(address *c_type.Uint512, index *c_type.Uint256) (c_type.PKr, error)
+	GetPkr(accountKey *common.AccountKey, index *c_type.Uint256) (c_type.PKr, error)
 	GetBalances(accountKey common.AccountKey) (balances map[string]*big.Int)
 	GenTx(param prepare.PreTxParam) (*txtool.GTxParam, error)
 	GetRecordsByPk(accountkey *common.AccountKey, begin, end uint64) (records []exchange.Utxo, err error)

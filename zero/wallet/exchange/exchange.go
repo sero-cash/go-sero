@@ -275,18 +275,21 @@ func (self *Exchange) GetCurrencyNumber(accountKey common.AccountKey) uint64 {
 	return value.(uint64) - 1
 }
 
-func (self *Exchange) GetPkr(pk *c_type.Uint512, index *c_type.Uint256) (pkr c_type.PKr, err error) {
+func (self *Exchange) GetPkr(accountKey *common.AccountKey, index *c_type.Uint256) (pkr c_type.PKr, err error) {
 	if index == nil {
 		return pkr, errors.New("index must not be empty")
 	}
 	if new(big.Int).SetBytes(index[:]).Cmp(big.NewInt(100)) < 0 {
 		return pkr, errors.New("index must > 100")
 	}
-	if _, ok := self.accounts.Load(*pk); !ok {
+	if value, ok := self.accounts.Load(*accountKey); !ok {
 		return pkr, errors.New("not found Pk")
+	} else {
+		acc := value.(*Account)
+		return acc.wallet.Accounts()[0].GetPkr(index), nil
+
 	}
 
-	return superzk.Pk2PKr(pk, index), nil
 }
 
 func (self *Exchange) ClearUsedFlagForPK(pk *c_type.Uint512) (count int) {

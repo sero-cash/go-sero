@@ -279,12 +279,12 @@ func (b *SeroAPIBackend) GetPkNumber(accountKey common.AccountKey) (number uint6
 	return b.sero.exchange.GetCurrencyNumber(accountKey), nil
 }
 
-func (b *SeroAPIBackend) GetPkr(address *c_type.Uint512, index *c_type.Uint256) (pkr c_type.PKr, e error) {
+func (b *SeroAPIBackend) GetPkr(accountKey *common.AccountKey, index *c_type.Uint256) (pkr c_type.PKr, e error) {
 	if b.sero.exchange == nil {
 		e = errors.New("not start exchange")
 		return
 	}
-	return b.sero.exchange.GetPkr(address, index)
+	return b.sero.exchange.GetPkr(accountKey, index)
 }
 
 func (b *SeroAPIBackend) GetLockedBalances(accountKey common.AccountKey) (balances map[string]*big.Int) {
