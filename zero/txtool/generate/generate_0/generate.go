@@ -84,10 +84,7 @@ func (self *gen_ctx) setFeeData() {
 			self.param.Fee.Value,
 		}
 		asset_desc := c_czero.AssetDesc{
-			Tkn_currency: self.s.Fee.Currency,
-			Tkn_value:    self.s.Fee.Value.ToUint256(),
-			Tkt_category: c_type.Empty_Uint256,
-			Tkt_value:    c_type.Empty_Uint256,
+			Asset: self.s.Fee.ToTypeAsset(),
 		}
 		c_czero.GenAssetCC(&asset_desc)
 		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)
@@ -102,12 +99,8 @@ func (self *gen_ctx) setInsData() {
 				s_in_o.Root = in.Out.Root
 				self.s.Desc_O.Ins = append(self.s.Desc_O.Ins, s_in_o)
 				{
-					asset := in.Out.State.OS.Out_O.Asset.ToFlatAsset()
 					asset_desc := c_czero.AssetDesc{
-						Tkn_currency: asset.Tkn.Currency,
-						Tkn_value:    asset.Tkn.Value.ToUint256(),
-						Tkt_category: asset.Tkt.Category,
-						Tkt_value:    asset.Tkt.Value,
+						Asset: in.Out.State.OS.Out_O.Asset.ToTypeAsset(),
 					}
 					c_czero.GenAssetCC(&asset_desc)
 					self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, asset_desc.Asset_cc[:]...)
@@ -169,12 +162,8 @@ func (self *gen_ctx) setCmdsData() {
 		self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, close.Ar[:]...)
 	}
 	if a != nil {
-		asset := a.ToFlatAsset()
 		asset_desc := c_czero.AssetDesc{
-			Tkn_currency: asset.Tkn.Currency,
-			Tkn_value:    asset.Tkn.Value.ToUint256(),
-			Tkt_category: asset.Tkt.Category,
-			Tkt_value:    asset.Tkt.Value,
+			Asset: a.ToTypeAsset(),
 		}
 		c_czero.GenAssetCC(&asset_desc)
 		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, asset_desc.Asset_cc[:]...)

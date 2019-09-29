@@ -1,6 +1,12 @@
 package stx_v1
 
 import (
+	"sync/atomic"
+
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
+	"github.com/sero-cash/go-czero-import/c_czero"
+
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/crypto/sha3"
@@ -11,7 +17,7 @@ import (
 type In_P struct {
 	Root  c_type.Uint256
 	Nil   c_type.Uint256
-	NSign c_type.Uint512
+	NSign c_type.SignN
 	ASign c_type.Uint512
 }
 
@@ -40,7 +46,7 @@ type In_P0 struct {
 	Nil   c_type.Uint256
 	Trace c_type.Uint256
 	Key   *c_type.Uint256 `rlp:"nil"`
-	Sign  c_type.Uint512
+	Sign  c_type.SignN
 }
 
 func (self *In_P0) Tx1_Hash() (ret c_type.Uint256) {
@@ -69,9 +75,33 @@ func (self *In_P0) ToHash() (ret c_type.Uint256) {
 }
 
 type Out_P struct {
-	PKr   c_type.PKr
-	Asset assets.Asset
-	Memo  c_type.Uint512
+	PKr           c_type.PKr
+	Asset         assets.Asset
+	Memo          c_type.Uint512
+	assetCC_Czero atomic.Value
+	assetCC_Szk   atomic.Value
+}
+
+func (self *Out_P) ToAssetCC_Czero() c_type.Uint256 {
+	if cc, ok := self.assetCC_Czero.Load().(c_type.Uint256); ok {
+		return cc
+	}
+	asset_desc := c_czero.AssetDesc{
+		Asset: self.Asset.ToTypeAsset(),
+	}
+	c_czero.GenAssetCC(&asset_desc)
+	v := asset_desc.Asset_cc
+	self.assetCC_Czero.Store(v)
+	return v
+}
+
+func (self *Out_P) ToAssetCC_Szk() c_type.Uint256 {
+	if cc, ok := self.assetCC_Szk.Load().(c_type.Uint256); ok {
+		return cc
+	}
+	v, _ := c_superzk.GenAssetCC(self.Asset.ToTypeAsset().NewRef())
+	self.assetCC_Szk.Store(v)
+	return v
 }
 
 func (self *Out_P) Clone() (ret Out_P) {

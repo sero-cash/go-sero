@@ -20,7 +20,6 @@ import (
 type verifyWithStateCtx struct {
 	tx             *stx.T
 	state          *zstate.ZState
-	hash           c_type.Uint256
 	oin_proof_proc *utils.Procs
 	balance_desc   c_type.BalanceDesc
 }
@@ -43,7 +42,7 @@ func (self *verifyWithStateCtx) clear() {
 }
 
 func (self *verifyWithStateCtx) verifyFee() (e error) {
-	feeCC := self.tx.ToFeeCC()
+	feeCC := self.tx.ToFeeCC_Czero()
 	self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, feeCC[:]...)
 	return
 }
@@ -76,7 +75,7 @@ func (self *verifyWithStateCtx) verifyOs() (e error) {
 		}
 
 		for _, out_o := range self.tx.Tx0().Desc_O.Outs {
-			assetCC := out_o.ToAssetCC()
+			assetCC := out_o.ToAssetCC_Czero()
 			self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, assetCC[:]...)
 		}
 	}
@@ -160,7 +159,7 @@ func (self *verifyWithStateCtx) verifyPkg() (e error) {
 }
 
 func (self *verifyWithStateCtx) verifyCmds() (e error) {
-	if cc := self.tx.Desc_Cmd.ToAssetCC(); cc != nil {
+	if cc := self.tx.Desc_Cmd.ToAssetCC_Czero(); cc != nil {
 		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, cc[:]...)
 	}
 	return

@@ -481,7 +481,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 		return ErrGasLimit
 	}
 
-	if err := verify.VerifyWithoutState(tx.Ehash().NewRef(), tx.GetZZSTX(), pool.chain.CurrentBlock().NumberU64()); err != nil {
+	num := pool.chain.CurrentBlock().NumberU64()
+	if err := verify.VerifyWithoutState(tx.Ehash().NewRef(), tx.GetZZSTX(), num); err != nil {
 		log.Error("validateTx verify without state error", "hash", tx.Hash().Hex(), "verify stx err", err)
 		pool.faileds[tx.Hash()] = time.Now()
 		return ErrVerifyError
@@ -493,7 +494,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	}
 
 	state := copyState.NextZState()
-	err := verify.VerifyWithState(tx.GetZZSTX(), state)
+	err := verify.VerifyWithState(tx.GetZZSTX(), state, num)
 	//err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
 	if err != nil {
 		log.Error("validateTx error", "hash", tx.Hash().Hex(), "verify stx err", err)

@@ -1303,7 +1303,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		for _, tx := range block.Transactions() {
 			err := <-tx_results
 			if err == nil {
-				err = verify.VerifyWithState(tx.GetZZSTX(), state.NextZState())
+				err = verify.VerifyWithState(tx.GetZZSTX(), state.NextZState(), block.NumberU64())
 			}
 			//err := verify.Verify(tx.GetZZSTX(), state.GetZState())
 			if err != nil {

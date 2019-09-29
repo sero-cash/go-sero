@@ -19,6 +19,8 @@ package stx_v0
 import (
 	"sync/atomic"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 
@@ -36,23 +38,29 @@ type Out_O struct {
 	Memo  c_type.Uint512
 
 	//Cache
-	assetCC atomic.Value
+	assetCC_Czero atomic.Value
+	assetCC_Szk   atomic.Value
 }
 
-func (self *Out_O) ToAssetCC() c_type.Uint256 {
-	if cc, ok := self.assetCC.Load().(c_type.Uint256); ok {
+func (self *Out_O) ToAssetCC_Czero() c_type.Uint256 {
+	if cc, ok := self.assetCC_Czero.Load().(c_type.Uint256); ok {
 		return cc
 	}
-	asset := self.Asset.ToFlatAsset()
 	asset_desc := c_czero.AssetDesc{
-		Tkn_currency: asset.Tkn.Currency,
-		Tkn_value:    asset.Tkn.Value.ToUint256(),
-		Tkt_category: asset.Tkt.Category,
-		Tkt_value:    asset.Tkt.Value,
+		Asset: self.Asset.ToTypeAsset(),
 	}
 	c_czero.GenAssetCC(&asset_desc)
 	v := asset_desc.Asset_cc
-	self.assetCC.Store(v)
+	self.assetCC_Czero.Store(v)
+	return v
+}
+
+func (self *Out_O) ToAssetCC_Szk() c_type.Uint256 {
+	if cc, ok := self.assetCC_Szk.Load().(c_type.Uint256); ok {
+		return cc
+	}
+	v, _ := c_superzk.GenAssetCC(self.Asset.ToTypeAsset().NewRef())
+	self.assetCC_Szk.Store(v)
 	return v
 }
 

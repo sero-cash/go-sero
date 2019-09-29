@@ -19,6 +19,8 @@ package stx
 import (
 	"sync/atomic"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 
@@ -46,8 +48,9 @@ type T struct {
 	Tx1 *stx_v1.Tx `rlp:"nil"`
 
 	//cache
-	hash  atomic.Value
-	feeCC atomic.Value
+	hash        atomic.Value
+	feeCC_Szk   atomic.Value
+	feeCC_Czero atomic.Value
 }
 
 func (self *T) Tx0() (ret *stx_v0.Tx) {
@@ -59,10 +62,6 @@ func (self *T) Tx0() (ret *stx_v0.Tx) {
 	} else {
 		return
 	}
-}
-
-func (self *T) IsSzk() bool {
-	return self.Tx1 != nil
 }
 
 func (self *T) ContractAsset() *assets.Asset {
@@ -101,19 +100,25 @@ func (self *T) IsOpContract() bool {
 	return false
 }
 
-func (self *T) ToFeeCC() c_type.Uint256 {
-	if cc, ok := self.feeCC.Load().(c_type.Uint256); ok {
+func (self *T) ToFeeCC_Czero() c_type.Uint256 {
+	if cc, ok := self.feeCC_Czero.Load().(c_type.Uint256); ok {
 		return cc
 	}
 	asset_desc := c_czero.AssetDesc{
-		Tkn_currency: self.Fee.Currency,
-		Tkn_value:    self.Fee.Value.ToUint256(),
-		Tkt_category: c_type.Empty_Uint256,
-		Tkt_value:    c_type.Empty_Uint256,
+		Asset: self.Fee.ToTypeAsset(),
 	}
 	c_czero.GenAssetCC(&asset_desc)
 	v := asset_desc.Asset_cc
-	self.feeCC.Store(v)
+	self.feeCC_Czero.Store(v)
+	return v
+}
+
+func (self *T) ToFeeCC_Szk() c_type.Uint256 {
+	if cc, ok := self.feeCC_Szk.Load().(c_type.Uint256); ok {
+		return cc
+	}
+	v, _ := c_superzk.GenAssetCC(self.Fee.ToTypeAsset().NewRef())
+	self.feeCC_Szk.Store(v)
 	return v
 }
 

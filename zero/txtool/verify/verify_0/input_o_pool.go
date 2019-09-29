@@ -31,7 +31,7 @@ func (self *verify_input_o_desc) Run() error {
 		self.e = err
 		return err
 	} else {
-		self.asset_cc = self.src.Out_O.ToAssetCC()
+		self.asset_cc = self.src.Out_O.ToAssetCC_Czero()
 		return nil
 	}
 }
