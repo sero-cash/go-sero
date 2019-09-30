@@ -18,6 +18,9 @@ func (self *LightNode) CurrentLight() *LightNode {
 func (self *LightNode) GetOutsByPKr(pkrs []c_type.PKr, start, end uint64) (br BlockOutResp, e error) {
 	br.CurrentNum = self.getLastNumber()
 	blockOuts := []BlockOut{}
+	if end == 0  {
+		end = br.CurrentNum
+	}
 	for _, pkr := range pkrs {
 		//uPKr := pkr.ToUint512()
 		prefix := append(pkrPrefix, pkr[:]...)

@@ -2,6 +2,8 @@ package light
 
 import (
 	"encoding/binary"
+	"fmt"
+	"github.com/btcsuite/btcutil/base58"
 	"math/big"
 	"sync/atomic"
 
@@ -110,6 +112,12 @@ func (self *LightNode) fetchBlockInfo() {
 			if out.State.OS.Out_O != nil {
 				pkr = out.State.OS.Out_O.Addr
 			}
+			if out.State.OS.Out_C != nil {
+				pkr = out.State.OS.Out_C.PKr
+			}
+			if out.State.OS.Out_P != nil {
+				pkr = out.State.OS.Out_P.PKr
+			}
 			if value, ok := pkrMap[pkr]; ok {
 				v := value
 				v = append(v, out)
@@ -123,6 +131,7 @@ func (self *LightNode) fetchBlockInfo() {
 			if err != nil {
 				return
 			}
+			fmt.Println("index light pkr: ",base58.Encode(pkr[:]))
 			batch.Put(pkrKey(pkr, uint64(block.Num)), data)
 		}
 
