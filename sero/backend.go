@@ -26,8 +26,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/sero-cash/go-sero/zero/proofservice"
-
 	"github.com/sero-cash/go-sero/voter"
 	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
 
@@ -176,9 +174,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	}
 	sero.bloomIndexer.Start(sero.blockchain)
 
-	//if config.TxPool.Journal != "" {
+	// if config.TxPool.Journal != "" {
 	//	config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
-	//}
+	// }
 	sero.txPool = core.NewTxPool(config.TxPool, sero.chainConfig, sero.blockchain)
 
 	sero.voter = voter.NewVoter(sero.chainConfig, sero.blockchain, sero)
@@ -198,21 +196,30 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 
 	ethapi.Backend_Instance = sero.APIBackend
 
-	//init exchange
+	// init exchange
 	if config.StartExchange {
 		sero.exchange = exchange.NewExchange(zconfig.Exchange_dir(), sero.txPool, sero.accountManager, config.AutoMerge)
 	}
 
 	stakeservice.NewStakeService(zconfig.Stake_dir(), sero.blockchain, sero.accountManager)
 
-	//init light
+	// init light
 	if config.StartLight {
 		sero.lightNode = light.NewLightNode(zconfig.Light_dir(), sero.txPool, sero.blockchain.GetDB())
 	}
 
-	if config.Proof != nil {
-		proofservice.NewProofService("", sero.APIBackend, config.Proof)
-	}
+	// if config.Proof != nil {
+	// 	if config.Proof.PKr == (c_type.PKr{}) {
+	// 		wallets := sero.accountManager.Wallets()
+	// 		if len(wallets) == 0 {
+	// 			// panic("init proofService error")
+	// 		}
+	//
+	// 		account := wallets[0].Accounts()
+	// 		config.Proof.PKr = superzk.Pk2PKr(account[0].Address.ToUint512(), &c_type.Uint256{1})
+	// 	}
+	// 	proofservice.NewProofService("", sero.APIBackend, config.Proof);
+	// }
 
 	SeroInstance = sero
 	return sero, nil

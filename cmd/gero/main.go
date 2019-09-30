@@ -145,6 +145,7 @@ var (
 		utils.ProofzinFeeFlag,
 		utils.ProofoinFeeFlag,
 		utils.ProofoutFeeFlag,
+		utils.ProofFixedFeeFlag,
 	}
 
 	rpcFlags = []cli.Flag{

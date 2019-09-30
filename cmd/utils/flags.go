@@ -104,7 +104,7 @@ func NewApp(gitCommit, usage string) *cli.App {
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
 	app.Author = ""
-	//app.Authors = nil
+	// app.Authors = nil
 	app.Email = ""
 	app.Version = params.VersionWithMeta
 	if len(gitCommit) >= 8 {
@@ -622,17 +622,17 @@ var (
 	ProofzinFeeFlag = cli.StringFlag{
 		Name:  "zinFee",
 		Usage: "proof for tx zin fee",
-		Value: "1sero",
+		Value: "0sero",
 	}
 	ProofoinFeeFlag = cli.StringFlag{
 		Name:  "oinFee",
 		Usage: "proof for tx oin fee",
-		Value: "0.5sero",
+		Value: "0sero",
 	}
 	ProofoutFeeFlag = cli.StringFlag{
 		Name:  "outFee",
 		Usage: "proof for tx out fee",
-		Value: "0.5sero",
+		Value: "0sero",
 	}
 	ProofFixedFeeFlag = cli.StringFlag{
 		Name:  "fixedFee",
@@ -937,32 +937,32 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 	log.Info("Maximum peer count", "SERO", cfg.MaxPeers)
 
-	//lightClient := ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalString(SyncModeFlag.Name) == "light"
-	////lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
-	//lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
+	// lightClient := ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalString(SyncModeFlag.Name) == "light"
+	// //lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
+	// lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
 	//
-	//if ctx.GlobalIsSet(MaxPeersFlag.Name) {
+	// if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 	//	cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
 	//	//if lightServer && !ctx.GlobalIsSet(LightPeersFlag.Name) {
 	//	//	cfg.MaxPeers += lightPeers
 	//	//}
-	//} else {
+	// } else {
 	//	//if lightServer {
 	//	//	cfg.MaxPeers += lightPeers
 	//	//}
 	//	if lightClient && ctx.GlobalIsSet(LightPeersFlag.Name) && cfg.MaxPeers < lightPeers {
 	//		cfg.MaxPeers = lightPeers
 	//	}
-	//}
-	////if !(lightClient || lightServer) {
-	//if !(lightClient) {
+	// }
+	// //if !(lightClient || lightServer) {
+	// if !(lightClient) {
 	//	lightPeers = 0
-	//}
-	//ethPeers := cfg.MaxPeers - lightPeers
-	//if lightClient {
+	// }
+	// ethPeers := cfg.MaxPeers - lightPeers
+	// if lightClient {
 	//	ethPeers = 0
-	//}
-	//log.Info("Maximum peer count", "ETH", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
+	// }
+	// log.Info("Maximum peer count", "ETH", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
 
 	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
@@ -974,7 +974,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	// if we're running a light client or server, force enable the v5 peer discovery
 	// unless it is explicitly disabled with --nodiscover note that explicitly specifying
 	// --v5disc overrides --nodiscover, in which case the later only disables v4 discovery
-	//forceV5Discovery := (lightClient || lightServer) && !ctx.GlobalBool(NoDiscoverFlag.Name)
+	// forceV5Discovery := (lightClient || lightServer) && !ctx.GlobalBool(NoDiscoverFlag.Name)
 	forceV5Discovery := !ctx.GlobalBool(NoDiscoverFlag.Name)
 	if ctx.GlobalIsSet(DiscoveryV5Flag.Name) {
 		cfg.DiscoveryV5 = ctx.GlobalBool(DiscoveryV5Flag.Name)
@@ -1004,7 +1004,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 	if ctx.GlobalBool(DeveloperFlag.Name) {
 		// --dev mode can't use p2p networking.
-		//cfg.MaxPeers = 0
+		// cfg.MaxPeers = 0
 		cfg.ListenAddr = ":0"
 		cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
@@ -1178,7 +1178,7 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	// Avoid conflicting network flags
 	checkExclusive(ctx, AlphanetFlag, DeveloperFlag)
-	//checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
+	// checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
 	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
