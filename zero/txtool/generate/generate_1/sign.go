@@ -3,6 +3,8 @@ package generate_1
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/core/types"
+
 	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/superzk"
 
@@ -152,6 +154,7 @@ func (self *sign_ctx) prepare() (e error) {
 	if need_tx1 {
 		self.s.Tx1 = &stx_v1.Tx{}
 	}
+	self.s.Ehash = types.Ehash(*self.param.GasPrice, self.param.Gas, []byte{})
 	return
 }
 
