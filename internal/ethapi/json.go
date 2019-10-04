@@ -176,7 +176,9 @@ func (b PKrAddress) ToPKr() *c_type.PKr {
 }
 
 func (b PKrAddress) MarshalText() ([]byte, error) {
-	return []byte(base58.Encode(b[:])), nil
+	a := utils.NewAddressByBytes(b[:])
+	a.SetProtocol("SC")
+	return []byte(a.ToCode()), nil
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.

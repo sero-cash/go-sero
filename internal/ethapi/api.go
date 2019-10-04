@@ -678,9 +678,13 @@ func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses
 
 }
 
-func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk PKAddress) (common.Address, error) {
-	PKr := superzk.Pk2PKr(Pk.ToUint512().NewRef(), nil)
-	result := common.Address{}
+func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk PKAddress) (PKrAddress, error) {
+	account, err := s.b.AccountManager().FindAccountByPk(Pk.ToUint512())
+	if err != nil {
+		return PKrAddress{}, err
+	}
+	PKr := account.GetPkr(nil)
+	result := PKrAddress{}
 	copy(result[:], PKr[:])
 	return result, nil
 }
