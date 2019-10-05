@@ -19,7 +19,6 @@ type verifyWithStateCtx struct {
 	tx           *stx.T
 	state        *zstate.ZState
 	balance_desc c_type.BalanceDesc
-	zcount       int
 	ck           assets.CKState
 }
 
@@ -27,7 +26,6 @@ func VerifyWithState(tx *stx.T, state *zstate.ZState) (e error) {
 	ctx := verifyWithStateCtx{}
 	ctx.tx = tx
 	ctx.state = state
-	ctx.ck = assets.NewCKState(true, &tx.Fee)
 	return
 }
 
@@ -50,6 +48,7 @@ func (self *verifyWithStateCtx) verifyDescZ() (e error) {
 
 func (self *verifyWithStateCtx) verifyFee() (e error) {
 	feeCC := self.tx.ToFeeCC_Szk()
+	self.ck = assets.NewCKState(true, &self.tx.Fee)
 	self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, feeCC[:]...)
 	return
 }
@@ -64,7 +63,6 @@ func (self *verifyWithStateCtx) verifyPkg() (e error) {
 			e = verify_utils.ReportError(fmt.Sprintf("pkg id already exists %v", hexutil.Encode(self.tx.Desc_Pkg.Create.Id[:])), self.tx)
 			return
 		} else {
-			self.zcount++
 			self.balance_desc.Zout_acms = append(self.balance_desc.Zout_acms, self.tx.Desc_Pkg.Create.Pkg.AssetCM[:]...)
 		}
 	}
@@ -88,7 +86,6 @@ func (self *verifyWithStateCtx) verifyPkg() (e error) {
 			return
 		} else {
 			if superzk.VerifyPKr(&self.balance_desc.Hash, &self.tx.Desc_Pkg.Close.Sign, &pg.Pack.PKr) {
-				self.zcount++
 				self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, pg.Pack.Pkg.AssetCM[:]...)
 			} else {
 				e = verify_utils.ReportError(fmt.Sprintf("Can not verify pkg sign of the id %v", hexutil.Encode(self.tx.Desc_Pkg.Close.Id[:])), self.tx)
@@ -101,8 +98,8 @@ func (self *verifyWithStateCtx) verifyPkg() (e error) {
 
 func (self *verifyWithStateCtx) verifyCmd() (e error) {
 	if cc := self.tx.Desc_Cmd.ToAssetCC_Szk(); cc != nil {
-		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, cc[:]...)
 		self.ck.AddOut(self.tx.Desc_Cmd.OutAsset())
+		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, cc[:]...)
 	}
 	return
 }
@@ -236,7 +233,6 @@ func (self *verifyWithStateCtx) verifyInsP() (e error) {
 
 func (self *verifyWithStateCtx) verifyInsC() (e error) {
 	for _, in := range self.tx.Tx1.Ins_C {
-		self.zcount++
 		self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, in.AssetCM[:]...)
 		if ok := self.state.State.HasIn(&in.Nil); ok {
 			e = verify_utils.ReportError("txs.verify in already in nils", self.tx)
@@ -262,14 +258,13 @@ func (self *verifyWithStateCtx) verifyOutP() (e error) {
 
 func (self *verifyWithStateCtx) verifyOutC() (e error) {
 	for _, out := range self.tx.Tx1.Outs_C {
-		self.zcount++
 		self.balance_desc.Zout_acms = append(self.balance_desc.Zout_acms, out.AssetCM[:]...)
 	}
 	return
 }
 
 func (self *verifyWithStateCtx) verifyBalance() (e error) {
-	if self.zcount > 0 {
+	if len(self.balance_desc.Zout_acms) > 0 || len(self.balance_desc.Zin_acms) > 0 {
 		self.balance_desc.Bcr = self.tx.Bcr
 		self.balance_desc.Bsign = self.tx.Bsign
 		if err := c_superzk.VerifyBalance(&self.balance_desc); err != nil {

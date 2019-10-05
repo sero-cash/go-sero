@@ -45,7 +45,6 @@ func (self *sign_ctx) Keys() (ret []c_type.Uint256) {
 
 func SignTx(param *txtool.GTxParam) (ctx sign_ctx, e error) {
 	ctx.param = *param
-	ctx.ck = assets.NewCKState(true, &param.Fee)
 	if e = ctx.check(); e != nil {
 		return
 	}
@@ -166,6 +165,7 @@ func (self *sign_ctx) genFee() (e error) {
 		e = err
 		return
 	} else {
+		self.ck = assets.NewCKState(true, &self.param.Fee)
 		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, cc[:]...)
 	}
 	return
@@ -210,11 +210,11 @@ func (self *sign_ctx) genCmd() (e error) {
 		self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, close.Ar[:]...)
 	}
 	if a != nil {
-		self.ck.AddOut(a)
 		if cc, err := c_superzk.GenAssetCC(a.ToTypeAsset().NewRef()); err != nil {
 			e = err
 			return
 		} else {
+			self.ck.AddOut(a)
 			self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, cc[:]...)
 		}
 	}
@@ -252,12 +252,11 @@ func (self *sign_ctx) genInsP0() (e error) {
 				}
 			}
 		}
-		self.ck.AddIn(&asset_desc)
 		if cc, err := c_superzk.GenAssetCC(in.Out.State.OS.Out_O.Asset.ToTypeAsset().NewRef()); err != nil {
 			e = err
 			return
 		} else {
-
+			self.ck.AddIn(&asset_desc)
 			self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, cc[:]...)
 		}
 		self.s.Tx1.Ins_P0 = append(self.s.Tx1.Ins_P0, t_in)
@@ -347,7 +346,6 @@ func (self *sign_ctx) genInsC() (e error) {
 			return
 		}
 
-		self.ck.AddIn(&dout.Asset)
 		self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, t_in.AssetCM[:]...)
 		self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, in.Ar[:]...)
 		self.s.Tx1.Ins_C = append(self.s.Tx1.Ins_C, t_in)
@@ -377,7 +375,6 @@ func (self *sign_ctx) genOutsC() (e error) {
 			return
 		}
 
-		self.ck.AddOut(&out.Asset)
 		self.balance_desc.Zout_acms = append(self.balance_desc.Zout_acms, t_out.AssetCM[:]...)
 		self.balance_desc.Zout_ars = append(self.balance_desc.Zout_ars, out.Ar[:]...)
 		self.s.Tx1.Outs_C = append(self.s.Tx1.Outs_C, t_out)
