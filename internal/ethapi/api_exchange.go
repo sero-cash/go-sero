@@ -3,6 +3,8 @@ package ethapi
 import (
 	"context"
 
+	"github.com/sero-cash/go-sero/zero/txtool/prepare"
+
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
@@ -100,7 +102,11 @@ func (s *PublicExchangeAPI) GetLockedBalances(address PKAddress) map[string]*Big
 }
 
 func (s *PublicExchangeAPI) GetMaxAvailable(address PKAddress, currency Smbol) (amount *Big) {
-	return (*Big)(s.b.GetMaxAvailable(address.ToUint512(), string(currency)))
+	account, err := s.b.AccountManager().FindAccountByPk(address.ToUint512())
+	if err != nil {
+		return nil
+	}
+	return (*Big)(s.b.GetMaxAvailable(account.Key.ToUint512(), string(currency)))
 }
 
 func (s *PublicExchangeAPI) GetBalances(ctx context.Context, address PKAddress) map[string]*Big {
@@ -562,4 +568,20 @@ func (s *PublicExchangeAPI) Pk2Pkr(ctx context.Context, pk PKAddress, index *c_t
 	var pkrAddress PKrAddress
 	copy(pkrAddress[:], pkr[:])
 	return pkrAddress, nil
+}
+
+func (s *PublicExchangeAPI) FindRoots(pk PKAddress, cy Smbol, amount Big) (map[string]interface{}, error) {
+	acc, err := s.b.AccountManager().FindAccountByPk(pk.ToUint512())
+	if err != nil {
+		return nil, err
+	}
+	utxos, remaining := exchange.CurrentExchange().FindRoots(&acc.Key, string(cy), amount.ToInt())
+	result := map[string]interface{}{}
+	result["utxos"] = utxos
+	result["remaining"] = Big(remaining)
+	return result, nil
+}
+
+func (s *PublicExchangeAPI) GetRoot(root *c_type.Uint256) *prepare.Utxo {
+	return exchange.CurrentExchange().GetRoot(root)
 }
