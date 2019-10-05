@@ -14,7 +14,7 @@ import (
 type In_P struct {
 	Root  c_type.Uint256
 	Nil   c_type.Uint256
-	Key   *c_type.Uint256
+	Key   *c_type.Uint256 `rlp:"nil"`
 	NSign c_type.SignN
 	ASign c_type.Uint512
 }

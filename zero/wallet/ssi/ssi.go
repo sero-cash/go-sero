@@ -41,7 +41,7 @@ func (self *SSI) CreateKr() (kr txtool.Kr) {
 
 	sk := c_type.Uint512{}
 	copy(sk[:], skr[:])
-	tk := superzk.Sk2Tk(&sk)
+	tk, _ := c_superzk.Sk2Tk(&sk)
 	pk, _ := c_superzk.Czero_Tk2PK(&tk)
 
 	pkr := superzk.Pk2PKr(&pk, &rnd)

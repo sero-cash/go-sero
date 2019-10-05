@@ -10,8 +10,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
-	"github.com/sero-cash/go-czero-import/superzk"
-
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txtool"
 )
@@ -19,7 +17,7 @@ import (
 func DecNilOuts(outs []txtool.Out, skr *c_type.PKr) (douts []txtool.DOut) {
 	sk := c_type.Uint512{}
 	copy(sk[:], skr[:])
-	tk := superzk.Sk2Tk(&sk)
+	tk, _ := c_superzk.Sk2Tk(&sk)
 	for _, out := range outs {
 		dout := txtool.DOut{}
 

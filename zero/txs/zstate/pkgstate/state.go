@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/sero-cash/go-czero-import/superzk"
+	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/sero-cash/go-sero/serodb"
 
@@ -81,7 +81,7 @@ func (self *PkgState) Force_del(hash *c_type.Uint256, close *stx.PkgClose) (e er
 		e = fmt.Errorf("Close Pkg is nil: %v", hexutil.Encode(close.Id[:]))
 		return
 	} else {
-		if superzk.VerifyPKr(hash, &close.Sign, &pg.Pack.PKr) {
+		if c_superzk.VerifyPKr_X(hash, &close.Sign, &pg.Pack.PKr) {
 			pg.Closed = true
 			self.data.Add(pg)
 		} else {
@@ -119,7 +119,7 @@ func (self *PkgState) Force_transfer(hash *c_type.Uint256, trans *stx.PkgTransfe
 		e = fmt.Errorf("Transfer Pkg is nil: %v", hexutil.Encode(trans.Id[:]))
 		return
 	} else {
-		if superzk.VerifyPKr(hash, &trans.Sign, &pg.Pack.PKr) {
+		if c_superzk.VerifyPKr_X(hash, &trans.Sign, &pg.Pack.PKr) {
 			pg.Pack.PKr = trans.PKr
 			self.data.Add(pg)
 		} else {

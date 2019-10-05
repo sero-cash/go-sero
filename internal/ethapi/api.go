@@ -521,7 +521,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 			e = err
 			return
 		}
-		sk := superzk.Seed2Sk(seed.SeedToUint256())
+		sk := c_superzk.Seed2Sk(seed.SeedToUint256())
 		gtx, err := flight.SignTx(&sk, pretx)
 		if err != nil {
 			exchange.CurrentExchange().ClearTxParam(pretx)

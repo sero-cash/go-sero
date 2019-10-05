@@ -560,7 +560,7 @@ func (self *Exchange) genTx(account *Account, param *prepare.BeforeTxParam) (txP
 		return
 	}
 
-	sk := superzk.Seed2Sk(seed.SeedToUint256())
+	sk := c_superzk.Seed2Sk(seed.SeedToUint256())
 	gtx, err := flight.SignTx(&sk, txParam)
 	if err != nil {
 		self.ClearTxParam(txParam)

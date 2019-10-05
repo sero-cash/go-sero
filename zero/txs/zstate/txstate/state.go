@@ -311,6 +311,8 @@ func (state *State) addTx1(tx *stx_v1.Tx, txhash *c_type.Uint256) (e error) {
 	}
 	for _, out := range tx.Outs_P {
 		if c_superzk.IsSzkPKr(&out.PKr) {
+			state.addOut_P(&out, txhash)
+		} else {
 			state.addOut_O(
 				&stx_v0.Out_O{
 					Addr:  out.PKr,
@@ -319,8 +321,6 @@ func (state *State) addTx1(tx *stx_v1.Tx, txhash *c_type.Uint256) (e error) {
 				},
 				txhash,
 			)
-		} else {
-			state.addOut_P(&out, txhash)
 		}
 	}
 	return

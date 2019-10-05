@@ -3,8 +3,8 @@ package ethapi
 import (
 	"context"
 
-	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/sero-cash/go-sero/common/address"
@@ -541,7 +541,7 @@ func (s *PublicExchangeAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes) (c_
 	}
 	var sd c_type.Uint256
 	copy(sd[:], seed[:])
-	return superzk.Seed2Sk(&sd), nil
+	return c_superzk.Seed2Sk(&sd), nil
 }
 
 func (s *PublicExchangeAPI) SignTxWithSk(param txtool.GTxParam, SK c_type.Uint512) (txtool.GTx, error) {
@@ -549,7 +549,7 @@ func (s *PublicExchangeAPI) SignTxWithSk(param txtool.GTxParam, SK c_type.Uint51
 }
 
 func (s *PublicExchangeAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (address.AccountAddress, error) {
-	tk := superzk.Sk2Tk(&sk)
+	tk, _ := c_superzk.Sk2Tk(&sk)
 	return address.BytesToAccount(tk[:]), nil
 }
 

@@ -75,11 +75,11 @@ func (s *PublicLocalAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes) (c_typ
 	}
 	var sd c_type.Uint256
 	copy(sd[:], seed[:])
-	return superzk.Seed2Sk(&sd), nil
+	return c_superzk.Seed2Sk(&sd), nil
 }
 
 func (s *PublicLocalAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (address.AccountAddress, error) {
-	tk := superzk.Sk2Tk(&sk)
+	tk, _ := c_superzk.Sk2Tk(&sk)
 	return address.BytesToAccount(tk[:]), nil
 }
 

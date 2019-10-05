@@ -3,6 +3,8 @@ package verify_1
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -69,7 +71,7 @@ func (self *verifyWithoutStateCtx) verifyFrom() (e error) {
 		e = verify_utils.ReportError("txs.verify from is invalid", self.tx)
 		return
 	}
-	if !superzk.VerifyPKr(&self.hash, &self.tx.Sign, &self.tx.From) {
+	if !c_superzk.VerifyPKr_X(&self.hash, &self.tx.Sign, &self.tx.From) {
 		e = verify_utils.ReportError("txs.verify from verify failed", self.tx)
 		return
 	}
@@ -87,6 +89,8 @@ func (self *verifyWithoutStateCtx) verifyPkg() (e error) {
 	}
 	if self.tx.Desc_Pkg.Create != nil {
 		self.zout_count++
+		e = errors.New("pkg not support after sip5")
+		return
 	}
 	if self.tx.Desc_Pkg.Close != nil {
 		self.zin_count++
