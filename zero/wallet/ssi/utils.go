@@ -12,7 +12,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/superzk"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txtool"
 )
@@ -30,15 +29,20 @@ func DecNilOuts(outs []txtool.Out, skr *c_type.PKr) (douts []txtool.DOut) {
 		if out.State.OS.Out_O != nil {
 			dout.Asset = out.State.OS.Out_O.Asset.Clone()
 			dout.Memo = out.State.OS.Out_O.Memo
-			dout.Nil = c_czero.GenNil(&sk, out.State.OS.RootCM)
+			if nl, e := c_superzk.Czero_genNil(&sk, out.State.OS.RootCM); e == nil {
+				dout.Nil = nl
+			}
 			log.Printf("DecOuts Out_O")
 		} else if out.State.OS.Out_Z != nil {
-			key, flag := c_czero.FetchKey(&tk, &out.State.OS.Out_Z.RPK)
-			if o := generate_0.ConfirmOutZ(&key, flag, out.State.OS.Out_Z); o != nil {
-				dout.Asset = o.Asset
-				dout.Memo = o.Memo
-				dout.Nil = c_czero.GenNil(&sk, out.State.OS.RootCM)
-				log.Printf("DecOuts success")
+			if key, flag, e := c_superzk.Czero_fetchKey(&tk, &out.State.OS.Out_Z.RPK); e == nil {
+				if o := generate_0.ConfirmOutZ(&key, flag, out.State.OS.Out_Z); o != nil {
+					dout.Asset = o.Asset
+					dout.Memo = o.Memo
+					if nl, e := c_superzk.Czero_genNil(&sk, out.State.OS.RootCM); e == nil {
+						dout.Nil = nl
+						log.Printf("DecOuts success")
+					}
+				}
 			}
 			log.Printf("DecOuts Out_Z")
 		} else if out.State.OS.Out_P != nil {

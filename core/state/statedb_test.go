@@ -29,7 +29,6 @@ import (
 	"testing/quick"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
-	"github.com/sero-cash/go-czero-import/cpt"
 	"gopkg.in/check.v1"
 
 	"github.com/sero-cash/go-sero/common"

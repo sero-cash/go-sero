@@ -36,10 +36,31 @@ func NewParam(obj *c_type.PKr, combine CombinFunc) (ret Param) {
 	return
 }
 
+func (self *Param) CalcRoot(value *c_type.Uint256, pos uint64, paths *[DEPTH]c_type.Uint256) (ret c_type.Uint256) {
+	ret = *value
+	for _, path := range paths {
+		if pos%2 == 0 {
+			ret = self.combine(&ret, &path)
+		} else {
+			ret = self.combine(&path, &ret)
+		}
+		pos >>= 1
+	}
+	return
+}
+
+func (self *Param) createEmpty() (ret [c_type.DEPTH + 1]c_type.Uint256) {
+	ret[0] = c_type.Empty_Uint256
+	for i := 1; i <= c_type.DEPTH; i++ {
+		ret[i] = self.combine(&ret[i-1], &ret[i-1])
+	}
+	return
+}
+
 func (self *Param) EmptyRoots() []c_type.Uint256 {
 	if !self.is_load {
 		self.is_load = true
-		self.emptyRoots = createEmpty()
+		self.emptyRoots = self.createEmpty()
 	}
 	return self.emptyRoots[:]
 }

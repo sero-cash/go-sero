@@ -5,8 +5,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
-
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -79,24 +77,11 @@ func (self *In_P0) ToHash() (ret c_type.Uint256) {
 }
 
 type Out_P struct {
-	PKr           c_type.PKr
-	Asset         assets.Asset
-	Memo          c_type.Uint512
-	assetCC_Czero atomic.Value
-	assetCC_Szk   atomic.Value
-}
+	PKr   c_type.PKr
+	Asset assets.Asset
+	Memo  c_type.Uint512
 
-func (self *Out_P) ToAssetCC_Czero() c_type.Uint256 {
-	if cc, ok := self.assetCC_Czero.Load().(c_type.Uint256); ok {
-		return cc
-	}
-	asset_desc := c_czero.AssetDesc{
-		Asset: self.Asset.ToTypeAsset(),
-	}
-	c_czero.GenAssetCC(&asset_desc)
-	v := asset_desc.Asset_cc
-	self.assetCC_Czero.Store(v)
-	return v
+	assetCC_Szk atomic.Value
 }
 
 func (self *Out_P) ToAssetCC_Szk() c_type.Uint256 {

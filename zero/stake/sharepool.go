@@ -724,7 +724,7 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 		voteNumMap := map[c_type.Uint512]bool{}
 		for _, vote := range header.CurrentVotes {
 			ret := types.StakeHash(&blockPosHash, &parentPosHash, vote.IsPool)
-			if err := self.verifyVote(vote, ret); err != nil {
+			if err := self.verifyVote(block.NumberU64(), vote, ret); err != nil {
 				return err
 			}
 			voteNumMap[vote.Sign] = true
@@ -761,7 +761,7 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 		blockPosHash := parentblock.HashPos()
 		for _, vote := range header.ParentVotes {
 			ret := types.StakeHash(&blockPosHash, &parentPosHash, vote.IsPool)
-			if err := self.verifyVote(vote, ret); err != nil {
+			if err := self.verifyVote(block.NumberU64(), vote, ret); err != nil {
 				return err
 			}
 
@@ -778,7 +778,7 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 	return nil
 }
 
-func (self *StakeState) verifyVote(vote types.HeaderVote, stakeHash common.Hash) error {
+func (self *StakeState) verifyVote(num uint64, vote types.HeaderVote, stakeHash common.Hash) error {
 	share := self.GetShare(vote.Id)
 	if share == nil {
 		return errors.New("not found share by shareId")
@@ -794,11 +794,11 @@ func (self *StakeState) verifyVote(vote types.HeaderVote, stakeHash common.Hash)
 		if pool.CurrentShareNum+pool.WishVoteNum == 0 {
 			return errors.New("the pool current share num is 0")
 		}
-		if !superzk.VerifyPKr(stakeHash.HashToUint256(), &vote.Sign, &pool.VotePKr) {
+		if !superzk.VerifyPKr_ByHeight(num, stakeHash.HashToUint256(), &vote.Sign, &pool.VotePKr) {
 			return errors.New("Verify header votes error")
 		}
 	} else {
-		if !superzk.VerifyPKr(stakeHash.HashToUint256(), &vote.Sign, &share.VotePKr) {
+		if !superzk.VerifyPKr_ByHeight(num, stakeHash.HashToUint256(), &vote.Sign, &share.VotePKr) {
 			return errors.New("Verify header votes error")
 		}
 	}

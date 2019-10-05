@@ -646,7 +646,7 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *c_
 			}
 		}
 		addrMap[addr.String()] = base58.Encode(onceAddr[:])
-		shortAddr := superzk.HashPKr(onceAddr.ToPKr())
+		shortAddr := c_superzk.HashPKr(onceAddr.ToPKr())
 		shortAddrMap[base58.Encode(onceAddr[:])] = common.BytesToContractAddress(shortAddr[:])
 	}
 	return &ConvertAddress{addrMap, shortAddrMap, rand}, nil

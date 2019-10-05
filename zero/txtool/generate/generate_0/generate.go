@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-czero-import/c_czero"
-	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -69,8 +70,12 @@ func (self *gen_ctx) prepare() {
 
 func (self *gen_ctx) check() (e error) {
 	sk := self.param.From.SKr.ToUint512()
-	tk := superzk.Sk2Tk(&sk)
-	if !superzk.IsMyPKr(&tk, &self.param.From.PKr) {
+	tk, err := c_superzk.Sk2Tk(&sk)
+	if err != nil {
+		e = err
+		return
+	}
+	if c_superzk.Czero_isMyPKr(&tk, &self.param.From.PKr) != nil {
 		e = errors.New("sk unmatch pkr for the From field")
 		return
 	}
@@ -181,11 +186,14 @@ func (self *gen_ctx) setData() {
 
 func (self *gen_ctx) signTxFrom() error {
 	sk := self.param.From.SKr.ToUint512()
-	tk := superzk.Sk2Tk(&sk)
-	if !superzk.IsMyPKr(&tk, &self.s.From) {
+	tk, err := c_superzk.Sk2Tk(&sk)
+	if err != nil {
+		return err
+	}
+	if c_superzk.Czero_isMyPKr(&tk, &self.s.From) != nil {
 		return fmt.Errorf("sign from : sk unmatch the from (%v)", hexutil.Encode(self.s.From[:]))
 	}
-	if sign, err := superzk.SignPKr(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.s.From); err != nil {
+	if sign, err := c_czero.SignPKrBySk(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.s.From); err != nil {
 		return err
 	} else {
 		self.s.Sign = sign
@@ -228,14 +236,14 @@ func (self *gen_ctx) signTxBalance() error {
 
 func (self *gen_ctx) signTxCmds() error {
 	if self.param.Cmds.PkgTransfer != nil {
-		if sign, err := superzk.SignPKr(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.param.Cmds.PkgTransfer.Owner); err != nil {
+		if sign, err := c_czero.SignPKrBySk(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.param.Cmds.PkgTransfer.Owner); err != nil {
 			return err
 		} else {
 			self.s.Desc_Pkg.Transfer.Sign = sign
 		}
 	}
 	if self.param.Cmds.PkgClose != nil {
-		if sign, err := superzk.SignPKr(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.param.Cmds.PkgClose.Owner); err != nil {
+		if sign, err := c_czero.SignPKrBySk(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.param.Cmds.PkgClose.Owner); err != nil {
 			return err
 		} else {
 			self.s.Desc_Pkg.Transfer.Sign = sign

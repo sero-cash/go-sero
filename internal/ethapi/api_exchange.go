@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
+	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/sero-cash/go-sero/common/address"
@@ -23,7 +24,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-sero/log"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-czero-import/superzk"
@@ -554,7 +554,7 @@ func (s *PublicExchangeAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (addre
 }
 
 func (s *PublicExchangeAPI) Tk2Pk(ctx context.Context, tk TKAddress) (address.AccountAddress, error) {
-	pk := c_czero.Tk2Pk(tk.ToTk().NewRef())
+	pk, _ := c_superzk.Czero_Tk2PK(tk.ToTk().NewRef())
 	return address.BytesToAccount(pk[:]), nil
 }
 func (s *PublicExchangeAPI) Pk2Pkr(ctx context.Context, pk PKAddress, index *c_type.Uint256) (PKrAddress, error) {

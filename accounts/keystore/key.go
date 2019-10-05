@@ -25,9 +25,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-czero-import/c_superzk"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-sero/common"
 
 	"github.com/btcsuite/btcutil/base58"
 
@@ -108,7 +108,7 @@ func newKeyFromTk(tk *c_type.Tk, at uint64, version int) *Key {
 	id := uuid.NewRandom()
 	tkaddress := common.TkAddress{}
 	copy(tkaddress[:], tk[:])
-	pk := c_czero.Tk2Pk(tk)
+	pk, _ := c_superzk.Czero_Tk2PK(tk)
 	accountKey := common.AccountKey{}
 	copy(accountKey[:], pk[:])
 	key := &Key{

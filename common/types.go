@@ -26,6 +26,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/pkg/errors"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -35,7 +37,6 @@ import (
 	"github.com/sero-cash/go-sero/crypto/sha3"
 
 	"github.com/sero-cash/go-czero-import/c_type"
-	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/common/hexutil"
 )
 
@@ -196,7 +197,7 @@ func (a Address) ToCaddr() ContractAddress {
 	var addr ContractAddress
 	pkr := new(c_type.PKr)
 	copy(pkr[:], a[:])
-	hash := superzk.HashPKr(pkr)
+	hash := c_superzk.HashPKr(pkr)
 	addr.SetBytes(hash[:])
 	return addr
 }

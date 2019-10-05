@@ -439,7 +439,7 @@ func (self *sign_ctx) signFrom() (e error) {
 func (self *sign_ctx) signInsP0() (e error) {
 	for i := range self.s.Tx1.Ins_P0 {
 		t_in := self.p0_ins[i]
-		if sign, err := c_superzk.Czero_signNil(
+		if sign, err := c_superzk.SignNil_P0(
 			&self.balance_desc.Hash,
 			t_in.SKr.ToUint512().NewRef(),
 			t_in.Out.State.OS.ToPKr(),

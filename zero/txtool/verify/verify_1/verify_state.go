@@ -118,7 +118,7 @@ func (self *verifyWithStateCtx) verifyInsP0() (e error) {
 			return
 		}
 		if src := self.state.State.GetOut(&in.Root); src != nil {
-			if e = c_superzk.Czero_verifyNil(&self.balance_desc.Hash, &in.Sign, src.ToPKr(), src.RootCM, &in.Nil); e != nil {
+			if e = c_superzk.VerifyNil_P0(&self.balance_desc.Hash, &in.Sign, src.ToPKr(), src.RootCM, &in.Nil); e != nil {
 				return
 			}
 			var asset_desc c_type.Asset

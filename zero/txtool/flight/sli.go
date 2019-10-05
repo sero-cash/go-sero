@@ -2,7 +2,6 @@ package flight
 
 import (
 	"github.com/pkg/errors"
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -55,17 +54,22 @@ func DecOut(tk *c_type.Tk, outs []txtool.Out) (douts []txtool.TDOut) {
 
 			dout.Asset = out.State.OS.Out_O.Asset.Clone()
 			dout.Memo = out.State.OS.Out_O.Memo
-			dout.Nils = append(dout.Nils, c_czero.GenTil(tk, out.State.OS.RootCM))
-			//dout.Nils = append(dout.Nils, c_czero.GenNil(tk, out.State.OS.RootCM))
-			dout.Nils = append(dout.Nils, out.Root)
+			if til, e := c_superzk.Czero_genTrace(tk, out.State.OS.RootCM); e == nil {
+				dout.Nils = append(dout.Nils, til)
+				//dout.Nils = append(dout.Nils, c_czero.GenNil(tk, out.State.OS.RootCM))
+				dout.Nils = append(dout.Nils, out.Root)
+			}
 
 		} else if out.State.OS.Out_Z != nil {
 
-			key, flag := c_czero.FetchKey(tk, &out.State.OS.Out_Z.RPK)
-			if confirm_out := generate_0.ConfirmOutZ(&key, flag, out.State.OS.Out_Z); confirm_out != nil {
-				dout = *confirm_out
-				dout.Nils = append(dout.Nils, c_czero.GenTil(tk, out.State.OS.RootCM))
-				//dout.Nils = append(dout.Nils, c_czero.GenNil(tk, out.State.OS.RootCM))
+			if key, flag, e := c_superzk.Czero_fetchKey(tk, &out.State.OS.Out_Z.RPK); e == nil {
+				if confirm_out := generate_0.ConfirmOutZ(&key, flag, out.State.OS.Out_Z); confirm_out != nil {
+					dout = *confirm_out
+					if til, e := c_superzk.Czero_genTrace(tk, out.State.OS.RootCM); e == nil {
+						dout.Nils = append(dout.Nils, til)
+						//dout.Nils = append(dout.Nils, c_czero.GenNil(tk, out.State.OS.RootCM))
+					}
+				}
 			}
 
 		} else if out.State.OS.Out_P != nil {

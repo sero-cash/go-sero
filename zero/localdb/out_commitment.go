@@ -2,7 +2,6 @@ package localdb
 
 import (
 	"github.com/pkg/errors"
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto"
@@ -19,15 +18,14 @@ func HashIndexAr(index uint64) (ret c_type.Uint256) {
 	pre_ar := index_bytes.ToUint256()
 	ar_bytes := crypto.Keccak256(pre_ar[:])
 	copy(ret[:], ar_bytes)
-	ret = c_czero.Force_Fr(&ret)
+	ret = c_superzk.RandomFr()
 	return
 }
 
 func genOutCM(self *OutState) (cm c_type.Uint256, e error) {
 	if self.Out_O != nil {
-		asset := self.Out_O.Asset.ToTypeAsset()
-		cm = c_czero.GenOutCM(
-			asset,
+		cm, e = c_superzk.Czero_genOutCM(
+			self.Out_O.Asset.ToTypeAsset().NewRef(),
 			&self.Out_O.Memo,
 			&self.Out_O.Addr,
 			HashIndexRsk(self.Index).NewRef(),
@@ -45,7 +43,7 @@ func genOutCM(self *OutState) (cm c_type.Uint256, e error) {
 func genRootCM(self *OutState) (cm c_type.Uint256, e error) {
 	if self.Out_O != nil || self.Out_Z != nil {
 		out_cm := self.OutCM
-		cm = c_czero.GenRootCM(self.Index, out_cm)
+		cm = c_superzk.Czero_genRootCM(self.Index, out_cm)
 		return
 	} else if self.Out_P != nil {
 		ar := HashIndexAr(self.Index)

@@ -117,7 +117,7 @@ func (self *votesFilter) verify(vote *types.Vote, share *stake.Share) bool {
 	if votePkr != nil {
 		parentPosHash := self.parentBlock.HashPos()
 		stakHash := types.StakeHash(&vote.PosHash, &parentPosHash, vote.IsPool)
-		if superzk.VerifyPKr(stakHash.HashToUint256(), &vote.Sign, votePkr) {
+		if superzk.VerifyPKr_ByHeight(self.block.NumberU64(), stakHash.HashToUint256(), &vote.Sign, votePkr) {
 			return true
 		}
 	}

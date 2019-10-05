@@ -114,6 +114,7 @@ func (self *DescCmd) ToAssetCC_Czero() *c_type.Uint256 {
 		if cc, ok := self.assetCC_Czero.Load().(c_type.Uint256); ok {
 			return &cc
 		}
+
 		asset_desc := c_czero.AssetDesc{
 			Asset: asset.ToTypeAsset(),
 		}

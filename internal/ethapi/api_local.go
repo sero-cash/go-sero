@@ -3,6 +3,8 @@ package ethapi
 import (
 	"context"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
@@ -16,7 +18,6 @@ import (
 	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/common/hexutil"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
@@ -83,7 +84,7 @@ func (s *PublicLocalAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (address.
 }
 
 func (s *PublicLocalAPI) Tk2Pk(ctx context.Context, tk TKAddress) (address.AccountAddress, error) {
-	pk := c_czero.Tk2Pk(tk.ToTk().NewRef())
+	pk, _ := c_superzk.Czero_Tk2PK(tk.ToTk().NewRef())
 	return address.BytesToAccount(pk[:]), nil
 }
 

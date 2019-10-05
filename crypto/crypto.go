@@ -28,7 +28,8 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/rlp"
@@ -206,7 +207,7 @@ func PrivkeyToAccoutKey(priv *ecdsa.PrivateKey) (ret common.AccountKey) {
 	copy(seed[:], privKey)
 	sk := superzk.Seed2Sk(&seed)
 	tk := superzk.Sk2Tk(&sk)
-	pubBytes := c_czero.Tk2Pk(&tk)
+	pubBytes, _ := c_superzk.Czero_Tk2PK(&tk)
 	copy(ret[:], pubBytes[:])
 	return
 }

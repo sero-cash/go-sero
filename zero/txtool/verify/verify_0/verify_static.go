@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-sero/zero/txtool/verify/verify_utils"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
@@ -91,7 +93,7 @@ func (self *verifyWithoutStateCtx) verifyFee() (e error) {
 }
 
 func (self *verifyWithoutStateCtx) verifyFrom() (e error) {
-	if !c_czero.IsPKrValid(&self.tx.From) {
+	if !c_superzk.Czero_isPKrValid(&self.tx.From) {
 		e = verify_utils.ReportError("txs.verify from is invalid", self.tx)
 		return
 	}
@@ -138,7 +140,7 @@ func (self *verifyWithoutStateCtx) verifyZs() (e error) {
 	if self.tx.Tx0() != nil {
 		for _, out := range self.tx.Tx0().Desc_Z.Outs {
 			self.zout_count++
-			if !c_czero.IsPKrValid(&out.PKr) {
+			if !c_superzk.Czero_isPKrValid(&out.PKr) {
 				e = verify_utils.ReportError("z_out pkr invalid", self.tx)
 				return
 			}
@@ -184,7 +186,7 @@ func (self *verifyWithoutStateCtx) verifyCmds() (e error) {
 		self.tx.Desc_Cmd.ToAssetCC_Czero()
 	}
 	if pkr := self.tx.Desc_Cmd.ToPkr(); pkr != nil {
-		if !c_czero.IsPKrValid(pkr) {
+		if !c_superzk.Czero_isPKrValid(pkr) {
 			e = verify_utils.ReportError("cmd pkr invalid", self.tx)
 			return
 		}

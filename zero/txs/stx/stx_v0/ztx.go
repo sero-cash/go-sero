@@ -1,7 +1,6 @@
 package stx_v0
 
 import (
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -44,17 +43,6 @@ type Out_Z struct {
 	EInfo   c_type.Einfo
 	PKr     c_type.PKr
 	Proof   c_type.Proof
-}
-
-func ConfirmOut_Z(deInfo *c_czero.InfoDesc, out_z *Out_Z) (e error) {
-	desc := c_czero.ConfirmOutputDesc{}
-	desc.Memo = deInfo.Memo
-	desc.Asset = deInfo.Asset
-	desc.Rsk = deInfo.Rsk
-	desc.Pkr = out_z.PKr
-	desc.Out_cm = out_z.OutCM
-	e = c_czero.ConfirmOutput(&desc)
-	return
 }
 
 func (self *Out_Z) Clone() (ret Out_Z) {

@@ -19,8 +19,9 @@ package generate_0
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-czero-import/c_type"
-	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
 
@@ -59,8 +60,11 @@ type gen_input_desc struct {
 }
 
 func (self *gen_input_desc) Run() error {
-	tk := superzk.Sk2Tk(&self.desc.Sk)
-	if !superzk.IsMyPKr(&tk, &self.desc.Pkr) {
+	tk, err := c_superzk.Sk2Tk(&self.desc.Sk)
+	if err != nil {
+		return err
+	}
+	if c_superzk.Czero_isMyPKr(&tk, &self.desc.Pkr) != nil {
 		return fmt.Errorf("generate zin proof: sk unmatch the PKr (%v)", hexutil.Encode(self.desc.Pkr[:]))
 	}
 	if err := c_czero.GenInputProofBySk(&self.desc); err != nil {
@@ -100,7 +104,12 @@ func (self *gen_ctx) genDesc_Zs() (e error) {
 		g.desc.Tkt_category = asset.Tkt.Category
 		g.desc.Tkt_value = asset.Tkt.Value
 		g.desc.Memo = self.param.Cmds.PkgCreate.Memo
-		g.desc.Key = pkg.GetKey(&self.param.From.PKr, superzk.Sk2Tk(self.param.From.SKr.ToUint512().NewRef()).NewRef())
+		tk, err := c_superzk.Sk2Tk(self.param.From.SKr.ToUint512().NewRef())
+		if err != nil {
+			e = err
+			return
+		}
+		g.desc.Key = pkg.GetKey(&self.param.From.PKr, &tk)
 
 		gen_pkg_procs.StartProc(&g)
 

@@ -19,7 +19,6 @@ package accounts
 
 import (
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -72,7 +71,7 @@ func (self *Account) GetPKByPK(pkr *common.Address) (ret address.AccountAddress)
 	if c_superzk.IsSzkPK(&c_pkr) {
 		c_pk, _ = c_superzk.Tk2Pk(&c_tk)
 	} else {
-		c_pk = c_czero.Tk2Pk(&c_tk)
+		c_pk, _ = c_superzk.Czero_Tk2PK(&c_tk)
 	}
 	copy(ret[:], c_pk[:])
 	return
@@ -87,7 +86,7 @@ func (self *Account) GetPKByPKr(pkr *common.Address) (ret address.AccountAddress
 	if c_superzk.IsSzkPKr(&c_pkr) {
 		c_pk, _ = c_superzk.Tk2Pk(&c_tk)
 	} else {
-		c_pk = c_czero.Tk2Pk(&c_tk)
+		c_pk, _ = c_superzk.Czero_Tk2PK(&c_tk)
 	}
 	copy(ret[:], c_pk[:])
 	return
@@ -99,12 +98,12 @@ func (self *Account) GetPKByHeight() (ret c_type.Uint512) {
 	copy(c_tk[:], self.Tk[:])
 	var c_pk c_type.Uint512
 	if self.Version == 1 {
-		c_pk = c_czero.Tk2Pk(&c_tk)
+		c_pk, _ = c_superzk.Czero_Tk2PK(&c_tk)
 	} else {
 		if height >= seroparam.SIP5() {
 			c_pk, _ = c_superzk.Tk2Pk(&c_tk)
 		} else {
-			c_pk = c_czero.Tk2Pk(&c_tk)
+			c_pk, _ = c_superzk.Czero_Tk2PK(&c_tk)
 		}
 	}
 	copy(ret[:], c_pk[:])

@@ -334,7 +334,7 @@ func (self *Voter) sign(info voteInfo) {
 	data := c_type.Uint256{}
 	copy(data[:], info.statkeHash[:])
 	sk := superzk.Seed2Sk(info.seed.SeedToUint256())
-	sign, err := superzk.SignPKr(&sk, &data, &info.votePKr)
+	sign, err := superzk.SignPKr_ByHeight(info.parentNum+1, &sk, &data, &info.votePKr)
 	if err != nil {
 		log.Error("voter sign", "sign err", err)
 		return
