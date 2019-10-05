@@ -328,7 +328,7 @@ func (self *sign_ctx) genInsC() (e error) {
 			return
 		}
 		t_in.AssetCM = asset_desc.Asset_cm_ret
-		in.A = &asset_desc.Ar
+		in.Ar = &asset_desc.Ar
 
 		zpka, a, err := c_superzk.GenZPKa(&in.Out.State.OS.Out_C.PKr)
 		if err != nil {
