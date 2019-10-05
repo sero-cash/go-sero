@@ -635,11 +635,11 @@ func (self *Exchange) getUtxo(root c_type.Uint256) (utxo Utxo, e error) {
 	return
 }
 
-func (self *Exchange) findUtxosByTicket(accountKey *common.AccountKey, tickets map[c_type.Uint256]c_type.Uint256) (utxos []Utxo, remain map[c_type.Uint256]c_type.Uint256) {
+func (self *Exchange) findUtxosByTicket(accountKey *common.AccountKey, tickets []assets.Ticket) (utxos []Utxo, remain map[c_type.Uint256]c_type.Uint256) {
 	remain = map[c_type.Uint256]c_type.Uint256{}
-	for value, category := range tickets {
-		remain[value] = category
-		prefix := append(pkPrefix, append(accountKey[:], value[:]...)...)
+	for _, ticket := range tickets {
+		remain[ticket.Value] = ticket.Category
+		prefix := append(pkPrefix, append(accountKey[:], ticket.Value[:]...)...)
 		iterator := self.db.NewIteratorWithPrefix(prefix)
 		if iterator.Next() {
 			key := iterator.Key()
@@ -647,10 +647,10 @@ func (self *Exchange) findUtxosByTicket(accountKey *common.AccountKey, tickets m
 			copy(root[:], key[98:130])
 
 			if utxo, err := self.getUtxo(root); err == nil {
-				if utxo.Asset.Tkt != nil && utxo.Asset.Tkt.Category == category {
+				if utxo.Asset.Tkt != nil && utxo.Asset.Tkt.Category == ticket.Category {
 					if _, ok := self.usedFlag.Load(utxo.Root); !ok {
 						utxos = append(utxos, utxo)
-						delete(remain, value)
+						delete(remain, ticket.Value)
 					}
 				}
 			}

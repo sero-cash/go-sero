@@ -44,8 +44,7 @@ type T struct {
 	Desc_Z   stx_v0.Desc_Z
 	Desc_Pkg PkgDesc_Z
 	Desc_Cmd DescCmd
-
-	Tx1 *stx_v1.Tx `rlp:"nil"`
+	Tx1      stx_v1.Tx
 
 	//cache
 	hash        atomic.Value
@@ -139,7 +138,7 @@ func (self *T) _ToHash() (ret c_type.Uint256) {
 	d.Write(self.Fee.ToHash().NewRef()[:])
 	d.Write(self.Desc_Z.ToHash().NewRef()[:])
 	d.Write(self.Desc_O.ToHash().NewRef()[:])
-	if self.Tx1 != nil {
+	if self.Tx1.Count() > 0 {
 		d.Write(self.Tx1.ToHash().NewRef()[:])
 	}
 	d.Write(self.Desc_Pkg.ToHash().NewRef()[:])

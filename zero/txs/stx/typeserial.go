@@ -59,7 +59,7 @@ func SetTxForVersion1(b *T, v1 *ZtxVersion_1) {
 func SetTxForVersion2(b *T, v2 *ZtxVersion_2) {
 	SetTxForVersion0(b, &v2.Version0)
 	SetTxForVersion1(b, &v2.Version1)
-	b.Tx1 = &v2.Tx1
+	b.Tx1 = v2.Tx1
 }
 
 func (b *T) DecodeRLP(s *rlp.Stream) error {
@@ -108,14 +108,14 @@ func SetVersion1ForTx(v1 *ZtxVersion_1, b *T) {
 func SetVersion2ForTx(v2 *ZtxVersion_2, b *T) {
 	SetVersion0ForTx(&v2.Version0, b)
 	SetVersion1ForTx(&v2.Version1, b)
-	v2.Tx1 = *b.Tx1
+	v2.Tx1 = b.Tx1
 }
 
 // EncodeRLP serializes b into the Ethereum RLP block format.
 func (b *T) EncodeRLP(w io.Writer) error {
 	vs := vserial.NewVSerial()
 
-	if b.Tx1 != nil {
+	if b.Tx1.Count() > 0 {
 		v2 := ZtxVersion_2{}
 		SetVersion2ForTx(&v2, b)
 		vs.Add(&v2, vserial.VERSION_2)

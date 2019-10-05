@@ -3,6 +3,8 @@ package verify_1
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -17,12 +19,15 @@ type verifyWithStateCtx struct {
 	tx           *stx.T
 	state        *zstate.ZState
 	balance_desc c_type.BalanceDesc
+	zcount       int
+	ck           assets.CKState
 }
 
 func VerifyWithState(tx *stx.T, state *zstate.ZState) (e error) {
 	ctx := verifyWithStateCtx{}
 	ctx.tx = tx
 	ctx.state = state
+	ctx.ck = assets.NewCKState(true, &tx.Fee)
 	return
 }
 
@@ -59,6 +64,7 @@ func (self *verifyWithStateCtx) verifyPkg() (e error) {
 			e = verify_utils.ReportError(fmt.Sprintf("pkg id already exists %v", hexutil.Encode(self.tx.Desc_Pkg.Create.Id[:])), self.tx)
 			return
 		} else {
+			self.zcount++
 			self.balance_desc.Zout_acms = append(self.balance_desc.Zout_acms, self.tx.Desc_Pkg.Create.Pkg.AssetCM[:]...)
 		}
 	}
@@ -82,6 +88,7 @@ func (self *verifyWithStateCtx) verifyPkg() (e error) {
 			return
 		} else {
 			if superzk.VerifyPKr(&self.balance_desc.Hash, &self.tx.Desc_Pkg.Close.Sign, &pg.Pack.PKr) {
+				self.zcount++
 				self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, pg.Pack.Pkg.AssetCM[:]...)
 			} else {
 				e = verify_utils.ReportError(fmt.Sprintf("Can not verify pkg sign of the id %v", hexutil.Encode(self.tx.Desc_Pkg.Close.Id[:])), self.tx)
@@ -95,6 +102,7 @@ func (self *verifyWithStateCtx) verifyPkg() (e error) {
 func (self *verifyWithStateCtx) verifyCmd() (e error) {
 	if cc := self.tx.Desc_Cmd.ToAssetCC_Szk(); cc != nil {
 		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, cc[:]...)
+		self.ck.AddOut(self.tx.Desc_Cmd.OutAsset())
 	}
 	return
 }
@@ -150,6 +158,7 @@ func (self *verifyWithStateCtx) verifyInsP0() (e error) {
 				e = verify_utils.ReportError("txs.verify p0_in no key gen cc error", self.tx)
 				return
 			} else {
+				self.ck.AddIn(assets.NewAssetByType(&asset_desc).ToRef())
 				self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, cc[:]...)
 			}
 		} else {
@@ -179,11 +188,42 @@ func (self *verifyWithStateCtx) verifyInsP() (e error) {
 				e = verify_utils.ReportError("txs.verify p0_in verify pkr error", self.tx)
 				return
 			}
-			asset := src.Out_P.Asset.ToTypeAsset()
-			if cc, err := c_superzk.GenAssetCC(&asset); err != nil {
-				e = verify_utils.ReportError("txs.verify p0_in gen cc error", self.tx)
+			var asset_desc c_type.Asset
+			if in.Key == nil {
+				if src.Out_P != nil {
+					asset_desc = src.Out_P.Asset.ToTypeAsset()
+				} else {
+					e = verify_utils.ReportError("txs.verify p_in has no key but not point to Out_P", self.tx)
+					return
+				}
+			} else {
+				if src.Out_C != nil {
+					if asset, _, ar, err := c_superzk.DecEInfo(in.Key, &src.Out_C.EInfo); err != nil {
+						e = err
+						return
+					} else {
+						if cm, err := c_superzk.GenAssetCM_PC(&asset, &ar); err != nil {
+							e = err
+							return
+						} else {
+							if cm != src.Out_C.AssetCM {
+								e = verify_utils.ReportError("txs.verify p_in can not confirm to Out_C", self.tx)
+								return
+							} else {
+								asset_desc = asset
+							}
+						}
+					}
+				} else {
+					e = verify_utils.ReportError("txs.verify p_in has key but not point to Out_C", self.tx)
+					return
+				}
+			}
+			if cc, err := c_superzk.GenAssetCC(&asset_desc); err != nil {
+				e = err
 				return
 			} else {
+				self.ck.AddIn(assets.NewAssetByType(&asset_desc).ToRef())
 				self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, cc[:]...)
 			}
 		} else {
@@ -196,6 +236,7 @@ func (self *verifyWithStateCtx) verifyInsP() (e error) {
 
 func (self *verifyWithStateCtx) verifyInsC() (e error) {
 	for _, in := range self.tx.Tx1.Ins_C {
+		self.zcount++
 		self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, in.AssetCM[:]...)
 		if ok := self.state.State.HasIn(&in.Nil); ok {
 			e = verify_utils.ReportError("txs.verify in already in nils", self.tx)
@@ -211,22 +252,34 @@ func (self *verifyWithStateCtx) verifyInsC() (e error) {
 }
 
 func (self *verifyWithStateCtx) verifyOutP() (e error) {
+	for _, out := range self.tx.Tx1.Outs_P {
+		self.ck.AddOut(&out.Asset)
+		cc := out.ToAssetCC_Szk()
+		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, cc[:]...)
+	}
 	return
 }
 
 func (self *verifyWithStateCtx) verifyOutC() (e error) {
 	for _, out := range self.tx.Tx1.Outs_C {
+		self.zcount++
 		self.balance_desc.Zout_acms = append(self.balance_desc.Zout_acms, out.AssetCM[:]...)
 	}
 	return
 }
 
 func (self *verifyWithStateCtx) verifyBalance() (e error) {
-	self.balance_desc.Bcr = self.tx.Bcr
-	self.balance_desc.Bsign = self.tx.Bsign
-	if err := c_superzk.VerifyBalance(&self.balance_desc); err != nil {
-		e = err
-		return
+	if self.zcount > 0 {
+		self.balance_desc.Bcr = self.tx.Bcr
+		self.balance_desc.Bsign = self.tx.Bsign
+		if err := c_superzk.VerifyBalance(&self.balance_desc); err != nil {
+			e = err
+			return
+		}
+	} else {
+		if e = self.ck.Check(); e != nil {
+			return
+		}
 	}
 	return
 }
@@ -252,20 +305,22 @@ func (self *verifyWithStateCtx) verify() (e error) {
 	if e = self.verifyCmd(); e != nil {
 		return
 	}
-	if e = self.verifyInsP0(); e != nil {
-		return
-	}
-	if e = self.verifyInsP(); e != nil {
-		return
-	}
-	if e = self.verifyInsC(); e != nil {
-		return
-	}
-	if e = self.verifyOutP(); e != nil {
-		return
-	}
-	if e = self.verifyOutC(); e != nil {
-		return
+	if self.tx.Tx1.Count() > 0 {
+		if e = self.verifyInsP0(); e != nil {
+			return
+		}
+		if e = self.verifyInsP(); e != nil {
+			return
+		}
+		if e = self.verifyInsC(); e != nil {
+			return
+		}
+		if e = self.verifyOutP(); e != nil {
+			return
+		}
+		if e = self.verifyOutC(); e != nil {
+			return
+		}
 	}
 	if e = self.verifyBalance(); e != nil {
 		return

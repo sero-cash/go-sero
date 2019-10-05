@@ -179,7 +179,7 @@ func (self *Utxos) Roots() (roots []c_type.Uint256) {
 
 type TxParamGenerator interface {
 	FindRoots(accountKey *common.AccountKey, currency string, amount *big.Int) (utxos Utxos, remain big.Int)
-	FindRootsByTicket(accountKey *common.AccountKey, tickets map[c_type.Uint256]c_type.Uint256) (roots Utxos, remain map[c_type.Uint256]c_type.Uint256)
+	FindRootsByTicket(accountKey *common.AccountKey, tickets []assets.Ticket) (roots Utxos, remain map[c_type.Uint256]c_type.Uint256)
 	GetRoot(root *c_type.Uint256) (utxos *Utxo)
 	DefaultRefundTo(accountKey *common.AccountKey) (ret *c_type.PKr)
 }

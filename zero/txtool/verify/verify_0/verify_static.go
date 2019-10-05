@@ -36,6 +36,36 @@ func VerifyWithoutState(ehash *c_type.Uint256, tx *stx.T, num uint64) (e error) 
 	return ctx.Verify()
 }
 
+func (self *verifyWithoutStateCtx) check() (e error) {
+	if self.tx.Tx1.Count() > 0 {
+		e = verify_utils.ReportError("czero tx can not has tx1", self.tx)
+		return
+	}
+	/*if c_superzk.IsSzkPKr(&self.tx.From) {
+		e = verify_utils.ReportError("czero tx can not has szk from", self.tx)
+		return
+	}
+	if pkr := self.tx.Desc_Cmd.ToPkr(); pkr != nil {
+		if c_superzk.IsSzkPKr(pkr) {
+			e = verify_utils.ReportError("czero tx can not has szk cmd", self.tx)
+			return
+		}
+	}
+	for _, out := range self.tx.Desc_O.Outs {
+		if c_superzk.IsSzkPKr(&out.Addr) {
+			e = verify_utils.ReportError("czero tx can not has szk o_out", self.tx)
+			return
+		}
+	}
+	for _, out := range self.tx.Desc_Z.Outs {
+		if c_superzk.IsSzkPKr(&out.PKr) {
+			e = verify_utils.ReportError("czero tx can not has szk z_out", self.tx)
+			return
+		}
+	}*/
+	return
+}
+
 func (self *verifyWithoutStateCtx) prepare() {
 	self.hash = self.tx.ToHash_for_sign()
 	self.zin_proof_proc = verify_input_procs_pool.GetProcs()

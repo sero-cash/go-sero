@@ -25,6 +25,7 @@ type sign_ctx struct {
 	balance_desc c_type.BalanceDesc
 	keys         []c_type.Uint256
 	s            stx.T
+	ck           assets.CKState
 }
 
 func (self *sign_ctx) Tx() (ret stx.T) {
@@ -44,6 +45,7 @@ func (self *sign_ctx) Keys() (ret []c_type.Uint256) {
 
 func SignTx(param *txtool.GTxParam) (ctx sign_ctx, e error) {
 	ctx.param = *param
+	ctx.ck = assets.NewCKState(true, &param.Fee)
 	if e = ctx.check(); e != nil {
 		return
 	}
@@ -121,9 +123,7 @@ func (self *sign_ctx) check() (e error) {
 }
 
 func (self *sign_ctx) prepare() (e error) {
-	need_tx1 := false
 	for i := range self.param.Ins {
-		need_tx1 = true
 		in := &self.param.Ins[i]
 		if in.Out.State.OS.Out_O != nil {
 			self.p0_ins = append(self.p0_ins, in)
@@ -143,16 +143,12 @@ func (self *sign_ctx) prepare() (e error) {
 		}
 	}
 	for i := range self.param.Outs {
-		need_tx1 = true
 		out := &self.param.Outs[i]
 		if c_superzk.IsSzkPKr(&out.PKr) {
 			self.c_outs = append(self.c_outs, out)
 		} else {
 			self.p_outs = append(self.p_outs, out)
 		}
-	}
-	if need_tx1 {
-		self.s.Tx1 = &stx_v1.Tx{}
 	}
 	self.s.Ehash = types.Ehash(*self.param.GasPrice, self.param.Gas, []byte{})
 	return
@@ -164,15 +160,13 @@ func (self *sign_ctx) genFrom() (e error) {
 }
 
 func (self *sign_ctx) genFee() (e error) {
-	{
-		self.s.Fee = self.param.Fee
+	self.s.Fee = self.param.Fee
 
-		if cc, err := c_superzk.GenAssetCC(self.param.Fee.ToTypeAsset().NewRef()); err != nil {
-			e = err
-			return
-		} else {
-			self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, cc[:]...)
-		}
+	if cc, err := c_superzk.GenAssetCC(self.param.Fee.ToTypeAsset().NewRef()); err != nil {
+		e = err
+		return
+	} else {
+		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, cc[:]...)
 	}
 	return
 }
@@ -216,6 +210,7 @@ func (self *sign_ctx) genCmd() (e error) {
 		self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, close.Ar[:]...)
 	}
 	if a != nil {
+		self.ck.AddOut(a)
 		if cc, err := c_superzk.GenAssetCC(a.ToTypeAsset().NewRef()); err != nil {
 			e = err
 			return
@@ -240,13 +235,9 @@ func (self *sign_ctx) genInsP0() (e error) {
 			return
 		}
 
+		var asset_desc assets.Asset
 		if in.Out.State.OS.Out_O != nil {
-			if cc, err := c_superzk.GenAssetCC(in.Out.State.OS.Out_O.Asset.ToTypeAsset().NewRef()); err != nil {
-				e = err
-				return
-			} else {
-				self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, cc[:]...)
-			}
+			asset_desc = in.Out.State.OS.Out_O.Asset
 		} else {
 			if key, flag, err := c_superzk.Czero_fetchKey(&tk, &in.Out.State.OS.Out_Z.RPK); err != nil {
 				e = err
@@ -257,13 +248,17 @@ func (self *sign_ctx) genInsP0() (e error) {
 					e = errors.New("gen tx1 confirm outz error")
 					return
 				} else {
-					if cc, err := c_superzk.GenAssetCC(out.Asset.ToTypeAsset().NewRef()); err != nil {
-						e = err
-					} else {
-						self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, cc[:]...)
-					}
+					asset_desc = out.Asset
 				}
 			}
+		}
+		self.ck.AddIn(&asset_desc)
+		if cc, err := c_superzk.GenAssetCC(in.Out.State.OS.Out_O.Asset.ToTypeAsset().NewRef()); err != nil {
+			e = err
+			return
+		} else {
+
+			self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, cc[:]...)
 		}
 		self.s.Tx1.Ins_P0 = append(self.s.Tx1.Ins_P0, t_in)
 	}
@@ -281,10 +276,33 @@ func (self *sign_ctx) genInsP() (e error) {
 		if e != nil {
 			return
 		}
-		if cc, err := c_superzk.GenAssetCC(in.Out.State.OS.Out_P.Asset.ToTypeAsset().NewRef()); err != nil {
+		var asset_desc assets.Asset
+		if in.Out.State.OS.Out_P != nil {
+			asset_desc = in.Out.State.OS.Out_P.Asset
+		} else {
+			if out_c := in.Out.State.OS.Out_C; out_c != nil {
+				if key, err := c_superzk.FetchKey(&out_c.PKr, &tk, &out_c.RPK); err != nil {
+					e = err
+					return
+				} else {
+					if dout := ConfirmOutC(&key, out_c); dout == nil {
+						e = errors.New("gen tx1 confirm outz error")
+						return
+					} else {
+						t_in.Key = &key
+						asset_desc = dout.Asset
+					}
+				}
+			} else {
+				e = errors.New("gen in_p but no out_p or out_c")
+			}
+		}
+
+		if cc, err := c_superzk.GenAssetCC(asset_desc.ToTypeAsset().NewRef()); err != nil {
 			e = err
 			return
 		} else {
+			self.ck.AddIn(&asset_desc)
 			self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, cc[:]...)
 			self.s.Tx1.Ins_P = append(self.s.Tx1.Ins_P, t_in)
 		}
@@ -310,36 +328,28 @@ func (self *sign_ctx) genInsC() (e error) {
 			return
 		}
 
-		info := c_superzk.DecInfoDesc{
-			Key:   key,
-			Einfo: in.Out.State.OS.Out_C.EInfo,
-		}
-		if e = c_superzk.DecOutput(&info); e != nil {
+		dout := ConfirmOutC(&key, in.Out.State.OS.Out_C)
+		if dout == nil {
+			e = errors.New("gen in_c error: can not find out_c")
 			return
 		}
-
 		self.keys = append(self.keys, key)
 
-		asset_desc := c_superzk.AssetDesc{
-			Asset: assets.NewAssetByType(&info.Asset_ret).ToRef().ToTypeAsset(),
-			Ar:    c_superzk.RandomFr(),
-		}
-		if e = c_superzk.GenAssetCM(&asset_desc); e != nil {
+		in.Ar = c_superzk.RandomFr().NewRef()
+		t_in.AssetCM, e = c_superzk.GenAssetCM_PC(dout.Asset.ToTypeAsset().NewRef(), in.Ar)
+		if e != nil {
 			return
 		}
-		t_in.AssetCM = asset_desc.Asset_cm_ret
-		in.Ar = &asset_desc.Ar
 
-		zpka, a, err := c_superzk.GenZPKa(&in.Out.State.OS.Out_C.PKr)
-		if err != nil {
-			e = err
+		in.A = c_superzk.RandomFr().NewRef()
+		t_in.ZPKa, e = c_superzk.GenZPKa(&in.Out.State.OS.Out_C.PKr, in.A)
+		if e != nil {
 			return
 		}
-		t_in.ZPKa = zpka
-		in.A = &a
 
-		self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, asset_desc.Asset_cm_ret[:]...)
-		self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, asset_desc.Ar[:]...)
+		self.ck.AddIn(&dout.Asset)
+		self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, t_in.AssetCM[:]...)
+		self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, in.Ar[:]...)
 		self.s.Tx1.Ins_C = append(self.s.Tx1.Ins_C, t_in)
 	}
 	return
@@ -349,37 +359,27 @@ func (self *sign_ctx) genOutsC() (e error) {
 	for _, out := range self.c_outs {
 		t_out := stx_v1.Out_C{}
 
-		asset_desc := c_superzk.AssetDesc{
-			Asset: out.Asset.ToTypeAsset(),
-			Ar:    c_superzk.RandomFr(),
-		}
-		if e = c_superzk.GenAssetCM(&asset_desc); e != nil {
+		out.Ar = c_superzk.RandomFr().NewRef()
+		t_out.AssetCM, e = c_superzk.GenAssetCM_PC(out.Asset.ToTypeAsset().NewRef(), out.Ar)
+		if e != nil {
 			return
 		}
-		t_out.AssetCM = asset_desc.Asset_cm_ret
-		out.Ar = &asset_desc.Ar
 
 		t_out.PKr = out.PKr
-		key, rpk, _, err := c_superzk.GenKey(&out.PKr)
-		if err != nil {
-			e = err
+		var key c_type.Uint256
+		key, t_out.RPK, _, e = c_superzk.GenKey(&out.PKr)
+		if e != nil {
 			return
 		}
-		t_out.RPK = rpk
 
-		info_desc := c_superzk.EncInfoDesc{
-			Key:   key,
-			Memo:  out.Memo,
-			Asset: out.Asset.ToTypeAsset(),
-			Ar:    asset_desc.Ar,
-		}
-		if e = c_superzk.EncOutput(&info_desc); e != nil {
+		t_out.EInfo, e = c_superzk.EncInfo(&key, out.Asset.ToTypeAsset().NewRef(), &out.Memo, out.Ar)
+		if e != nil {
 			return
 		}
-		t_out.EInfo = info_desc.Einfo
 
-		self.balance_desc.Zout_acms = append(self.balance_desc.Zout_acms, asset_desc.Asset_cm_ret[:]...)
-		self.balance_desc.Zout_ars = append(self.balance_desc.Zout_ars, asset_desc.Ar[:]...)
+		self.ck.AddOut(&out.Asset)
+		self.balance_desc.Zout_acms = append(self.balance_desc.Zout_acms, t_out.AssetCM[:]...)
+		self.balance_desc.Zout_ars = append(self.balance_desc.Zout_ars, out.Ar[:]...)
 		self.s.Tx1.Outs_C = append(self.s.Tx1.Outs_C, t_out)
 	}
 	return
@@ -392,16 +392,14 @@ func (self *sign_ctx) genOutsP() (e error) {
 		t_out.Asset = out.Asset
 		t_out.Memo = out.Memo
 
-		asset_desc := c_superzk.AssetDesc{
-			Asset: out.Asset.ToTypeAsset(),
-			Ar:    c_superzk.RandomFr(),
-		}
-		if e = c_superzk.GenAssetCM(&asset_desc); e != nil {
+		if cc, err := c_superzk.GenAssetCC(out.Asset.ToTypeAsset().NewRef()); err != nil {
+			e = err
 			return
+		} else {
+			self.ck.AddOut(&out.Asset)
+			self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, cc[:]...)
+			self.s.Tx1.Outs_P = append(self.s.Tx1.Outs_P, t_out)
 		}
-
-		self.balance_desc.Oout_accs = append(self.balance_desc.Oout_accs, asset_desc.Asset_cc_ret[:]...)
-		self.s.Tx1.Outs_P = append(self.s.Tx1.Outs_P, t_out)
 	}
 	return
 }
@@ -492,14 +490,22 @@ func (self *sign_ctx) signInsC() (e error) {
 	return
 }
 func (self *sign_ctx) signBalance() (e error) {
-	if e = c_superzk.SignBalance(&self.balance_desc); e != nil {
-		return
-	}
-	if self.balance_desc.Bcr == c_type.Empty_Uint256 {
-		return errors.New("sign balance failed!!!")
+	if len(self.balance_desc.Zin_acms) > 0 || len(self.balance_desc.Zout_acms) > 0 {
+		if e = c_superzk.SignBalance(&self.balance_desc); e != nil {
+			return
+		}
+		if self.balance_desc.Bcr == c_type.Empty_Uint256 {
+			return errors.New("sign balance failed!!!")
+		} else {
+			self.s.Bcr = self.balance_desc.Bcr
+			self.s.Bsign = self.balance_desc.Bsign
+			return nil
+		}
 	} else {
-		self.s.Bcr = self.balance_desc.Bcr
-		self.s.Bsign = self.balance_desc.Bsign
-		return nil
+		if e = self.ck.Check(); e != nil {
+			return
+		} else {
+			return
+		}
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/sero-cash/go-czero-import/c_czero"
 
 	"github.com/sero-cash/go-czero-import/c_type"
-	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -17,27 +16,32 @@ import (
 type In_P struct {
 	Root  c_type.Uint256
 	Nil   c_type.Uint256
+	Key   *c_type.Uint256
 	NSign c_type.SignN
 	ASign c_type.Uint512
 }
 
 func (self *In_P) Tx1_Hash() (ret c_type.Uint256) {
-	hash := crypto.Keccak256(
-		self.Root[:],
-		self.Nil[:],
-	)
-	copy(ret[:], hash)
+	d := sha3.NewKeccak256()
+	d.Write(self.Root[:])
+	d.Write(self.Nil[:])
+	if self.Key != nil {
+		d.Write(self.Key[:])
+	}
+	copy(ret[:], d.Sum(nil))
 	return ret
 }
 
 func (self *In_P) ToHash() (ret c_type.Uint256) {
-	hash := crypto.Keccak256(
-		self.Root[:],
-		self.Nil[:],
-		self.NSign[:],
-		self.ASign[:],
-	)
-	copy(ret[:], hash)
+	d := sha3.NewKeccak256()
+	d.Write(self.Root[:])
+	d.Write(self.Nil[:])
+	if self.Key != nil {
+		d.Write(self.Key[:])
+	}
+	d.Write(self.NSign[:])
+	d.Write(self.ASign[:])
+	copy(ret[:], d.Sum(nil))
 	return ret
 }
 

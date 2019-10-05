@@ -13,6 +13,15 @@ type Tx struct {
 	Outs_P []Out_P
 }
 
+func (self *Tx) Count() (ret int) {
+	ret += len(self.Ins_P0)
+	ret += len(self.Ins_P)
+	ret += len(self.Ins_C)
+	ret += len(self.Outs_C)
+	ret += len(self.Outs_P)
+	return
+}
+
 func (self *Tx) Tx1_Hash() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	for _, in := range self.Ins_P0 {

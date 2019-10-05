@@ -3,6 +3,8 @@ package exchange
 import (
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/txs/assets"
+
 	"github.com/sero-cash/go-sero/common"
 
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
@@ -42,7 +44,7 @@ func (self *Exchange) FindRoots(accountKey *common.AccountKey, currency string, 
 	return
 }
 
-func (self *Exchange) FindRootsByTicket(accountKey *common.AccountKey, tickets map[c_type.Uint256]c_type.Uint256) (roots prepare.Utxos, remain map[c_type.Uint256]c_type.Uint256) {
+func (self *Exchange) FindRootsByTicket(accountKey *common.AccountKey, tickets []assets.Ticket) (roots prepare.Utxos, remain map[c_type.Uint256]c_type.Uint256) {
 	utxos, remain := self.findUtxosByTicket(accountKey, tickets)
 	for _, utxo := range utxos {
 		roots = append(roots, prepare.Utxo{utxo.Root, utxo.Asset})

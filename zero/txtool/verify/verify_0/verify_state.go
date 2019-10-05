@@ -3,8 +3,6 @@ package verify_0
 import (
 	"fmt"
 
-	"github.com/sero-cash/go-czero-import/superzk"
-
 	"github.com/sero-cash/go-sero/zero/txtool/verify/verify_utils"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
@@ -134,7 +132,7 @@ func (self *verifyWithStateCtx) verifyPkg() (e error) {
 			e = verify_utils.ReportError(fmt.Sprintf("Can not find pkg of the id %v", hexutil.Encode(self.tx.Desc_Pkg.Transfer.Id[:])), self.tx)
 			return
 		} else {
-			if superzk.VerifyPKr(&self.balance_desc.Hash, &self.tx.Desc_Pkg.Transfer.Sign, &pg.Pack.PKr) {
+			if c_czero.VerifyPKr(&self.balance_desc.Hash, &self.tx.Desc_Pkg.Transfer.Sign, &pg.Pack.PKr) {
 			} else {
 				e = verify_utils.ReportError(fmt.Sprintf("Can not verify pkg sign of the id %v", hexutil.Encode(self.tx.Desc_Pkg.Transfer.Id[:])), self.tx)
 				return
@@ -147,7 +145,7 @@ func (self *verifyWithStateCtx) verifyPkg() (e error) {
 			e = verify_utils.ReportError(fmt.Sprintf("Can not find pkg of the id %v", hexutil.Encode(self.tx.Desc_Pkg.Close.Id[:])), self.tx)
 			return
 		} else {
-			if superzk.VerifyPKr(&self.balance_desc.Hash, &self.tx.Desc_Pkg.Close.Sign, &pg.Pack.PKr) {
+			if c_czero.VerifyPKr(&self.balance_desc.Hash, &self.tx.Desc_Pkg.Close.Sign, &pg.Pack.PKr) {
 				self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, pg.Pack.Pkg.AssetCM[:]...)
 			} else {
 				e = verify_utils.ReportError(fmt.Sprintf("Can not verify pkg sign of the id %v", hexutil.Encode(self.tx.Desc_Pkg.Close.Id[:])), self.tx)

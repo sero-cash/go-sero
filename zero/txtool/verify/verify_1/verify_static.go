@@ -18,6 +18,7 @@ type verifyWithoutStateCtx struct {
 	oout_count int
 	oin_count  int
 	zout_count int
+	zin_count  int
 }
 
 func VerifyWithoutState(ehash *c_type.Uint256, tx *stx.T) (e error) {
@@ -87,6 +88,9 @@ func (self *verifyWithoutStateCtx) verifyPkg() (e error) {
 	if self.tx.Desc_Pkg.Create != nil {
 		self.zout_count++
 	}
+	if self.tx.Desc_Pkg.Close != nil {
+		self.zin_count++
+	}
 	return
 }
 
@@ -134,10 +138,12 @@ func (self *verifyWithoutStateCtx) verifyCmd() (e error) {
 }
 
 func (self *verifyWithoutStateCtx) verifyInsP0() (e error) {
+	self.oin_count += len(self.tx.Tx1.Ins_P0)
 	return
 }
 
 func (self *verifyWithoutStateCtx) verifyInsP() (e error) {
+	self.oin_count += len(self.tx.Tx1.Ins_P)
 	return
 }
 
@@ -147,6 +153,7 @@ func (self *verifyWithoutStateCtx) verifyInsC() (e error) {
 			e = verify_utils.ReportError("c_out zpka verify invalid", self.tx)
 			return
 		}
+		self.zin_count++
 	}
 	return
 }
@@ -213,20 +220,22 @@ func (self *verifyWithoutStateCtx) verify() (e error) {
 	if e = self.verifyCmd(); e != nil {
 		return
 	}
-	if e = self.verifyInsP0(); e != nil {
-		return
-	}
-	if e = self.verifyInsP(); e != nil {
-		return
-	}
-	if e = self.verifyInsC(); e != nil {
-		return
-	}
-	if e = self.verifyOutP(); e != nil {
-		return
-	}
-	if e = self.verifyOutC(); e != nil {
-		return
+	if self.tx.Tx1.Count() > 0 {
+		if e = self.verifyInsP0(); e != nil {
+			return
+		}
+		if e = self.verifyInsP(); e != nil {
+			return
+		}
+		if e = self.verifyInsC(); e != nil {
+			return
+		}
+		if e = self.verifyOutP(); e != nil {
+			return
+		}
+		if e = self.verifyOutC(); e != nil {
+			return
+		}
 	}
 	if e = self.verifyBalance(); e != nil {
 		return

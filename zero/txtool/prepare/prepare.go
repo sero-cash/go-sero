@@ -28,7 +28,7 @@ func SelectUtxos(param *PreTxParam, generator TxParamGenerator) (utxos Utxos, e 
 		}
 		return
 	} else {
-		ck := NewCKState(true, &param.Fee)
+		ck := assets.NewCKState(true, &param.Fee)
 
 		if cmdsAsset := param.Cmds.OutAsset(); cmdsAsset != nil {
 			ck.AddOut(cmdsAsset)
@@ -47,8 +47,8 @@ func SelectUtxos(param *PreTxParam, generator TxParamGenerator) (utxos Utxos, e 
 			}
 		}
 
-		if len(ck.tk) > 0 {
-			if outs, remain := generator.FindRootsByTicket(&param.From, ck.tk); len(remain) == 0 {
+		if tks := ck.Tkts(); len(tks) > 0 {
+			if outs, remain := generator.FindRootsByTicket(&param.From, tks); len(remain) == 0 {
 				utxos = append(utxos, outs...)
 				for _, out := range outs {
 					ck.AddIn(&out.Asset)
@@ -59,16 +59,13 @@ func SelectUtxos(param *PreTxParam, generator TxParamGenerator) (utxos Utxos, e 
 			}
 		}
 
-		for currency, value := range ck.cy {
-			sign := value.balance.ToIntRef().Sign()
-			if sign > 0 {
-				outs, remain := generator.FindRoots(&param.From, utils.Uint256ToCurrency(&currency), new(big.Int).Abs(value.balance.ToIntRef()))
-				if remain.Sign() <= 0 {
-					utxos = append(utxos, outs...)
-				} else {
-					e = errors.New("no enough unlocked utxos")
-					return
-				}
+		for _, tkn := range ck.Tkns() {
+			outs, remain := generator.FindRoots(&param.From, utils.Uint256ToCurrency(&tkn.Currency), tkn.Value.ToIntRef())
+			if remain.Sign() <= 0 {
+				utxos = append(utxos, outs...)
+			} else {
+				e = errors.New("no enough unlocked utxos")
+				return
 			}
 		}
 
@@ -92,7 +89,7 @@ func BuildTxParam(
 
 	txParam = &txtool.GTxParam{}
 
-	ck := NewCKState(false, &param.Fee)
+	ck := assets.NewCKState(false, &param.Fee)
 
 	txParam.Fee = param.Fee
 	txParam.GasPrice = &param.GasPrice
@@ -109,15 +106,10 @@ func BuildTxParam(
 	oins_count := 0
 	for index, utxo := range param.Utxos {
 		if out := state.GetOut(&utxo.Root); out != nil {
-			if added, err := ck.AddIn(&utxo.Asset); err != nil {
-				e = err
-				return
-			} else {
-				if added {
-					Ins = append(Ins, txtool.GIn{Out: txtool.Out{Root: utxo.Root, State: *out}, Witness: wits[index]})
-					if out.OS.Out_O != nil {
-						oins_count++
-					}
+			if ck.AddIn(&utxo.Asset) {
+				Ins = append(Ins, txtool.GIn{Out: txtool.Out{Root: utxo.Root, State: *out}, Witness: wits[index]})
+				if out.OS.Out_O != nil {
+					oins_count++
 				}
 			}
 		} else {

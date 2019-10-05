@@ -330,7 +330,7 @@ func (state *State) AddStx(st *stx.T) (e error) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	txhash := st.ToHash()
-	if st.Tx0() != nil && st.Tx1 != nil {
+	if st.Tx0() != nil && st.Tx1.Count() > 0 {
 		return fmt.Errorf("add stx, tx0 & tx1 only one can has value ")
 	}
 
@@ -338,8 +338,8 @@ func (state *State) AddStx(st *stx.T) (e error) {
 		return state.addTx0(st.Tx0(), &txhash)
 	}
 
-	if st.Tx1 != nil {
-		return state.addTx1(st.Tx1, &txhash)
+	if st.Tx1.Count() > 0 {
+		return state.addTx1(&st.Tx1, &txhash)
 	}
 
 	return
