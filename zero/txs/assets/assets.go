@@ -11,6 +11,13 @@ type Asset struct {
 	Tkt *Ticket `rlp:"nil"`
 }
 
+func (self *Asset) IsValid() bool {
+	if self.Tkn != nil {
+		return self.Tkn.IsValid()
+	}
+	return true
+}
+
 func (self *Asset) HasAsset() bool {
 	if self != nil {
 		if self.Tkn != nil {

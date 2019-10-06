@@ -10,15 +10,7 @@ import (
 )
 
 func CheckUint(i *utils.U256) bool {
-	if len(i.ToInt().Bytes()) > 32 {
-		return false
-	}
-	u := i.ToUint256()
-	if u[31] == 0 && u[30] == 0 {
-		return true
-	} else {
-		return false
-	}
+	return i.IsValid()
 }
 func ReportError(str string, tx *stx.T) (e error) {
 	h := hexutil.Encode(tx.ToHash().NewRef()[:])

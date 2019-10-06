@@ -11,6 +11,10 @@ type Token struct {
 	Value    utils.U256
 }
 
+func (self *Token) IsValid() bool {
+	return self.Value.IsValid()
+}
+
 func (self *Token) ToTypeAsset() c_type.Asset {
 	return c_type.Asset{
 		Tkn_currency: self.Currency,

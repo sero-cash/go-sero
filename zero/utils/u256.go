@@ -4,6 +4,8 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/pkg/errors"
+
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
@@ -17,6 +19,22 @@ var U256_0 U256 = U256(*big.NewInt(0))
 func NewU256(i uint64) (ret U256) {
 	ret = U256(*big.NewInt(int64(i)))
 	return
+}
+
+func (self U256) IsValid() bool {
+	v := self.ToInt()
+	if v.Sign() < 0 {
+		return false
+	}
+	if len(v.Bytes()) > 32 {
+		return false
+	}
+	u := self.ToUint256()
+	if u[31] == 0 && u[30] == 0 {
+		return true
+	} else {
+		return false
+	}
 }
 
 func (self U256) DeepCopy() interface{} {
@@ -188,6 +206,9 @@ func (self *U256) Cmp(a *U256) int {
 }
 
 func (self *U256) SubU(a *U256) {
+	if self.Cmp(a) < 0 {
+		panic(errors.New("u256 sub error: result is negative"))
+	}
 	l := big.Int(*self.ToRef())
 	r := big.Int(*a)
 	l.Sub(&l, &r)

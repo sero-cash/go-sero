@@ -154,8 +154,14 @@ func (self *verifyWithStateCtx) verifyInsP0() (e error) {
 				e = verify_utils.ReportError("txs.verify p0_in no key gen cc error", self.tx)
 				return
 			} else {
-				self.ck.AddIn(assets.NewAssetByType(&asset_desc).ToRef())
-				self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, cc[:]...)
+				asset := assets.NewAssetByType(&asset_desc)
+				if asset.IsValid() {
+					self.ck.AddIn(&asset)
+					self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, cc[:]...)
+				} else {
+					e = verify_utils.ReportError("txs.verify p0_in but asset is invalid", self.tx)
+					return
+				}
 			}
 		} else {
 			e = verify_utils.ReportError("txs.Verify: p0_in not find in the outs!", self.tx)
@@ -219,7 +225,12 @@ func (self *verifyWithStateCtx) verifyInsP() (e error) {
 				e = err
 				return
 			} else {
-				self.ck.AddIn(assets.NewAssetByType(&asset_desc).ToRef())
+				asset := assets.NewAssetByType(&asset_desc)
+				if !asset.IsValid() {
+					e = verify_utils.ReportError("txs.verify p_in asset is invalid", self.tx)
+					return
+				}
+				self.ck.AddIn(&asset)
 				self.balance_desc.Oin_accs = append(self.balance_desc.Oin_accs, cc[:]...)
 			}
 		} else {
