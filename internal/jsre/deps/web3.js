@@ -3062,7 +3062,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             this.currentProvider = provider;
             this.sero = new Sero(this);
             this.exchange = new Exchange(this);
-            this.stake=new Stake(this)
+            this.stake=new Stake(this);
             this.db = new DB(this);
             this.net = new Net(this);
             this.personal = new Personal(this);
@@ -6331,18 +6331,18 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var importMnemonic = new Method({
                 name: 'importMnemonic',
                 call: 'personal_importMnemonic',
-                params: 2
+                params: 4
             });
             var importRawKey = new Method({
                 name: 'importRawKey',
                 call: 'personal_importRawKey',
-                params: 2
+                params: 4
             });
 
             var importTk = new Method({
                 name: 'importTk',
                 call: 'personal_importTk',
-                params: 1,
+                params: 3,
                 inputFormatter: [formatters.inputAddressFormatter]
             });
             var sign = new Method({

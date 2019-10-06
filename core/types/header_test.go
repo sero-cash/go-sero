@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/sero-cash/go-sero/core/types/typeserial"
-
 	"github.com/sero-cash/go-sero/rlp"
 )
 
@@ -17,7 +15,7 @@ func TestRLP(t *testing.T) {
 
 	tx := Header{}
 	tx.GasUsed = 10
-	tx.CurrentVotes = append(tx.CurrentVotes, typeserial.Vote{})
+	tx.CurrentVotes = append(tx.CurrentVotes, HeaderVote{})
 
 	e := rlp.Encode(w, &tx)
 	fmt.Println(e)
