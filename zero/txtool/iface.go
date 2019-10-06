@@ -79,6 +79,7 @@ type GTxParam struct {
 	Ins      []GIn
 	Outs     []GOut
 	Cmds     Cmds
+	Z        *bool
 }
 
 func (self *GTxParam) IsSzk() (ret bool) {

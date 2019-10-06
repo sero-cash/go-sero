@@ -139,14 +139,22 @@ func (self *sign_ctx) prepare() (e error) {
 			continue
 		}
 		if in.Out.State.OS.Out_C != nil {
-			self.c_ins = append(self.c_ins, in)
+			if self.param.Z != nil && *self.param.Z {
+				self.c_ins = append(self.c_ins, in)
+			} else {
+				self.p_ins = append(self.p_ins, in)
+			}
 			continue
 		}
 	}
 	for i := range self.param.Outs {
 		out := &self.param.Outs[i]
 		if c_superzk.IsSzkPKr(&out.PKr) {
-			self.c_outs = append(self.c_outs, out)
+			if self.param.Z != nil && *self.param.Z {
+				self.c_outs = append(self.c_outs, out)
+			} else {
+				self.p_outs = append(self.p_outs, out)
+			}
 		} else {
 			self.p_outs = append(self.p_outs, out)
 		}
