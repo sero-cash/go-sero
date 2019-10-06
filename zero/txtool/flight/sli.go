@@ -1,6 +1,9 @@
 package flight
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -13,6 +16,8 @@ import (
 
 func GenTx(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
 	if param.IsSzk() {
+		str, _ := json.Marshal(param)
+		fmt.Println(string(str))
 		if tx, param, keys, err := SignTx1(param); err != nil {
 			e = err
 			return

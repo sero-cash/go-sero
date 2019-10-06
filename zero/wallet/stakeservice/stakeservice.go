@@ -190,7 +190,7 @@ func (self *StakeService) stakeIndex() {
 	err := batch.Write()
 	if err == nil {
 		self.numbers.Range(func(key, value interface{}) bool {
-			pk := key.(c_type.Uint512)
+			pk := key.(common.AccountKey)
 			self.numbers.Store(pk, blocNumber)
 			return true
 		})

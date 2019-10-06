@@ -348,6 +348,8 @@ func (self *sign_ctx) genInsC() (e error) {
 			return
 		}
 
+		t_in.Anchor = in.Witness.Anchor
+
 		self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, t_in.AssetCM[:]...)
 		self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, in.Ar[:]...)
 		self.s.Tx1.Ins_C = append(self.s.Tx1.Ins_C, t_in)
