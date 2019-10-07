@@ -33,12 +33,12 @@ func (self *LightNode) GetOutsByPKr(pkrs []c_type.PKr, start, end uint64) (br Bl
 			if num > end {
 				break
 			}
-			var outs []txtool.Out
-			if err := rlp.Decode(bytes.NewReader(iterator.Value()), &outs); err != nil {
+			var bds []BlockData
+			if err := rlp.Decode(bytes.NewReader(iterator.Value()), &bds); err != nil {
 				log.Error("Light Invalid block RLP", "Num:", num, "err:", err)
 				return br, err
 			} else {
-				blockOut := BlockOut{Num: num, Outs: outs}
+				blockOut := BlockOut{Num: num, Data: bds}
 				blockOuts = append(blockOuts, blockOut)
 			}
 		}
@@ -75,5 +75,10 @@ type BlockOutResp struct {
 
 type BlockOut struct {
 	Num  uint64
-	Outs []txtool.Out
+	Data []BlockData
+}
+
+type BlockData struct {
+	TxInfo TxInfo
+	Out txtool.Out
 }

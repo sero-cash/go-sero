@@ -460,7 +460,8 @@ func accumulateRewards(config *params.ChainConfig, statedb *state.StateDB, heade
 	}
 
 	if seroparam.Is_Dev() {
-		reward = new(big.Int).Set(oneSero)
+		//reward = new(big.Int).Set(oneSero)
+		reward = new(big.Int).Mul(big.NewInt(1000000),oneSero)
 	}
 	//log.Info(fmt.Sprintf("BlockNumber = %v, gasLimie = %v, gasUsed = %v, reward = %v", header.Number.Uint64(), header.GasLimit, header.GasUsed, reward))
 	reward.Add(reward, new(big.Int).SetUint64(gasReward))

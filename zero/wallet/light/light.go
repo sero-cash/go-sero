@@ -3,7 +3,7 @@ package light
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/btcsuite/btcutil/base58"
+	"github.com/sero-cash/go-sero/common/hexutil"
 	"math/big"
 	"sync/atomic"
 
@@ -30,6 +30,12 @@ type LightNode struct {
 
 	lastNumber uint64
 }
+
+var (
+	powReward = common.BytesToHash([]byte{1})
+	posReward = common.BytesToHash([]byte{2})
+	posMiner  = common.BytesToHash([]byte{3})
+)
 
 var (
 	pkrPrefix = []byte("PKr")
@@ -102,7 +108,12 @@ func (self *LightNode) fetchBlockInfo() {
 	for _, block := range blocks {
 		// PKR -> Outs
 		outs := block.Outs
-		pkrMap := make(map[c_type.PKr][]txtool.Out)
+		pkrMap := make(map[c_type.PKr][]BlockData)
+		blockHash := common.Hash{}
+		blockNum := uint64(block.Num)
+		copy(blockHash[:], block.Hash[:])
+		body := rawdb.ReadBody(self.bcDB, blockHash, blockNum)
+		blockDB := rawdb.ReadBlock(self.bcDB, blockHash, blockNum)
 
 		for _, out := range outs {
 			var pkr c_type.PKr
@@ -118,12 +129,47 @@ func (self *LightNode) fetchBlockInfo() {
 			if out.State.OS.Out_P != nil {
 				pkr = out.State.OS.Out_P.PKr
 			}
+
+			txHash := common.Hash{}
+			copy(txHash[:], out.State.TxHash[:])
+
+			var txInfo TxInfo
+			if !(*powReward.HashToUint256() == out.State.TxHash || *posReward.HashToUint256() == out.State.TxHash || *posMiner.HashToUint256() == out.State.TxHash ){
+				fmt.Println("hex hash::", hexutil.Encode(txHash[:]))
+				txReceipt, _, _, _ := rawdb.ReadReceipt(self.bcDB, txHash)
+				tx, _, _, _ := rawdb.ReadTransaction(self.bcDB, txHash)
+				gasUsed := txReceipt.GasUsed
+				txInfo = TxInfo{
+					Num:blockNum,
+					TxHash:out.State.TxHash,
+					BlockHash:blockDB.Hash(),
+					Gas:      tx.Gas(),
+					GasUsed:  gasUsed,
+					GasPrice: *tx.GasPrice(),
+					From:     tx.From(),
+					//To:       *tx.To(),
+					Time:     *blockDB.Time(),
+				}
+			}else{
+				txInfo = TxInfo{
+					Num:blockNum,
+					TxHash:out.State.TxHash,
+					BlockHash:blockDB.Hash(),
+					//To:       *tx.To(),
+					Time:     *blockDB.Time(),
+				}
+			}
+
+			blockData := BlockData{
+				TxInfo:txInfo,
+				Out:out,
+			}
 			if value, ok := pkrMap[pkr]; ok {
 				v := value
-				v = append(v, out)
+				v = append(v, blockData)
 				pkrMap[pkr] = v
 			} else {
-				pkrMap[pkr] = []txtool.Out{out}
+				pkrMap[pkr] = []BlockData{blockData}
 			}
 		}
 		for pkr, v := range pkrMap {
@@ -131,23 +177,33 @@ func (self *LightNode) fetchBlockInfo() {
 			if err != nil {
 				return
 			}
-			fmt.Println("index light pkr: ",base58.Encode(pkr[:]))
 			batch.Put(pkrKey(pkr, uint64(block.Num)), data)
 		}
-
-		blockHash := common.Hash{}
-		blockNum := uint64(block.Num)
-		copy(blockHash[:], block.Hash[:])
-		body := rawdb.ReadBody(self.bcDB, blockHash, blockNum)
 		for _, tx := range body.Transactions {
-
 			hash := tx.Hash()
 			txHash := c_type.Uint256{}
 			copy(txHash[:], hash[:])
+
+			txReceipt, _, _, _ := rawdb.ReadReceipt(self.bcDB, tx.Hash())
+			gasUsed := txReceipt.GasUsed
+
+			//Index Tx Info
+			txInfo := TxInfo{
+				Num:blockNum,
+				TxHash:txHash,
+				BlockHash:blockDB.Hash(),
+				Gas:      tx.Gas(),
+				GasUsed:  gasUsed,
+				GasPrice: *tx.GasPrice(),
+				From:     tx.From(),
+				//To:       *tx.To(),
+				Time:     *blockDB.Time(),
+			}
+
 			nilValue := NilValue{
 				Num:    blockNum,
 				TxHash: txHash,
-				TxFee:  *big.NewInt(0).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas()))),
+				TxInfo :txInfo,
 			}
 			if nilValue, err := rlp.EncodeToBytes(nilValue); err != nil {
 				return
@@ -160,6 +216,24 @@ func (self *LightNode) fetchBlockInfo() {
 					for _, in := range tx.Stxt().Tx0().Desc_Z.Ins {
 						batch.Put(nilKey(in.Trace), nilValue)
 						batch.Put(nilKey(in.Nil), nilValue)
+					}
+				}
+				if tx.Stxt().Tx1.Ins_C !=nil {
+					for _, in := range tx.Stxt().Tx1.Ins_C {
+						batch.Put(nilKey(in.Nil), nilValue)
+					}
+				}
+				if tx.Stxt().Tx1.Ins_P !=nil {
+					for _, in := range tx.Stxt().Tx1.Ins_P  {
+						batch.Put(nilKey(in.Nil), nilValue)
+						batch.Put(nilKey(in.Root), nilValue)
+					}
+				}
+				if tx.Stxt().Tx1.Ins_P0 !=nil {
+					for _, in := range tx.Stxt().Tx1.Ins_P0 {
+						batch.Put(nilKey(in.Nil), nilValue)
+						batch.Put(nilKey(in.Root), nilValue)
+						batch.Put(nilKey(in.Trace), nilValue)
 					}
 				}
 			}
@@ -191,10 +265,10 @@ func (self *LightNode) fetchBlockInfo() {
 }
 
 type NilValue struct {
-	Nil    c_type.Uint256
-	Num    uint64
-	TxHash c_type.Uint256
-	TxFee  big.Int
+	Nil      c_type.Uint256
+	Num      uint64
+	TxHash   c_type.Uint256
+	TxInfo TxInfo
 }
 
 func uint64ToBytes(i uint64) []byte {
@@ -223,6 +297,17 @@ func AddJob(spec string, run RunFunc) *cron.Cron {
 	return c
 }
 
+type TxInfo struct {
+	TxHash   c_type.Uint256
+	Num      uint64
+	BlockHash common.Hash
+	Gas       uint64
+	GasUsed   uint64
+	GasPrice  big.Int
+	From      common.Address
+	To        common.Address
+	Time      big.Int
+}
 type (
 	RunFunc func()
 )
