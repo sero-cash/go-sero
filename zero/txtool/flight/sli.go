@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -15,7 +17,19 @@ import (
 )
 
 func GenTx(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
-	if param.IsSzk() {
+	var need_szk = true
+
+	if txtool.Ref_inst.Bc != nil {
+		if txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64() < seroparam.SIP5() {
+			need_szk = false
+		}
+	} else {
+		if param.Z == nil {
+			need_szk = false
+		}
+	}
+
+	if need_szk {
 		str, _ := json.Marshal(param)
 		fmt.Println(string(str))
 		if tx, param, keys, err := SignTx1(param); err != nil {
