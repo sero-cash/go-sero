@@ -25,7 +25,7 @@ func VerifyWithState(tx *stx.T, state *zstate.ZState) (e error) {
 	ctx := verifyWithStateCtx{}
 	ctx.tx = tx
 	ctx.state = state
-	return
+	return ctx.verify()
 }
 
 func (self *verifyWithStateCtx) prepare() {
