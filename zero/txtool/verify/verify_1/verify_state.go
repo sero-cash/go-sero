@@ -291,7 +291,7 @@ func (self *verifyWithStateCtx) verifyBalance() (e error) {
 
 func (self *verifyWithStateCtx) verify() (e error) {
 	self.prepare()
-	defer self.verify()
+	defer self.clear()
 	if e = self.verifyDescO(); e != nil {
 		return
 	}
