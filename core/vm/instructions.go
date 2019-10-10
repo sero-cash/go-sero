@@ -1109,15 +1109,15 @@ func makeLog(size int) executionFunc {
 			}
 		}
 		if topics[0] == topic_allotTicket {
-			//hash, returnGas, err, alarm := handleAllotTicket(d, interpreter.evm, contract, data)
-			//contract.Gas += returnGas
-			//if alarm {
-			//	contract.UseGas(contract.Gas)
-			//}
-			//if err != nil {
-			//	log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
-			//}
-			hash := common.Hash{}
+			hash, returnGas, err, alarm := handleAllotTicket(d, interpreter.evm, contract, data)
+			contract.Gas += returnGas
+			if alarm {
+				contract.UseGas(contract.Gas)
+			}
+			if err != nil {
+				log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
+			}
+			// hash := common.Hash{}
 			memory.Set(mStart.Uint64()+length-32, 32, hash[:])
 		} else if topics[0] == topic_issueToken {
 			if ok, err := handleIssueToken(d, interpreter.evm, contract, data); ok {

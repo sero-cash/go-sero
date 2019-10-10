@@ -1,9 +1,6 @@
 package flight
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/pkg/errors"
@@ -22,6 +19,8 @@ func GenTx(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
 	if txtool.Ref_inst.Bc != nil {
 		if txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64() < seroparam.SIP5() {
 			need_szk = false
+		} else {
+			param.Z = &need_szk
 		}
 	} else {
 		if param.Z == nil {
@@ -30,8 +29,6 @@ func GenTx(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
 	}
 
 	if need_szk {
-		str, _ := json.Marshal(param)
-		fmt.Println(string(str))
 		if tx, param, keys, err := SignTx1(param); err != nil {
 			e = err
 			return
@@ -75,7 +72,7 @@ func DecOut(tk *c_type.Tk, outs []txtool.Out) (douts []txtool.TDOut) {
 			dout.Memo = out.State.OS.Out_O.Memo
 			if til, e := c_superzk.Czero_genTrace(tk, out.State.OS.RootCM); e == nil {
 				dout.Nils = append(dout.Nils, til)
-				//dout.Nils = append(dout.Nils, c_czero.GenNil(tk, out.State.OS.RootCM))
+				// dout.Nils = append(dout.Nils, c_czero.GenNil(tk, out.State.OS.RootCM))
 				dout.Nils = append(dout.Nils, out.Root)
 			}
 
@@ -86,7 +83,7 @@ func DecOut(tk *c_type.Tk, outs []txtool.Out) (douts []txtool.TDOut) {
 					dout = *confirm_out
 					if til, e := c_superzk.Czero_genTrace(tk, out.State.OS.RootCM); e == nil {
 						dout.Nils = append(dout.Nils, til)
-						//dout.Nils = append(dout.Nils, c_czero.GenNil(tk, out.State.OS.RootCM))
+						// dout.Nils = append(dout.Nils, c_czero.GenNil(tk, out.State.OS.RootCM))
 					}
 				}
 			}
