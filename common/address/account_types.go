@@ -107,11 +107,14 @@ func ValidPkr(addr utils.Address) error {
 		}
 		var pkr c_type.PKr
 		copy(pkr[:], addr.Bytes)
-		if c_superzk.IsSzkPKr(&pkr) {
-			if addr.Protocol == "" {
-				return errors.New("pkr address is new version  must have prefix SC")
+		if !addr.IsHex {
+			if c_superzk.IsSzkPKr(&pkr) {
+				if addr.Protocol == "" {
+					return errors.New("pkr address is new version  must have prefix SC")
+				}
 			}
 		}
+
 		if !superzk.IsPKrValid(&pkr) {
 			return errors.New("invalid pkr")
 		}
