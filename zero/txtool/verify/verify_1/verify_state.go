@@ -129,12 +129,17 @@ func (self *verifyWithStateCtx) verifyInsP0() (e error) {
 							e = verify_utils.ReportError("txs.verify p0_in gen out cm error", self.tx)
 							return
 						} else {
-							src.GenOutCM()
-							if out_cm != *src.OutCM {
-								e = verify_utils.ReportError("txs.verify p0_in confirm error", self.tx)
-								return
+							if src_out_cm := src.TryGetOutCM(); src_out_cm != nil {
+								if out_cm != *src.OutCM {
+									e = verify_utils.ReportError("txs.verify p0_in confirm error", self.tx)
+									return
+								} else {
+									asset_desc = asset
+								}
+
 							} else {
-								asset_desc = asset
+								e = verify_utils.ReportError("txs.verify p0_in the src out_cm is empty", self.tx)
+								return
 							}
 						}
 					}

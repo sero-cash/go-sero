@@ -18,7 +18,7 @@ type OutState struct {
 	RootCM *c_type.Uint256 `rlp:"nil"`
 }
 
-func (self *OutState) GenOutCM() {
+func (self *OutState) genOutCM() {
 	if self.OutCM == nil {
 		if cm, err := genOutCM(self); err != nil {
 			panic(err)
@@ -32,9 +32,21 @@ func (self *OutState) GenOutCM() {
 	}
 }
 
+func (self *OutState) TryGetOutCM() (ret *c_type.Uint256) {
+	if self.Out_O != nil {
+		ret = self.OutCM
+		return
+	} else if self.Out_Z != nil {
+		ret = &self.Out_Z.OutCM
+		return
+	} else {
+		return
+	}
+}
+
 func (self *OutState) GenRootCM() {
-	if self.Out_O != nil || self.Out_Z != nil {
-		self.GenOutCM()
+	if self.Out_O != nil {
+		self.genOutCM()
 	}
 	if self.RootCM == nil {
 		if cm, err := genRootCM(self); err != nil {

@@ -41,9 +41,13 @@ func genOutCM(self *OutState) (cm c_type.Uint256, e error) {
 }
 
 func genRootCM(self *OutState) (cm c_type.Uint256, e error) {
-	if self.Out_O != nil || self.Out_Z != nil {
+	if self.Out_O != nil {
 		out_cm := self.OutCM
 		cm = c_superzk.Czero_genRootCM(self.Index, out_cm)
+		return
+	} else if self.Out_Z != nil {
+		out_cm := self.Out_Z.OutCM
+		cm = c_superzk.Czero_genRootCM(self.Index, &out_cm)
 		return
 	} else if self.Out_P != nil {
 		ar := HashIndexAr(self.Index)
