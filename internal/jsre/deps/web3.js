@@ -4456,6 +4456,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @returns {Object}
          */
         var outputTransactionFormatter = function (tx){
+            return tx;
             if(tx.blockNumber !== null)
                 tx.blockNumber = utils.toDecimal(tx.blockNumber);
             if(tx.transactionIndex !== null)
@@ -6660,7 +6661,18 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 call: 'sero_genPKr',
                 params: 1,
                 inputFormatter: [formatters.inputAddressFormatter]
-            })
+            });
+            var genIndexPKr=new Method({
+                name: 'genIndexPKr',
+                call: 'sero_genIndexPKr',
+                params: 2,
+                inputFormatter: [formatters.inputAddressFormatter,null]
+            });
+            var genIndexPKrByTk=new Method({
+                name: 'genIndexPKrByTk',
+                call: 'sero_genIndexPKrByTk',
+                params: 3,
+            });
 
             var reSendTransaction = new Method({
                 name: 'reSendTransaction',
@@ -6785,6 +6797,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 transferPkg,
                 convertAddressParams,
                 genPKr,
+                genIndexPKr,
+                genIndexPKrByTk,
                 getFullAddress,
                 currencyToContractAddress,
                 getDecimal,

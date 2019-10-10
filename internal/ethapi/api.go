@@ -323,16 +323,23 @@ func (s *PrivateAccountAPI) ListWallets() []rawWallet {
 
 // NewAccount will create a new account and returns the address for the new account.
 func (s *PrivateAccountAPI) NewAccount(password string) (string, error) {
-	blockNum := uint64(0)
+	maxNumber := s.b.Downloader().Progress().HighestBlock
+
 	if seroparam.Is_Dev() {
-		blockNum = uint64(0)
+		maxNumber = uint64(0)
 	} else {
 		current := s.b.CurrentBlock()
 		if current != nil {
-			blockNum = current.NumberU64()
+			if maxNumber < current.NumberU64() {
+				maxNumber = current.NumberU64()
+			}
 		}
 	}
-	acc, err := fetchKeystore(s.am).NewAccount(password, blockNum)
+	version := 1
+	if maxNumber >= seroparam.SIP5() {
+		version = 2
+	}
+	acc, err := fetchKeystore(s.am).NewAccount(password, maxNumber, version)
 	if err != nil {
 		return "", err
 	}
@@ -345,16 +352,23 @@ func (s *PrivateAccountAPI) NewAccount(password string) (string, error) {
 
 // NewAccount will create a new account and returns the mnemonic 、address for the new account.
 func (s *PrivateAccountAPI) NewAccountWithMnemonic(password string) (map[string]string, error) {
-	blockNum := uint64(0)
+	maxNumber := s.b.Downloader().Progress().HighestBlock
+
 	if seroparam.Is_Dev() {
-		blockNum = uint64(0)
+		maxNumber = uint64(0)
 	} else {
 		current := s.b.CurrentBlock()
 		if current != nil {
-			blockNum = current.NumberU64()
+			if maxNumber < current.NumberU64() {
+				maxNumber = current.NumberU64()
+			}
 		}
 	}
-	mnemonic, acc, err := fetchKeystore(s.am).NewAccountWithMnemonic(password, blockNum)
+	version := 1
+	if maxNumber >= seroparam.SIP5() {
+		version = 2
+	}
+	mnemonic, acc, err := fetchKeystore(s.am).NewAccountWithMnemonic(password, maxNumber, version)
 	if err != nil {
 		return nil, err
 	}
@@ -694,6 +708,48 @@ func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk PKAddress) (string,
 		return result.Base58(), nil
 	}
 
+}
+
+func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk PKAddress, index int64) (PKrAddress, error) {
+	account, err := s.b.AccountManager().FindAccountByPk(Pk.ToUint512())
+	if err != nil {
+		return PKrAddress{}, err
+	}
+	salt := big.NewInt(index).Bytes()
+	random := append(account.Tk[:], salt...)
+	r := crypto.Keccak256Hash(random).HashToUint256()
+	PKr := account.GetPkr(r)
+	result := PKrAddress{}
+	copy(result[:], PKr[:])
+	return result, nil
+	//currentBlock := uint64(s.BlockNumber())
+	//if currentBlock >= seroparam.SIP5() {
+	//	return result.String(), nil
+	//} else {
+	//	return result.Base58(), nil
+	//}
+}
+
+func (s *PublicBlockChainAPI) GenIndexPKrByTk(ctx context.Context, Tk TKAddress, index int64, oldVersion bool) (PKrAddress, error) {
+
+	salt := big.NewInt(index).Bytes()
+	random := append(Tk[:], salt...)
+	r := crypto.Keccak256Hash(random).HashToUint256()
+	var pk c_type.Uint512
+	var err error
+	if oldVersion {
+		pk, err = c_superzk.Czero_Tk2PK(Tk.ToTk().NewRef())
+	} else {
+		pk, err = c_superzk.Tk2Pk(Tk.ToTk().NewRef())
+	}
+	if err != nil {
+		return PKrAddress{}, err
+	}
+
+	pkr := superzk.Pk2PKr(&pk, r)
+	result := PKrAddress{}
+	copy(result[:], pkr[:])
+	return result, nil
 }
 
 type Balance struct {

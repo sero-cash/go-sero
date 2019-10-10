@@ -350,7 +350,7 @@ func (ks *KeyStore) expire(accountKey common.AccountKey, u *unlocked, timeout ti
 
 // NewAccount generates a new key and stores it into the key directory,
 // encrypting it with the passphrase.
-func (ks *KeyStore) NewAccount(passphrase string, at uint64) (accounts.Account, error) {
+func (ks *KeyStore) NewAccount(passphrase string, at uint64, version int) (accounts.Account, error) {
 	_, account, err := storeNewKey(ks.storage, crand.Reader, passphrase, at, version)
 	if err != nil {
 		return accounts.Account{}, err
@@ -362,7 +362,7 @@ func (ks *KeyStore) NewAccount(passphrase string, at uint64) (accounts.Account, 
 	return account, nil
 }
 
-func (ks *KeyStore) NewAccountWithMnemonic(passphrase string, at uint64) (string, accounts.Account, error) {
+func (ks *KeyStore) NewAccountWithMnemonic(passphrase string, at uint64, version int) (string, accounts.Account, error) {
 	mnemonic, _, account, err := storeNewKeyWithMnemonic(ks.storage, passphrase, at, version)
 	if err != nil {
 		return "", accounts.Account{}, err
