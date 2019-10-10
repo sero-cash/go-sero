@@ -90,7 +90,13 @@ func (b PKAddress) ToUint512() c_type.Uint512 {
 }
 
 func (b PKAddress) MarshalText() ([]byte, error) {
-	return []byte(base58.Encode(b[:])), nil
+	if c_superzk.IsFlagSet(b[:]) {
+		a := utils.NewAddressByBytes(b[:])
+		a.SetProtocol("SP")
+		return []byte(a.ToCode()), nil
+	} else {
+		return []byte(base58.Encode(b[:])), nil
+	}
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.
