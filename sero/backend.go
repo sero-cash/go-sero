@@ -26,6 +26,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-sero/voter"
 	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
 
@@ -39,7 +41,6 @@ import (
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/consensus/ethash"
@@ -366,9 +367,9 @@ func (s *Sero) Serobase() (eb accounts.Account, err error) {
 }
 
 // SetSerobase sets the mining reward address.
-func (s *Sero) SetSerobase(serobase address.AccountAddress) {
+func (s *Sero) SetSerobase(serobase address.MixBase58Adrress) {
 	s.lock.Lock()
-	account, _ := s.accountManager.FindAccountByPk(*serobase.ToUint512())
+	account, _ := s.accountManager.FindAccountByPkr(serobase.ToPkr())
 	s.serobase = account
 	s.lock.Unlock()
 

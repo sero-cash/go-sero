@@ -244,8 +244,8 @@ func (s *PublicAccountAPI) Accounts() []string {
 	return addresses
 }
 
-func (s *PublicAccountAPI) GetTk(addr MixBase58Adrress) string {
-	var pkr = addr.toPkr()
+func (s *PublicAccountAPI) GetTk(addr address.MixBase58Adrress) string {
+	var pkr = addr.ToPkr()
 	account, err := s.am.FindAccountByPkr(pkr)
 	if err != nil {
 		return ""
@@ -424,7 +424,7 @@ func (s *PrivateAccountAPI) ImportMnemonic(mnemonic string, password string, old
 // UnlockAccount will unlock the account associated with the given address with
 // the given password for duration seconds. If duration is nil it will use a
 // default of 300 seconds. It returns an indication if the account was unlocked.
-func (s *PrivateAccountAPI) UnlockAccount(addr MixBase58Adrress, password string, duration *uint64) (bool, error) {
+func (s *PrivateAccountAPI) UnlockAccount(addr address.MixBase58Adrress, password string, duration *uint64) (bool, error) {
 	const max = uint64(time.Duration(math.MaxInt64) / time.Second)
 	var d time.Duration
 	if duration == nil {
@@ -437,7 +437,7 @@ func (s *PrivateAccountAPI) UnlockAccount(addr MixBase58Adrress, password string
 	if seroparam.Is_Dev() {
 		d = 0
 	}
-	account, err := s.am.FindAccountByPkr(addr.toPkr())
+	account, err := s.am.FindAccountByPkr(addr.ToPkr())
 	if err != nil {
 		return false, err
 	}
@@ -445,16 +445,16 @@ func (s *PrivateAccountAPI) UnlockAccount(addr MixBase58Adrress, password string
 	return err == nil, err
 }
 
-func (s *PrivateAccountAPI) ExportMnemonic(addr MixBase58Adrress, password string) (string, error) {
-	account, err := s.am.FindAccountByPkr(addr.toPkr())
+func (s *PrivateAccountAPI) ExportMnemonic(addr address.MixBase58Adrress, password string) (string, error) {
+	account, err := s.am.FindAccountByPkr(addr.ToPkr())
 	if err != nil {
 		return "", err
 	}
 	return fetchKeystore(s.am).ExportMnemonic(account, password)
 }
 
-func (s *PrivateAccountAPI) ExportRawKey(addr MixBase58Adrress, password string) (hexutil.Bytes, error) {
-	account, err := s.am.FindAccountByPkr(addr.toPkr())
+func (s *PrivateAccountAPI) ExportRawKey(addr address.MixBase58Adrress, password string) (hexutil.Bytes, error) {
+	account, err := s.am.FindAccountByPkr(addr.ToPkr())
 	if err != nil {
 		return nil, err
 	}
@@ -474,8 +474,8 @@ func (s *PrivateAccountAPI) GenSeed() (hexutil.Bytes, error) {
 }
 
 // LockAccount will lock the account associated with the given address when it's unlocked.
-func (s *PrivateAccountAPI) LockAccount(addr MixBase58Adrress) bool {
-	account, err := s.am.FindAccountByPkr(addr.toPkr())
+func (s *PrivateAccountAPI) LockAccount(addr address.MixBase58Adrress) bool {
+	account, err := s.am.FindAccountByPkr(addr.ToPkr())
 	if err != nil {
 		return false
 	}
@@ -489,7 +489,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 	s.nonceLock.mu.Lock()
 	defer s.nonceLock.mu.Unlock()
 	// Look up the wallet containing the requested abi
-	fromAccount, err := s.am.FindAccountByPkr(args.From.toPkr())
+	fromAccount, err := s.am.FindAccountByPkr(args.From.ToPkr())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -589,7 +589,7 @@ func (s *PublicBlockChainAPI) BlockNumber() hexutil.Uint64 {
 	return hexutil.Uint64(header.Number.Uint64())
 }
 
-func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy string) (*address.AccountAddress, error) {
+func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy Smbol) (*ContractAddress, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
 		return nil, err
@@ -597,17 +597,18 @@ func (s *PublicBlockChainAPI) CurrencyToContractAddress(ctx context.Context, cy 
 	if cy == "" {
 		return nil, errors.New("cy can not be empty!")
 	} else {
-		if cy == "sero" || cy == "SERO" {
+		if cy.IsSero() {
 			return nil, nil
 		}
 	}
-	contractAddress := state.GetContrctAddressByToken(cy)
+	contractAddress := state.GetContrctAddressByToken(cy.String())
 	empty := common.Address{}
 	if contractAddress == empty {
-		return nil, errors.New(cy + "not exists!")
+		return nil, errors.New(cy.String() + "not exists!")
 	}
-	contractAddr := address.BytesToAccount(contractAddress[:64])
-	return &contractAddr, nil
+	var result = &ContractAddress{}
+	result.SetBytes(contractAddress[:64])
+	return result, nil
 }
 
 type ConvertAddress struct {
@@ -678,15 +679,21 @@ func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses
 
 }
 
-func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk PKAddress) (PKrAddress, error) {
+func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk PKAddress) (string, error) {
 	account, err := s.b.AccountManager().FindAccountByPk(Pk.ToUint512())
 	if err != nil {
-		return PKrAddress{}, err
+		return "", err
 	}
 	PKr := account.GetPkr(nil)
 	result := PKrAddress{}
 	copy(result[:], PKr[:])
-	return result, nil
+	currentBlock := uint64(s.BlockNumber())
+	if currentBlock >= seroparam.SIP5() {
+		return result.String(), nil
+	} else {
+		return result.Base58(), nil
+	}
+
 }
 
 type Balance struct {
@@ -995,19 +1002,23 @@ func (s *Smbol) IsNotSero() bool {
 	return !s.IsSero()
 }
 
+func (s Smbol) String() string {
+	return string(s)
+}
+
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
-	From        *MixBase58Adrress `json:"from"`
-	To          *common.Address   `json:"to"`
-	GasCurrency Smbol             `json:"gasCy"` //default SERO
-	Gas         hexutil.Uint64    `json:"gas"`
-	GasPrice    hexutil.Big       `json:"gasPrice"`
-	Value       hexutil.Big       `json:"value"`
-	Data        hexutil.Bytes     `json:"data"`
-	Currency    Smbol             `json:"cy"`
-	Dynamic     bool              `json:"dy"` //contract address parameters are dynamically generated.
-	Category    Smbol             `json:"catg"`
-	Tkt         *common.Hash      `json:"tkt"`
+	From        *address.MixBase58Adrress `json:"from"`
+	To          *AllMixedAddress          `json:"to"`
+	GasCurrency Smbol                     `json:"gasCy"` //default SERO
+	Gas         hexutil.Uint64            `json:"gas"`
+	GasPrice    hexutil.Big               `json:"gasPrice"`
+	Value       hexutil.Big               `json:"value"`
+	Data        hexutil.Bytes             `json:"data"`
+	Currency    Smbol                     `json:"cy"`
+	Dynamic     bool                      `json:"dy"` //contract address parameters are dynamically generated.
+	Category    Smbol                     `json:"catg"`
+	Tkt         *common.Hash              `json:"tkt"`
 }
 
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, bool, error) {
@@ -1021,7 +1032,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// Set sender address or use a default if none specified
 	addr := args.From
 	if args.From == nil {
-		addr = &MixBase58Adrress{}
+		addr = &address.MixBase58Adrress{}
 		if wallets := s.b.AccountManager().Wallets(); len(wallets) > 0 {
 			if accounts := wallets[0].Accounts(); len(accounts) > 0 {
 				fromAddr := accounts[0].GetPKByHeight()
@@ -1069,26 +1080,18 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 	rand := c_type.RandUint128()
 	var to *common.Address
-	if args.To != nil && state.IsContract(common.BytesToAddress(args.To[:])) && !args.Dynamic {
-		copy(rand[:], args.To[:16])
-	}
+
 	if args.To != nil {
 		to = &common.Address{}
-		if state.IsContract(common.BytesToAddress(args.To[:])) {
-			t := common.BytesToAddress(args.To[:])
-			to = &t
+		copy(rand[:], args.To[:])
+		if args.To.IsContract() {
+			copy(to[:], args.To[:])
 		} else {
-			if args.To.IsAccountAddress() {
-				pk := common.AddrToAccountAddr(*args.To)
-				pkr := (superzk.Pk2PKr(pk.ToUint512(), nil))
-				t := common.BytesToAddress(pkr[:])
-				to = &t
-			} else {
-				to = args.To
-			}
+			toPkr := args.To.ToPKr()
+			copy(to[:], toPkr[:])
 		}
-	}
 
+	}
 	fee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))
 	if args.To != nil && state.IsContract(common.BytesToAddress(args.To[:])) && args.GasCurrency.IsNotSero() {
 		m, d := state.GetTokenRate(common.BytesToAddress(args.To[:]), string(args.GasCurrency))
@@ -1104,7 +1107,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 	var fromPkr c_type.PKr
 	if addr.IsPkr() {
-		fromPkr = addr.toPkr()
+		fromPkr = addr.ToPkr()
 
 	} else {
 		var fromPk c_type.Uint512
@@ -1225,11 +1228,12 @@ func (s *PublicBlockChainAPI) GetDecimal(ctx context.Context, tokenName string) 
 	if contractAddress == empty {
 		return nil, errors.New(tokenName + "not exists!")
 	}
-	contractAddr := address.BytesToAccount(contractAddress[:64])
+	var to AllMixedAddress
+	to.setBytes(contractAddress[:])
 	callArgs := CallArgs{
-		To: &contractAddress,
+		To: &to,
 	}
-	decimals := NewSRC20Decimal(contractAddr, tokenName)
+	decimals := NewSRC20Decimal(tokenName)
 	for _, d := range decimals {
 		data, err := d.Pack()
 		if err != nil {
@@ -1248,7 +1252,7 @@ func (s *PublicBlockChainAPI) GetDecimal(ctx context.Context, tokenName string) 
 			continue
 		}
 		result := hexutil.Uint(*decimal)
-		log.Info("GetDecimal", "contract", contractAddr.String(), "method", d.method, "decimal", *decimal)
+		log.Info("GetDecimal", "contract", base58.Encode(contractAddress[:]), "method", d.method, "decimal", *decimal)
 		return &result, nil
 
 	}
@@ -1467,9 +1471,9 @@ func NewPublicTransactionPoolAPI(b Backend, nonceLock *AddrLocker) *PublicTransa
 	return &PublicTransactionPoolAPI{b, nonceLock}
 }
 
-func (s *PublicTransactionPoolAPI) AddressUnlocked(accountAddr MixBase58Adrress) (bool, error) {
+func (s *PublicTransactionPoolAPI) AddressUnlocked(accountAddr address.MixBase58Adrress) (bool, error) {
 	// Look up the wallet containing the requested signer
-	account, err := s.b.AccountManager().FindAccountByPkr(accountAddr.toPkr())
+	account, err := s.b.AccountManager().FindAccountByPkr(accountAddr.ToPkr())
 	if err != nil {
 		return false, err
 	}
@@ -1623,25 +1627,25 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 	}
 	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
 	if receipt.ContractAddress != (common.Address{}) {
-		fields["contractAddress"] = address.BytesToAccount(receipt.ContractAddress[:64])
+		fields["contractAddress"] = base58.Encode(receipt.ContractAddress[:64])
 	}
 	return fields, nil
 }
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	From        MixBase58Adrress  `json:"from"`
-	To          *MixedcaseAddress `json:"to"`
-	Gas         *hexutil.Uint64   `json:"gas"`
-	GasCurrency Smbol             `json:"gasCy"` //default SERO
-	GasPrice    *hexutil.Big      `json:"gasPrice"`
-	Value       *hexutil.Big      `json:"value"`
-	Data        *hexutil.Bytes    `json:"data"`
-	Currency    Smbol             `json:"cy"`
-	Dynamic     bool              `json:"dy"` //contract address parameters are dynamically generated.
-	Category    Smbol             `json:"catg"`
-	Tkt         *common.Hash      `json:"tkt"`
-	Memo        string            `json:"Memo"`
+	From        address.MixBase58Adrress `json:"from"`
+	To          *MixedcaseAddress        `json:"to"`
+	Gas         *hexutil.Uint64          `json:"gas"`
+	GasCurrency Smbol                    `json:"gasCy"` //default SERO
+	GasPrice    *hexutil.Big             `json:"gasPrice"`
+	Value       *hexutil.Big             `json:"value"`
+	Data        *hexutil.Bytes           `json:"data"`
+	Currency    Smbol                    `json:"cy"`
+	Dynamic     bool                     `json:"dy"` //contract address parameters are dynamically generated.
+	Category    Smbol                    `json:"catg"`
+	Tkt         *common.Hash             `json:"tkt"`
+	Memo        string                   `json:"Memo"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
@@ -1770,7 +1774,7 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB, fromAccount accounts.Acc
 		contractCmd := stx.ContractCmd{asset, nil, *args.Data}
 		txParam.Cmds.Contract = &contractCmd
 		if args.From.IsPkr() {
-			refundPkr = args.From.toPkr()
+			refundPkr = args.From.ToPkr()
 		} else {
 			refundPkr = fromAccount.GetPkr(&fromRand)
 		}
@@ -1779,10 +1783,10 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB, fromAccount accounts.Acc
 		fromRand := c_type.Uint256{}
 		copy(fromRand[:16], args.To.Addr[:16])
 		if args.From.IsPkr() {
-			refundPkr = args.From.toPkr()
+			refundPkr = args.From.ToPkr()
 		} else {
 			if args.Dynamic {
-				refundPkr = args.From.toPkr()
+				refundPkr = fromAccount.GetPkr(nil)
 			} else {
 				refundPkr = fromAccount.GetPkr(&fromRand)
 			}
@@ -1799,7 +1803,7 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB, fromAccount accounts.Acc
 		contractCmd := stx.ContractCmd{asset, args.To.ToPkr(nil).NewRef(), data}
 		txParam.Cmds.Contract = &contractCmd
 	} else {
-		refundPkr = args.From.toPkr()
+		refundPkr = args.From.ToPkr()
 		receptions := []prepare.Reception{{Addr: args.To.ToPkr(nil), Asset: asset}}
 		txParam.Receptions = receptions
 	}
@@ -1838,7 +1842,7 @@ func (args *SendTxArgs) toCreatePkg(state *state.StateDB, fromAccount accounts.A
 		utils.CurrencyToUint256(string(args.GasCurrency)),
 		utils.U256(*feevalue),
 	}
-	txParam.RefundTo = args.From.toPkr().NewRef()
+	txParam.RefundTo = fromAccount.GetPkr(nil).NewRef()
 	txParam.Fee = feeToken
 	pkgCreateCmd := prepare.PkgCreateCmd{c_type.RandUint256(), toPkr, asset, stringToUint512(args.Memo)}
 	txParam.Cmds.PkgCreate = &pkgCreateCmd
@@ -1878,7 +1882,7 @@ func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.H
 		return common.Hash{}, err
 	}
 
-	fromAccount, err := b.AccountManager().FindAccountByPkr(args.From.toPkr())
+	fromAccount, err := b.AccountManager().FindAccountByPkr(args.From.ToPkr())
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -1998,11 +2002,11 @@ func (s *PublicTransactionPoolAPI) CreatePkg(ctx context.Context, args SendTxArg
 }
 **/
 type ClosePkgArgs struct {
-	From     *address.AccountAddress `json:"from"`
-	Gas      *hexutil.Uint64         `json:"gas"`
-	GasPrice *hexutil.Big            `json:"gasPrice"`
-	PkgId    *c_type.Uint256         `json:"id"`
-	Key      *c_type.Uint256         `json:"key"`
+	From     *address.MixBase58Adrress `json:"from"`
+	Gas      *hexutil.Uint64           `json:"gas"`
+	GasPrice *hexutil.Big              `json:"gasPrice"`
+	PkgId    *c_type.Uint256           `json:"id"`
+	Key      *c_type.Uint256           `json:"key"`
 }
 
 func (args *ClosePkgArgs) setDefaults(ctx context.Context, b Backend) error {
@@ -2042,7 +2046,7 @@ func (args *ClosePkgArgs) toTxParam(fromAccount accounts.Account) (txParam prepa
 		utils.U256(*feevalue),
 	}
 	txParam.From = fromAccount.Key
-	txParam.RefundTo = superzk.Pk2PKr(args.From.ToUint512(), c_type.RandUint256().NewRef()).NewRef()
+	txParam.RefundTo = fromAccount.GetPkr(nil).NewRef()
 	txParam.Fee = feeToken
 	pkgCloseCmd := prepare.PkgCloseCmd{*args.PkgId, *args.Key}
 	txParam.Cmds.PkgClose = &pkgCloseCmd
@@ -2051,11 +2055,11 @@ func (args *ClosePkgArgs) toTxParam(fromAccount accounts.Account) (txParam prepa
 }
 
 type TransferPkgArgs struct {
-	From     *address.AccountAddress `json:"from"`
-	Gas      *hexutil.Uint64         `json:"gas"`
-	GasPrice *hexutil.Big            `json:"gasPrice"`
-	PkgId    *c_type.Uint256         `json:"id"`
-	To       *common.Address         `json:"To"`
+	From     *address.MixBase58Adrress `json:"from"`
+	Gas      *hexutil.Uint64           `json:"gas"`
+	GasPrice *hexutil.Big              `json:"gasPrice"`
+	PkgId    *c_type.Uint256           `json:"id"`
+	To       *MixedcaseAddress         `json:"To"`
 }
 
 func (args *TransferPkgArgs) setDefaults(ctx context.Context, b Backend) error {
@@ -2090,12 +2094,7 @@ func (args *TransferPkgArgs) toTransaction(state *state.StateDB) (*types.Transac
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), nil)
 	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	ehash := tx.Ehash()
-	var Pkr c_type.PKr
-	if state.IsContract(common.BytesToAddress(args.To[:])) {
-		Pkr = *(args.To.ToPKr())
-	} else {
-		Pkr = common.AddrToPKr(*args.To)
-	}
+	Pkr := args.To.ToPkr(nil)
 	txt := &ztx.T{
 		Fee: assets.Token{
 			utils.CurrencyToUint256(params.DefaultCurrency),

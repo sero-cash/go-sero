@@ -24,15 +24,15 @@ import (
 	"math/big"
 	"math/rand"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/pkg/errors"
 
 	"github.com/btcsuite/btcutil/base58"
-
-	"github.com/sero-cash/go-sero/common/addrutil"
 
 	"github.com/sero-cash/go-sero/crypto/sha3"
 
@@ -52,6 +52,21 @@ var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
 )
+
+func IsBase58Str(s string) bool {
+
+	pattern := "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$"
+	match, err := regexp.MatchString(pattern, s)
+	if err != nil {
+		return false
+	}
+	return match
+
+}
+
+func IsString(input []byte) bool {
+	return len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"'
+}
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
 type Hash [HashLength]byte
@@ -319,17 +334,26 @@ func (a Address) MarshalText() ([]byte, error) {
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *Address) UnmarshalText(input []byte) error {
-	out, err := addrutil.IsValidBase58Address(input)
-	if err != nil {
-		return err
+	if IsBase58Str(string(input)) {
+		return errors.New("is not base58 string")
 	}
-	copy(a[:], out)
-	return nil
+	b := base58.Decode(string(input))
+	if len(b) != 96 {
+		return errors.New("invalid address must be 96 btyes")
+	}
+	pkr := c_type.PKr{}
+	copy(pkr[:], b[:])
+	if !superzk.IsPKrValid(&pkr) {
+		return errors.New("invalid PKr base58")
+	} else {
+		copy(a[:], b)
+		return nil
+	}
 }
 
 // UnmarshalJSON parses a hash in hex syntax.
 func (a *Address) UnmarshalJSON(input []byte) error {
-	if !addrutil.IsString(input) {
+	if !IsString(input) {
 		return errors.New("not string")
 	} else {
 		return a.UnmarshalText(input[1 : len(input)-1])
@@ -374,9 +398,8 @@ func (self AddressList) Swap(i, j int) {
 // UnprefixedAddress allows marshaling an Data without 0x prefix.
 type UnprefixedAddress Address
 
-// UnmarshalText decodes the Data from hex. The 0x prefix is optional.
 func (a *UnprefixedAddress) UnmarshalText(input []byte) error {
-	if addrutil.IsBase58Str(string(input)) {
+	if IsBase58Str(string(input)) {
 		out := base58.Decode(string(input))
 		copy(a[:], out[:])
 		return nil

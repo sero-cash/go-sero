@@ -15,7 +15,6 @@ import (
 	"github.com/tyler-smith/go-bip39"
 
 	"github.com/pkg/errors"
-	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -78,14 +77,22 @@ func (s *PublicLocalAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes) (c_typ
 	return c_superzk.Seed2Sk(&sd), nil
 }
 
-func (s *PublicLocalAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (address.AccountAddress, error) {
-	tk, _ := c_superzk.Sk2Tk(&sk)
-	return address.BytesToAccount(tk[:]), nil
+func (s *PublicLocalAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (ret TKAddress, err error) {
+	tk, err := c_superzk.Sk2Tk(&sk)
+	if err != nil {
+		return
+	}
+	copy(ret[:], tk[:])
+	return
 }
 
-func (s *PublicLocalAPI) Tk2Pk(ctx context.Context, tk TKAddress) (address.AccountAddress, error) {
-	pk, _ := c_superzk.Czero_Tk2PK(tk.ToTk().NewRef())
-	return address.BytesToAccount(pk[:]), nil
+func (s *PublicLocalAPI) Tk2Pk(ctx context.Context, tk TKAddress) (ret PKAddress, err error) {
+	pk, err := c_superzk.Czero_Tk2PK(tk.ToTk().NewRef())
+	if err != nil {
+		return
+	}
+	copy(ret[:], pk[:])
+	return
 }
 
 func (s *PublicLocalAPI) Pk2Pkr(ctx context.Context, pk PKAddress, index *c_type.Uint256) (PKrAddress, error) {

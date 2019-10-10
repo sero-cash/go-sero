@@ -17,17 +17,15 @@
 package address
 
 import (
-	"bytes"
-	"database/sql/driver"
-	"fmt"
-	"math/big"
+	"errors"
 
-	"github.com/sero-cash/go-sero/common/addrutil"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/btcsuite/btcutil/base58"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
-	"github.com/sero-cash/go-sero/common/hexutil"
+	"github.com/sero-cash/go-czero-import/superzk"
 )
 
 // Lengths of hashes and Accountes in bytes.
@@ -37,128 +35,6 @@ const (
 	SeedLength           = 32
 )
 
-// Data represents the 64 byte Data of an Ethereum account.
-type AccountAddress [AccountAddressLength]byte
-
-// If b is larger than len(h), b will be cropped from the left.
-func BytesToAccount(b []byte) AccountAddress {
-	var a AccountAddress
-	a.SetBytes(b)
-	return a
-}
-
-// BigToAccount returns Data with byte values of b.
-// If b is larger than len(h), b will be cropped from the left.
-func BigToAccount(b *big.Int) AccountAddress { return BytesToAccount(b.Bytes()) }
-
-// HexToAccount returns Data with byte values of s.
-// If s is larger than len(h), s will be cropped from the left.
-//func HexToAccount(s string) Data { return BytesToAccount(FromHex(s)) }
-
-func Base58ToAccount(s string) AccountAddress {
-	out := base58.Decode(s)
-	return BytesToAccount(out[:])
-}
-
-// Bytes gets the string representation of the underlying Data.
-func (a AccountAddress) Bytes() []byte { return a[:] }
-
-func (a AccountAddress) ToUint512() *c_type.Uint512 {
-	pubKey := c_type.Uint512{}
-	copy(pubKey[:], a[:])
-	return &pubKey
-}
-
-func (a AccountAddress) ToTK() *c_type.Tk {
-	tk := c_type.Tk{}
-	copy(tk[:], a[:])
-	return &tk
-}
-
-// Big converts an Data to a big integer.
-func (a AccountAddress) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
-
-// Base58 returns base58 string representation of the Data.
-func (a AccountAddress) Base58() string {
-	return base58.Encode(a[:])
-}
-
-// String implements fmt.Stringer.
-func (a AccountAddress) String() string {
-	return a.Base58()
-}
-
-// Format implements fmt.Formatter, forcing the byte slice to be formatted as is,
-// without going through the stringer interface used for logging.
-func (a AccountAddress) Format(s fmt.State, c rune) {
-	fmt.Fprintf(s, "%"+string(c), a[:])
-}
-
-// SetBytes sets the Data to the value of b.
-// If b is larger than len(a) it will panic.
-func (a *AccountAddress) SetBytes(b []byte) {
-	if len(b) > len(a) {
-		b = b[len(b)-AccountAddressLength:]
-	}
-	copy(a[AccountAddressLength-len(b):], b)
-}
-
-// MarshalText returns the hex representation of a.
-func (a AccountAddress) MarshalText() ([]byte, error) {
-	return hexutil.Bytes(a[:]).MarshalBase58Text()
-}
-
-func isZeroSuffix(base58bytes [96]byte) bool {
-	zerobytes := [32]byte{}
-	suffix := [32]byte{}
-	copy(suffix[:], base58bytes[64:])
-	return (zerobytes == suffix)
-}
-
-// UnmarshalText parses a hash in hex syntax.
-func (a *AccountAddress) UnmarshalText(input []byte) error {
-	out, err := addrutil.IsValidBase58AcccountAddress(input)
-	if err != nil {
-		return err
-	}
-	copy(a[:], out)
-	return nil
-}
-
-// Scan implements Scanner for database/sql.
-func (a *AccountAddress) Scan(src interface{}) error {
-	srcB, ok := src.([]byte)
-	if !ok {
-		return fmt.Errorf("can't scan %T into Data", src)
-	}
-	if len(srcB) != AccountAddressLength {
-		return fmt.Errorf("can't scan []byte of len %d into Data, want %d", len(srcB), AccountAddressLength)
-	}
-	copy(a[:], srcB)
-	return nil
-}
-
-//func (a *Data) IsContract() bool {
-//	return strings.HasSuffix(string(a[:]),"contract")
-//}
-
-// Value implements valuer for database/sql.
-func (a AccountAddress) Value() (driver.Value, error) {
-	return a[:], nil
-}
-
-type Accountes []AccountAddress
-
-func (self Accountes) Len() int {
-	return len(self)
-}
-func (self Accountes) Less(i, j int) bool {
-	return bytes.Compare(self[i][:], self[j][:]) < 0
-}
-func (self Accountes) Swap(i, j int) {
-	self[i], self[j] = self[j], self[i]
-}
-
 type Seed [SeedLength]byte
 
 func (priv *Seed) SeedToUint256() *c_type.Uint256 {
@@ -166,4 +42,102 @@ func (priv *Seed) SeedToUint256() *c_type.Uint256 {
 	copy(seed[:], priv[:])
 	return &seed
 
+}
+
+type MixBase58Adrress []byte
+
+func (b MixBase58Adrress) MarshalText() ([]byte, error) {
+	return []byte(base58.Encode(b)), nil
+}
+
+func (b MixBase58Adrress) IsPkr() bool {
+	return len(b) == 96
+}
+
+func (b MixBase58Adrress) ToPkr() c_type.PKr {
+	var pkr c_type.PKr
+	if b.IsPkr() {
+		copy(pkr[:], b[:])
+	} else {
+		var pk c_type.Uint512
+		copy(pk[:], b[:])
+		pkr = superzk.Pk2PKr(&pk, nil)
+	}
+	return pkr
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (b *MixBase58Adrress) UnmarshalText(input []byte) error {
+
+	if len(input) == 0 {
+		return errors.New("empty string")
+	}
+
+	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+		return e
+	} else {
+		if addr.IsHex {
+			return errors.New("is not base58 address")
+		}
+		out := addr.Bytes
+		if len(out) == 96 {
+			err := ValidPkr(addr)
+			if err != nil {
+				return err
+			}
+			*b = out[:]
+			return nil
+		} else if len(out) == 64 {
+			err := ValidPk(addr)
+			if err != nil {
+				return err
+			}
+			*b = out[:]
+			return nil
+		} else {
+			return errors.New("invalid mix address")
+		}
+	}
+}
+
+func ValidPkr(addr utils.Address) error {
+	if len(addr.Bytes) == 96 {
+		if !addr.MatchProtocol("SC") {
+			return errors.New("address protocol is not pkr")
+		}
+		var pkr c_type.PKr
+		copy(pkr[:], addr.Bytes)
+		if c_superzk.IsSzkPKr(&pkr) {
+			if addr.Protocol == "" {
+				return errors.New("pkr address is new version  must have prefix SC")
+			}
+		}
+		if !superzk.IsPKrValid(&pkr) {
+			return errors.New("invalid pkr")
+		}
+	} else {
+		return errors.New("pkr address must be 96 bytes")
+	}
+	return nil
+}
+
+func ValidPk(addr utils.Address) error {
+	if len(addr.Bytes) == 64 {
+		if !addr.MatchProtocol("SP") {
+			return errors.New("address protocol is not pk")
+		}
+		pk := c_type.Uint512{}
+		copy(pk[:], addr.Bytes)
+		if c_superzk.IsSzkPK(&pk) {
+			if addr.Protocol == "" {
+				return errors.New("pk is new version mush have prefix scp1")
+			}
+		}
+		if !superzk.IsPKValid(&pk) {
+			return errors.New("invalid PK")
+		}
+	} else {
+		return errors.New("pk address must be 64 bytes")
+	}
+	return nil
 }

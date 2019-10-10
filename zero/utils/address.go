@@ -2,6 +2,7 @@ package utils
 
 import (
 	"crypto/md5"
+	"encoding/hex"
 	"regexp"
 	"strings"
 
@@ -10,8 +11,6 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 
 	"github.com/pkg/errors"
-
-	"github.com/sero-cash/go-sero/common/hexutil"
 )
 
 type Address struct {
@@ -46,12 +45,30 @@ func (self *Address) setBytes(bs []byte) {
 	self.genVersion()
 }
 
+func Decode(input string) ([]byte, error) {
+	if len(input) == 0 {
+		return nil, errors.New("empty hex strin")
+	}
+	if !has0xPrefix(input) {
+		return nil, errors.New("hex string without 0x prefix")
+	}
+	b, err := hex.DecodeString(input[2:])
+	if err != nil {
+		return nil, err
+	}
+	return b, err
+}
+
+func has0xPrefix(input string) bool {
+	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
+}
+
 func (self *Address) setHex(hex string) (e error) {
 	self.IsHex = true
 	if strings.Index(hex, "0x") != 0 {
 		hex = "0x" + hex
 	}
-	if bytes, err := hexutil.Decode(hex); err != nil {
+	if bytes, err := Decode(hex); err != nil {
 		e = err
 		return
 	} else {
@@ -87,8 +104,15 @@ func (self *Address) ToCode() (ret string) {
 	return self.Protocol + self.Version + "." + self.Base58 + "." + self.Sum
 }
 
+func Encode(b []byte) string {
+	enc := make([]byte, len(b)*2+2)
+	copy(enc, "0x")
+	hex.Encode(enc[2:], b)
+	return string(enc)
+}
+
 func (self *Address) ToHex() (ret string) {
-	return hexutil.Encode(self.Bytes)
+	return Encode(self.Bytes)
 }
 
 func (self *Address) ToBase58() (ret string) {

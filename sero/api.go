@@ -205,7 +205,7 @@ func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 }
 
 // SetSerobase sets the serobase of the miner
-func (api *PrivateMinerAPI) SetSerobase(serobase address.AccountAddress) bool {
+func (api *PrivateMinerAPI) SetSerobase(serobase address.MixBase58Adrress) bool {
 	api.s.SetSerobase(serobase)
 	return true
 }

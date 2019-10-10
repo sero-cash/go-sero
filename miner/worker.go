@@ -495,11 +495,12 @@ func (self *worker) commitNewWork() {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		addr := common.Address{}
 		//pkr :=  superzk.Pk2PKr(self.coinbase.ToUint512(), nil)
-		pkr, licr, ret := c_czero.Pk2PKrAndLICr(self.coinbase.Key.ToUint512().NewRef(), header.Number.Uint64())
+		_, licr, ret := c_czero.Pk2PKrAndLICr(self.coinbase.Key.ToUint512().NewRef(), header.Number.Uint64())
 		if !ret {
 			log.Error("Failed to Addr2PKrAndLICr")
 			return
 		}
+		pkr := self.coinbase.GetPkr(nil)
 		addr.SetBytes(pkr[:])
 		header.Coinbase = addr
 		header.Licr = licr

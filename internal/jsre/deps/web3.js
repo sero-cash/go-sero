@@ -2576,7 +2576,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @returns {Boolean}
          */
         var isHexStrict = function (hex) {
-            return ((_.isString(hex) || _.isNumber(hex)) && /^(-)?0x[0-9a-f]*$/i.test(hex));
+            return (isString(hex) || isNumber(hex)) && /^(-0x|0x)?[0-9a-f]*$/i.test(hex);
         };
 
         /**
@@ -2725,8 +2725,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                     return false;
                 }
             }
-
-
         };
 
         /**
@@ -2749,53 +2747,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          */
         var isToAddress = function (address) {
             return paramAddress(address)
-        };
-
-        /**
-         * Checks if the given string is a checksummed address
-         *
-         * @method isChecksumAddress
-         * @param {String} address the given HEX adress
-         * @return {Boolean}
-         */
-        var isChecksumAddress = function (address) {
-            // Check each case
-            // address = address.replace('0x', '');
-            // var addressHash = sha3(address.toLowerCase());
-
-            // for (var i = 0; i < 40; i++) {
-            //     // the nth letter should be uppercase if the nth digit of casemap is 1
-            //     if ((parseInt(addressHash[i], 16) > 7 && address[i].toUpperCase() !== address[i]) || (parseInt(addressHash[i], 16) <= 7 && address[i].toLowerCase() !== address[i])) {
-            //         return false;
-            //     }
-            // }
-            return true;
-        };
-
-
-        /**
-         * Makes a checksum address
-         *
-         * @method toChecksumAddress
-         * @param {String} address the given HEX adress
-         * @return {String}
-         */
-        var toChecksumAddress = function (address) {
-            if (typeof address === 'undefined') return '';
-
-            // address = address.toLowerCase().replace('0x', '');
-            // var addressHash = sha3(address);
-            var checksumAddress = '';
-
-            for (var i = 0; i < address.length; i++) {
-                // If ith character is 9 to f then make it uppercase
-                // if (parseInt(addressHash[i], 16) > 7) {
-                //     checksumAddress += address[i].toUpperCase();
-                // } else {
-                checksumAddress += address[i];
-                // }
-            }
-            return checksumAddress;
         };
 
         /**
@@ -2932,16 +2883,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
 
         var addressToHex = function (addr) {
-            if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addr)) {
-                bytes = base58ToBytes(addr)
-                if (bytes.length !== 96 && bytes.length !=64) {
-                    throw new Error("not a public address or collection address")
-                }
-                return bytesToHex(bytes)
-
-            }else{
-                throw new Error("not base58 string")
-            }
+            var bs58Str = addressToBase58(addr);
+            var bs = base58ToBytes(bs58Str);
+            return bytesToHex(bs);
         };
 
         var base58ToHex = function (value) {
@@ -2957,6 +2901,56 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             b=hexToBytes(value)
             return bytesToBase58(b)
         };
+
+
+
+        var addressToBase58 =  function (addr) {
+            if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addr)) {
+                return addr
+            }else if (isHexStrict(addr)) {
+                return hexToBase58(addr);
+            }else {
+                addrs = addr.split('\.');
+                if (addrs.length === 3){
+                    if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addrs[1])) {
+                        return addrs[1]
+                    }else {
+                        throw new Error('invalid address format')
+                    }
+
+                }else {
+                    throw new Error('invalid address format')
+                }
+            }
+        }
+
+        var isNewAddress =  function (addr) {
+            var bs58 = addressToBase58(addr);
+            var bs = base58ToBytes(bs58);
+            return (bs[bs.length - 1] & (0x1 << 6)) !== 0;
+        }
+
+        var formatAddress = function (addr) {
+            var bs58 = addressToBase58(addr);
+            var bs = base58ToBytes(bs58);
+            var prefix;
+            var version = 0;
+            if (bs.length === 64) {
+                prefix = 'SP';
+            }else if (bs.length === 96) {
+                prefix = 'SC';
+            }
+            if (isNewAddress(addr)) {
+                version = 1;
+            }
+            prefix += version;
+            protocol = hexToBytes(fromUtf8(prefix));
+            sum =md5(protocol.concat(bs));
+            checkSum = base58.encode(hexToBytes(sum)).substr(0,2);
+            return prefix+'.'+bs58+'.'+checkSum;
+        }
+
+
 
 
         module.exports = {
@@ -2982,8 +2976,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             paramAddress: paramAddress,
             isAddress: isAddress,
             isToAddress: isToAddress,
-            isChecksumAddress: isChecksumAddress,
-            toChecksumAddress: toChecksumAddress,
             isFunction: isFunction,
             isString: isString,
             isObject: isObject,
@@ -3001,6 +2993,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             addressToHex:addressToHex,
             base58ToHex:base58ToHex,
             hexToBase58:hexToBase58,
+            formatAddress:formatAddress,
+            isNewAddress:isNewAddress,
         };
 
     },{"./base58":17,"./sha3.js":20,"bignumber.js":"bignumber.js","md5":90,"utf8":91}],22:[function(require,module,exports){
@@ -3108,14 +3102,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         Web3.prototype.fromTa = utils.fromTa;
         Web3.prototype.isAddress = utils.isAddress;
         Web3.prototype.isToAddress = utils.isToAddress;
-        Web3.prototype.isChecksumAddress = utils.isChecksumAddress;
-        Web3.prototype.toChecksumAddress = utils.toChecksumAddress;
         Web3.prototype.padLeft = utils.padLeft;
         Web3.prototype.padRight = utils.padRight;
         Web3.prototype.addressToHex = utils.addressToHex;
         Web3.prototype.base58ToHex = utils.base58ToHex;
         Web3.prototype.hexToBase58 = utils.hexToBase58;
-
+        Web3.prototype.formatAddress = utils.formatAddress;
+        Web3.prototype.isNewAddress = utils.isNewAddress;
 
         Web3.prototype.sha3 = function(string, options) {
             return '0x' + sha3(string, options);

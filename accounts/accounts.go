@@ -61,37 +61,6 @@ func (self Account) TkToString() string {
 		return addr.ToCode()
 	}
 }
-
-func (self *Account) GetPKByPK(pkr *common.Address) (ret address.AccountAddress) {
-	c_pkr := c_type.Uint512{}
-	copy(c_pkr[:], pkr[:])
-	c_tk := c_type.Tk{}
-	copy(c_tk[:], self.Tk[:])
-	var c_pk c_type.Uint512
-	if c_superzk.IsSzkPK(&c_pkr) {
-		c_pk, _ = c_superzk.Tk2Pk(&c_tk)
-	} else {
-		c_pk, _ = c_superzk.Czero_Tk2PK(&c_tk)
-	}
-	copy(ret[:], c_pk[:])
-	return
-}
-
-func (self *Account) GetPKByPKr(pkr *common.Address) (ret address.AccountAddress) {
-	c_pkr := c_type.PKr{}
-	copy(c_pkr[:], pkr[:])
-	c_tk := c_type.Tk{}
-	copy(c_tk[:], self.Tk[:])
-	var c_pk c_type.Uint512
-	if c_superzk.IsSzkPKr(&c_pkr) {
-		c_pk, _ = c_superzk.Tk2Pk(&c_tk)
-	} else {
-		c_pk, _ = c_superzk.Czero_Tk2PK(&c_tk)
-	}
-	copy(ret[:], c_pk[:])
-	return
-}
-
 func (self *Account) GetPKByHeight() (ret c_type.Uint512) {
 	height := txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()
 	c_tk := c_type.Tk{}

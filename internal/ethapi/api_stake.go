@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -47,12 +49,12 @@ func NewPublicStakeApI(b Backend, nonceLock *AddrLocker) *PublicStakeApI {
 }
 
 type BuyShareTxArg struct {
-	From     MixBase58Adrress `json:"from"`
-	Vote     *common.Address  `json:"vote"`
-	Pool     *hexutil.Bytes   `json:"pool"`
-	Gas      *hexutil.Uint64  `json:"gas"`
-	GasPrice *hexutil.Big     `json:"gasPrice"`
-	Value    *hexutil.Big     `json:"value"`
+	From     address.MixBase58Adrress  `json:"from"`
+	Vote     *address.MixBase58Adrress `json:"vote"`
+	Pool     *hexutil.Bytes            `json:"pool"`
+	Gas      *hexutil.Uint64           `json:"gas"`
+	GasPrice *hexutil.Big              `json:"gasPrice"`
+	Value    *hexutil.Big              `json:"value"`
 }
 
 func (args *BuyShareTxArg) setDefaults(ctx context.Context, b Backend) error {
@@ -103,7 +105,7 @@ func (args *BuyShareTxArg) setDefaults(ctx context.Context, b Backend) error {
 func (args *BuyShareTxArg) toPreTxParam(fromAccount accounts.Account) prepare.PreTxParam {
 	preTx := prepare.PreTxParam{}
 	preTx.From = fromAccount.Key
-	preTx.RefundTo = args.From.toPkr().NewRef()
+	preTx.RefundTo = fromAccount.GetPkr(nil).NewRef()
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
 		utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(*args.Gas)), args.GasPrice.ToInt())),
@@ -113,7 +115,7 @@ func (args *BuyShareTxArg) toPreTxParam(fromAccount accounts.Account) prepare.Pr
 
 	buyShareCmd := stx.BuyShareCmd{}
 	buyShareCmd.Value = utils.U256(*args.Value.ToInt())
-	buyShareCmd.Vote = common.AddrToPKr(*args.Vote)
+	buyShareCmd.Vote = args.Vote.ToPkr()
 	if args.Pool != nil {
 		var pool c_type.Uint256
 		copy(pool[:], (*args.Pool)[:])
@@ -145,7 +147,7 @@ func (s *PublicStakeApI) BuyShare(ctx context.Context, args BuyShareTxArg) (comm
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
-	fromAccount, err := s.b.AccountManager().FindAccountByPkr(args.From.toPkr())
+	fromAccount, err := s.b.AccountManager().FindAccountByPkr(args.From.ToPkr())
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -164,12 +166,12 @@ func (s *PublicStakeApI) BuyShare(ctx context.Context, args BuyShareTxArg) (comm
 }
 
 type RegistStakePoolTxArg struct {
-	From     MixBase58Adrress `json:"from"`
-	Vote     *common.Address  `json:"vote"`
-	Gas      *hexutil.Uint64  `json:"gas"`
-	GasPrice *hexutil.Big     `json:"gasPrice"`
-	Value    *hexutil.Big     `json:"value"`
-	Fee      *hexutil.Uint    `json:"fee"`
+	From     address.MixBase58Adrress  `json:"from"`
+	Vote     *address.MixBase58Adrress `json:"vote"`
+	Gas      *hexutil.Uint64           `json:"gas"`
+	GasPrice *hexutil.Big              `json:"gasPrice"`
+	Value    *hexutil.Big              `json:"value"`
+	Fee      *hexutil.Uint             `json:"fee"`
 }
 
 func (args *RegistStakePoolTxArg) setDefaults(ctx context.Context, b Backend) error {
@@ -221,7 +223,7 @@ func (args *RegistStakePoolTxArg) toPreTxParam(fromAccount accounts.Account) pre
 	preTx.Cmds = prepare.Cmds{}
 	registPoolCmd := stx.RegistPoolCmd{}
 	registPoolCmd.Value = utils.U256(*args.Value.ToInt())
-	registPoolCmd.Vote = common.AddrToPKr(*args.Vote)
+	registPoolCmd.Vote = args.Vote.ToPkr()
 	registPoolCmd.FeeRate = uint32(*args.Fee)
 	preTx.Cmds.RegistPool = &registPoolCmd
 	return preTx
@@ -238,13 +240,13 @@ func (s *PublicStakeApI) RegistStakePool(ctx context.Context, args RegistStakePo
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
-	fromAccount, err := s.b.AccountManager().FindAccountByPkr(args.From.toPkr())
+	fromAccount, err := s.b.AccountManager().FindAccountByPkr(args.From.ToPkr())
 	if err != nil {
 		return common.Hash{}, err
 	}
 	fromPkr := getStakePoolPkr(fromAccount)
 	if args.From.IsPkr() {
-		fromPkr = args.From.toPkr()
+		fromPkr = args.From.ToPkr()
 	}
 	poolId := getStakePoolId(fromPkr)
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
@@ -283,14 +285,14 @@ func getStakePoolId(from c_type.PKr) common.Hash {
 	return crypto.Keccak256Hash(from[:])
 }
 
-func (s *PublicStakeApI) CloseStakePool(ctx context.Context, from MixBase58Adrress) (common.Hash, error) {
+func (s *PublicStakeApI) CloseStakePool(ctx context.Context, from address.MixBase58Adrress) (common.Hash, error) {
 	var fromPkr c_type.PKr
-	fromAccount, err := s.b.AccountManager().FindAccountByPkr(from.toPkr())
+	fromAccount, err := s.b.AccountManager().FindAccountByPkr(from.ToPkr())
 	if err != nil {
 		return common.Hash{}, err
 	}
 	if from.IsPkr() {
-		fromPkr = from.toPkr()
+		fromPkr = from.ToPkr()
 	} else {
 		fromPkr = getStakePoolPkr(fromAccount)
 
@@ -334,7 +336,7 @@ func (s *PublicStakeApI) CloseStakePool(ctx context.Context, from MixBase58Adrre
 	return common.BytesToHash(gtx.Hash[:]), nil
 }
 
-func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from MixBase58Adrress, fee hexutil.Uint64) (common.Hash, error) {
+func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from address.MixBase58Adrress, fee hexutil.Uint64) (common.Hash, error) {
 
 	if uint32(fee) < seroparam.LOWEST_STAKING_NODE_FEE_RATE {
 		return common.Hash{}, errors.New(fmt.Sprintf("fee rate can not less then %v", seroparam.LOWEST_STAKING_NODE_FEE_RATE))
@@ -344,12 +346,12 @@ func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from MixBase58A
 	}
 
 	var fromPkr c_type.PKr
-	fromAccount, err := s.b.AccountManager().FindAccountByPkr(from.toPkr())
+	fromAccount, err := s.b.AccountManager().FindAccountByPkr(from.ToPkr())
 	if err != nil {
 		return common.Hash{}, err
 	}
 	if from.IsPkr() {
-		fromPkr = from.toPkr()
+		fromPkr = from.ToPkr()
 	} else {
 		fromPkr = getStakePoolPkr(fromAccount)
 
@@ -394,14 +396,14 @@ func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from MixBase58A
 	return common.BytesToHash(gtx.Hash[:]), nil
 }
 
-func (s *PublicStakeApI) ModifyStakePoolVote(ctx context.Context, from MixBase58Adrress, vote MixBase58Adrress) (common.Hash, error) {
+func (s *PublicStakeApI) ModifyStakePoolVote(ctx context.Context, from address.MixBase58Adrress, vote address.MixBase58Adrress) (common.Hash, error) {
 	var fromPkr c_type.PKr
-	fromAccount, err := s.b.AccountManager().FindAccountByPkr(from.toPkr())
+	fromAccount, err := s.b.AccountManager().FindAccountByPkr(from.ToPkr())
 	if err != nil {
 		return common.Hash{}, err
 	}
 	if from.IsPkr() {
-		fromPkr = from.toPkr()
+		fromPkr = from.ToPkr()
 	} else {
 		fromPkr = getStakePoolPkr(fromAccount)
 
@@ -422,7 +424,7 @@ func (s *PublicStakeApI) ModifyStakePoolVote(ctx context.Context, from MixBase58
 	if pool.Closed {
 		return common.Hash{}, errors.New("stake pool has closed")
 	}
-	votePkr := vote.toPkr()
+	votePkr := vote.ToPkr()
 	preTx := prepare.PreTxParam{}
 	preTx.From = fromAccount.Key
 	preTx.RefundTo = &fromPkr
@@ -710,9 +712,9 @@ func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share, api
 
 }
 
-func (s *PublicStakeApI) MyShare(ctx context.Context, addr MixBase58Adrress) []map[string]interface{} {
+func (s *PublicStakeApI) MyShare(ctx context.Context, addr address.MixBase58Adrress) []map[string]interface{} {
 	wallets := s.b.AccountManager().Wallets()
-	account, err := s.b.AccountManager().FindAccountByPkr(addr.toPkr())
+	account, err := s.b.AccountManager().FindAccountByPkr(addr.ToPkr())
 	if err != nil {
 		return nil
 	}

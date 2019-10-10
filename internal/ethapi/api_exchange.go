@@ -386,7 +386,7 @@ func validAddress(addr MixAdrress) (bool, error) {
 	return true, nil
 }
 
-func (s *PublicExchangeAPI) ValidAddress(ctx context.Context, addr MixBase58Adrress) (bool, error) {
+func (s *PublicExchangeAPI) ValidAddress(ctx context.Context, addr address.MixBase58Adrress) (bool, error) {
 	if len(addr) != 64 && len(addr) != 96 {
 		return false, errors.Errorf("invalid addr %v", base58.Encode(addr[:]))
 	}
@@ -548,14 +548,22 @@ func (s *PublicExchangeAPI) SignTxWithSk(param txtool.GTxParam, SK c_type.Uint51
 	return flight.SignTx(&SK, &param)
 }
 
-func (s *PublicExchangeAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (address.AccountAddress, error) {
-	tk, _ := c_superzk.Sk2Tk(&sk)
-	return address.BytesToAccount(tk[:]), nil
+func (s *PublicExchangeAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (ret TKAddress, err error) {
+	tk, err := c_superzk.Sk2Tk(&sk)
+	if err != nil {
+		return
+	}
+	copy(ret[:], tk[:])
+	return
 }
 
-func (s *PublicExchangeAPI) Tk2Pk(ctx context.Context, tk TKAddress) (address.AccountAddress, error) {
-	pk, _ := c_superzk.Czero_Tk2PK(tk.ToTk().NewRef())
-	return address.BytesToAccount(pk[:]), nil
+func (s *PublicExchangeAPI) Tk2Pk(ctx context.Context, tk TKAddress) (ret PKAddress, err error) {
+	pk, err := c_superzk.Czero_Tk2PK(tk.ToTk().NewRef())
+	if err != nil {
+		return
+	}
+	copy(ret[:], pk[:])
+	return
 }
 func (s *PublicExchangeAPI) Pk2Pkr(ctx context.Context, pk PKAddress, index *c_type.Uint256) (PKrAddress, error) {
 	empty := c_type.Uint256{}
