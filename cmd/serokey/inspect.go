@@ -69,7 +69,7 @@ make sure to use this feature with great caution!`,
 		// Output all relevant information we can retrieve.
 		showPrivate := ctx.Bool("private")
 		out := outputInspect{
-			Address: key.AccountKey.String(),
+			Address: key.Address.String(),
 			Tk:      key.Tk.String(),
 		}
 		if showPrivate {

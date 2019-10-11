@@ -104,7 +104,7 @@ func (args *BuyShareTxArg) setDefaults(ctx context.Context, b Backend) error {
 
 func (args *BuyShareTxArg) toPreTxParam(fromAccount accounts.Account) prepare.PreTxParam {
 	preTx := prepare.PreTxParam{}
-	preTx.From = fromAccount.Key
+	preTx.From = fromAccount.Address.ToUint512()
 	preTx.RefundTo = fromAccount.GetPkr(nil).NewRef()
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
@@ -214,7 +214,7 @@ func (args *RegistStakePoolTxArg) setDefaults(ctx context.Context, b Backend) er
 
 func (args *RegistStakePoolTxArg) toPreTxParam(fromAccount accounts.Account) prepare.PreTxParam {
 	preTx := prepare.PreTxParam{}
-	preTx.From = fromAccount.Key
+	preTx.From = fromAccount.Address.ToUint512()
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
 		utils.U256(*big.NewInt(0).Mul(big.NewInt(int64(*args.Gas)), args.GasPrice.ToInt())),
@@ -278,7 +278,7 @@ func getStakePoolPkr(account accounts.Account) c_type.PKr {
 	randHash := crypto.Keccak256Hash(account.Tk[:])
 	var rand c_type.Uint256
 	copy(rand[:], randHash[:])
-	return superzk.Pk2PKr(account.Key.ToUint512().NewRef(), &rand)
+	return superzk.Pk2PKr(account.Address.ToUint512().NewRef(), &rand)
 
 }
 func getStakePoolId(from c_type.PKr) common.Hash {
@@ -313,7 +313,7 @@ func (s *PublicStakeApI) CloseStakePool(ctx context.Context, from address.MixBas
 		return common.Hash{}, errors.New("stake pool has closed")
 	}
 	preTx := prepare.PreTxParam{}
-	preTx.From = fromAccount.Key
+	preTx.From = fromAccount.Address.ToUint512()
 	preTx.RefundTo = &fromPkr
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
@@ -372,7 +372,7 @@ func (s *PublicStakeApI) ModifyStakePoolFee(ctx context.Context, from address.Mi
 		return common.Hash{}, errors.New("stake pool has closed")
 	}
 	preTx := prepare.PreTxParam{}
-	preTx.From = fromAccount.Key
+	preTx.From = fromAccount.Address.ToUint512()
 	preTx.RefundTo = &fromPkr
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
@@ -426,7 +426,7 @@ func (s *PublicStakeApI) ModifyStakePoolVote(ctx context.Context, from address.M
 	}
 	votePkr := vote.ToPkr()
 	preTx := prepare.PreTxParam{}
-	preTx.From = fromAccount.Key
+	preTx.From = fromAccount.Address.ToUint512()
 	preTx.RefundTo = &fromPkr
 	preTx.Fee = assets.Token{
 		utils.CurrencyToUint256("SERO"),
@@ -718,7 +718,7 @@ func (s *PublicStakeApI) MyShare(ctx context.Context, addr address.MixBase58Adrr
 	if err != nil {
 		return nil
 	}
-	shares := stakeservice.CurrentStakeService().SharesByAccountKey(account.Key)
+	shares := stakeservice.CurrentStakeService().SharesByPk(account.Address.ToUint512())
 	return newRPCStatisticsShare(wallets, shares, s, ctx)
 }
 

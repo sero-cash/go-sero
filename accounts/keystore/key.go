@@ -25,11 +25,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-czero-import/c_superzk"
-
-	"github.com/sero-cash/go-sero/common"
-
-	"github.com/btcsuite/btcutil/base58"
 
 	"github.com/sero-cash/go-czero-import/c_type"
 
@@ -47,9 +45,9 @@ const (
 type Key struct {
 	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
 	// to simplify lookups we also store the address
-	AccountKey common.AccountKey
+	Address address.PKAddress
 
-	Tk common.TkAddress
+	Tk address.TKAddress
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
 	PrivateKey *ecdsa.PrivateKey
@@ -61,7 +59,7 @@ type Key struct {
 
 type keyStore interface {
 	// Loads and decrypts the key from disk.
-	GetKey(accountKey common.AccountKey, filename string, auth string) (*Key, error)
+	GetKey(address address.PKAddress, filename string, auth string) (*Key, error)
 	// Writes and encrypts the key.
 	StoreKey(filename string, k *Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
@@ -69,13 +67,12 @@ type keyStore interface {
 }
 
 type encryptedKeyJSONV1 struct {
-	Address    string     `json:"address"`
-	AccountKey string     `json:"accountKey"`
-	Tk         string     `json:"tk"`
-	Crypto     cryptoJSON `json:"crypto"`
-	Id         string     `json:"id"`
-	Version    int        `json:"version"`
-	At         uint64     `json:"at"`
+	Address string     `json:"address"`
+	Tk      string     `json:"tk"`
+	Crypto  cryptoJSON `json:"crypto"`
+	Id      string     `json:"id"`
+	Version int        `json:"version"`
+	At      uint64     `json:"at"`
 }
 
 type cryptoJSON struct {
@@ -95,7 +92,7 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, at uint64, version int) 
 	id := uuid.NewRandom()
 	key := &Key{
 		Id:         id,
-		AccountKey: crypto.PrivkeyToAccoutKey(privateKeyECDSA),
+		Address:    crypto.PrivkeyToAddress(privateKeyECDSA, version),
 		Tk:         crypto.PrivkeyToTk(privateKeyECDSA),
 		PrivateKey: privateKeyECDSA,
 		At:         at,
@@ -106,17 +103,17 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, at uint64, version int) 
 
 func newKeyFromTk(tk *c_type.Tk, at uint64, version int) *Key {
 	id := uuid.NewRandom()
-	tkaddress := common.TkAddress{}
+	tkaddress := address.TKAddress{}
 	copy(tkaddress[:], tk[:])
 	pk, _ := c_superzk.Czero_Tk2PK(tk)
-	accountKey := common.AccountKey{}
-	copy(accountKey[:], pk[:])
+	address := address.PKAddress{}
+	copy(address[:], pk[:])
 	key := &Key{
-		Id:         id,
-		AccountKey: accountKey,
-		Tk:         tkaddress,
-		At:         at,
-		Version:    version,
+		Id:      id,
+		Address: address,
+		Tk:      tkaddress,
+		At:      at,
+		Version: version,
 	}
 	return key
 }
@@ -134,7 +131,7 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string, at uint64, version in
 	if err != nil {
 		return nil, accounts.Account{}, err
 	}
-	a := accounts.Account{Key: key.AccountKey, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.AccountKey))}, At: key.At}
+	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}, At: key.At}
 	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
 		zeroKey(key.PrivateKey)
 		return nil, a, err
@@ -162,7 +159,7 @@ func storeNewKeyWithMnemonic(ks keyStore, auth string, at uint64, version int) (
 	}
 
 	key := newKeyFromECDSA(privateKeyECDSA, at, version)
-	a := accounts.Account{Key: key.AccountKey, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.AccountKey))}, At: key.At, Version: key.Version}
+	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}, At: key.At, Version: key.Version}
 	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
 		zeroKey(key.PrivateKey)
 		return "", nil, a, err
@@ -194,9 +191,9 @@ func writeKeyFile(file string, content []byte) error {
 
 // keyFileName implements the naming convention for keyfiles:
 // UTC--<created_at UTC ISO8601>-<address hex>
-func keyFileName(keyAddr common.AccountKey) string {
+func keyFileName(keyAddr address.PKAddress) string {
 	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), base58.Encode(keyAddr[:]))
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), keyAddr.String())
 }
 
 func toISO8601(t time.Time) string {

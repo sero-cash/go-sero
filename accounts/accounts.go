@@ -18,74 +18,32 @@
 package accounts
 
 import (
-	"github.com/btcsuite/btcutil/base58"
-	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
-	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/event"
-	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 // AccountAddress represents an Sero account located at a specific location defined
 // by the optional URL field.
 type Account struct {
-	Key     common.AccountKey `json:"address"` // Sero account address derived from the key
-	Tk      common.TkAddress  `json:"tk"`      // Sero account tk derived from the key
+	Address address.PKAddress `json:"address"` // Sero account address derived from the key
+	Tk      address.TKAddress `json:"tk"`      // Sero account tk derived from the key
 	URL     URL               `json:"url"`     // Optional resource locator within a backend
 	At      uint64            `json:"at"`      //account create at blocknum
 	Version int               `json:"version"`
 }
 
-func (self Account) PkToString() string {
-	pk := self.GetPKByHeight()
-	if self.Version == 1 {
-		return base58.Encode(pk[:])
-	} else {
-		addr := utils.NewAddressByBytes(pk[:])
-		addr.SetProtocol("SP")
-		return addr.ToCode()
-	}
-}
-
-func (self Account) TkToString() string {
-	if self.Version == 1 {
-		return base58.Encode(self.Tk[:])
-	} else {
-		addr := utils.NewAddressByBytes(self.Tk[:])
-		addr.SetProtocol("ST")
-		return addr.ToCode()
-	}
-}
-func (self *Account) GetPKByHeight() (ret c_type.Uint512) {
-	height := txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()
-	c_tk := c_type.Tk{}
-	copy(c_tk[:], self.Tk[:])
-	var c_pk c_type.Uint512
-	if self.Version == 1 {
-		c_pk, _ = c_superzk.Czero_Tk2PK(&c_tk)
-	} else {
-		if height >= seroparam.SIP5() {
-			c_pk, _ = c_superzk.Tk2Pk(&c_tk)
-		} else {
-			c_pk, _ = c_superzk.Czero_Tk2PK(&c_tk)
-		}
-	}
-	copy(ret[:], c_pk[:])
-	return
-}
-
 func (self *Account) GetPkr(rand *c_type.Uint256) c_type.PKr {
-	pk := self.GetPKByHeight()
+	pk := self.Address.ToUint512()
 	return superzk.Pk2PKr(&pk, rand)
 }
 
 func (self *Account) GetDefaultPkr(index uint64) c_type.PKr {
-	pk := self.GetPKByHeight()
+	pk := self.Address.ToUint512()
 	r := c_type.Uint256{}
 	copy(r[:], common.LeftPadBytes(utils.EncodeNumber(index), 32))
 	if index == 0 {

@@ -2,7 +2,6 @@ package exchange
 
 import (
 	"github.com/sero-cash/go-czero-import/c_type"
-	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/serodb"
@@ -78,7 +77,7 @@ type pkgIndexes struct {
 	pk_from_id_maps map[string]c_type.Uint256
 }
 
-func (self *Exchange) indexPkgs(accountKeys []common.AccountKey, batch serodb.Batch, blocks []txtool.Block) {
+func (self *Exchange) indexPkgs(pks []c_type.Uint512, batch serodb.Batch, blocks []txtool.Block) {
 	for _, block := range blocks {
 		for _, pkg := range block.Pkgs {
 			if p := self.FindPkgById(&pkg.Pack.Id); p != nil {
@@ -93,11 +92,11 @@ func (self *Exchange) indexPkgs(accountKeys []common.AccountKey, batch serodb.Ba
 				batch.Delete(id_2_pkg_key(&p.z.Pack.Id))
 			}
 			var p Pkg
-			if account, ok := self.ownPkr(accountKeys, pkg.Pack.PKr); ok {
-				p.to = account.accountKey.ToUint512().NewRef()
+			if account, ok := self.ownPkr(pks, pkg.Pack.PKr); ok {
+				p.to = account.pk
 			}
-			if account, ok := self.ownPkr(accountKeys, pkg.From); ok {
-				p.from = account.accountKey.ToUint512().NewRef()
+			if account, ok := self.ownPkr(pks, pkg.From); ok {
+				p.from = account.pk
 			}
 			if p.from != nil || p.to != nil {
 				if !pkg.Closed {

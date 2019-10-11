@@ -271,27 +271,27 @@ func (b *SeroAPIBackend) CommitTx(tx *txtool.GTx) error {
 	return b.sero.txPool.AddLocal(signedTx)
 }
 
-func (b *SeroAPIBackend) GetPkNumber(accountKey common.AccountKey) (number uint64, e error) {
+func (b *SeroAPIBackend) GetPkNumber(pk c_type.Uint512) (number uint64, e error) {
 	if b.sero.exchange == nil {
 		e = errors.New("not start exchange")
 		return
 	}
-	return b.sero.exchange.GetCurrencyNumber(accountKey), nil
+	return b.sero.exchange.GetCurrencyNumber(pk), nil
 }
 
-func (b *SeroAPIBackend) GetPkr(accountKey *common.AccountKey, index *c_type.Uint256) (pkr c_type.PKr, e error) {
+func (b *SeroAPIBackend) GetPkr(pk *c_type.Uint512, index *c_type.Uint256) (pkr c_type.PKr, e error) {
 	if b.sero.exchange == nil {
 		e = errors.New("not start exchange")
 		return
 	}
-	return b.sero.exchange.GetPkr(accountKey, index)
+	return b.sero.exchange.GetPkr(pk, index)
 }
 
-func (b *SeroAPIBackend) GetLockedBalances(accountKey common.AccountKey) (balances map[string]*big.Int) {
+func (b *SeroAPIBackend) GetLockedBalances(pk c_type.Uint512) (balances map[string]*big.Int) {
 	if b.sero.exchange == nil {
 		return
 	}
-	return b.sero.exchange.GetLockedBalances(accountKey)
+	return b.sero.exchange.GetLockedBalances(pk)
 }
 
 func (b *SeroAPIBackend) GetMaxAvailable(pk c_type.Uint512, currency string) (amount *big.Int) {
@@ -301,11 +301,11 @@ func (b *SeroAPIBackend) GetMaxAvailable(pk c_type.Uint512, currency string) (am
 	return b.sero.exchange.GetMaxAvailable(pk, currency)
 }
 
-func (b *SeroAPIBackend) GetBalances(accountKey common.AccountKey) (balances map[string]*big.Int) {
+func (b *SeroAPIBackend) GetBalances(pk c_type.Uint512) (balances map[string]*big.Int) {
 	if b.sero.exchange == nil {
 		return
 	}
-	return b.sero.exchange.GetBalances(accountKey)
+	return b.sero.exchange.GetBalances(pk)
 }
 
 func (b *SeroAPIBackend) GenTx(param prepare.PreTxParam) (txParam *txtool.GTxParam, e error) {
@@ -324,12 +324,12 @@ func (b *SeroAPIBackend) GetRecordsByPkr(pkr c_type.PKr, begin, end uint64) (rec
 	return b.sero.exchange.GetRecordsByPkr(pkr, begin, end)
 }
 
-func (b *SeroAPIBackend) GetRecordsByAccountKey(accountKey *common.AccountKey, begin, end uint64) (records []exchange.Utxo, err error) {
+func (b *SeroAPIBackend) GetRecordsByPk(pk *c_type.Uint512, begin, end uint64) (records []exchange.Utxo, err error) {
 	if b.sero.exchange == nil {
 		err = errors.New("not start exchange")
 		return
 	}
-	return b.sero.exchange.GetRecordsByPk(accountKey, begin, end)
+	return b.sero.exchange.GetRecordsByPk(pk, begin, end)
 }
 
 func (b *SeroAPIBackend) GetRecordsByTxHash(txHash c_type.Uint256) (records []exchange.Utxo, err error) {

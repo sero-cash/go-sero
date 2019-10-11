@@ -234,33 +234,32 @@ func (s *PublicAccountAPI) GetSzkAccounts() []string {
 }
 
 // Accounts returns the collection of accounts this node manages
-func (s *PublicAccountAPI) Accounts() []string {
-	addresses := make([]string, 0) // return [] instead of nil if empty
+func (s *PublicAccountAPI) Accounts() []address.PKAddress {
+	addresses := make([]address.PKAddress, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
 		for _, account := range wallet.Accounts() {
-			addresses = append(addresses, account.PkToString())
+			addresses = append(addresses, account.Address)
 		}
 	}
 	return addresses
 }
 
-func (s *PublicAccountAPI) GetTk(addr address.MixBase58Adrress) string {
+func (s *PublicAccountAPI) GetTk(addr address.MixBase58Adrress) address.TKAddress {
 	var pkr = addr.ToPkr()
 	account, err := s.am.FindAccountByPkr(pkr)
 	if err != nil {
-		return ""
+		return address.TKAddress{}
 	}
-	return account.TkToString()
+	return account.Tk
 }
 
-func (s *PublicAccountAPI) IsMinePKr(Pkr PKrAddress) *string {
+func (s *PublicAccountAPI) IsMinePKr(Pkr PKrAddress) *address.PKAddress {
 	var pkr = Pkr.ToPKr()
 	account, err := s.am.FindAccountByPkr(*pkr)
 	if err != nil {
 		return nil
 	}
-	str := account.PkToString()
-	return &str
+	return &account.Address
 
 }
 
@@ -283,11 +282,11 @@ func NewPrivateAccountAPI(b Backend, nonceLock *AddrLocker) *PrivateAccountAPI {
 }
 
 // ListAccounts will return a list of addresses for accounts this node manages.
-func (s *PrivateAccountAPI) ListAccounts() []string {
-	addresses := make([]string, 0) // return [] instead of nil if empty
+func (s *PrivateAccountAPI) ListAccounts() []address.PKAddress {
+	addresses := make([]address.PKAddress, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
 		for _, account := range wallet.Accounts() {
-			addresses = append(addresses, account.PkToString())
+			addresses = append(addresses, account.Address)
 		}
 	}
 	return addresses
@@ -322,7 +321,7 @@ func (s *PrivateAccountAPI) ListWallets() []rawWallet {
 }
 
 // NewAccount will create a new account and returns the address for the new account.
-func (s *PrivateAccountAPI) NewAccount(password string) (string, error) {
+func (s *PrivateAccountAPI) NewAccount(password string) (address.PKAddress, error) {
 	maxNumber := s.b.Downloader().Progress().HighestBlock
 
 	if seroparam.Is_Dev() {
@@ -341,17 +340,17 @@ func (s *PrivateAccountAPI) NewAccount(password string) (string, error) {
 	}
 	acc, err := fetchKeystore(s.am).NewAccount(password, maxNumber, version)
 	if err != nil {
-		return "", err
+		return address.PKAddress{}, err
 	}
 
 	if seroparam.Is_Dev() {
 		fetchKeystore(s.am).TimedUnlock(acc, password, 0)
 	}
-	return acc.PkToString(), nil
+	return acc.Address, nil
 }
 
 // NewAccount will create a new account and returns the mnemonic 、address for the new account.
-func (s *PrivateAccountAPI) NewAccountWithMnemonic(password string) (map[string]string, error) {
+func (s *PrivateAccountAPI) NewAccountWithMnemonic(password string) (map[string]interface{}, error) {
 	maxNumber := s.b.Downloader().Progress().HighestBlock
 
 	if seroparam.Is_Dev() {
@@ -376,9 +375,9 @@ func (s *PrivateAccountAPI) NewAccountWithMnemonic(password string) (map[string]
 	if seroparam.Is_Dev() {
 		fetchKeystore(s.am).TimedUnlock(acc, password, 0)
 	}
-	result := map[string]string{}
+	result := map[string]interface{}{}
 	result["mnemonic"] = mnemonic
-	result["address"] = acc.PkToString()
+	result["address"] = acc.Address
 	return result, nil
 }
 
@@ -389,50 +388,56 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string, oldVersion bool, at uint64) (string, error) {
+func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string, oldVersion bool, at uint64) (address.PKAddress, error) {
 	key, err := crypto.HexToECDSA(privkey)
 	if err != nil {
-		return "", err
+		return address.PKAddress{}, err
 	}
 	version := 2
 	if oldVersion {
 		version = 1
 	}
 	acc, err := fetchKeystore(s.am).ImportECDSA(key, password, at, version)
-	return acc.PkToString(), err
+	return acc.Address, err
 }
 
-func (s *PrivateAccountAPI) ImportTk(tk TKAddress, oldVersion bool, at uint64) (string, error) {
+func (s *PrivateAccountAPI) ImportTk(tk address.TKAddress, oldVersion bool, at uint64) (address.PKAddress, error) {
 	version := 2
 	if oldVersion {
 		version = 1
 	}
 	acc, err := fetchKeystore(s.am).ImportTk(tk.ToTk(), at, version)
-	return acc.PkToString(), err
+	return acc.Address, err
 }
 
-func (s *PrivateAccountAPI) ImportMnemonic(mnemonic string, password string, oldVersion bool, at uint64) (string, error) {
+func (s *PrivateAccountAPI) ImportMnemonic(mnemonic string, password string, at uint64) (address.PKAddress, error) {
+	mnemonicSlice := strings.Split(mnemonic, " ")
+	version := 1
+	if len(mnemonicSlice) == 25 {
+		if mnemonicSlice[0] == "v2" {
+			version = 2
+			mnemonic = strings.Join(mnemonicSlice[1:], " ")
+		} else {
+			return address.PKAddress{}, errors.New("invalid mnemnoic")
+		}
+	}
 	_, err := bip39.MnemonicToByteArray(mnemonic)
 	if err != nil {
-		return "", err
+		return address.PKAddress{}, err
 	}
 	seed, err := bip39.EntropyFromMnemonic(mnemonic)
 	if err != nil {
-		return "", err
+		return address.PKAddress{}, err
 	}
 	if len(seed) != 32 {
-		return "", errors.New("EntropyFromMnemonic error seed not 256bits")
+		return address.PKAddress{}, errors.New("EntropyFromMnemonic error seed not 256bits")
 	}
 	key, err := crypto.ToECDSA(seed[:32])
 	if err != nil {
-		return "", err
-	}
-	version := 2
-	if oldVersion {
-		version = 1
+		return address.PKAddress{}, err
 	}
 	acc, err := fetchKeystore(s.am).ImportECDSA(key, password, at, version)
-	return acc.PkToString(), err
+	return acc.Address, err
 }
 
 // UnlockAccount will unlock the account associated with the given address with
@@ -493,7 +498,7 @@ func (s *PrivateAccountAPI) LockAccount(addr address.MixBase58Adrress) bool {
 	if err != nil {
 		return false
 	}
-	return fetchKeystore(s.am).Lock(account.Key) == nil
+	return fetchKeystore(s.am).Lock(account.Address) == nil
 }
 
 // signTransactions sets defaults and signs the given transaction
@@ -693,7 +698,7 @@ func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses
 
 }
 
-func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk PKAddress) (string, error) {
+func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk address.PKAddress) (string, error) {
 	account, err := s.b.AccountManager().FindAccountByPk(Pk.ToUint512())
 	if err != nil {
 		return "", err
@@ -710,7 +715,7 @@ func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk PKAddress) (string,
 
 }
 
-func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk PKAddress, index int64) (PKrAddress, error) {
+func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk address.PKAddress, index int64) (PKrAddress, error) {
 	account, err := s.b.AccountManager().FindAccountByPk(Pk.ToUint512())
 	if err != nil {
 		return PKrAddress{}, err
@@ -730,7 +735,7 @@ func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk PKAddress, ind
 	//}
 }
 
-func (s *PublicBlockChainAPI) GenIndexPKrByTk(ctx context.Context, Tk TKAddress, index int64, oldVersion bool) (PKrAddress, error) {
+func (s *PublicBlockChainAPI) GenIndexPKrByTk(ctx context.Context, Tk address.TKAddress, index int64, oldVersion bool) (PKrAddress, error) {
 
 	salt := big.NewInt(index).Bytes()
 	random := append(Tk[:], salt...)
@@ -802,7 +807,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr AllMixedAddre
 			return Balance{}, err
 		}
 		if seroparam.IsExchange() {
-			exchangBalance := s.b.GetBalances(fromAccount.Key)
+			exchangBalance := s.b.GetBalances(fromAccount.Address.ToUint512())
 			return GetBalanceFromExchange(exchangBalance), nil
 		} else {
 			return result, errors.New("lstate.balance is no longer supported")
@@ -1091,7 +1096,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		addr = &address.MixBase58Adrress{}
 		if wallets := s.b.AccountManager().Wallets(); len(wallets) > 0 {
 			if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-				fromAddr := accounts[0].GetPKByHeight()
+				fromAddr := accounts[0].Address
 				*addr = fromAddr[:]
 			}
 		}
@@ -1819,7 +1824,7 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB, fromAccount accounts.Acc
 
 	var refundPkr c_type.PKr
 	txParam.GasPrice = (*big.Int)(args.GasPrice)
-	txParam.From = fromAccount.Key
+	txParam.From = fromAccount.Address.ToUint512()
 
 	feevalue := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	asset := args.toAsset()
@@ -1890,7 +1895,7 @@ func stringToUint512(str string) c_type.Uint512 {
 func (args *SendTxArgs) toCreatePkg(state *state.StateDB, fromAccount accounts.Account) (txParam prepare.PreTxParam) {
 	var toPkr c_type.PKr
 	txParam.GasPrice = (*big.Int)(args.GasPrice)
-	txParam.From = fromAccount.Key
+	txParam.From = fromAccount.Address.ToUint512()
 	feevalue := defaultFee(args.GasPrice, args.Gas)
 	asset := args.toAsset()
 	toPkr = args.To.ToPkr(nil)
@@ -2101,7 +2106,7 @@ func (args *ClosePkgArgs) toTxParam(fromAccount accounts.Account) (txParam prepa
 		utils.CurrencyToUint256("SERO"),
 		utils.U256(*feevalue),
 	}
-	txParam.From = fromAccount.Key
+	txParam.From = fromAccount.Address.ToUint512()
 	txParam.RefundTo = fromAccount.GetPkr(nil).NewRef()
 	txParam.Fee = feeToken
 	pkgCloseCmd := prepare.PkgCloseCmd{*args.PkgId, *args.Key}

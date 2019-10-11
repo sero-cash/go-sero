@@ -15,6 +15,7 @@ import (
 	"github.com/tyler-smith/go-bip39"
 
 	"github.com/pkg/errors"
+	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -25,7 +26,7 @@ import (
 type PublicLocalAPI struct {
 }
 
-func (s *PublicLocalAPI) DecOut(ctx context.Context, outs []txtool.Out, tk TKAddress) (douts []txtool.TDOut, e error) {
+func (s *PublicLocalAPI) DecOut(ctx context.Context, outs []txtool.Out, tk address.TKAddress) (douts []txtool.TDOut, e error) {
 	tk_u64 := tk.ToTk()
 	douts = flight.DecOut(&tk_u64, outs)
 	return
@@ -45,7 +46,7 @@ func (s *PublicLocalAPI) IsPkrValid(ctx context.Context, tk PKrAddress) error {
 	return nil
 }
 
-func (s *PublicLocalAPI) IsPkValid(ctx context.Context, tk PKAddress) error {
+func (s *PublicLocalAPI) IsPkValid(ctx context.Context, tk address.PKAddress) error {
 	return nil
 }
 
@@ -77,7 +78,7 @@ func (s *PublicLocalAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes) (c_typ
 	return c_superzk.Seed2Sk(&sd), nil
 }
 
-func (s *PublicLocalAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (ret TKAddress, err error) {
+func (s *PublicLocalAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (ret address.TKAddress, err error) {
 	tk, err := c_superzk.Sk2Tk(&sk)
 	if err != nil {
 		return
@@ -86,8 +87,13 @@ func (s *PublicLocalAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (ret TKAd
 	return
 }
 
-func (s *PublicLocalAPI) Tk2Pk(ctx context.Context, tk TKAddress) (ret PKAddress, err error) {
-	pk, err := c_superzk.Czero_Tk2PK(tk.ToTk().NewRef())
+func (s *PublicLocalAPI) Tk2Pk(ctx context.Context, tk address.TKAddress, new bool) (ret address.PKAddress, err error) {
+	var pk c_type.Uint512
+	if new {
+		pk, err = c_superzk.Tk2Pk(tk.ToTk().NewRef())
+	} else {
+		pk, err = c_superzk.Czero_Tk2PK(tk.ToTk().NewRef())
+	}
 	if err != nil {
 		return
 	}
@@ -95,7 +101,7 @@ func (s *PublicLocalAPI) Tk2Pk(ctx context.Context, tk TKAddress) (ret PKAddress
 	return
 }
 
-func (s *PublicLocalAPI) Pk2Pkr(ctx context.Context, pk PKAddress, index *c_type.Uint256) (PKrAddress, error) {
+func (s *PublicLocalAPI) Pk2Pkr(ctx context.Context, pk address.PKAddress, index *c_type.Uint256) (PKrAddress, error) {
 	empty := c_type.Uint256{}
 	if index != nil {
 		if (*index) == empty {

@@ -154,7 +154,7 @@ func (self *Cmds) Valid() bool {
 }
 
 type PreTxParam struct {
-	From       common.AccountKey
+	From       c_type.Uint512
 	RefundTo   *c_type.PKr
 	Receptions []Reception
 	Cmds       Cmds
@@ -178,10 +178,10 @@ func (self *Utxos) Roots() (roots []c_type.Uint256) {
 }
 
 type TxParamGenerator interface {
-	FindRoots(accountKey *common.AccountKey, currency string, amount *big.Int) (utxos Utxos, remain big.Int)
-	FindRootsByTicket(accountKey *common.AccountKey, tickets []assets.Ticket) (roots Utxos, remain map[c_type.Uint256]c_type.Uint256)
+	FindRoots(pk *c_type.Uint512, currency string, amount *big.Int) (utxos Utxos, remain big.Int)
+	FindRootsByTicket(pk *c_type.Uint512, tickets []assets.Ticket) (roots Utxos, remain map[c_type.Uint256]c_type.Uint256)
 	GetRoot(root *c_type.Uint256) (utxos *Utxo)
-	DefaultRefundTo(accountKey *common.AccountKey) (ret *c_type.PKr)
+	DefaultRefundTo(pk *c_type.Uint512) (ret *c_type.PKr)
 }
 
 type TxParamState interface {

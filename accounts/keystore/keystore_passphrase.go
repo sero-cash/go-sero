@@ -37,9 +37,9 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-sero/common/address"
 
-	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/accounts"
 
 	"github.com/btcsuite/btcutil/base58"
 
@@ -82,7 +82,7 @@ type keyStorePassphrase struct {
 	scryptP     int
 }
 
-func (ks keyStorePassphrase) GetKey(accountKey common.AccountKey, filename, auth string) (*Key, error) {
+func (ks keyStorePassphrase) GetKey(address address.PKAddress, filename, auth string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 
 	keyjson, err := ioutil.ReadFile(filename)
@@ -95,8 +95,8 @@ func (ks keyStorePassphrase) GetKey(accountKey common.AccountKey, filename, auth
 		return nil, err
 	}
 	// Make sure we're really operating on the requested key (no swap attacks)
-	if key.AccountKey != accountKey {
-		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.AccountKey, accountKey)
+	if key.Address != address {
+		return nil, fmt.Errorf("key content mismatch: have account %s, want %s", key.Address.String(), address.String())
 	}
 	return key, nil
 }
@@ -171,12 +171,12 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 		}
 	}
 	encryptedKeyJSONV1 := encryptedKeyJSONV1{
-		AccountKey: base58.Encode(key.AccountKey.Bytes()),
-		Tk:         base58.Encode(key.Tk.Bytes()),
-		Crypto:     cryptoStruct,
-		Id:         key.Id.String(),
-		Version:    key.Version,
-		At:         key.At,
+		Address: base58.Encode(key.Address[:]),
+		Tk:      base58.Encode(key.Tk[:]),
+		Crypto:  cryptoStruct,
+		Id:      key.Id.String(),
+		Version: key.Version,
+		At:      key.At,
 	}
 	return json.Marshal(encryptedKeyJSONV1)
 }
@@ -222,10 +222,11 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 
 	return &Key{
 		Id:         uuid.UUID(keyId),
-		AccountKey: crypto.PrivkeyToAccoutKey(key),
+		Address:    crypto.PrivkeyToAddress(key, k.Version),
 		Tk:         crypto.PrivkeyToTk(key),
 		PrivateKey: key,
 		At:         k.At,
+		Version:    k.Version,
 	}, nil
 }
 

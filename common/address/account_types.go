@@ -144,3 +144,101 @@ func ValidPk(addr utils.Address) error {
 	}
 	return nil
 }
+
+type TKAddress [64]byte
+
+func Base58ToTk(str string) (ret TKAddress) {
+	b := base58.Decode(str)
+	copy(ret[:], b)
+	return
+}
+
+func (b TKAddress) ToTk() c_type.Tk {
+	result := c_type.Tk{}
+	copy(result[:], b[:])
+
+	return result
+}
+
+func (c TKAddress) String() string {
+	return base58.Encode(c[:])
+}
+
+func (b TKAddress) MarshalText() ([]byte, error) {
+	return []byte(base58.Encode(b[:])), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (b *TKAddress) UnmarshalText(input []byte) error {
+
+	if len(input) == 0 {
+		return nil
+	}
+	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+		return e
+	} else {
+		if !addr.MatchProtocol("ST") {
+			return errors.New("address protocol is not tk")
+		}
+		if len(addr.Bytes) == 64 {
+			copy(b[:], addr.Bytes)
+		} else {
+			return errors.New("ivalid TK")
+		}
+		return nil
+	}
+}
+
+type PKAddress [64]byte
+
+func Base58ToPk(str string) (ret PKAddress) {
+	b := base58.Decode(str)
+	copy(ret[:], b)
+	return
+}
+
+func (b PKAddress) String() string {
+	if c_superzk.IsFlagSet(b[:]) {
+		a := utils.NewAddressByBytes(b[:])
+		a.SetProtocol("SP")
+		return a.ToCode()
+	} else {
+		return base58.Encode(b[:])
+	}
+}
+
+func (b PKAddress) ToUint512() c_type.Uint512 {
+	result := c_type.Uint512{}
+	copy(result[:], b[:])
+
+	return result
+}
+
+func NewPKAddres(b []byte) (ret PKAddress) {
+	copy(ret[:], b)
+	return
+}
+
+func (b PKAddress) MarshalText() ([]byte, error) {
+	return []byte(b.String()), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (b *PKAddress) UnmarshalText(input []byte) error {
+	if len(input) == 0 {
+		return nil
+	}
+	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+		return e
+	} else {
+		if !addr.MatchProtocol("SP") {
+			return errors.New("address protocol is not pk")
+		}
+		err := ValidPk(addr)
+		if err != nil {
+			return err
+		}
+		copy(b[:], addr.Bytes)
+		return nil
+	}
+}

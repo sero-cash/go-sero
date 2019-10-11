@@ -28,6 +28,8 @@ import (
 	"math/big"
 	"os"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/sero-cash/go-sero/rlp"
@@ -199,18 +201,23 @@ func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
 	return r.Cmp(secp256k1N) < 0 && s.Cmp(secp256k1N) < 0 && (v == 0 || v == 1)
 }
 
-func PrivkeyToAccoutKey(priv *ecdsa.PrivateKey) (ret common.AccountKey) {
+func PrivkeyToAddress(priv *ecdsa.PrivateKey, version int) (ret address.PKAddress) {
 	privKey := FromECDSA(priv)
 	var seed c_type.Uint256
 	copy(seed[:], privKey)
 	sk := c_superzk.Seed2Sk(&seed)
 	tk, _ := c_superzk.Sk2Tk(&sk)
-	pubBytes, _ := c_superzk.Czero_Tk2PK(&tk)
-	copy(ret[:], pubBytes[:])
+	var pk c_type.Uint512
+	if version == 2 {
+		pk, _ = c_superzk.Tk2Pk(&tk)
+	} else {
+		pk, _ = c_superzk.Czero_Tk2PK(&tk)
+	}
+	copy(ret[:], pk[:])
 	return
 }
 
-func PrivkeyToTk(priv *ecdsa.PrivateKey) (ret common.TkAddress) {
+func PrivkeyToTk(priv *ecdsa.PrivateKey) (ret address.TKAddress) {
 	privKey := FromECDSA(priv)
 	var seed c_type.Uint256
 	copy(seed[:], privKey)

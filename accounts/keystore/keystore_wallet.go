@@ -46,7 +46,7 @@ func (w *keystoreWallet) Status() (string, error) {
 	w.keystore.mu.RLock()
 	defer w.keystore.mu.RUnlock()
 
-	if _, ok := w.keystore.unlocked[w.account.Key]; ok {
+	if _, ok := w.keystore.unlocked[w.account.Address]; ok {
 		return "Unlocked", nil
 	}
 	return "Locked", nil
@@ -69,7 +69,7 @@ func (w *keystoreWallet) Accounts() []accounts.Account {
 // Contains implements accounts.Wallet, returning whether a particular account is
 // or is not wrapped by this wallet instance.
 func (w *keystoreWallet) Contains(account accounts.Account) bool {
-	return account.Key == w.account.Key && (account.URL == (accounts.URL{}) || account.URL == w.account.URL)
+	return account.Address == w.account.Address && (account.URL == (accounts.URL{}) || account.URL == w.account.URL)
 }
 
 // Derive implements accounts.Wallet, but is a noop for plain wallets since there
@@ -83,7 +83,7 @@ func (w *keystoreWallet) Derive(path accounts.DerivationPath, pin bool) (account
 func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain sero.ChainStateReader) {}
 
 func (w *keystoreWallet) AddressUnlocked(account accounts.Account) (bool, error) {
-	if account.Key != w.account.Key {
+	if account.Address != w.account.Address {
 		return false, accounts.ErrUnknownAccount
 	}
 	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {

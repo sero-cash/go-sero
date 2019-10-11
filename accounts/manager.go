@@ -21,8 +21,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/sero-cash/go-sero/common"
-
 	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/sero-cash/go-sero/event"
@@ -185,11 +183,6 @@ func (am *Manager) FindAccountByPkr(pkr c_type.PKr) (Account, error) {
 		}
 	}
 	return Account{}, ErrUnknownAccount
-}
-
-func (am *Manager) FindByKey(key *common.AccountKey) (Wallet, error) {
-	account := Account{Key: *key}
-	return am.Find(account)
 }
 
 // Subscribe creates an async subscription to receive notifications when the

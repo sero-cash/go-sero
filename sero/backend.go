@@ -383,7 +383,7 @@ func (s *Sero) StartMining(local bool) error {
 		return fmt.Errorf("serobase missing: %v", err)
 	}
 	current_height := s.blockchain.CurrentHeader().Number.Uint64()
-	pkr, lic, ret := c_czero.Pk2PKrAndLICr(eb.Key.ToUint512().NewRef(), current_height)
+	pkr, lic, ret := c_czero.Pk2PKrAndLICr(eb.Address.ToUint512().NewRef(), current_height)
 	ret = c_czero.CheckLICr(&pkr, &lic, current_height)
 	if !ret {
 		lic_t := c_czero.LICr{}

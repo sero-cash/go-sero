@@ -32,8 +32,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sero-cash/go-sero/common"
-
 	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/tyler-smith/go-bip39"
@@ -66,7 +64,7 @@ type KeyStore struct {
 	storage  keyStore                        // Storage backend, might be cleartext or encrypted
 	cache    *accountCache                   // In-memory account cache over the filesystem storage
 	changes  chan struct{}                   // Channel receiving change notifications from the cache
-	unlocked map[common.AccountKey]*unlocked // Currently unlocked account (decrypted private keys)
+	unlocked map[address.PKAddress]*unlocked // Currently unlocked account (decrypted private keys)
 
 	wallets     []accounts.Wallet       // Wallet wrappers around the individual key files
 	updateFeed  event.Feed              // Event feed to notify wallet additions/removals
@@ -95,7 +93,7 @@ func (ks *KeyStore) init(keydir string) {
 	defer ks.mu.Unlock()
 
 	// Initialize the set of unlocked keys and the account cache
-	ks.unlocked = make(map[common.AccountKey]*unlocked)
+	ks.unlocked = make(map[address.PKAddress]*unlocked)
 	ks.cache, ks.changes = newAccountCache(keydir)
 
 	// TODO: In order for this finalizer to work, there must be no references
@@ -224,8 +222,8 @@ func (ks *KeyStore) updater() {
 }
 
 // HasAddress reports whether a key with the given address is present.
-func (ks *KeyStore) HasAddress(accountKey common.AccountKey) bool {
-	return ks.cache.hasAddress(accountKey)
+func (ks *KeyStore) HasAddress(address address.PKAddress) bool {
+	return ks.cache.hasAddress(address)
 }
 
 // Accounts returns all key files present in the directory.
@@ -263,11 +261,11 @@ func (ks *KeyStore) Unlock(a accounts.Account, passphrase string) error {
 }
 
 // Lock removes the private key with the given address from memory.
-func (ks *KeyStore) Lock(accountKey common.AccountKey) error {
+func (ks *KeyStore) Lock(address address.PKAddress) error {
 	ks.mu.Lock()
-	if unl, found := ks.unlocked[accountKey]; found {
+	if unl, found := ks.unlocked[address]; found {
 		ks.mu.Unlock()
-		ks.expire(accountKey, unl, time.Duration(0)*time.Nanosecond)
+		ks.expire(address, unl, time.Duration(0)*time.Nanosecond)
 	} else {
 		ks.mu.Unlock()
 	}
@@ -289,7 +287,7 @@ func (ks *KeyStore) TimedUnlock(a accounts.Account, passphrase string, timeout t
 
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
-	u, found := ks.unlocked[a.Key]
+	u, found := ks.unlocked[a.Address]
 	if found {
 		if u.abort == nil {
 			// The address was unlocked indefinitely, so unlocking
@@ -302,11 +300,11 @@ func (ks *KeyStore) TimedUnlock(a accounts.Account, passphrase string, timeout t
 	}
 	if timeout > 0 {
 		u = &unlocked{Key: key, abort: make(chan struct{})}
-		go ks.expire(a.Key, u, timeout)
+		go ks.expire(a.Address, u, timeout)
 	} else {
 		u = &unlocked{Key: key}
 	}
-	ks.unlocked[a.Key] = u
+	ks.unlocked[a.Address] = u
 	return nil
 }
 
@@ -324,11 +322,11 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 	if err != nil {
 		return a, nil, err
 	}
-	key, err := ks.storage.GetKey(a.Key, a.URL.Path, auth)
+	key, err := ks.storage.GetKey(a.Address, a.URL.Path, auth)
 	return a, key, err
 }
 
-func (ks *KeyStore) expire(accountKey common.AccountKey, u *unlocked, timeout time.Duration) {
+func (ks *KeyStore) expire(address address.PKAddress, u *unlocked, timeout time.Duration) {
 	t := time.NewTimer(timeout)
 	defer t.Stop()
 	select {
@@ -340,9 +338,9 @@ func (ks *KeyStore) expire(accountKey common.AccountKey, u *unlocked, timeout ti
 		// was launched with. we can check that using pointer equality
 		// because the map stores a new pointer every time the key is
 		// unlocked.
-		if ks.unlocked[accountKey] == u {
+		if ks.unlocked[address] == u {
 			zeroKey(u.PrivateKey)
-			delete(ks.unlocked, accountKey)
+			delete(ks.unlocked, address)
 		}
 		ks.mu.Unlock()
 	}
@@ -399,6 +397,9 @@ func (ks *KeyStore) ExportMnemonic(a accounts.Account, passphrase string) (strin
 	if err != nil {
 		return "", err
 	}
+	if key.Version == 2 {
+		mnemonic = "v2 " + mnemonic
+	}
 	return mnemonic, nil
 }
 
@@ -427,7 +428,7 @@ func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (ac
 // ImportECDSA stores the given key into the key directory, encrypting it with the passphrase.
 func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string, at uint64, version int) (accounts.Account, error) {
 	key := newKeyFromECDSA(priv, at, version)
-	if ks.cache.hasAddress(key.AccountKey) {
+	if ks.cache.hasAddress(key.Address) {
 		return accounts.Account{}, fmt.Errorf("account already exists")
 	}
 	return ks.importKey(key, passphrase)
@@ -435,10 +436,10 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string, at ui
 
 func (ks *KeyStore) ImportTk(tk c_type.Tk, at uint64, version int) (accounts.Account, error) {
 	key := newKeyFromTk(&tk, at, version)
-	if ks.cache.hasAddress(key.AccountKey) {
+	if ks.cache.hasAddress(key.Address) {
 		return accounts.Account{}, fmt.Errorf("account already exists")
 	}
-	a := accounts.Account{Key: key.AccountKey, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.AccountKey))}, At: key.At, Version: key.Version}
+	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.Address))}, At: key.At, Version: key.Version}
 	if err := ks.storage.StoreKey(a.URL.Path, key, ""); err != nil {
 		return accounts.Account{}, err
 	}
@@ -448,7 +449,7 @@ func (ks *KeyStore) ImportTk(tk c_type.Tk, at uint64, version int) (accounts.Acc
 }
 
 func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, error) {
-	a := accounts.Account{Key: key.AccountKey, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.AccountKey))}, At: key.At, Version: key.Version}
+	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.Address))}, At: key.At, Version: key.Version}
 	if err := ks.storage.StoreKey(a.URL.Path, key, passphrase); err != nil {
 		return accounts.Account{}, err
 	}
@@ -480,7 +481,7 @@ func (ks *KeyStore) GetSeed(a accounts.Account) (*address.Seed, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
-	unlockedKey, found := ks.unlocked[a.Key]
+	unlockedKey, found := ks.unlocked[a.Address]
 	if !found {
 		return nil, ErrLocked
 	}

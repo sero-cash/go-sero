@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 
@@ -177,7 +177,7 @@ func (self *CmdsArgs) toCmds() prepare.Cmds {
 }
 
 type GenTxArgs struct {
-	From       PKAddress
+	From       address.PKAddress
 	RefundTo   *PKrAddress
 	Receptions []ReceptionArgs
 	Cmds       *CmdsArgs
@@ -224,7 +224,7 @@ func (args GenTxArgs) check() error {
 
 }
 
-func (args GenTxArgs) toTxParam(fromAccount accounts.Account) prepare.PreTxParam {
+func (args GenTxArgs) toTxParam() prepare.PreTxParam {
 	gasPrice := args.GasPrice.ToInt()
 
 	if gasPrice.Sign() == 0 {
@@ -253,7 +253,7 @@ func (args GenTxArgs) toTxParam(fromAccount accounts.Account) prepare.PreTxParam
 		cmds = args.Cmds.toCmds()
 	}
 	return prepare.PreTxParam{
-		fromAccount.Key,
+		args.From.ToUint512(),
 		refundPkr,
 		receptions,
 		cmds,

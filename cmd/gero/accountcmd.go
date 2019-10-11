@@ -158,7 +158,7 @@ func accountList(ctx *cli.Context) error {
 	var index int
 	for _, wallet := range stack.AccountManager().Wallets() {
 		for _, account := range wallet.Accounts() {
-			fmt.Printf("Account #%d: {%x} %s\n", index, account.Key, &account.URL)
+			fmt.Printf("Account #%d: {%x} %s\n", index, account.Address, &account.URL)
 			index++
 		}
 	}
@@ -176,11 +176,11 @@ func unlockAccount(ctx *cli.Context, ks *keystore.KeyStore, address string, i in
 		password := getPassPhrase(prompt, false, i, passwords)
 		err = ks.Unlock(account, password)
 		if err == nil {
-			log.Info("Unlocked account", "address", account.PkToString())
+			log.Info("Unlocked account", "address", account.Address.String())
 			return account, password
 		}
 		if err, ok := err.(*keystore.AmbiguousAddrError); ok {
-			log.Info("Unlocked account", "address", account.PkToString())
+			log.Info("Unlocked account", "address", account.Address.String())
 			return ambiguousAddrRecovery(ks, err, password), password
 		}
 		if err != keystore.ErrDecrypt {
@@ -225,7 +225,7 @@ func getPassPhrase(prompt string, confirmation bool, i int, passwords []string) 
 }
 
 func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrError, auth string) accounts.Account {
-	fmt.Printf("Multiple key files exist for address %x:\n", err.Key)
+	fmt.Printf("Multiple key files exist for address %x:\n", err.Address)
 	for _, a := range err.Matches {
 		fmt.Println("  ", a.URL)
 	}
@@ -313,6 +313,6 @@ func accountImport(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("Could not create the account: %v", err)
 	}
-	fmt.Printf("Data: {%x}\n", acct.Key)
+	fmt.Printf("Data: {%x}\n", acct.Address)
 	return nil
 }
