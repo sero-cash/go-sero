@@ -2692,10 +2692,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
         var paramAddress = function (addr) {
-            addrs = addr.split('\.');
+            addrs = addr.split('0');
             if (addrs.length == 1){
                 if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addr)) {
-                    bytes = base58ToBytes(addr)
+                    bytes = base58ToBytes(addr);
                     if (bytes.length !== 96 && bytes.length !=64) {
                         return false;
                     }
@@ -2910,7 +2910,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }else if (isHexStrict(addr)) {
                 return hexToBase58(addr);
             }else {
-                addrs = addr.split('\.');
+                addrs = addr.split('0');
                 if (addrs.length === 3){
                     if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addrs[1])) {
                         return addrs[1]
@@ -2942,12 +2942,15 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }
             if (isNewAddress(addr)) {
                 version = 1;
+                prefix += version;
+                protocol = hexToBytes(fromUtf8(prefix));
+                sum =md5(protocol.concat(bs));
+                checkSum = base58.encode(hexToBytes(sum)).substr(0,2);
+                return prefix+'0'+bs58+'0'+checkSum;
+            }else {
+                return bs58;
             }
-            prefix += version;
-            protocol = hexToBytes(fromUtf8(prefix));
-            sum =md5(protocol.concat(bs));
-            checkSum = base58.encode(hexToBytes(sum)).substr(0,2);
-            return prefix+'.'+bs58+'.'+checkSum;
+
         }
 
 

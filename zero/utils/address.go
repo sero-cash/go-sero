@@ -13,6 +13,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const separator = "0"
+
 type Address struct {
 	Bytes    []byte
 	Base58   string
@@ -101,7 +103,7 @@ func (self *Address) setBase58(bs string) (e error) {
 
 }
 func (self *Address) ToCode() (ret string) {
-	return self.Protocol + self.Version + "." + self.Base58 + "." + self.Sum
+	return self.Protocol + self.Version + separator + self.Base58 + separator + self.Sum
 }
 
 func Encode(b []byte) string {
@@ -155,6 +157,22 @@ func IsBase58Str(s string) bool {
 	}
 	return match
 }
+func isHexCharacter(c byte) bool {
+	return ('0' <= c && c <= '9') || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
+}
+
+func IsHex(s string) bool {
+	if has0xPrefix(s) {
+		s = s[2:]
+	}
+
+	for _, c := range []byte(s) {
+		if !isHexCharacter(c) {
+			return false
+		}
+	}
+	return false
+}
 
 func NewAddressByBase58(addr string) (ret Address, e error) {
 	if e = ret.setBase58(addr); e != nil {
@@ -164,29 +182,35 @@ func NewAddressByBase58(addr string) (ret Address, e error) {
 	return
 }
 
-var reg, _ = regexp.Compile(`^(.*)\.(.*)\.(.*)$`)
+//var reg, _ = regexp.Compile(`^(.*)\.(.*)\.(.*)$`)
+var reg, _ = regexp.Compile(`^(.*)0(.*)0(.*)$`)
 
 func NewAddressByString(addr string) (ret Address, e error) {
-	if strs := reg.FindStringSubmatch(addr); len(strs) != 4 {
-		if IsBase58Str(addr) {
-			return NewAddressByBase58(addr)
-		} else {
-			return NewAddressByHex(addr)
-		}
+	if IsHex(addr) {
+		return NewAddressByHex(addr)
 	} else {
-		if e = ret.setBase58(strs[2]); e != nil {
+		if strs := reg.FindStringSubmatch(addr); len(strs) != 4 {
+			if IsBase58Str(addr) {
+				return NewAddressByBase58(addr)
+			} else {
+				e = errors.New("invalid base58 string")
+				return
+			}
+		} else {
+			if e = ret.setBase58(strs[2]); e != nil {
+				return
+			}
+			ret.Protocol = strs[1][:len(strs[1])-1]
+			ret.calcSum()
+			if ret.Version != strs[1][len(strs[1])-1:] {
+				e = errors.New("the version check failed")
+				return
+			}
+			if ret.Sum != strs[3] {
+				e = errors.New("the sum check failed")
+				return
+			}
 			return
 		}
-		ret.Protocol = strs[1][:len(strs[1])-1]
-		ret.calcSum()
-		if ret.Version != strs[1][len(strs[1])-1:] {
-			e = errors.New("the version check failed")
-			return
-		}
-		if ret.Sum != strs[3] {
-			e = errors.New("the sum check failed")
-			return
-		}
-		return
 	}
 }
