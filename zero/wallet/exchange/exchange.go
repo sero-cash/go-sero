@@ -231,7 +231,7 @@ func (self *Exchange) updateAccount() {
 			self.lock.Lock()
 			switch event.Kind {
 			case accounts.WalletArrived:
-				//wallet := event.Wallet
+				// wallet := event.Wallet
 				self.initWallet(event.Wallet)
 			case accounts.WalletDropped:
 				accountKey := event.Wallet.Accounts()[0].Key
@@ -593,7 +593,7 @@ func (self *Exchange) iteratorUtxo(AccountKey *common.AccountKey, begin, end uin
 		if num >= end {
 			break
 		}
-		copy(key[:], key[12:76])
+		copy(accountkey[:], key[12:76])
 
 		if AccountKey != nil && *AccountKey != accountkey {
 			continue
@@ -794,7 +794,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, accountKeys []
 			key := AccountKey{key: *account.accountKey, Num: out.State.Num}
 			dout := DecOuts([]txtool.Out{out}, &account.skr)[0]
 			utxo := Utxo{Pkr: *pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset, IsZ: out.State.OS.IsZero()}
-			//log.Info("DecOuts", "PK", base58.EncodeToString(account.pk[:]), "root", common.Bytes2Hex(out.Root[:]), "currency", common.BytesToString(utxo.Asset.Tkn.Currency[:]), "value", utxo.Asset.Tkn.Value)
+			// log.Info("DecOuts", "PK", base58.EncodeToString(account.pk[:]), "root", common.Bytes2Hex(out.Root[:]), "currency", common.BytesToString(utxo.Asset.Tkn.Currency[:]), "value", utxo.Asset.Tkn.Value)
 			nilsMap[utxo.Root] = utxo
 			nilsMap[utxo.Nil] = utxo
 			log.Warn("++++++++++++DecOuts", "PK", base58.Encode(account.accountKey[:])[:5], "root", hexutil.Encode(utxo.Root[:])[:5], "cy", utils.Uint256ToCurrency(&utxo.Asset.Tkn.Currency), "value", utxo.Asset.Tkn.Value, "type", out.State.OS.TxType(), "nil", hexutil.Encode(dout.Nil[:]))
@@ -906,7 +906,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[AccountKey][]
 
 			// "ROOT" + root
 			batch.Put(rootKey(utxo.Root), data)
-			//nil => root
+			// nil => root
 			batch.Put(nilToRootKey(utxo.Nil), utxo.Root[:])
 
 			var pkKeys []byte
@@ -941,7 +941,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[AccountKey][]
 				txMap[utxo.TxHash] = []Utxo{utxo}
 			}
 
-			//log.Info("Index add", "PK", base58.EncodeToString(key.PK[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "root", common.Bytes2Hex(utxo.Root[:]), "Value", utxo.Asset.Tkn.Value)
+			// log.Info("Index add", "PK", base58.EncodeToString(key.PK[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "root", common.Bytes2Hex(utxo.Root[:]), "Value", utxo.Asset.Tkn.Value)
 		}
 
 		data, e := rlp.EncodeToBytes(roots)
@@ -993,7 +993,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[AccountKey][]
 			var root c_type.Uint256
 			copy(root[:], value[98:130])
 			delete(ops, common.Bytes2Hex(nilKey(root)))
-			//self.usedFlag.Delete(root)
+			// self.usedFlag.Delete(root)
 			delRoots = append(delRoots, root)
 
 			copy(accountKey[:], value[2:66])
@@ -1011,7 +1011,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[AccountKey][]
 				var root c_type.Uint256
 				copy(root[:], value[98:130])
 				batch.Delete(nilKey(root))
-				//self.usedFlag.Delete(root)
+				// self.usedFlag.Delete(root)
 				delRoots = append(delRoots, root)
 
 				copy(accountKey[:], value[2:66])
@@ -1277,9 +1277,9 @@ func rootKey(root c_type.Uint256) []byte {
 	return append(rootPrefix, root[:]...)
 }
 
-//func outUtxoKey(number uint64, pk c_type.Uint512) []byte {
+// func outUtxoKey(number uint64, pk c_type.Uint512) []byte {
 //	return append(outUtxoPrefix, append(encodeNumber(number), pk[:]...)...)
-//}
+// }
 
 // utxoKey = PK + currency +root
 func utxoAccountKeyKey(accountKey common.AccountKey, currency []byte, root *c_type.Uint256) []byte {
