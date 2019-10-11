@@ -420,6 +420,10 @@ func (b MixedcaseAddress) ToPkr(r *c_type.Uint256) (ret c_type.PKr) {
 	return
 }
 
+func (b MixedcaseAddress) MarshalText() ([]byte, error) {
+	return []byte(b.Origin), nil
+}
+
 func (b *MixedcaseAddress) UnmarshalText(input []byte) error {
 
 	if len(input) == 0 {

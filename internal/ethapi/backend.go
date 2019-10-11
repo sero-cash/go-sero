@@ -93,7 +93,7 @@ type Backend interface {
 	GetPkr(accountKey *common.AccountKey, index *c_type.Uint256) (c_type.PKr, error)
 	GetBalances(accountKey common.AccountKey) (balances map[string]*big.Int)
 	GenTx(param prepare.PreTxParam) (*txtool.GTxParam, error)
-	GetRecordsByPk(accountkey *common.AccountKey, begin, end uint64) (records []exchange.Utxo, err error)
+	GetRecordsByAccountKey(accountkey *common.AccountKey, begin, end uint64) (records []exchange.Utxo, err error)
 	GetRecordsByPkr(pkr c_type.PKr, begin, end uint64) (records []exchange.Utxo, err error)
 	GetLockedBalances(accountKey common.AccountKey) (balances map[string]*big.Int)
 	GetMaxAvailable(pk c_type.Uint512, currency string) (amount *big.Int)

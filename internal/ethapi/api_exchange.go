@@ -257,7 +257,7 @@ func (s *PublicExchangeAPI) GetRecords(ctx context.Context, begin, end uint64, a
 
 	var utxos []exchange.Utxo
 	if address == nil || len(*address) == 0 {
-		utxos, err = s.b.GetRecordsByPk(nil, begin, end)
+		utxos, err = s.b.GetRecordsByAccountKey(nil, begin, end)
 	} else {
 		addr := *address
 		if len(addr) == 64 {
@@ -267,7 +267,7 @@ func (s *PublicExchangeAPI) GetRecords(ctx context.Context, begin, end uint64, a
 			if err != nil {
 				return nil, err
 			}
-			utxos, err = s.b.GetRecordsByPk(&account.Key, begin, end)
+			utxos, err = s.b.GetRecordsByAccountKey(&account.Key, begin, end)
 		} else if len(addr) == 96 {
 			var pkr c_type.PKr
 			copy(pkr[:], addr[:])

@@ -602,7 +602,7 @@ func (self *Exchange) iteratorUtxo(AccountKey *common.AccountKey, begin, end uin
 		value := iterator.Value()
 		roots := []c_type.Uint256{}
 		if err := rlp.Decode(bytes.NewReader(value), &roots); err != nil {
-			log.Error("Invalid roots RLP", "PK", common.Bytes2Hex(accountkey[:]), "blockNumber", num, "err", err)
+			log.Error("Invalid roots RLP", "accoutKey", common.Bytes2Hex(accountkey[:]), "blockNumber", num, "err", err)
 			e = err
 			return
 		}
@@ -797,7 +797,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, accountKeys []
 			// log.Info("DecOuts", "PK", base58.EncodeToString(account.pk[:]), "root", common.Bytes2Hex(out.Root[:]), "currency", common.BytesToString(utxo.Asset.Tkn.Currency[:]), "value", utxo.Asset.Tkn.Value)
 			nilsMap[utxo.Root] = utxo
 			nilsMap[utxo.Nil] = utxo
-			log.Warn("++++++++++++DecOuts", "PK", base58.Encode(account.accountKey[:])[:5], "root", hexutil.Encode(utxo.Root[:])[:5], "cy", utils.Uint256ToCurrency(&utxo.Asset.Tkn.Currency), "value", utxo.Asset.Tkn.Value, "type", out.State.OS.TxType(), "nil", hexutil.Encode(dout.Nil[:]))
+			log.Warn("++++++++++++DecOuts", "accountKey", base58.Encode(account.accountKey[:])[:5], "root", hexutil.Encode(utxo.Root[:])[:5], "cy", utils.Uint256ToCurrency(&utxo.Asset.Tkn.Currency), "value", utxo.Asset.Tkn.Value, "type", out.State.OS.TxType(), "nil", hexutil.Encode(dout.Nil[:]))
 
 			if list, ok := utxosMap[key]; ok {
 				utxosMap[key] = append(list, utxo)

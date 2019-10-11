@@ -324,7 +324,7 @@ func (b *SeroAPIBackend) GetRecordsByPkr(pkr c_type.PKr, begin, end uint64) (rec
 	return b.sero.exchange.GetRecordsByPkr(pkr, begin, end)
 }
 
-func (b *SeroAPIBackend) GetRecordsByPk(accountKey *common.AccountKey, begin, end uint64) (records []exchange.Utxo, err error) {
+func (b *SeroAPIBackend) GetRecordsByAccountKey(accountKey *common.AccountKey, begin, end uint64) (records []exchange.Utxo, err error) {
 	if b.sero.exchange == nil {
 		err = errors.New("not start exchange")
 		return
