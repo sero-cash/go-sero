@@ -799,8 +799,10 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr AllMixedAddre
 			return Balance{}, err
 		}
 		if seroparam.IsExchange() {
-			exchangBalance := s.b.GetBalances(fromAccount.Address.ToUint512())
-			return GetBalanceFromExchange(exchangBalance), nil
+			exchangBalance,ticekts := s.b.GetBalances(fromAccount.Address.ToUint512())
+			balance := GetBalanceFromExchange(exchangBalance)
+			balance.Tkt = ticekts;
+			return balance, nil
 		} else {
 			return result, errors.New("lstate.balance is no longer supported")
 		}

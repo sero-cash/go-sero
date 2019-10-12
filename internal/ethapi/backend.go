@@ -91,7 +91,7 @@ type Backend interface {
 
 	GetPkNumber(pk c_type.Uint512) (number uint64, e error)
 	GetPkr(pk *c_type.Uint512, index *c_type.Uint256) (c_type.PKr, error)
-	GetBalances(pk c_type.Uint512) (balances map[string]*big.Int)
+	GetBalances(pk c_type.Uint512) (balances map[string]*big.Int, tickets map[string][]*common.Hash)
 	GenTx(param prepare.PreTxParam) (*txtool.GTxParam, error)
 	GetRecordsByPk(pk *c_type.Uint512, begin, end uint64) (records []exchange.Utxo, err error)
 	GetRecordsByPkr(pkr c_type.PKr, begin, end uint64) (records []exchange.Utxo, err error)

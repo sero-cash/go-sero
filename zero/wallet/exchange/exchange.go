@@ -13,8 +13,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
-	"github.com/btcsuite/btcutil/base58"
-
 	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/common/address"
@@ -46,6 +44,7 @@ type Account struct {
 	skr           c_type.PKr
 	mainPkr       c_type.PKr
 	balances      map[string]*big.Int
+	tickets       map[string][]*common.Hash
 	utxoNums      map[string]uint64
 	isChanged     bool
 	nextMergeTime time.Time
@@ -376,13 +375,14 @@ func (self *Exchange) GetMaxAvailable(pk c_type.Uint512, currency string) (amoun
 	return
 }
 
-func (self *Exchange) GetBalances(pk c_type.Uint512) (balances map[string]*big.Int) {
+func (self *Exchange) GetBalances(pk c_type.Uint512) (balances map[string]*big.Int, tickets map[string][]*common.Hash) {
 	if value, ok := self.accounts.Load(pk); ok {
 		account := value.(*Account)
 		if account.isChanged {
 			prefix := append(pkPrefix, pk[:]...)
 			iterator := self.db.NewIteratorWithPrefix(prefix)
 			balances = map[string]*big.Int{}
+			tickets = make(map[string][]*common.Hash)
 			utxoNums := map[string]uint64{}
 			for iterator.Next() {
 				key := iterator.Key()
@@ -399,13 +399,23 @@ func (self *Exchange) GetBalances(pk c_type.Uint512) (balances map[string]*big.I
 							utxoNums[currency] = 1
 						}
 					}
+					if utxo.Asset.Tkt != nil {
+						category := common.BytesToString(utxo.Asset.Tkt.Category[:])
+						ticket := common.BytesToHash(utxo.Asset.Tkt.Value[:])
+						if _, ok := tickets[category]; ok {
+							tickets[category] = append(tickets[category], &ticket)
+						} else {
+							tickets[category] = []*common.Hash{&ticket}
+						}
+					}
 				}
 			}
 			account.balances = balances
+			account.tickets = tickets;
 			account.utxoNums = utxoNums
 			account.isChanged = false
 		} else {
-			return account.balances
+			return account.balances, account.tickets
 		}
 	}
 
@@ -797,7 +807,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 			// log.Info("DecOuts", "PK", base58.EncodeToString(account.pk[:]), "root", common.Bytes2Hex(out.Root[:]), "currency", common.BytesToString(utxo.Asset.Tkn.Currency[:]), "value", utxo.Asset.Tkn.Value)
 			nilsMap[utxo.Root] = utxo
 			nilsMap[utxo.Nil] = utxo
-			log.Warn("++++++++++++DecOuts", "PK", base58.Encode(account.pk[:])[:5], "root", hexutil.Encode(utxo.Root[:])[:5], "cy", utils.Uint256ToCurrency(&utxo.Asset.Tkn.Currency), "value", utxo.Asset.Tkn.Value, "type", out.State.OS.TxType(), "nil", hexutil.Encode(dout.Nil[:]))
+			// log.Warn("++++++++++++DecOuts", "PK", base58.Encode(account.pk[:])[:5], "root", hexutil.Encode(utxo.Root[:])[:5], "cy", utils.Uint256ToCurrency(&utxo.Asset.Tkn.Currency), "value", utxo.Asset.Tkn.Value, "type", out.State.OS.TxType(), "nil", hexutil.Encode(dout.Nil[:]))
 
 			if list, ok := utxosMap[key]; ok {
 				utxosMap[key] = append(list, utxo)

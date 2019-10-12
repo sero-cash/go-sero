@@ -301,7 +301,7 @@ func (b *SeroAPIBackend) GetMaxAvailable(pk c_type.Uint512, currency string) (am
 	return b.sero.exchange.GetMaxAvailable(pk, currency)
 }
 
-func (b *SeroAPIBackend) GetBalances(pk c_type.Uint512) (balances map[string]*big.Int) {
+func (b *SeroAPIBackend) GetBalances(pk c_type.Uint512) (balances map[string]*big.Int, tickets map[string][]*common.Hash) {
 	if b.sero.exchange == nil {
 		return
 	}

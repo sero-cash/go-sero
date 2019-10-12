@@ -93,14 +93,14 @@ func (s *PublicExchangeAPI) GetMaxAvailable(pk address.PKAddress, currency Smbol
 	return (*Big)(s.b.GetMaxAvailable(pk.ToUint512(), string(currency)))
 }
 
-func (s *PublicExchangeAPI) GetBalances(ctx context.Context, pk address.PKAddress) map[string]*Big {
+func (s *PublicExchangeAPI) GetBalances(ctx context.Context, pk address.PKAddress) (map[string]*Big, map[string][]*common.Hash){
 	result := map[string]*Big{}
 
-	balances := s.b.GetBalances(pk.ToUint512())
+	balances,tickets := s.b.GetBalances(pk.ToUint512())
 	for k, v := range balances {
 		result[k] = (*Big)(v)
 	}
-	return result
+	return result, tickets
 }
 
 type ReceptionArgs struct {
