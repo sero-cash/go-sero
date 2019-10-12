@@ -9,7 +9,7 @@ import (
 	"github.com/sero-cash/go-sero/zero/txtool"
 )
 
-func ConfirmOutC(key *c_type.Uint256, outc *stx_v1.Out_C) (dout *txtool.TDOut) {
+func ConfirmOutC(key *c_type.Uint256, outc *stx_v1.Out_C) (dout *txtool.TDOut, ar c_type.Uint256) {
 	info := c_superzk.DecInfoDesc{}
 	info.Key = *key
 	info.Einfo = outc.EInfo
@@ -17,6 +17,7 @@ func ConfirmOutC(key *c_type.Uint256, outc *stx_v1.Out_C) (dout *txtool.TDOut) {
 	asset_desc := c_superzk.AssetDesc{}
 	asset_desc.Asset = info.Asset_ret
 	asset_desc.Ar = info.Ar_ret
+	ar = asset_desc.Ar
 	if e := c_superzk.GenAssetCM(&asset_desc); e != nil {
 		return
 	}

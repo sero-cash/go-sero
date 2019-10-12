@@ -290,11 +290,11 @@ func (self *sign_ctx) genInsP() (e error) {
 			asset_desc = in.Out.State.OS.Out_P.Asset
 		} else {
 			if out_c := in.Out.State.OS.Out_C; out_c != nil {
-				if key, err := c_superzk.FetchKey(&out_c.PKr, &tk, &out_c.RPK); err != nil {
+				if key, _, err := c_superzk.FetchKey(&out_c.PKr, &tk, &out_c.RPK); err != nil {
 					e = err
 					return
 				} else {
-					if dout := ConfirmOutC(&key, out_c); dout == nil {
+					if dout, _ := ConfirmOutC(&key, out_c); dout == nil {
 						e = errors.New("gen tx1 confirm outz error")
 						return
 					} else {
@@ -331,24 +331,29 @@ func (self *sign_ctx) genInsC() (e error) {
 			return
 		}
 
-		key, err := c_superzk.FetchKey(&in.Out.State.OS.Out_C.PKr, &tk, &in.Out.State.OS.Out_C.RPK)
+		key, vskr, err := c_superzk.FetchKey(&in.Out.State.OS.Out_C.PKr, &tk, &in.Out.State.OS.Out_C.RPK)
 		if err != nil {
 			e = err
 			return
 		}
+		in.Vskr = &vskr
 
-		dout := ConfirmOutC(&key, in.Out.State.OS.Out_C)
+		dout, ar_old := ConfirmOutC(&key, in.Out.State.OS.Out_C)
 		if dout == nil {
 			e = errors.New("gen in_c error: can not find out_c")
 			return
 		}
+		in.ArOld = &ar_old
 		self.keys = append(self.keys, key)
 
 		in.Ar = c_superzk.RandomFr().NewRef()
-		t_in.AssetCM, e = c_superzk.GenAssetCM_PC(dout.Asset.ToTypeAsset().NewRef(), in.Ar)
-		if e != nil {
+		cm, cc, err := c_superzk.GenAssetCM_PC(dout.Asset.ToTypeAsset().NewRef(), in.Ar)
+		if err != nil {
+			e = err
 			return
 		}
+		t_in.AssetCM = cm
+		in.CC = &cc
 
 		in.A = c_superzk.RandomFr().NewRef()
 		t_in.ZPKa, e = c_superzk.GenZPKa(&in.Out.State.OS.Out_C.PKr, in.A)
@@ -370,7 +375,7 @@ func (self *sign_ctx) genOutsC() (e error) {
 		t_out := stx_v1.Out_C{}
 
 		out.Ar = c_superzk.RandomFr().NewRef()
-		t_out.AssetCM, e = c_superzk.GenAssetCM_PC(out.Asset.ToTypeAsset().NewRef(), out.Ar)
+		t_out.AssetCM, _, e = c_superzk.GenAssetCM_PC(out.Asset.ToTypeAsset().NewRef(), out.Ar)
 		if e != nil {
 			return
 		}

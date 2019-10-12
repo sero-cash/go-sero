@@ -98,8 +98,8 @@ func DecOut(tk *c_type.Tk, outs []txtool.Out) (douts []txtool.TDOut) {
 
 		} else if out.State.OS.Out_C != nil {
 
-			if key, e := c_superzk.FetchKey(&out.State.OS.Out_C.PKr, tk, &out.State.OS.Out_C.RPK); e == nil {
-				if confirm_out := generate_1.ConfirmOutC(&key, out.State.OS.Out_C); confirm_out != nil {
+			if key, _, e := c_superzk.FetchKey(&out.State.OS.Out_C.PKr, tk, &out.State.OS.Out_C.RPK); e == nil {
+				if confirm_out, _ := generate_1.ConfirmOutC(&key, out.State.OS.Out_C); confirm_out != nil {
 					if nl, e := c_superzk.GenNil(tk, out.State.OS.RootCM.NewRef(), &out.State.OS.Out_C.PKr); e == nil {
 						dout = *confirm_out
 						dout.Nils = append(dout.Nils, nl)

@@ -52,8 +52,8 @@ func DecNilOuts(outs []txtool.Out, skr *c_type.PKr) (douts []txtool.DOut) {
 			}
 			log.Printf("DecOuts Out_P")
 		} else if out.State.OS.Out_C != nil {
-			if key, e := c_superzk.FetchKey(&out.State.OS.Out_C.PKr, &tk, &out.State.OS.Out_C.RPK); e == nil {
-				if o := generate_1.ConfirmOutC(&key, out.State.OS.Out_C); o != nil {
+			if key, _, e := c_superzk.FetchKey(&out.State.OS.Out_C.PKr, &tk, &out.State.OS.Out_C.RPK); e == nil {
+				if o, _ := generate_1.ConfirmOutC(&key, out.State.OS.Out_C); o != nil {
 					if nl, e := c_superzk.GenNil(&tk, out.State.OS.RootCM.NewRef(), out.State.OS.ToPKr()); e == nil {
 						dout.Asset = o.Asset
 						dout.Memo = o.Memo

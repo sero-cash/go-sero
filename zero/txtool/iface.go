@@ -18,6 +18,9 @@ type GIn struct {
 	Witness Witness
 	A       *c_type.Uint256
 	Ar      *c_type.Uint256
+	ArOld   *c_type.Uint256
+	Vskr    *c_type.Uint256
+	CC      *c_type.Uint256
 }
 
 type GOut struct {

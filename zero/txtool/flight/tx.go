@@ -37,9 +37,15 @@ func SignTx1(txParam *txtool.GTxParam) (tx stx.T, param txtool.GTxParam, keys []
 }
 
 func ProveTx1(tx *stx.T, param *txtool.GTxParam) (gtx txtool.GTx, e error) {
-	gtx.Tx = *tx
-	gtx.Gas = hexutil.Uint64(param.Gas)
-	gtx.GasPrice = hexutil.Big(*param.GasPrice)
-	gtx.Hash = gtx.Tx.ToHash()
-	return
+	if ctx, err := generate_1.ProveTx(tx, param); err != nil {
+		e = err
+		return
+	} else {
+		gtx.Tx = ctx.Tx()
+		gtx.Gas = hexutil.Uint64(param.Gas)
+		gtx.GasPrice = hexutil.Big(*param.GasPrice)
+		gtx.Hash = gtx.Tx.ToHash()
+		return
+
+	}
 }

@@ -203,7 +203,7 @@ func (self *verifyWithStateCtx) verifyInsP() (e error) {
 						e = err
 						return
 					} else {
-						if cm, err := c_superzk.GenAssetCM_PC(&asset, &ar); err != nil {
+						if cm, _, err := c_superzk.GenAssetCM_PC(&asset, &ar); err != nil {
 							e = err
 							return
 						} else {

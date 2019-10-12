@@ -3,6 +3,8 @@ package verify_1
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/utils"
+
 	"github.com/pkg/errors"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
@@ -15,12 +17,14 @@ import (
 )
 
 type verifyWithoutStateCtx struct {
-	tx         *stx.T
-	hash       c_type.Uint256
-	oout_count int
-	oin_count  int
-	zout_count int
-	zin_count  int
+	tx              *stx.T
+	hash            c_type.Uint256
+	oout_count      int
+	oin_count       int
+	zout_count      int
+	zin_count       int
+	cin_proof_proc  *utils.Procs
+	cout_proof_proc *utils.Procs
 }
 
 func VerifyWithoutState(ehash *c_type.Uint256, tx *stx.T) (e error) {
@@ -35,11 +39,14 @@ func VerifyWithoutState(ehash *c_type.Uint256, tx *stx.T) (e error) {
 
 func (self *verifyWithoutStateCtx) prepare() {
 	self.hash = self.tx.Tx1_Hash()
+	self.cin_proof_proc = verify_input_procs_pool.GetProcs()
+	self.cout_proof_proc = verify_output_procs_pool.GetProcs()
 	return
 }
 
 func (self *verifyWithoutStateCtx) clear() {
-
+	verify_input_procs_pool.PutProcs(self.cin_proof_proc)
+	verify_output_procs_pool.PutProcs(self.cout_proof_proc)
 }
 
 func (self *verifyWithoutStateCtx) verifyDescO() (e error) {
@@ -203,6 +210,20 @@ func (self *verifyWithoutStateCtx) verifyBalance() (e error) {
 	return
 }
 
+func (self *verifyWithoutStateCtx) WaitVerifyProof() (e error) {
+	if self.cin_proof_proc.HasProc() {
+		if e = self.cin_proof_proc.End(); e != nil {
+			return
+		}
+	}
+	if self.cout_proof_proc.HasProc() {
+		if e = self.cout_proof_proc.End(); e != nil {
+			return
+		}
+	}
+	return
+}
+
 func (self *verifyWithoutStateCtx) verify() (e error) {
 	self.prepare()
 	defer self.clear()
@@ -242,6 +263,9 @@ func (self *verifyWithoutStateCtx) verify() (e error) {
 		}
 	}
 	if e = self.verifyBalance(); e != nil {
+		return
+	}
+	if e = self.WaitVerifyProof(); e != nil {
 		return
 	}
 	return
