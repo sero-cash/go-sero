@@ -692,21 +692,15 @@ func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses
 
 }
 
-func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk address.PKAddress) (string, error) {
+func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk address.PKAddress) (PKrAddress, error) {
 	account, err := s.b.AccountManager().FindAccountByPk(Pk.ToUint512())
 	if err != nil {
-		return "", err
+		return PKrAddress{}, err
 	}
 	PKr := account.GetPkr(nil)
 	result := PKrAddress{}
 	copy(result[:], PKr[:])
-	currentBlock := uint64(s.BlockNumber())
-	if currentBlock >= seroparam.SIP5() {
-		return result.String(), nil
-	} else {
-		return result.Base58(), nil
-	}
-
+	return result, nil
 }
 
 func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk address.PKAddress, index int64) (PKrAddress, error) {
@@ -801,9 +795,9 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, addr AllMixedAddre
 			return Balance{}, err
 		}
 		if seroparam.IsExchange() {
-			exchangBalance,ticekts := s.b.GetBalances(fromAccount.Address.ToUint512())
+			exchangBalance, ticekts := s.b.GetBalances(fromAccount.Address.ToUint512())
 			balance := GetBalanceFromExchange(exchangBalance)
-			balance.Tkt = ticekts;
+			balance.Tkt = ticekts
 			return balance, nil
 		} else {
 			return result, errors.New("lstate.balance is no longer supported")
