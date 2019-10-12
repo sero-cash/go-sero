@@ -149,8 +149,8 @@ func (self *StakeService) stakeIndex() {
 	if start == uint64(math.MaxUint64) {
 		return
 	}
-	if start < seroparam.SIP4() {
-		start = seroparam.SIP4()
+	if !seroparam.Is_Dev() &&  start < 1300000 {
+		start = 1300000
 	}
 
 	header := self.bc.CurrentHeader()
