@@ -334,7 +334,7 @@ func (a Address) MarshalText() ([]byte, error) {
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *Address) UnmarshalText(input []byte) error {
-	if IsBase58Str(string(input)) {
+	if !IsBase58Str(string(input)) {
 		return errors.New("is not base58 string")
 	}
 	b := base58.Decode(string(input))
