@@ -804,10 +804,8 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 			key := PkKey{key: *account.pk, Num: out.State.Num}
 			dout := DecOuts([]txtool.Out{out}, &account.skr)[0]
 			utxo := Utxo{Pkr: *pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset, IsZ: out.State.OS.IsZero()}
-			// log.Info("DecOuts", "PK", base58.EncodeToString(account.pk[:]), "root", common.Bytes2Hex(out.Root[:]), "currency", common.BytesToString(utxo.Asset.Tkn.Currency[:]), "value", utxo.Asset.Tkn.Value)
 			nilsMap[utxo.Root] = utxo
 			nilsMap[utxo.Nil] = utxo
-			// log.Warn("++++++++++++DecOuts", "PK", base58.Encode(account.pk[:])[:5], "root", hexutil.Encode(utxo.Root[:])[:5], "cy", utils.Uint256ToCurrency(&utxo.Asset.Tkn.Currency), "value", utxo.Asset.Tkn.Value, "type", out.State.OS.TxType(), "nil", hexutil.Encode(dout.Nil[:]))
 
 			if list, ok := utxosMap[key]; ok {
 				utxosMap[key] = append(list, utxo)
@@ -843,8 +841,6 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 						continue
 					}
 				}
-				log.Warn("------------Nils", "root", hexutil.Encode(utxo.Root[:])[:5], "cy", utils.Uint256ToCurrency(&utxo.Asset.Tkn.Currency), "value", utxo.Asset.Tkn.Value, "type", utxo.NilTxType(), "nil", hexutil.Encode(Nil[:]))
-
 				nils = append(nils, Nil)
 				roots = append(roots, utxo.Root)
 			}
