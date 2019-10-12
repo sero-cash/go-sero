@@ -173,7 +173,7 @@ func IsHex(s string) bool {
 			return false
 		}
 	}
-	return false
+	return true
 }
 
 func NewAddressByBase58(addr string) (ret Address, e error) {
