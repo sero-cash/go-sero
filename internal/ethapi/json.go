@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/common/address"
+	"github.com/sero-cash/go-sero/zero/account"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
-
-	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -91,7 +89,7 @@ func (b PKrAddress) ToPKr() *c_type.PKr {
 
 func (b PKrAddress) MarshalText() ([]byte, error) {
 	if c_superzk.IsSzkPKr(b.ToPKr()) {
-		a := utils.NewAddressByBytes(b[:])
+		a := account.NewAddressByBytes(b[:])
 		a.SetProtocol("SC")
 		return []byte(a.ToCode()), nil
 	} else {
@@ -101,7 +99,7 @@ func (b PKrAddress) MarshalText() ([]byte, error) {
 }
 
 func (b PKrAddress) String() string {
-	a := utils.NewAddressByBytes(b[:])
+	a := account.NewAddressByBytes(b[:])
 	a.SetProtocol("SC")
 	return a.ToCode()
 }
@@ -115,10 +113,10 @@ func (b *PKrAddress) UnmarshalText(input []byte) error {
 	if len(input) == 0 {
 		return nil
 	}
-	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+	if addr, e := account.NewAddressByString(string(input)); e != nil {
 		return e
 	} else {
-		err := address.ValidPkr(addr)
+		err := account.ValidPkr(addr)
 		if err != nil {
 			return err
 		}
@@ -140,19 +138,19 @@ func (b *MixAdrress) UnmarshalText(input []byte) error {
 		return nil
 	}
 
-	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+	if addr, e := account.NewAddressByString(string(input)); e != nil {
 		return e
 	} else {
 		out := addr.Bytes
 		if len(out) == 96 {
-			err := address.ValidPkr(addr)
+			err := account.ValidPkr(addr)
 			if err != nil {
 				return err
 			}
 			*b = out[:]
 			return nil
 		} else if len(out) == 64 {
-			err := address.ValidPk(addr)
+			err := account.ValidPk(addr)
 			if err != nil {
 				return err
 			}
@@ -211,7 +209,7 @@ func (b *AllMixedAddress) UnmarshalText(input []byte) error {
 	if len(input) == 0 {
 		return ErrEmptyString
 	}
-	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+	if addr, e := account.NewAddressByString(string(input)); e != nil {
 		return e
 	} else {
 		out := addr.Bytes
@@ -223,7 +221,7 @@ func (b *AllMixedAddress) UnmarshalText(input []byte) error {
 					copy(b[:], out)
 					return nil
 				} else {
-					err := address.ValidPkr(addr)
+					err := account.ValidPkr(addr)
 					if err != nil {
 						return err
 					}
@@ -241,7 +239,7 @@ func (b *AllMixedAddress) UnmarshalText(input []byte) error {
 					copy(b[:], out)
 					return nil
 				} else {
-					err := address.ValidPk(addr)
+					err := account.ValidPk(addr)
 					if err != nil {
 						return err
 					}
@@ -277,7 +275,7 @@ func (b *ContractAddress) UnmarshalText(input []byte) error {
 		return ErrEmptyString
 	}
 
-	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+	if addr, e := account.NewAddressByString(string(input)); e != nil {
 		return e
 	} else {
 		if !addr.MatchProtocol("SS") {
@@ -362,7 +360,7 @@ func (b *MixedcaseAddress) UnmarshalText(input []byte) error {
 		return ErrEmptyString
 	}
 
-	if addr, e := utils.NewAddressByString(string(input)); e != nil {
+	if addr, e := account.NewAddressByString(string(input)); e != nil {
 		return e
 	} else {
 		b.Origin = string(input)
@@ -377,7 +375,7 @@ func (b *MixedcaseAddress) UnmarshalText(input []byte) error {
 				return nil
 			} else {
 				if len(addr.Bytes) == 96 {
-					err := address.ValidPkr(addr)
+					err := account.ValidPkr(addr)
 					if err != nil {
 						return nil
 					}
@@ -385,7 +383,7 @@ func (b *MixedcaseAddress) UnmarshalText(input []byte) error {
 					return nil
 
 				} else if len(addr.Bytes) == 64 {
-					err := address.ValidPk(addr)
+					err := account.ValidPk(addr)
 					if err != nil {
 						return nil
 					}

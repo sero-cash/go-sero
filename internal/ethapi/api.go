@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/account"
+
 	"github.com/btcsuite/btcutil/base58"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
@@ -223,9 +225,9 @@ func NewPublicAccountAPI(am *accounts.Manager) *PublicAccountAPI {
 func (s *PublicAccountAPI) GetSzkAccounts() []string {
 	addresses := make([]string, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
-		for _, account := range wallet.Accounts() {
-			pk, _ := c_superzk.Tk2Pk(account.Tk.ToTk().NewRef())
-			addr := utils.NewAddressByBytes(pk[:])
+		for _, acc := range wallet.Accounts() {
+			pk, _ := c_superzk.Tk2Pk(acc.Tk.ToTk().NewRef())
+			addr := account.NewAddressByBytes(pk[:])
 			addr.SetProtocol("SP")
 			addresses = append(addresses, addr.ToCode())
 		}

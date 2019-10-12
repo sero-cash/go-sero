@@ -19,6 +19,7 @@ package common
 
 import (
 	"encoding/hex"
+	"strings"
 )
 
 // ToHex returns the hex representation of b, prefixed with '0x'.
@@ -123,4 +124,8 @@ func LeftPadBytes(slice []byte, l int) []byte {
 	copy(padded[l-len(slice):], slice)
 
 	return padded
+}
+
+func BytesToString(b []byte) string {
+	return strings.Trim(string(b), string([]byte{0}))
 }

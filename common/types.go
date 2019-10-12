@@ -25,10 +25,12 @@ import (
 	"math/rand"
 	"reflect"
 	"regexp"
-	"strings"
+
+	"github.com/sero-cash/go-sero/zero/account"
+
+	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
-	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/pkg/errors"
 
@@ -37,7 +39,6 @@ import (
 	"github.com/sero-cash/go-sero/crypto/sha3"
 
 	"github.com/sero-cash/go-czero-import/c_type"
-	"github.com/sero-cash/go-sero/common/hexutil"
 )
 
 // Lengths of hashes and addresses in bytes.
@@ -236,10 +237,6 @@ func (a *ContractAddress) UnmarshalText(input []byte) error {
 	return hexutil.UnmarshalFixedText("ContractAddress", input, a[:])
 }
 
-func BytesToString(b []byte) string {
-	return strings.Trim(string(b), string([]byte{0}))
-}
-
 // BytesToAddress returns Data with value b.
 // If b is larger than len(h), b will be cropped from the left.
 func BytesToAddress(b []byte) Address {
@@ -334,21 +331,37 @@ func (a Address) MarshalText() ([]byte, error) {
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *Address) UnmarshalText(input []byte) error {
-	if !IsBase58Str(string(input)) {
-		return errors.New("is not base58 string")
-	}
-	b := base58.Decode(string(input))
-	if len(b) != 96 {
-		return errors.New("invalid address must be 96 btyes")
-	}
-	pkr := c_type.PKr{}
-	copy(pkr[:], b[:])
-	if !superzk.IsPKrValid(&pkr) {
-		return errors.New("invalid PKr base58")
+
+	if addr, e := account.NewAddressByString(string(input)); e != nil {
+		return e
 	} else {
-		copy(a[:], b)
-		return nil
+		if addr.IsHex {
+			return errors.New("is not base58 address")
+		}
+		out := addr.Bytes
+		if len(out) != 64 && len(out) != 96 {
+			return errors.New("address lenght must be 64 or 96 bytes")
+		}
+		if len(out) == 96 {
+			empty := Hash{}
+			if bytes.Compare(out[64:], empty[:]) != 0 {
+				err := account.ValidPkr(addr)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		if len(out) == 64 {
+			if addr.Protocol != "" && addr.Protocol == "SP" {
+				err := account.ValidPk(addr)
+				if err != nil {
+					return nil
+				}
+			}
+		}
+		copy(a[:], out)
 	}
+	return nil
 }
 
 // UnmarshalJSON parses a hash in hex syntax.

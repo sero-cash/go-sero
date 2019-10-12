@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/account"
+
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
@@ -516,7 +518,7 @@ type StakePool struct {
 
 func PkrToString(pkr c_type.PKr) string {
 	if c_superzk.IsSzkPKr(&pkr) {
-		addr := utils.NewAddressByBytes(pkr[:])
+		addr := account.NewAddressByBytes(pkr[:])
 		return addr.SetProtocol("SC").ToCode()
 	} else {
 		return base58.Encode(pkr[:])
