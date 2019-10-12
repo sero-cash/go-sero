@@ -323,22 +323,22 @@ func (s *PrivateAccountAPI) ListWallets() []rawWallet {
 // NewAccount will create a new account and returns the address for the new account.
 func (s *PrivateAccountAPI) NewAccount(password string) (address.PKAddress, error) {
 	maxNumber := s.b.Downloader().Progress().HighestBlock
-
-	if seroparam.Is_Dev() {
-		maxNumber = uint64(0)
-	} else {
-		current := s.b.CurrentBlock()
-		if current != nil {
-			if maxNumber < current.NumberU64() {
-				maxNumber = current.NumberU64()
-			}
+	current := s.b.CurrentBlock()
+	at := uint64(0)
+	if current != nil {
+		if maxNumber < current.NumberU64() {
+			maxNumber = current.NumberU64()
 		}
+	}
+	at = maxNumber
+	if seroparam.Is_Dev() {
+		at = uint64(0)
 	}
 	version := 1
 	if maxNumber >= seroparam.SIP5() {
 		version = 2
 	}
-	acc, err := fetchKeystore(s.am).NewAccount(password, maxNumber, version)
+	acc, err := fetchKeystore(s.am).NewAccount(password, at, version)
 	if err != nil {
 		return address.PKAddress{}, err
 	}
@@ -352,22 +352,22 @@ func (s *PrivateAccountAPI) NewAccount(password string) (address.PKAddress, erro
 // NewAccount will create a new account and returns the mnemonic 、address for the new account.
 func (s *PrivateAccountAPI) NewAccountWithMnemonic(password string) (map[string]interface{}, error) {
 	maxNumber := s.b.Downloader().Progress().HighestBlock
-
-	if seroparam.Is_Dev() {
-		maxNumber = uint64(0)
-	} else {
-		current := s.b.CurrentBlock()
-		if current != nil {
-			if maxNumber < current.NumberU64() {
-				maxNumber = current.NumberU64()
-			}
+	current := s.b.CurrentBlock()
+	at := uint64(0)
+	if current != nil {
+		if maxNumber < current.NumberU64() {
+			maxNumber = current.NumberU64()
 		}
+	}
+	at = maxNumber
+	if seroparam.Is_Dev() {
+		at = uint64(0)
 	}
 	version := 1
 	if maxNumber >= seroparam.SIP5() {
 		version = 2
 	}
-	mnemonic, acc, err := fetchKeystore(s.am).NewAccountWithMnemonic(password, maxNumber, version)
+	mnemonic, acc, err := fetchKeystore(s.am).NewAccountWithMnemonic(password, at, version)
 	if err != nil {
 		return nil, err
 	}
@@ -672,27 +672,19 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *c_
 	return &ConvertAddress{addrMap, shortAddrMap, rand}, nil
 }
 
-func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses []common.ContractAddress) (map[common.ContractAddress]common.Address, error) {
+func (s *PublicBlockChainAPI) GetFullAddress(ctx context.Context, shortAddresses []common.ContractAddress) (map[common.ContractAddress]PKrAddress, error) {
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
 		return nil, err
 	}
-	addrMap := map[common.ContractAddress]common.Address{}
+	addrMap := map[common.ContractAddress]PKrAddress{}
 	for _, short := range shortAddresses {
 		full := state.GetNonceAddress(short[:])
-		//
-		//wallets := s.b.AccountManager().Wallets()
-		//
-		//if len(wallets) > 0 {
-		//	for _, wallet := range wallets {
-		//		if wallet.IsMine(full) {
-		//			full = common.BytesToAddress(wallet.Accounts()[0].Address[:])
-		//			break
-		//		}
-		//	}
-		//}
-		addrMap[short] = full
+		var pkr PKrAddress
+		copy(pkr[:], full[:])
+
+		addrMap[short] = pkr
 	}
 	return addrMap, nil
 
@@ -1436,7 +1428,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 type RPCTransaction struct {
 	BlockHash        common.Hash     `json:"blockHash"`
 	BlockNumber      *hexutil.Big    `json:"blockNumber"`
-	From             common.Address  `json:"from"`
+	From             PKrAddress      `json:"from"`
 	Gas              hexutil.Uint64  `json:"gas"`
 	GasPrice         *hexutil.Big    `json:"gasPrice"`
 	Hash             common.Hash     `json:"hash"`
@@ -1446,6 +1438,11 @@ type RPCTransaction struct {
 	TransactionIndex hexutil.Uint    `json:"transactionIndex"`
 	Value            *hexutil.Big    `json:"value"`
 	Stx              *stx.T          `json:"stx"`
+}
+
+func addressToPKrAddress(addr common.Address) (ret PKrAddress) {
+	copy(ret[:], addr[:])
+	return
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
@@ -1461,7 +1458,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		to = nil
 	}
 	result := &RPCTransaction{
-		From:     tx.From(),
+		From:     addressToPKrAddress(tx.From()),
 		Gas:      hexutil.Uint64(tx.Gas()),
 		GasPrice: (*hexutil.Big)(tx.GasPrice()),
 		Hash:     tx.Hash(),
@@ -1587,17 +1584,6 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockHashAndIndex(ctx cont
 	return nil
 }
 
-// GetTransactionCount returns the number of transactions the given address has sent for the given block number
-func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*hexutil.Uint64, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
-	if state == nil || err != nil {
-		return nil, err
-	}
-	//nonce := state.GetNonce(address)
-	u := hexutil.Uint64(0)
-	return &u, state.Error()
-}
-
 // GetTransactionByHash returns the transaction for the given hash
 func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) *RPCTransaction {
 	// Try to return an already finalized transaction
@@ -1657,7 +1643,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 		"blockNumber":       hexutil.Uint64(blockNumber),
 		"transactionHash":   hash,
 		"transactionIndex":  hexutil.Uint64(index),
-		"from":              tx.From(),
+		"from":              addressToPKrAddress(tx.From()),
 		"to":                to,
 		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
 		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),

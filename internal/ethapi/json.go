@@ -171,6 +171,11 @@ func (b AllMixedAddress) setBytes(bs []byte) {
 	copy(b[:], bs)
 }
 
+func (b AllMixedAddress) ToPKrAddress() (ret PKrAddress) {
+	copy(ret[:], b[:])
+	return
+}
+
 func (b AllMixedAddress) IsContract() bool {
 	empty := common.Hash{}
 	if len(b) == 96 {
