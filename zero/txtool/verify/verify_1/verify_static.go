@@ -216,6 +216,9 @@ func (self *verifyWithoutStateCtx) verifyBalance() (e error) {
 func (self *verifyWithoutStateCtx) verify() (e error) {
 	self.prepare()
 	defer self.clear()
+
+	self.ProcessVerifyProof()
+
 	if e = self.verifyDescO(); e != nil {
 		return
 	}
