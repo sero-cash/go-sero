@@ -6,9 +6,10 @@ import (
 	"math/big"
 	"unsafe"
 
+	"github.com/sero-cash/go-czero-import/c_type"
+
 	"github.com/sero-cash/go-sero/core/types/vserial"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/crypto/sha3"
@@ -49,7 +50,7 @@ type Header struct {
 	//Data
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
-	Licr        c_czero.LICr   `json:"licr"            	gencodec:"required"`
+	Licr        c_type.LICr    `json:"licr"            	gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
@@ -188,7 +189,7 @@ type Header_Version_0 struct {
 	//Data
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
-	Licr        c_czero.LICr   `json:"licr"            	gencodec:"required"`
+	Licr        c_type.LICr    `json:"licr"            	gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`

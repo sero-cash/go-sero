@@ -26,6 +26,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-czero-import/c_type"
+
+	"github.com/sero-cash/go-czero-import/superzk"
+
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/voter"
@@ -36,8 +40,6 @@ import (
 
 	"github.com/sero-cash/go-sero/internal/ethapi"
 	"github.com/sero-cash/go-sero/zero/wallet/exchange"
-
-	"github.com/sero-cash/go-czero-import/c_czero"
 
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
@@ -383,10 +385,10 @@ func (s *Sero) StartMining(local bool) error {
 		return fmt.Errorf("serobase missing: %v", err)
 	}
 	current_height := s.blockchain.CurrentHeader().Number.Uint64()
-	pkr, lic, ret := c_czero.Pk2PKrAndLICr(eb.Address.ToUint512().NewRef(), current_height)
-	ret = c_czero.CheckLICr(&pkr, &lic, current_height)
+	pkr, lic, ret := superzk.Pk2PKrAndLICr(eb.Address.ToUint512().NewRef(), current_height)
+	ret = superzk.CheckLICr(&pkr, &lic, current_height)
 	if !ret {
-		lic_t := c_czero.LICr{}
+		lic_t := c_type.LICr{}
 		if bytes.Equal(lic.Proof[:32], lic_t.Proof[:32]) {
 			log.Error("Cannot start mining , miner license does not exists ", "", "")
 			return fmt.Errorf(" miner license does not exists")

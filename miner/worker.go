@@ -23,9 +23,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sero-cash/go-sero/accounts"
+	"github.com/sero-cash/go-czero-import/superzk"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-sero/accounts"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
 
@@ -495,15 +495,15 @@ func (self *worker) commitNewWork() {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		addr := common.Address{}
 		//pkr :=  superzk.Pk2PKr(self.coinbase.ToUint512(), nil)
-		_, licr, ret := c_czero.Pk2PKrAndLICr(self.coinbase.Address.ToUint512().NewRef(), header.Number.Uint64())
+		_, licr, ret := superzk.Pk2PKrAndLICr(self.coinbase.Address.ToUint512().NewRef(), header.Number.Uint64())
 		if !ret {
 			log.Error("Failed to Addr2PKrAndLICr")
 			return
 		}
+		header.Licr = licr
 		pkr := self.coinbase.GetPkr(nil)
 		addr.SetBytes(pkr[:])
 		header.Coinbase = addr
-		header.Licr = licr
 	}
 
 	if err := self.engine.Prepare(self.chain, header); err != nil {
