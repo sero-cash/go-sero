@@ -377,7 +377,7 @@ func (b *MixedcaseAddress) UnmarshalText(input []byte) error {
 				if len(addr.Bytes) == 96 {
 					err := account.ValidPkr(addr)
 					if err != nil {
-						return nil
+						return err
 					}
 					b.Addr = addr.Bytes
 					return nil
@@ -385,7 +385,7 @@ func (b *MixedcaseAddress) UnmarshalText(input []byte) error {
 				} else if len(addr.Bytes) == 64 {
 					err := account.ValidPk(addr)
 					if err != nil {
-						return nil
+						return err
 					}
 					b.Addr = addr.Bytes
 					return nil

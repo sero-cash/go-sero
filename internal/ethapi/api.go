@@ -701,6 +701,7 @@ func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk address.PKAddress) 
 	result := PKrAddress{}
 	copy(result[:], PKr[:])
 	return result, nil
+	return result, nil
 }
 
 func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk address.PKAddress, index int64) (PKrAddress, error) {
