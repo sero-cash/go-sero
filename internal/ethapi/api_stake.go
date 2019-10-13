@@ -640,12 +640,18 @@ func containsHash(vas []common.Hash, item common.Hash) bool {
 	return false
 }
 
-func newRPCStatisticsShare(wallets []accounts.Wallet, shares []*stake.Share, api *PublicStakeApI, ctx context.Context) []map[string]interface{} {
+func newRPCStatisticsShare(mg *accounts.Manager, shares []*stake.Share, api *PublicStakeApI, ctx context.Context) []map[string]interface{} {
 	result := map[string]*RPCStatisticsShare{}
 	var key interface{}
 	for _, share := range shares {
 		key = share.PKr
 		var keystr = PkrToString(share.PKr)
+		if mg != nil {
+			acc, err := mg.FindAccountByPkr(share.PKr)
+			if err == nil {
+				keystr = acc.Address.String()
+			}
+		}
 		var s *RPCStatisticsShare
 		if _, ok := result[keystr]; ok {
 			s = result[keystr]
