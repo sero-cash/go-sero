@@ -73,3 +73,23 @@ func (self *gen_input_desc) Run() error {
 		return nil
 	}
 }
+
+var gen_pkg_procs_pool = utils.NewProcsPool(func() int { return zconfig.G_p_thread_num })
+
+type gen_pkg_desc struct {
+	asset_cm c_type.Uint256
+	asset    c_type.Asset
+	ar       c_type.Uint256
+	proof    c_type.Proof
+	e        error
+}
+
+func (self *gen_pkg_desc) Run() error {
+	if proof, e := c_superzk.ProveOutput(&self.asset, &self.ar, &self.asset_cm); e != nil {
+		self.e = e
+		return e
+	} else {
+		self.proof = proof
+		return nil
+	}
+}

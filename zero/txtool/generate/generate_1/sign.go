@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/txs/pkg"
+
 	"github.com/sero-cash/go-sero/core/types"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
@@ -205,6 +207,26 @@ func (self *sign_ctx) genCmd() (e error) {
 		self.s.Desc_Pkg.Create = &stx.PkgCreate{}
 		self.s.Desc_Pkg.Create.PKr = create.PKr
 		self.s.Desc_Pkg.Create.Id = create.Id
+		create.Ar = c_superzk.RandomFr()
+		if cm, _, err := c_superzk.GenAssetCM_PC(create.Asset.ToTypeAsset().NewRef(), &create.Ar); err != nil {
+			e = err
+			return
+		} else {
+			self.s.Desc_Pkg.Create.Pkg.AssetCM = cm
+		}
+		sk := self.param.From.SKr.ToUint512()
+		tk, err := c_superzk.Sk2Tk(&sk)
+		if err != nil {
+			e = err
+			return
+		}
+		key := pkg.GetKey(&self.param.From.PKr, &tk)
+		if einfo, err := c_superzk.EncInfo(&key, create.Asset.ToTypeAsset().NewRef(), &create.Memo, &create.Ar); err != nil {
+			e = err
+			return
+		} else {
+			self.s.Desc_Pkg.Create.Pkg.EInfo = einfo
+		}
 	}
 	if self.param.Cmds.PkgTransfer != nil {
 		change := self.param.Cmds.PkgTransfer
@@ -434,6 +456,9 @@ func (self *sign_ctx) genSign() (e error) {
 	if e = self.signInsC(); e != nil {
 		return
 	}
+	if e = self.signPkg(); e != nil {
+		return
+	}
 	if e = self.signBalance(); e != nil {
 		return
 	}
@@ -503,6 +528,25 @@ func (self *sign_ctx) signInsC() (e error) {
 	}
 	return
 }
+
+func (self *sign_ctx) signPkg() error {
+	if self.param.Cmds.PkgTransfer != nil {
+		if sign, err := c_superzk.SignPKr_X(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.param.Cmds.PkgTransfer.Owner); err != nil {
+			return err
+		} else {
+			self.s.Desc_Pkg.Transfer.Sign = sign
+		}
+	}
+	if self.param.Cmds.PkgClose != nil {
+		if sign, err := c_superzk.SignPKr_X(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.param.Cmds.PkgClose.Owner); err != nil {
+			return err
+		} else {
+			self.s.Desc_Pkg.Transfer.Sign = sign
+		}
+	}
+	return nil
+}
+
 func (self *sign_ctx) signBalance() (e error) {
 	if len(self.balance_desc.Zin_acms) > 0 || len(self.balance_desc.Zout_acms) > 0 {
 		if e = c_superzk.SignBalance(&self.balance_desc); e != nil {

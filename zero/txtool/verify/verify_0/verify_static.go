@@ -24,7 +24,6 @@ type verifyWithoutStateCtx struct {
 	zout_count      int
 	zin_proof_proc  *utils.Procs
 	zout_proof_proc *utils.Procs
-	pkg_proof_proc  *utils.Procs
 }
 
 func VerifyWithoutState(ehash *c_type.Uint256, tx *stx.T, num uint64) (e error) {
@@ -72,14 +71,12 @@ func (self *verifyWithoutStateCtx) prepare() {
 	self.hash = self.tx.ToHash_for_sign()
 	self.zin_proof_proc = verify_input_procs_pool.GetProcs()
 	self.zout_proof_proc = verify_output_procs_pool.GetProcs()
-	self.pkg_proof_proc = verify_pkg_procs_pool.GetProcs()
 
 }
 
 func (self *verifyWithoutStateCtx) clear() {
 	verify_input_procs_pool.PutProcs(self.zin_proof_proc)
 	verify_output_procs_pool.PutProcs(self.zout_proof_proc)
-	verify_pkg_procs_pool.PutProcs(self.pkg_proof_proc)
 }
 
 func (self *verifyWithoutStateCtx) verifyFee() (e error) {
@@ -216,6 +213,10 @@ func (self *verifyWithoutStateCtx) verifyCmds() (e error) {
 func (self *verifyWithoutStateCtx) Verify() (e error) {
 	self.prepare()
 	defer self.clear()
+
+	if e = self.check(); e != nil {
+		return
+	}
 
 	self.ProcessVerifyProof()
 

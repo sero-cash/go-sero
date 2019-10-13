@@ -58,6 +58,7 @@ type GPkgCreateCmd struct {
 	PKr   c_type.PKr
 	Asset assets.Asset
 	Memo  c_type.Uint512
+	Ar    c_type.Uint256
 }
 
 type Cmds struct {

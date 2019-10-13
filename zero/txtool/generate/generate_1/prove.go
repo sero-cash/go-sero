@@ -97,6 +97,16 @@ func (self *prove_ctx) prove() (e error) {
 		gen_input_procs.StartProc(&g)
 	}
 
+	var gen_pkg_procs = gen_pkg_procs_pool.GetProcs()
+	defer gen_pkg_procs_pool.PutProcs(gen_pkg_procs)
+	if self.param.Cmds.PkgCreate != nil {
+		g := gen_pkg_desc{}
+		g.asset = self.param.Cmds.PkgCreate.Asset.ToTypeAsset()
+		g.ar = self.param.Cmds.PkgCreate.Ar
+		g.asset_cm = self.tx.Desc_Pkg.Create.Pkg.AssetCM
+		gen_pkg_procs.StartProc(&g)
+	}
+
 	//-----------------
 
 	if gen_output_procs.HasProc() {
@@ -116,6 +126,15 @@ func (self *prove_ctx) prove() (e error) {
 				input_desc := g.(*gen_input_desc)
 				self.tx.Tx1.Ins_C[i].Proof = input_desc.proof
 			}
+		} else {
+			return
+		}
+	}
+
+	if gen_pkg_procs.HasProc() {
+		if e = gen_pkg_procs.End(); e == nil {
+			pkg_desc := gen_pkg_procs.Runs[0].(*gen_pkg_desc)
+			self.tx.Desc_Pkg.Create.Proof = pkg_desc.proof
 		} else {
 			return
 		}

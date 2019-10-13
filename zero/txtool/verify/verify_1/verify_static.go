@@ -25,6 +25,7 @@ type verifyWithoutStateCtx struct {
 	zin_count       int
 	cin_proof_proc  *utils.Procs
 	cout_proof_proc *utils.Procs
+	pkg_proof_proc  *utils.Procs
 }
 
 func VerifyWithoutState(ehash *c_type.Uint256, tx *stx.T) (e error) {
@@ -41,12 +42,14 @@ func (self *verifyWithoutStateCtx) prepare() {
 	self.hash = self.tx.Tx1_Hash()
 	self.cin_proof_proc = verify_input_procs_pool.GetProcs()
 	self.cout_proof_proc = verify_output_procs_pool.GetProcs()
+	self.pkg_proof_proc = verify_pkg_procs_pool.GetProcs()
 	return
 }
 
 func (self *verifyWithoutStateCtx) clear() {
 	verify_input_procs_pool.PutProcs(self.cin_proof_proc)
 	verify_output_procs_pool.PutProcs(self.cout_proof_proc)
+	verify_pkg_procs_pool.PutProcs(self.pkg_proof_proc)
 }
 
 func (self *verifyWithoutStateCtx) verifyDescO() (e error) {
@@ -206,20 +209,6 @@ func (self *verifyWithoutStateCtx) verifyBalance() (e error) {
 	if self.zout_count > seroparam.MAX_Z_OUT_LENGTH_SIP2 {
 		e = verify_utils.ReportError("verify error: out_size > 500", self.tx)
 		return
-	}
-	return
-}
-
-func (self *verifyWithoutStateCtx) WaitVerifyProof() (e error) {
-	if self.cin_proof_proc.HasProc() {
-		if e = self.cin_proof_proc.End(); e != nil {
-			return
-		}
-	}
-	if self.cout_proof_proc.HasProc() {
-		if e = self.cout_proof_proc.End(); e != nil {
-			return
-		}
 	}
 	return
 }

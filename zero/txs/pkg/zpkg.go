@@ -8,7 +8,6 @@ import (
 
 type Pkg_Z struct {
 	AssetCM c_type.Uint256
-	PkgCM   c_type.Uint256
 	EInfo   c_type.Einfo
 }
 
@@ -20,7 +19,6 @@ func (this Pkg_Z) ToRef() (ret *Pkg_Z) {
 func (self *Pkg_Z) ToHash() (ret c_type.Uint256) {
 	d := sha3.NewKeccak256()
 	d.Write(self.AssetCM[:])
-	d.Write(self.PkgCM[:])
 	d.Write(self.EInfo[:])
 	copy(ret[:], d.Sum(nil))
 	return ret

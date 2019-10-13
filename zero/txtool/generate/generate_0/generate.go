@@ -79,6 +79,10 @@ func (self *gen_ctx) check() (e error) {
 		e = errors.New("sk unmatch pkr for the From field")
 		return
 	}
+	if self.param.Cmds.PkgCreate != nil || self.param.Cmds.PkgClose != nil || self.param.Cmds.PkgTransfer != nil {
+		e = errors.New("pkg not allowed until SIP5")
+		return
+	}
 	return
 }
 
@@ -146,25 +150,6 @@ func (self *gen_ctx) setCmdsData() {
 	if self.param.Cmds.Contract != nil {
 		self.s.Desc_Cmd.Contract = self.param.Cmds.Contract
 		a = &self.param.Cmds.Contract.Asset
-	}
-	if self.param.Cmds.PkgCreate != nil {
-		create := self.param.Cmds.PkgCreate
-		self.s.Desc_Pkg.Create = &stx.PkgCreate{}
-		self.s.Desc_Pkg.Create.PKr = create.PKr
-		self.s.Desc_Pkg.Create.Id = create.Id
-	}
-	if self.param.Cmds.PkgTransfer != nil {
-		change := self.param.Cmds.PkgTransfer
-		self.s.Desc_Pkg.Transfer = &stx.PkgTransfer{}
-		self.s.Desc_Pkg.Transfer.Id = change.Id
-		self.s.Desc_Pkg.Transfer.PKr = change.PKr
-	}
-	if self.param.Cmds.PkgClose != nil {
-		close := self.param.Cmds.PkgClose
-		self.s.Desc_Pkg.Close = &stx.PkgClose{}
-		self.s.Desc_Pkg.Close.Id = close.Id
-		self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, close.AssetCM[:]...)
-		self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, close.Ar[:]...)
 	}
 	if a != nil {
 		asset_desc := c_czero.AssetDesc{
