@@ -721,13 +721,13 @@ func newRPCStatisticsShare(mg *accounts.Manager, shares []*stake.Share, api *Pub
 }
 
 func (s *PublicStakeApI) MyShare(ctx context.Context, addr address.MixBase58Adrress) []map[string]interface{} {
-	wallets := s.b.AccountManager().Wallets()
+	//wallets := s.b.AccountManager().Wallets()
 	account, err := s.b.AccountManager().FindAccountByPkr(addr.ToPkr())
 	if err != nil {
 		return nil
 	}
 	shares := stakeservice.CurrentStakeService().SharesByPk(account.Address.ToUint512())
-	return newRPCStatisticsShare(wallets, shares, s, ctx)
+	return newRPCStatisticsShare(s.b.AccountManager(), shares, s, ctx)
 }
 
 func (s *PublicStakeApI) GetShare(ctx context.Context, shareId common.Hash) map[string]interface{} {
@@ -763,9 +763,9 @@ func (s *PublicStakeApI) GetShare(ctx context.Context, shareId common.Hash) map[
 	return ret
 }
 func (s *PublicStakeApI) GetShareByPkr(ctx context.Context, pkr PKrAddress) []map[string]interface{} {
-	wallets := s.b.AccountManager().Wallets()
+	//wallets := s.b.AccountManager().Wallets()
 	shares := stakeservice.CurrentStakeService().SharesByPkr(*(pkr.ToPKr()))
-	return newRPCStatisticsShare(wallets, shares, s, ctx)
+	return newRPCStatisticsShare(s.b.AccountManager(), shares, s, ctx)
 }
 
 func (s *PublicStakeApI) GetStakeInfo(ctx context.Context, poolId common.Hash, start, end hexutil.Uint64) (ret map[string][]interface{}) {
