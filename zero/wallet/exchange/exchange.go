@@ -187,7 +187,7 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 	if _, ok := self.accounts.Load(w.Accounts()[0].Address.ToUint512()); !ok {
 		account := Account{}
 		account.wallet = w
-		account.pk = w.Accounts()[0].Address.ToUint512().NewRef()
+		account.pk = w.Accounts()[0].GetPk().NewRef()
 		account.tk = w.Accounts()[0].Tk.ToTk().NewRef()
 		copy(account.skr[:], account.tk[:])
 		account.mainPkr = w.Accounts()[0].GetDefaultPkr(1)
@@ -411,7 +411,7 @@ func (self *Exchange) GetBalances(pk c_type.Uint512) (balances map[string]*big.I
 				}
 			}
 			account.balances = balances
-			account.tickets = tickets;
+			account.tickets = tickets
 			account.utxoNums = utxoNums
 			account.isChanged = false
 		} else {
