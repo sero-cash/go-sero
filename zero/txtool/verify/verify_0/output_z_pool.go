@@ -3,8 +3,6 @@ package verify_0
 import (
 	"errors"
 
-	"github.com/sero-cash/go-czero-import/c_superzk"
-
 	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
@@ -21,7 +19,7 @@ type verify_output_desc struct {
 }
 
 func (self *verify_output_desc) Run() error {
-	if c_superzk.Czero_isPKrValid(&self.pkr) {
+	if c_czero.IsPKrValid(&self.pkr) {
 		if err := c_czero.VerifyOutput(&self.desc); err != nil {
 			self.e = err
 			return err
