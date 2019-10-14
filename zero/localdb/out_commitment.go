@@ -18,7 +18,7 @@ func HashIndexAr(index uint64) (ret c_type.Uint256) {
 	pre_ar := index_bytes.ToUint256()
 	ar_bytes := crypto.Keccak256(pre_ar[:])
 	copy(ret[:], ar_bytes)
-	ret = c_superzk.RandomFr()
+	ret = c_superzk.ForceFr(&ret)
 	return
 }
 
