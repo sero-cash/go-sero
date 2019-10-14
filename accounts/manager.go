@@ -167,7 +167,7 @@ func (am *Manager) FindAccountByPk(pk c_type.Uint512) (Account, error) {
 	am.lock.RLock()
 	defer am.lock.RUnlock()
 	for _, wallet := range am.wallets {
-		if wallet.Accounts()[0].IsMyPk(pk) {
+		if wallet.Accounts()[0].GetPk() == pk {
 			return wallet.Accounts()[0], nil
 		}
 	}

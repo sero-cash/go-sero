@@ -48,6 +48,7 @@ type Account struct {
 	utxoNums      map[string]uint64
 	isChanged     bool
 	nextMergeTime time.Time
+	version       int
 }
 
 type PkrAccount struct {
@@ -184,7 +185,7 @@ func NewExchange(dbpath string, txPool *core.TxPool, accountManager *accounts.Ma
 
 func (self *Exchange) initWallet(w accounts.Wallet) {
 
-	if _, ok := self.accounts.Load(w.Accounts()[0].Address.ToUint512()); !ok {
+	if _, ok := self.accounts.Load(w.Accounts()[0].GetPk()); !ok {
 		account := Account{}
 		account.wallet = w
 		account.pk = w.Accounts()[0].GetPk().NewRef()
@@ -193,6 +194,7 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 		account.mainPkr = w.Accounts()[0].GetDefaultPkr(1)
 		account.isChanged = true
 		account.nextMergeTime = time.Now()
+		account.version = w.Accounts()[0].Version
 		self.accounts.Store(*account.pk, &account)
 
 		if num := self.starNum(account.pk); num > w.Accounts()[0].At {
@@ -537,7 +539,7 @@ func (self *Exchange) getAccountByPk(pk c_type.Uint512) *Account {
 func (self *Exchange) getAccountByPkr(pkr c_type.PKr) (a *Account) {
 	self.accounts.Range(func(pk, value interface{}) bool {
 		account := value.(*Account)
-		if superzk.IsMyPKr(account.tk, &pkr) {
+		if superzk.IsMyPKr(account.tk, &pkr, account.version) {
 			a = account
 			return false
 		}
@@ -797,6 +799,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 			}
 
 			account, ok := self.ownPkr(pks, *pkr)
+			log.Info("index", ">>>>", account.wallet.Accounts()[0].Address.String())
 			if !ok {
 				continue
 			}
@@ -1043,8 +1046,22 @@ func (self *Exchange) ownPkr(pks []c_type.Uint512, pkr c_type.PKr) (account *Acc
 			continue
 		}
 		account = value.(*Account)
-		if superzk.IsMyPKr(account.tk, &pkr) {
-			return account, true
+		if c_superzk.IsSzkPKr(&pkr) {
+			if account.version == 1 {
+				continue
+			}
+			if c_superzk.IsMyPKr(account.tk, &pkr) {
+				return account, true
+			}
+		} else {
+			if account.version == 2 {
+				continue
+			}
+			if e := c_superzk.Czero_isMyPKr(account.tk, &pkr); e != nil {
+				continue
+			} else {
+				return account, true
+			}
 		}
 	}
 	return
@@ -1118,8 +1135,7 @@ type MergeParam struct {
 }
 
 func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e error) {
-	fromPkr := superzk.Pk2PKr(&mp.From, nil)
-	account := self.getAccountByPkr(fromPkr)
+	account := self.getAccountByPk(mp.From)
 	if account == nil {
 		e = errors.New("account is nil")
 		return

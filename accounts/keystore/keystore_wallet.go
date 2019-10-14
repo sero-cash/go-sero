@@ -122,6 +122,6 @@ func (w *keystoreWallet) GetSeedWithPassphrase(passphrase string) (*address.Seed
 
 func (w *keystoreWallet) IsMine(pkr c_type.PKr) bool {
 	tk := w.account.Tk.ToTk()
-	succ := superzk.IsMyPKr(&tk, &pkr)
+	succ := superzk.IsMyPKr(&tk, &pkr, w.account.Version)
 	return succ
 }

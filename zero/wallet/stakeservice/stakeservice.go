@@ -21,8 +21,9 @@ import (
 )
 
 type Account struct {
-	pk *c_type.Uint512
-	tk *c_type.Tk
+	pk      *c_type.Uint512
+	tk      *c_type.Tk
+	version int
 }
 
 type StakeService struct {
@@ -149,7 +150,7 @@ func (self *StakeService) stakeIndex() {
 	if start == uint64(math.MaxUint64) {
 		return
 	}
-	if !seroparam.Is_Dev() &&  start < 1300000 {
+	if !seroparam.Is_Dev() && start < 1300000 {
 		start = 1300000
 	}
 
@@ -183,8 +184,8 @@ func (self *StakeService) stakeIndex() {
 	}
 
 	self.numbers.Range(func(key, value interface{}) bool {
-		accountKey := key.(c_type.Uint512)
-		batch.Put(numKey(accountKey), utils.EncodeNumber(blocNumber))
+		pk := key.(c_type.Uint512)
+		batch.Put(numKey(pk), utils.EncodeNumber(blocNumber))
 		return true
 	})
 	err := batch.Write()
@@ -202,7 +203,7 @@ func (self *StakeService) ownPkr(pkr c_type.PKr) (pk *c_type.Uint512, ok bool) {
 	var account *Account
 	self.accounts.Range(func(key, value interface{}) bool {
 		a := value.(*Account)
-		if superzk.IsMyPKr(a.tk, &pkr) {
+		if superzk.IsMyPKr(a.tk, &pkr, account.version) {
 			account = a
 			return false
 		}
@@ -233,8 +234,8 @@ func (self *StakeService) updateAccount() {
 			case accounts.WalletArrived:
 				self.initWallet(event.Wallet)
 			case accounts.WalletDropped:
-				address := event.Wallet.Accounts()[0].Address
-				self.numbers.Delete(address.ToUint512())
+				address := event.Wallet.Accounts()[0].GetPk()
+				self.numbers.Delete(address)
 			}
 			self.lock.Unlock()
 
@@ -247,10 +248,11 @@ func (self *StakeService) updateAccount() {
 }
 
 func (self *StakeService) initWallet(w accounts.Wallet) {
-	if _, ok := self.accounts.Load(w.Accounts()[0].Address); !ok {
+	if _, ok := self.accounts.Load(w.Accounts()[0].GetPk()); !ok {
 		account := Account{}
-		account.pk = w.Accounts()[0].Address.ToUint512().NewRef()
+		account.pk = w.Accounts()[0].GetPk().NewRef()
 		account.tk = w.Accounts()[0].Tk.ToTk().NewRef()
+		account.version = w.Accounts()[0].Version
 		self.accounts.Store(*account.pk, &account)
 
 		var num uint64

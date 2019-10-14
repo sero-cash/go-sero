@@ -19,6 +19,8 @@ package address
 import (
 	"errors"
 
+	"github.com/sero-cash/go-sero/log"
+
 	"github.com/sero-cash/go-sero/zero/account"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -146,10 +148,15 @@ func (b *TKAddress) UnmarshalText(input []byte) error {
 
 type PKAddress [64]byte
 
-func Base58ToPk(str string) (ret PKAddress) {
-	b := base58.Decode(str)
-	copy(ret[:], b)
-	return
+func StringToPk(str string) (ret PKAddress) {
+	if addr, e := account.NewAddressByString(str); e != nil {
+		log.Info("StringToPk", "err", e)
+		return
+	} else {
+		copy(ret[:], addr.Bytes)
+		return
+	}
+
 }
 
 func (b PKAddress) String() string {

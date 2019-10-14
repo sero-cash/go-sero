@@ -88,7 +88,7 @@ func (self *sign_ctx) check() (e error) {
 	sk := self.param.From.SKr.ToUint512()
 	tk, e := c_superzk.Sk2Tk(&sk)
 	fmt.Println(e)
-	if !superzk.IsMyPKr(&tk, &self.param.From.PKr) {
+	if !superzk.IsMyPKr(&tk, &self.param.From.PKr, 0) {
 		e = errors.New("sk unmatch pkr for the From field")
 		return
 	}
@@ -108,14 +108,14 @@ func (self *sign_ctx) check() (e error) {
 			continue
 		}
 		if in.Out.State.OS.Out_P != nil {
-			if !superzk.IsMyPKr(&tk, &in.Out.State.OS.Out_P.PKr) {
+			if !superzk.IsMyPKr(&tk, &in.Out.State.OS.Out_P.PKr, 0) {
 				e = errors.New("sk unmatch pkr for out_z")
 				return
 			}
 			continue
 		}
 		if in.Out.State.OS.Out_C != nil {
-			if !superzk.IsMyPKr(&tk, &in.Out.State.OS.Out_C.PKr) {
+			if !superzk.IsMyPKr(&tk, &in.Out.State.OS.Out_C.PKr, 0) {
 				e = errors.New("sk unmatch pkr for out_z")
 				return
 			}

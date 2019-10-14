@@ -93,10 +93,10 @@ func (s *PublicExchangeAPI) GetMaxAvailable(pk address.PKAddress, currency Smbol
 	return (*Big)(s.b.GetMaxAvailable(pk.ToUint512(), string(currency)))
 }
 
-func (s *PublicExchangeAPI) GetBalances(ctx context.Context, pk address.PKAddress) (map[string]*Big, map[string][]*common.Hash){
+func (s *PublicExchangeAPI) GetBalances(ctx context.Context, pk address.PKAddress) (map[string]*Big, map[string][]*common.Hash) {
 	result := map[string]*Big{}
 
-	balances,tickets := s.b.GetBalances(pk.ToUint512())
+	balances, tickets := s.b.GetBalances(pk.ToUint512())
 	for k, v := range balances {
 		result[k] = (*Big)(v)
 	}
@@ -456,7 +456,7 @@ func (s *PublicExchangeAPI) GetPkByPkr(ctx context.Context, pkr PKrAddress) (*ad
 		return nil, nil
 	}
 	for _, wallet := range wallets {
-		if superzk.IsMyPKr(wallet.Accounts()[0].Tk.ToTk().NewRef(), pkr.ToPKr()) {
+		if superzk.IsMyPKr(wallet.Accounts()[0].Tk.ToTk().NewRef(), pkr.ToPKr(), wallet.Accounts()[0].Version) {
 			pkAddr := wallet.Accounts()[0].Address
 			return &pkAddr, nil
 		}

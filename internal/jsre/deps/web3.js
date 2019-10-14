@@ -2692,12 +2692,15 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
         var paramAddress = function (addr) {
-            addrs = addr.split('0');
+            var addrs = addr.split('0');
             if (addrs.length == 1){
                 if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addr)) {
                     bytes = base58ToBytes(addr);
                     if (bytes.length !== 96 && bytes.length !=64) {
                         return false;
+                    }
+                    if (isNewAddress(addr)) {
+                        throw new Error("invalid address,new version address hava three part")
                     }
                     return true;
                 } else {
@@ -2713,7 +2716,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                         return false;
                     }else{
                         protocol = hexToBytes(fromUtf8(addrs[0]));
-                        addrByte = base58ToBytes(addrs[1]);
+                        var addrByte = base58ToBytes(addrs[1]);
                         sum =md5(protocol.concat(addrByte))
                         checkSum = base58.encode(hexToBytes(sum)).substr(0,2);
                         if (checkSum !== addrs[2]) {

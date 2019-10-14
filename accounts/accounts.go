@@ -72,7 +72,7 @@ func (self *Account) IsMyPk(pk c_type.Uint512) bool {
 func (self *Account) IsMyPkr(pkr c_type.PKr) bool {
 	tk := c_type.Tk{}
 	copy(tk[:], self.Tk[:])
-	return superzk.IsMyPKr(&tk, &pkr)
+	return superzk.IsMyPKr(&tk, &pkr, self.Version)
 }
 
 // Wallet represents a software or hardware wallet that might contain one or more

@@ -164,6 +164,9 @@ func storeNewKeyWithMnemonic(ks keyStore, auth string, at uint64, version int) (
 		zeroKey(key.PrivateKey)
 		return "", nil, a, err
 	}
+	if version == 2 {
+		mnemonic = "v2 " + mnemonic
+	}
 	return mnemonic, key, a, err
 }
 
