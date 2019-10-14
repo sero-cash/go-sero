@@ -799,7 +799,7 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 			}
 
 			account, ok := self.ownPkr(pks, *pkr)
-			log.Info("index", ">>>>", account.wallet.Accounts()[0].Address.String())
+			// log.Info("index", ">>>>", account.wallet.Accounts()[0].Address.String())
 			if !ok {
 				continue
 			}
