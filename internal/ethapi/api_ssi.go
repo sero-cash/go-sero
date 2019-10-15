@@ -16,7 +16,7 @@ type PublicSSIAPI struct {
 }
 
 func (s *PublicSSIAPI) CreateKr() (kr txtool.Kr) {
-	return ssi.SSI_Inst.CreateKr()
+	return ssi.SSI_Inst.CreateKr(false)
 }
 
 func (s *PublicSSIAPI) GetBlocksInfo(ctx context.Context, start hexutil.Uint64, count hexutil.Uint64) ([]ssi.Block, error) {
