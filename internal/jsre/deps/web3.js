@@ -2692,41 +2692,14 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
         var paramAddress = function (addr) {
-            var addrs = addr.split('0');
-            if (addrs.length == 1){
-                if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addr)) {
-                    bytes = base58ToBytes(addr);
-                    if (bytes.length !== 96 && bytes.length !=64) {
-                        return false;
-                    }
-                    if (isNewAddress(addr)) {
-                        throw new Error("invalid address,new version address hava three part")
-                    }
-                    return true;
-                } else {
+            if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addr)) {
+                bytes = base58ToBytes(addr);
+                if (bytes.length !== 96 && bytes.length !=64) {
                     return false;
                 }
-            }else{
-                if (addrs.length!=3){
-                    throw new Error("invalid address,address hava three part")
-                }
-                if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addrs[1])) {
-                    bytes = base58ToBytes(addrs[1])
-                    if (bytes.length !== 96 && bytes.length !=64) {
-                        return false;
-                    }else{
-                        protocol = hexToBytes(fromUtf8(addrs[0]));
-                        var addrByte = base58ToBytes(addrs[1]);
-                        sum =md5(protocol.concat(addrByte))
-                        checkSum = base58.encode(hexToBytes(sum)).substr(0,2);
-                        if (checkSum !== addrs[2]) {
-                            return false;
-                        }
-                        return true;
-                    }
-                } else {
-                    return false;
-                }
+                return true;
+            } else {
+                return false;
             }
         };
 
@@ -2906,55 +2879,14 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
 
-
-        var addressToBase58 =  function (addr) {
-            if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addr)) {
-                return addr
-            }else if (isHexStrict(addr)) {
-                return hexToBase58(addr);
-            }else {
-                addrs = addr.split('0');
-                if (addrs.length === 3){
-                    if (/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/i.test(addrs[1])) {
-                        return addrs[1]
-                    }else {
-                        throw new Error('invalid address format')
-                    }
-
-                }else {
-                    throw new Error('invalid address format')
-                }
-            }
-        }
-
         var isNewAddress =  function (addr) {
-            var bs58 = addressToBase58(addr);
-            var bs = base58ToBytes(bs58);
+            var bs = base58ToBytes(addr);
+            if (bs.length!=64 && bs.length!=96) {
+                throw new Error("invalid address")
+            }
             return (bs[bs.length - 1] & (0x1 << 6)) !== 0;
         }
 
-        var formatAddress = function (addr) {
-            var bs58 = addressToBase58(addr);
-            var bs = base58ToBytes(bs58);
-            var prefix;
-            var version = 0;
-            if (bs.length === 64) {
-                prefix = 'SP';
-            }else if (bs.length === 96) {
-                prefix = 'SC';
-            }
-            if (isNewAddress(addr)) {
-                version = 1;
-                prefix += version;
-                protocol = hexToBytes(fromUtf8(prefix));
-                sum =md5(protocol.concat(bs));
-                checkSum = base58.encode(hexToBytes(sum)).substr(0,2);
-                return prefix+'0'+bs58+'0'+checkSum;
-            }else {
-                return bs58;
-            }
-
-        }
 
 
 
@@ -2999,7 +2931,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             addressToHex:addressToHex,
             base58ToHex:base58ToHex,
             hexToBase58:hexToBase58,
-            formatAddress:formatAddress,
             isNewAddress:isNewAddress,
         };
 
@@ -3113,7 +3044,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         Web3.prototype.addressToHex = utils.addressToHex;
         Web3.prototype.base58ToHex = utils.base58ToHex;
         Web3.prototype.hexToBase58 = utils.hexToBase58;
-        Web3.prototype.formatAddress = utils.formatAddress;
         Web3.prototype.isNewAddress = utils.isNewAddress;
 
         Web3.prototype.sha3 = function(string, options) {

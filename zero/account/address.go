@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
-	"github.com/sero-cash/go-czero-import/c_type"
-	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/btcsuite/btcutil/base58"
 
@@ -215,49 +213,4 @@ func NewAddressByString(addr string) (ret Address, e error) {
 			return
 		}
 	}
-}
-
-func ValidPk(addr Address) error {
-	if len(addr.Bytes) == 64 {
-		if !addr.MatchProtocol("SP") {
-			return errors.New("address protocol is not pk")
-		}
-		pk := c_type.Uint512{}
-		copy(pk[:], addr.Bytes)
-		if c_superzk.IsSzkPK(&pk) {
-			if addr.Protocol == "" {
-				return errors.New("pk is new version mush have prefix scp1")
-			}
-		}
-		if !superzk.IsPKValid(&pk) {
-			return errors.New("invalid PK")
-		}
-	} else {
-		return errors.New("pk address must be 64 bytes")
-	}
-	return nil
-}
-
-func ValidPkr(addr Address) error {
-	if len(addr.Bytes) == 96 {
-		if !addr.MatchProtocol("SC") {
-			return errors.New("address protocol is not pkr")
-		}
-		var pkr c_type.PKr
-		copy(pkr[:], addr.Bytes)
-		if !addr.IsHex {
-			if c_superzk.IsSzkPKr(&pkr) {
-				if addr.Protocol == "" {
-					return errors.New("pkr address is new version  must have prefix SC")
-				}
-			}
-		}
-
-		if !superzk.IsPKrValid(&pkr) {
-			return errors.New("invalid pkr")
-		}
-	} else {
-		return errors.New("pkr address must be 96 bytes")
-	}
-	return nil
 }

@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/zero/account"
-
-	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -88,20 +86,12 @@ func (b PKrAddress) ToPKr() *c_type.PKr {
 }
 
 func (b PKrAddress) MarshalText() ([]byte, error) {
-	if c_superzk.IsSzkPKr(b.ToPKr()) {
-		a := account.NewAddressByBytes(b[:])
-		a.SetProtocol("SC")
-		return []byte(a.ToCode()), nil
-	} else {
-		bs := base58.Encode(b[:])
-		return []byte(bs), nil
-	}
+	return []byte(b.String()), nil
 }
 
 func (b PKrAddress) String() string {
-	a := account.NewAddressByBytes(b[:])
-	a.SetProtocol("SC")
-	return a.ToCode()
+	return base58.Encode(b[:])
+
 }
 
 func (b PKrAddress) Base58() string {
@@ -113,16 +103,16 @@ func (b *PKrAddress) UnmarshalText(input []byte) error {
 	if len(input) == 0 {
 		return nil
 	}
-	if addr, e := account.NewAddressByString(string(input)); e != nil {
-		return e
-	} else {
-		err := account.ValidPkr(addr)
-		if err != nil {
-			return err
-		}
-		copy(b[:], addr.Bytes)
-		return nil
+	out, err := address.DecodeAddr(input)
+	if err != nil {
+		return err
 	}
+	err = address.ValidPkr(out)
+	if err != nil {
+		return err
+	}
+	copy(b[:], out)
+	return nil
 }
 
 type MixAdrress []byte
@@ -137,30 +127,28 @@ func (b *MixAdrress) UnmarshalText(input []byte) error {
 	if len(input) == 0 {
 		return nil
 	}
-
-	if addr, e := account.NewAddressByString(string(input)); e != nil {
-		return e
-	} else {
-		out := addr.Bytes
-		if len(out) == 96 {
-			err := account.ValidPkr(addr)
-			if err != nil {
-				return err
-			}
-			*b = out[:]
-			return nil
-		} else if len(out) == 64 {
-			err := account.ValidPk(addr)
-			if err != nil {
-				return err
-			}
-			*b = out[:]
-			return nil
-		} else {
-			return errors.New("invalid mix address")
-		}
+	out, err := address.DecodeAddr(input)
+	if err != nil {
+		return err
 	}
-	return nil
+
+	if len(out) == 96 {
+		err := address.ValidPkr(out)
+		if err != nil {
+			return err
+		}
+		*b = out[:]
+		return nil
+	} else if len(out) == 64 {
+		err := address.ValidPk(out)
+		if err != nil {
+			return err
+		}
+		*b = out[:]
+		return nil
+	} else {
+		return errors.New("invalid mix address")
+	}
 }
 
 type AllMixedAddress [96]byte
@@ -209,49 +197,48 @@ func (b *AllMixedAddress) UnmarshalText(input []byte) error {
 	if len(input) == 0 {
 		return ErrEmptyString
 	}
-	if addr, e := account.NewAddressByString(string(input)); e != nil {
-		return e
-	} else {
-		out := addr.Bytes
-		if len(out) == 96 {
-			if isContract, err := IsContract(out); err != nil {
-				return err
-			} else {
-				if isContract {
-					copy(b[:], out)
-					return nil
-				} else {
-					err := account.ValidPkr(addr)
-					if err != nil {
-						return err
-					}
-					copy(b[:], out)
-					return nil
-				}
-			}
-		} else if len(out) == 64 {
-			contract_addr := common.Address{}
-			copy(contract_addr[:], out)
-			if isContract, err := txtool.Ref_inst.Bc.IsContract(contract_addr); err != nil {
-				return err
-			} else {
-				if isContract {
-					copy(b[:], out)
-					return nil
-				} else {
-					err := account.ValidPk(addr)
-					if err != nil {
-						return err
-					}
-					pk := c_type.Uint512{}
-					copy(pk[:], out[:])
-					pkr := superzk.Pk2PKr(&pk, nil)
-					copy(b[:], pkr[:])
-				}
-			}
+	out, err := address.DecodeAddr(input)
+	if err != nil {
+		return err
+	}
+	if len(out) == 96 {
+		if isContract, err := IsContract(out); err != nil {
+			return err
 		} else {
-			return errors.New("AllMixedAddress must be length 64 or 96")
+			if isContract {
+				copy(b[:], out)
+				return nil
+			} else {
+				err := address.ValidPkr(out)
+				if err != nil {
+					return err
+				}
+				copy(b[:], out)
+				return nil
+			}
 		}
+	} else if len(out) == 64 {
+		contract_addr := common.Address{}
+		copy(contract_addr[:], out)
+		if isContract, err := txtool.Ref_inst.Bc.IsContract(contract_addr); err != nil {
+			return err
+		} else {
+			if isContract {
+				copy(b[:], out)
+				return nil
+			} else {
+				err := address.ValidPk(out)
+				if err != nil {
+					return err
+				}
+				pk := c_type.Uint512{}
+				copy(pk[:], out[:])
+				pkr := superzk.Pk2PKr(&pk, nil)
+				copy(b[:], pkr[:])
+			}
+		}
+	} else {
+		return errors.New("AllMixedAddress must be length 64 or 96")
 	}
 
 	return nil
@@ -274,130 +261,90 @@ func (b *ContractAddress) UnmarshalText(input []byte) error {
 	if len(input) == 0 {
 		return ErrEmptyString
 	}
-
-	if addr, e := account.NewAddressByString(string(input)); e != nil {
-		return e
-	} else {
-		if !addr.MatchProtocol("SS") {
-			return errors.New("address protocol is not contract")
-		}
-		out := addr.Bytes
-		if len(out) == 96 {
-			addr := common.Address{}
-			copy(addr[:], out)
-			if isContract, err := txtool.Ref_inst.Bc.IsContract(addr); err != nil {
-				return err
-			} else {
-				if isContract {
-					copy(b[:], out)
-					return nil
-				} else {
-					return errors.New("this 96 bytes not contract address")
-				}
-			}
-		} else if len(out) == 64 {
-			contract_addr := common.Address{}
-			copy(contract_addr[:], out)
-			if isContract, err := txtool.Ref_inst.Bc.IsContract(contract_addr); err != nil {
-				return err
-			} else {
-				if isContract {
-					copy(b[:], contract_addr[:])
-					return nil
-				} else {
-					return errors.New("this 64 bytes not contract address")
-				}
-			}
+	out, err := address.DecodeAddr(input)
+	if err != nil {
+		return err
+	}
+	if len(out) == 96 {
+		addr := common.Address{}
+		copy(addr[:], out)
+		if isContract, err := txtool.Ref_inst.Bc.IsContract(addr); err != nil {
+			return err
 		} else {
-			return errors.New("ContractAddress must be length 64 or 96")
+			if isContract {
+				copy(b[:], out)
+				return nil
+			} else {
+				return errors.New("this 96 bytes not contract address")
+			}
+		}
+	} else if len(out) == 64 {
+		contract_addr := common.Address{}
+		copy(contract_addr[:], out)
+		if isContract, err := txtool.Ref_inst.Bc.IsContract(contract_addr); err != nil {
+			return err
+		} else {
+			if isContract {
+				copy(b[:], contract_addr[:])
+				return nil
+			} else {
+				return errors.New("this 64 bytes not contract address")
+			}
+		}
+	} else {
+		return errors.New("ContractAddress must be length 64 or 96")
+	}
+}
+
+type AllBase58Adrress []byte
+
+func (b AllBase58Adrress) MarshalText() ([]byte, error) {
+	return []byte(base58.Encode(b)), nil
+}
+
+func (b AllBase58Adrress) String() string {
+	return base58.Encode(b)
+}
+func (b AllBase58Adrress) Bytes() []byte {
+	return []byte(b)
+}
+
+func (b AllBase58Adrress) ToPkr(isContract bool) (ret c_type.PKr) {
+	if len(b) == 96 {
+		copy(ret[:], b[:])
+	} else {
+		if isContract {
+			copy(ret[:], b[:])
+		} else {
+			var pk c_type.Uint512
+			copy(pk[:], b[:])
+			ret = superzk.Pk2PKr(&pk, nil)
 		}
 	}
-
-}
-
-type MixedcaseAddress struct {
-	Addr     []byte
-	Origin   string
-	Contract bool
-}
-
-func (b MixedcaseAddress) String() string {
-	return b.Origin
-}
-func (b MixedcaseAddress) IsPkr() bool {
-	if b.Contract {
-		return false
-	} else {
-		return len(b.Addr) == 96
-	}
-}
-func (b MixedcaseAddress) IsContract() bool {
-	return b.Contract
-}
-func (b MixedcaseAddress) ToPkr(r *c_type.Uint256) (ret c_type.PKr) {
-	if b.IsContract() {
-		copy(ret[:], b.Addr)
-		return
-	}
-	if b.IsPkr() {
-		copy(ret[:], b.Addr)
-		return
-	}
-	pk := c_type.Uint512{}
-	copy(pk[:], b.Addr)
-	pkr := superzk.Pk2PKr(&pk, r)
-	copy(ret[:], pkr[:])
 	return
 }
 
-func (b MixedcaseAddress) MarshalText() ([]byte, error) {
-	return []byte(b.Origin), nil
-}
-
-func (b *MixedcaseAddress) UnmarshalText(input []byte) error {
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (b *AllBase58Adrress) UnmarshalText(input []byte) error {
 
 	if len(input) == 0 {
-		return ErrEmptyString
+		return nil
 	}
-
-	if addr, e := account.NewAddressByString(string(input)); e != nil {
-		return e
-	} else {
-		b.Origin = string(input)
-
-		if isContract, err := IsContract(addr.Bytes); err == nil {
-			if isContract {
-				b.Contract = true
-				if !addr.MatchProtocol("SS") {
-					return errors.New("address protocol is not contract")
-				}
-				b.Addr = addr.Bytes
-				return nil
-			} else {
-				if len(addr.Bytes) == 96 {
-					err := account.ValidPkr(addr)
-					if err != nil {
-						return err
-					}
-					b.Addr = addr.Bytes
-					return nil
-
-				} else if len(addr.Bytes) == 64 {
-					err := account.ValidPk(addr)
-					if err != nil {
-						return err
-					}
-					b.Addr = addr.Bytes
-					return nil
-				} else {
-					return errors.New("invalid address")
-				}
-
-			}
-
-		} else {
+	out, err := address.DecodeAddr(input)
+	if err != nil {
+		return err
+	}
+	if len(out) == 96 {
+		err := address.ValidPkr(out)
+		if err != nil {
 			return err
 		}
-
+		*b = out[:]
+		return nil
+	} else if len(out) == 64 {
+		*b = out[:]
+		return nil
+	} else {
+		return errors.New("invalid base58 address")
 	}
 }

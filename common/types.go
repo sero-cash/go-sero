@@ -24,9 +24,8 @@ import (
 	"math/big"
 	"math/rand"
 	"reflect"
-	"regexp"
 
-	"github.com/sero-cash/go-sero/zero/account"
+	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
 
@@ -53,17 +52,6 @@ var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
 )
-
-func IsBase58Str(s string) bool {
-
-	pattern := "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$"
-	match, err := regexp.MatchString(pattern, s)
-	if err != nil {
-		return false
-	}
-	return match
-
-}
 
 func IsString(input []byte) bool {
 	return len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"'
@@ -331,35 +319,24 @@ func (a Address) MarshalText() ([]byte, error) {
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *Address) UnmarshalText(input []byte) error {
-
-	if addr, e := account.NewAddressByString(string(input)); e != nil {
-		return e
-	} else {
-		if addr.IsHex {
-			return errors.New("is not base58 address")
-		}
-		out := addr.Bytes
+	if address.IsBase58Str(string(input)) {
+		out := base58.Decode(string(input))
 		if len(out) != 64 && len(out) != 96 {
 			return errors.New("address lenght must be 64 or 96 bytes")
 		}
 		if len(out) == 96 {
 			empty := Hash{}
 			if bytes.Compare(out[64:], empty[:]) != 0 {
-				err := account.ValidPkr(addr)
+				err := address.ValidPkr(out)
 				if err != nil {
 					return err
 				}
 			}
 		}
-		if len(out) == 64 {
-			if addr.Protocol != "" && addr.Protocol == "SP" {
-				err := account.ValidPk(addr)
-				if err != nil {
-					return nil
-				}
-			}
-		}
 		copy(a[:], out)
+
+	} else {
+		return errors.New("not base58 string")
 	}
 	return nil
 }
@@ -412,7 +389,7 @@ func (self AddressList) Swap(i, j int) {
 type UnprefixedAddress Address
 
 func (a *UnprefixedAddress) UnmarshalText(input []byte) error {
-	if IsBase58Str(string(input)) {
+	if address.IsBase58Str(string(input)) {
 		out := base58.Decode(string(input))
 		copy(a[:], out[:])
 		return nil

@@ -17,15 +17,13 @@
 package address
 
 import (
+	"encoding/hex"
 	"errors"
-
-	"github.com/sero-cash/go-sero/log"
-
-	"github.com/sero-cash/go-sero/zero/account"
+	"regexp"
+	"strings"
 
 	"github.com/btcsuite/btcutil/base58"
 
-	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/superzk"
 )
@@ -43,6 +41,17 @@ func (priv *Seed) SeedToUint256() *c_type.Uint256 {
 	seed := c_type.Uint256{}
 	copy(seed[:], priv[:])
 	return &seed
+
+}
+
+func IsBase58Str(s string) bool {
+
+	pattern := "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$"
+	match, err := regexp.MatchString(pattern, s)
+	if err != nil {
+		return false
+	}
+	return match
 
 }
 
@@ -74,23 +83,17 @@ func (b *MixBase58Adrress) UnmarshalText(input []byte) error {
 	if len(input) == 0 {
 		return errors.New("empty string")
 	}
-
-	if addr, e := account.NewAddressByString(string(input)); e != nil {
-		return e
-	} else {
-		if addr.IsHex {
-			return errors.New("is not base58 address")
-		}
-		out := addr.Bytes
+	if IsBase58Str(string(input)) {
+		out := base58.Decode(string(input))
 		if len(out) == 96 {
-			err := account.ValidPkr(addr)
+			err := ValidPkr(out)
 			if err != nil {
 				return err
 			}
 			*b = out[:]
 			return nil
 		} else if len(out) == 64 {
-			err := account.ValidPk(addr)
+			err := ValidPk(out)
 			if err != nil {
 				return err
 			}
@@ -99,6 +102,8 @@ func (b *MixBase58Adrress) UnmarshalText(input []byte) error {
 		} else {
 			return errors.New("invalid mix address")
 		}
+	} else {
+		return errors.New("is not base58 address")
 	}
 }
 
@@ -131,42 +136,30 @@ func (b *TKAddress) UnmarshalText(input []byte) error {
 	if len(input) == 0 {
 		return nil
 	}
-	if addr, e := account.NewAddressByString(string(input)); e != nil {
-		return e
-	} else {
-		if !addr.MatchProtocol("ST") {
-			return errors.New("address protocol is not tk")
-		}
-		if len(addr.Bytes) == 64 {
-			copy(b[:], addr.Bytes)
+	if IsBase58Str(string(input)) {
+		out := base58.Decode(string(input))
+		if len(out) == 64 {
+			copy(b[:], out)
 		} else {
 			return errors.New("ivalid TK")
 		}
 		return nil
+
+	} else {
+		return errors.New("is not base58 string")
 	}
 }
 
 type PKAddress [64]byte
 
 func StringToPk(str string) (ret PKAddress) {
-	if addr, e := account.NewAddressByString(str); e != nil {
-		log.Info("StringToPk", "err", e)
-		return
-	} else {
-		copy(ret[:], addr.Bytes)
-		return
-	}
-
+	out := base58.Decode(str)
+	copy(ret[:], out)
+	return
 }
 
 func (b PKAddress) String() string {
-	if c_superzk.IsFlagSet(b[:]) {
-		a := account.NewAddressByBytes(b[:])
-		a.SetProtocol("SP")
-		return a.ToCode()
-	} else {
-		return base58.Encode(b[:])
-	}
+	return base58.Encode(b[:])
 }
 
 func (b PKAddress) ToUint512() c_type.Uint512 {
@@ -186,21 +179,119 @@ func (b PKAddress) MarshalText() ([]byte, error) {
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.
-func (b *PKAddress) UnmarshalText(input []byte) error {
+func (b *PKAddress) UnmarshalText(input []byte) (e error) {
 	if len(input) == 0 {
 		return nil
 	}
-	if addr, e := account.NewAddressByString(string(input)); e != nil {
-		return e
+	var out []byte
+	if IsBase58Str(string(input)) {
+		out = base58.Decode(string(input))
+
+	} else if IsHex(string(input)) {
+		out, e = DecodeHex(string(input))
+		if e != nil {
+			return
+		}
+
 	} else {
-		if !addr.MatchProtocol("SP") {
-			return errors.New("address protocol is not pk")
+		return errors.New("invalid pk string")
+	}
+	if len(out) == 64 {
+		e = ValidPk(out)
+		if e != nil {
+			return e
 		}
-		err := account.ValidPk(addr)
-		if err != nil {
-			return err
+		copy(b[:], out)
+		return
+	} else {
+		return errors.New("pk address must be 64 bytes")
+	}
+}
+
+func ValidPk(addr []byte) error {
+	if len(addr) == 64 {
+		pk := c_type.Uint512{}
+		copy(pk[:], addr)
+		if !superzk.IsPKValid(&pk) {
+			return errors.New("invalid PK")
 		}
-		copy(b[:], addr.Bytes)
-		return nil
+	} else {
+		return errors.New("pk address must be 64 bytes")
+	}
+	return nil
+}
+
+func ValidPkr(addr []byte) error {
+	if len(addr) == 96 {
+		var pkr c_type.PKr
+		copy(pkr[:], addr)
+		if !superzk.IsPKrValid(&pkr) {
+			return errors.New("invalid pkr")
+		}
+	} else {
+		return errors.New("pkr address must be 96 bytes")
+	}
+	return nil
+}
+
+func Decode(input string) ([]byte, error) {
+	if len(input) == 0 {
+		return nil, errors.New("empty hex strin")
+	}
+	if !has0xPrefix(input) {
+		return nil, errors.New("hex string without 0x prefix")
+	}
+	b, err := hex.DecodeString(input[2:])
+	if err != nil {
+		return nil, err
+	}
+	return b, err
+}
+
+func has0xPrefix(input string) bool {
+	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
+}
+func isHexCharacter(c byte) bool {
+	return ('0' <= c && c <= '9') || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
+}
+
+func IsHex(s string) bool {
+	if has0xPrefix(s) {
+		s = s[2:]
+	}
+
+	for _, c := range []byte(s) {
+		if !isHexCharacter(c) {
+			return false
+		}
+	}
+	return true
+}
+func DecodeHex(hex string) (bytes []byte, err error) {
+	if strings.Index(hex, "0x") != 0 {
+		hex = "0x" + hex
+	}
+	if bytes, err = Decode(hex); err != nil {
+		return
+	} else {
+		if len(bytes) == 0 {
+			err = errors.New("the bytes length is 0")
+			return
+		} else {
+			return
+		}
+	}
+}
+
+func DecodeAddr(input []byte) (bytes []byte, e error) {
+	if IsBase58Str(string(input)) {
+		bytes = base58.Decode(string(input))
+		return
+	} else if IsHex(string(input)) {
+		return DecodeHex(string(input))
+
+	} else {
+		e = errors.New("invalid address string")
+		return
 	}
 }

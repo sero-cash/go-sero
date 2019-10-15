@@ -25,8 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sero-cash/go-sero/zero/account"
-
 	"github.com/btcsuite/btcutil/base58"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
@@ -220,19 +218,6 @@ type PublicAccountAPI struct {
 // NewPublicAccountAPI creates a new PublicAccountAPI.
 func NewPublicAccountAPI(am *accounts.Manager) *PublicAccountAPI {
 	return &PublicAccountAPI{am: am}
-}
-
-func (s *PublicAccountAPI) GetSzkAccounts() []string {
-	addresses := make([]string, 0) // return [] instead of nil if empty
-	for _, wallet := range s.am.Wallets() {
-		for _, acc := range wallet.Accounts() {
-			pk, _ := c_superzk.Tk2Pk(acc.Tk.ToTk().NewRef())
-			addr := account.NewAddressByBytes(pk[:])
-			addr.SetProtocol("SP")
-			addresses = append(addresses, addr.ToCode())
-		}
-	}
-	return addresses
 }
 
 // Accounts returns the collection of accounts this node manages
@@ -638,7 +623,7 @@ type ConvertAddress struct {
 	Rand      *c_type.Uint128                   `json:"rand"`
 }
 
-func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *c_type.Uint128, addresses []MixedcaseAddress, dy bool) (*ConvertAddress, error) {
+func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *c_type.Uint128, addresses []AllBase58Adrress, dy bool) (*ConvertAddress, error) {
 	empty := &c_type.Uint128{}
 	if bytes.Equal(rand[:], empty[:]) {
 		randKey := c_type.RandUint128()
@@ -653,18 +638,27 @@ func (s *PublicBlockChainAPI) ConvertAddressParams(ctx context.Context, rand *c_
 		randUint128 := c_type.RandUint128()
 		randSeed = (&randUint128).ToUint256()
 	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
+	if err != nil {
+		return nil, err
+	}
 	for _, addr := range addresses {
 		onceAddr := common.Address{}
-		if addr.IsContract() {
-			onceAddr = common.BytesToAddress(addr.Addr)
+		if state.IsContract(common.BytesToAddress(addr.Bytes())) {
+			onceAddr = common.BytesToAddress(addr.Bytes())
 		} else {
-			if addr.IsPkr() {
-				onceAddr = common.BytesToAddress(addr.Addr)
+			if len(addr.Bytes()) == 96 {
+				onceAddr = common.BytesToAddress(addr.Bytes())
 			} else {
 				pk := c_type.Uint512{}
-				copy(pk[:], addr.Addr)
-				pkr := superzk.Pk2PKr(&pk, randSeed.NewRef())
-				onceAddr.SetBytes(pkr[:])
+				copy(pk[:], addr.Bytes())
+				if superzk.IsPKValid(&pk) {
+					pkr := superzk.Pk2PKr(&pk, randSeed.NewRef())
+					onceAddr.SetBytes(pkr[:])
+				} else {
+					return nil, errors.New("invalid param address:" + addr.String())
+				}
 			}
 		}
 		addrMap[addr.String()] = base58.Encode(onceAddr[:])
@@ -1671,7 +1665,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
 	From        address.MixBase58Adrress `json:"from"`
-	To          *MixedcaseAddress        `json:"to"`
+	To          *AllBase58Adrress        `json:"to"`
 	Gas         *hexutil.Uint64          `json:"gas"`
 	GasCurrency Smbol                    `json:"gasCy"` //default SERO
 	GasPrice    *hexutil.Big             `json:"gasPrice"`
@@ -1707,7 +1701,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		return err
 	}
 
-	if args.To != nil && !state.IsContract(common.BytesToAddress(args.To.Addr[:])) {
+	if args.To != nil && !state.IsContract(common.BytesToAddress(args.To.Bytes())) {
 		var input []byte
 		if args.Data != nil {
 			input = *args.Data
@@ -1719,13 +1713,13 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 
 	}
 
-	if args.To == nil || !state.IsContract(common.BytesToAddress(args.To.Addr[:])) {
+	if args.To == nil || !state.IsContract(common.BytesToAddress(args.To.Bytes())) {
 		if args.GasCurrency.IsNotEmpty() && args.GasCurrency.IsNotSero() {
 			return errors.New(`GasCurrency must be null or SERO`)
 		}
 	} else {
 		if args.GasCurrency.IsNotSero() {
-			m, d := state.GetTokenRate(common.BytesToAddress(args.To.Addr[:]), string(args.GasCurrency))
+			m, d := state.GetTokenRate(common.BytesToAddress(args.To.Bytes()), string(args.GasCurrency))
 			if m.Sign() == 0 || d.Sign() == 0 {
 				return errors.New("the smart contract dose not support alternative payment!")
 			}
@@ -1815,9 +1809,9 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB, fromAccount accounts.Acc
 			refundPkr = fromAccount.GetPkr(&fromRand)
 		}
 
-	} else if state.IsContract(common.BytesToAddress(args.To.Addr[:])) {
+	} else if state.IsContract(common.BytesToAddress(args.To.Bytes())) {
 		fromRand := c_type.Uint256{}
-		copy(fromRand[:16], args.To.Addr[:16])
+		copy(fromRand[:16], args.To.Bytes()[:16])
 		if args.From.IsPkr() {
 			refundPkr = args.From.ToPkr()
 		} else {
@@ -1828,7 +1822,7 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB, fromAccount accounts.Acc
 			}
 		}
 		if args.GasCurrency.IsNotSero() {
-			m, d := state.GetTokenRate(common.BytesToAddress(args.To.Addr[:]), string(args.GasCurrency))
+			m, d := state.GetTokenRate(common.BytesToAddress(args.To.Bytes()), string(args.GasCurrency))
 			feevalue = new(big.Int).Div(feevalue.Mul(feevalue, m), d)
 		}
 		txParam.Cmds = prepare.Cmds{}
@@ -1836,11 +1830,11 @@ func (args *SendTxArgs) toTxParam(state *state.StateDB, fromAccount accounts.Acc
 		if args.Data != nil {
 			data = *args.Data
 		}
-		contractCmd := stx.ContractCmd{asset, args.To.ToPkr(nil).NewRef(), data}
+		contractCmd := stx.ContractCmd{asset, args.To.ToPkr(true).NewRef(), data}
 		txParam.Cmds.Contract = &contractCmd
 	} else {
 		refundPkr = args.From.ToPkr()
-		receptions := []prepare.Reception{{Addr: args.To.ToPkr(nil), Asset: asset}}
+		receptions := []prepare.Reception{{Addr: args.To.ToPkr(false), Asset: asset}}
 		txParam.Receptions = receptions
 	}
 	feeAsset := assets.Token{
@@ -1873,7 +1867,12 @@ func (args *SendTxArgs) toCreatePkg(state *state.StateDB, fromAccount accounts.A
 	txParam.From = fromAccount.Address.ToUint512()
 	feevalue := defaultFee(args.GasPrice, args.Gas)
 	asset := args.toAsset()
-	toPkr = args.To.ToPkr(nil)
+
+	if state.IsContract(common.BytesToAddress(args.To.Bytes())) {
+		toPkr = args.To.ToPkr(true)
+	} else {
+		toPkr = args.To.ToPkr(false)
+	}
 	feeToken := assets.Token{
 		utils.CurrencyToUint256(string(args.GasCurrency)),
 		utils.U256(*feevalue),
@@ -1935,7 +1934,7 @@ func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.H
 	}
 }
 
-func commitPreTx(txParam prepare.PreTxParam, b Backend, to *MixedcaseAddress) (common.Hash, error) {
+func commitPreTx(txParam prepare.PreTxParam, b Backend, to *AllBase58Adrress) (common.Hash, error) {
 	pretx, gtx, err := exchange.CurrentExchange().GenTxWithSign(txParam)
 	if err != nil {
 		return common.Hash{}, err
@@ -1949,7 +1948,7 @@ func commitPreTx(txParam prepare.PreTxParam, b Backend, to *MixedcaseAddress) (c
 	if to == nil {
 		log.Info("create contract  transaction", "fullhash", txhash.Hex())
 	} else {
-		log.Info("Submitted transaction", "fullhash", txhash.Hex(), "recipient", to)
+		log.Info("Submitted transaction", "fullhash", txhash.Hex(), "recipient", to.String())
 	}
 	return txhash, nil
 
@@ -2095,7 +2094,7 @@ type TransferPkgArgs struct {
 	Gas      *hexutil.Uint64           `json:"gas"`
 	GasPrice *hexutil.Big              `json:"gasPrice"`
 	PkgId    *c_type.Uint256           `json:"id"`
-	To       *MixedcaseAddress         `json:"To"`
+	To       *AllBase58Adrress         `json:"To"`
 }
 
 func (args *TransferPkgArgs) setDefaults(ctx context.Context, b Backend) error {
@@ -2130,13 +2129,19 @@ func (args *TransferPkgArgs) toTransaction(state *state.StateDB) (*types.Transac
 	tx := types.NewTransaction((*big.Int)(args.GasPrice), uint64(*args.Gas), nil)
 	fee := new(big.Int).Mul(((*big.Int)(args.GasPrice)), new(big.Int).SetUint64(uint64(*args.Gas)))
 	ehash := tx.Ehash()
-	Pkr := args.To.ToPkr(nil)
+	var pkr c_type.PKr
+	if state.IsContract(common.BytesToAddress(args.To.Bytes())) {
+		pkr = args.To.ToPkr(true)
+	} else {
+		pkr = args.To.ToPkr(false)
+	}
+
 	txt := &ztx.T{
 		Fee: assets.Token{
 			utils.CurrencyToUint256(params.DefaultCurrency),
 			utils.U256(*fee),
 		},
-		PkgTransfer: &ztx.PkgTransfer{*args.PkgId, Pkr},
+		PkgTransfer: &ztx.PkgTransfer{*args.PkgId, pkr},
 	}
 	txt.Ehash = ehash
 	txt.FromRnd = c_type.RandUint256().NewRef()

@@ -6,11 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/zero/account"
-
 	"github.com/sero-cash/go-sero/common/address"
-
-	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -517,12 +513,7 @@ type StakePool struct {
 }
 
 func PkrToString(pkr c_type.PKr) string {
-	if c_superzk.IsSzkPKr(&pkr) {
-		addr := account.NewAddressByBytes(pkr[:])
-		return addr.SetProtocol("SC").ToCode()
-	} else {
-		return base58.Encode(pkr[:])
-	}
+	return base58.Encode(pkr[:])
 }
 
 func newRPCStakePool(wallets []accounts.Wallet, pool stake.StakePool, timestamp uint64) map[string]interface{} {
