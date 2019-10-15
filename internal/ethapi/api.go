@@ -698,12 +698,15 @@ func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk address.PKAddress) 
 	return result, nil
 }
 
-func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk address.PKAddress, index int64) (PKrAddress, error) {
+func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk address.PKAddress, index uint64) (PKrAddress, error) {
 	account, err := s.b.AccountManager().FindAccountByPk(Pk.ToUint512())
 	if err != nil {
 		return PKrAddress{}, err
 	}
-	salt := big.NewInt(index).Bytes()
+	enc := big.NewInt(0).SetUint64(index).Bytes()
+	salt := make([]byte, 8)
+	copy(salt[:], enc)
+	//log.Info("GenIndexPKr", "salt", hexutil.Encode(salt))
 	random := append(account.Tk[:], salt...)
 	r := crypto.Keccak256Hash(random).HashToUint256()
 	PKr := account.GetPkr(r)
@@ -718,10 +721,13 @@ func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk address.PKAddr
 	//}
 }
 
-func (s *PublicBlockChainAPI) GenIndexPKrByTk(ctx context.Context, Tk address.TKAddress, index int64, oldVersion bool) (PKrAddress, error) {
+func (s *PublicBlockChainAPI) GenIndexPKrByTk(ctx context.Context, Tk address.TKAddress, index uint64, oldVersion bool) (PKrAddress, error) {
 
-	salt := big.NewInt(index).Bytes()
+	enc := big.NewInt(0).SetUint64(index).Bytes()
+	salt := make([]byte, 8)
+	copy(salt[:], enc)
 	random := append(Tk[:], salt...)
+	//log.Info("GenIndexPKr", "salt", hexutil.Encode(salt))
 	r := crypto.Keccak256Hash(random).HashToUint256()
 	var pk c_type.Uint512
 	var err error
