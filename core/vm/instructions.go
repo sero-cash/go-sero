@@ -702,7 +702,7 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	// Pop other call parameters.
 	addr, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(addr))
-	//TODO
+	// TODO
 	if toAddr == (common.Address{}) {
 		return nil, ErrToAddressError
 	}
@@ -750,7 +750,7 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	// Pop other call parameters.
 	addr, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(addr))
-	//TODO
+	// TODO
 	if toAddr == (common.Address{}) {
 		return nil, ErrToAddressError
 	}
@@ -797,7 +797,7 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract,
 	// Pop other call parameters.
 	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(addr))
-	//TODO
+	// TODO
 	if toAddr == (common.Address{}) {
 		return nil, ErrToAddressError
 	}
@@ -826,7 +826,7 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, m
 	// Pop other call parameters.
 	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(addr))
-	//TODO
+	// TODO
 	if toAddr == (common.Address{}) {
 		return nil, ErrToAddressError
 	}
@@ -869,8 +869,8 @@ func opStop(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 }
 
 func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	//toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(stack.pop()))
-	//interpreter.evm.StateDB.Suicide(contract.Address(), toAddr)
+	// toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BigToContractAddress(stack.pop()))
+	// interpreter.evm.StateDB.Suicide(contract.Address(), toAddr)
 	return nil, nil
 }
 
@@ -921,7 +921,7 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 		gas := evm.callGasTemp + params.CallStipend
 		_, returnGas, err, _alarm := evm.Call(contract, toAddr, nil, gas, &asset)
 		alarm = _alarm
-		//contract.Gas += returnGas
+		// contract.Gas += returnGas
 		if err != nil {
 			return common.Hash{}, returnGas, err, alarm
 		} else {
@@ -1109,6 +1109,7 @@ func makeLog(size int) executionFunc {
 			}
 		}
 		if topics[0] == topic_allotTicket {
+			log.Info("allotTicket")
 			hash, returnGas, err, alarm := handleAllotTicket(d, interpreter.evm, contract, data)
 			contract.Gas += returnGas
 			if alarm {
@@ -1196,6 +1197,7 @@ func makeLog(size int) executionFunc {
 			}
 			contract.Gas += interpreter.evm.callGasTemp
 		} else if topics[0] == topic_closePkg {
+			log.Info("closePkg")
 			id := c_type.Uint256{}
 			copy(id[:], d[0:32])
 
@@ -1235,6 +1237,7 @@ func makeLog(size int) executionFunc {
 			}
 			contract.Gas += interpreter.evm.callGasTemp
 		} else if topics[0] == topic_transferPkg {
+			log.Info("transferPkg")
 			id := c_type.Uint256{}
 			copy(id[:], d[0:32])
 
