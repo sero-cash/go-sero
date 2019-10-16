@@ -1109,7 +1109,6 @@ func makeLog(size int) executionFunc {
 			}
 		}
 		if topics[0] == topic_allotTicket {
-			log.Info("allotTicket")
 			hash, returnGas, err, alarm := handleAllotTicket(d, interpreter.evm, contract, data)
 			contract.Gas += returnGas
 			if alarm {
@@ -1122,10 +1121,9 @@ func makeLog(size int) executionFunc {
 			memory.Set(mStart.Uint64()+length-32, 32, hash[:])
 		} else if topics[0] == topic_issueToken {
 			if ok, err := handleIssueToken(d, interpreter.evm, contract, data); ok {
-				log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
 				memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
 			} else {
-				log.Trace(err.Error())
+				log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
 				memory.Set(mStart.Uint64()+length-32, 32, hashFalse)
 			}
 			contract.Gas += interpreter.evm.callGasTemp
@@ -1197,7 +1195,6 @@ func makeLog(size int) executionFunc {
 			}
 			contract.Gas += interpreter.evm.callGasTemp
 		} else if topics[0] == topic_closePkg {
-			log.Info("closePkg")
 			id := c_type.Uint256{}
 			copy(id[:], d[0:32])
 
@@ -1237,7 +1234,6 @@ func makeLog(size int) executionFunc {
 			}
 			contract.Gas += interpreter.evm.callGasTemp
 		} else if topics[0] == topic_transferPkg {
-			log.Info("transferPkg")
 			id := c_type.Uint256{}
 			copy(id[:], d[0:32])
 
