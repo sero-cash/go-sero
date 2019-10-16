@@ -1147,6 +1147,16 @@ func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e er
 	if mu, e = self.getMergeUtxos(account.pk, mp.Currency, int(mp.Zcount), int(mp.Left)); e != nil {
 		return
 	}
+
+	if strings.ToUpper(mp.Currency) != "SERO" {
+		if utxos, r := self.findUtxos(&mp.From, "SERO", default_fee_value); r == nil || r.Sign() > 0 {
+			e = errors.New("No enough SERO coins for fee")
+			return
+		} else {
+			mu.list = append(mu.list, utxos...)
+		}
+	}
+
 	bytes := common.LeftPadBytes([]byte(mp.Currency), 32)
 	var Currency c_type.Uint256
 	copy(Currency[:], bytes[:])

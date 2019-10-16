@@ -27,6 +27,7 @@ type sign_ctx struct {
 	p_outs       []*txtool.GOut
 	balance_desc c_type.BalanceDesc
 	keys         []c_type.Uint256
+	bases        []c_type.Uint256
 	s            stx.T
 	ck           assets.CKState
 }
@@ -43,6 +44,11 @@ func (self *sign_ctx) Param() (ret txtool.GTxParam) {
 
 func (self *sign_ctx) Keys() (ret []c_type.Uint256) {
 	ret = self.keys
+	return
+}
+
+func (self *sign_ctx) Bases() (ret []c_type.Uint256) {
+	ret = self.bases
 	return
 }
 
@@ -388,6 +394,9 @@ func (self *sign_ctx) genInsC() (e error) {
 		self.balance_desc.Zin_acms = append(self.balance_desc.Zin_acms, t_in.AssetCM[:]...)
 		self.balance_desc.Zin_ars = append(self.balance_desc.Zin_ars, in.Ar[:]...)
 		self.s.Tx1.Ins_C = append(self.s.Tx1.Ins_C, t_in)
+
+		baser := c_superzk.ClearPKr(in.Out.State.OS.ToPKr()).BASEr()
+		self.bases = append(self.bases, baser)
 	}
 	return
 }
@@ -417,6 +426,7 @@ func (self *sign_ctx) genOutsC() (e error) {
 		self.balance_desc.Zout_acms = append(self.balance_desc.Zout_acms, t_out.AssetCM[:]...)
 		self.balance_desc.Zout_ars = append(self.balance_desc.Zout_ars, out.Ar[:]...)
 		self.s.Tx1.Outs_C = append(self.s.Tx1.Outs_C, t_out)
+		self.keys = append(self.keys, key)
 	}
 	return
 }

@@ -7,6 +7,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_1"
+
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
+
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_0"
 
@@ -50,19 +54,34 @@ func Confirm(key_str string, out_str string) {
 		if len(key_bs) == 32 {
 			key := c_type.Uint256{}
 			copy(key[:], key_bs)
-			var out stx_v0.Out_Z
-			if e := json.Unmarshal([]byte(out_str), &out); e == nil {
-				if dout := generate_0.ConfirmOutZ(&key, true, &out); dout != nil {
-					if dout_bs, e := json.Marshal(dout); e == nil {
-						OUTPUT_RESULT(string(dout_bs))
+			if strings.Contains(out_str, "\"OutCM\":") {
+				var out stx_v0.Out_Z
+				if e := json.Unmarshal([]byte(out_str), &out); e == nil {
+					if dout := generate_0.ConfirmOutZ(&key, true, &out); dout != nil {
+						if dout_bs, e := json.Marshal(dout); e == nil {
+							OUTPUT_RESULT(string(dout_bs))
+						} else {
+							OUTPUT_ERROR("Marshal-", e)
+						}
 					} else {
-						OUTPUT_ERROR("Marshal-", e)
+						OUTPUT_ERROR("Confirm OutZ Failed", nil)
 					}
 				} else {
-					OUTPUT_ERROR("Confirm OutZ Failed", nil)
+					OUTPUT_ERROR("Out_Z Unmarshal-", e)
 				}
 			} else {
-				OUTPUT_ERROR("Unmarshal-", e)
+				var out stx_v1.Out_C
+				if e := json.Unmarshal([]byte(out_str), &out); e == nil {
+					if dout, _ := generate_1.ConfirmOutC(&key, &out); dout != nil {
+						if dout_bs, e := json.Marshal(dout); e == nil {
+							OUTPUT_RESULT(string(dout_bs))
+						} else {
+							OUTPUT_ERROR("Out_C Marshal-", e)
+						}
+					}
+				} else {
+					OUTPUT_ERROR("Out_C Unmarshal-", e)
+				}
 			}
 		} else {
 			OUTPUT_ERROR("key must 32 bytes", nil)

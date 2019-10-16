@@ -52,7 +52,6 @@ func OUTPUT_ERROR(result interface{}, e error) {
 }
 
 func main() {
-	fmt.Println("hello", "ok")
 	seroparam.InitExchangeValueStr(true)
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	fmt.Printf("PThread: %v \n", zconfig.G_p_thread_num)

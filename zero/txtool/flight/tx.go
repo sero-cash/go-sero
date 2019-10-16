@@ -24,7 +24,7 @@ func SignTx0(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
 	}
 }
 
-func SignTx1(txParam *txtool.GTxParam) (tx stx.T, param txtool.GTxParam, keys []c_type.Uint256, e error) {
+func SignTx1(txParam *txtool.GTxParam) (tx stx.T, param txtool.GTxParam, keys []c_type.Uint256, bases []c_type.Uint256, e error) {
 	if ctx, err := generate_1.SignTx(txParam); err != nil {
 		e = err
 		return
@@ -32,6 +32,7 @@ func SignTx1(txParam *txtool.GTxParam) (tx stx.T, param txtool.GTxParam, keys []
 		tx = ctx.Tx()
 		param = ctx.Param()
 		keys = ctx.Keys()
+		bases = ctx.Bases()
 		return
 	}
 }

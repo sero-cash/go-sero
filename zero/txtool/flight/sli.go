@@ -29,7 +29,7 @@ func GenTx(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
 	}
 
 	if need_szk {
-		if tx, param, keys, err := SignTx1(param); err != nil {
+		if tx, param, keys, bases, err := SignTx1(param); err != nil {
 			e = err
 			return
 		} else {
@@ -37,6 +37,7 @@ func GenTx(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
 				return
 			} else {
 				gtx.Keys = keys
+				gtx.Bases = bases
 				return
 			}
 		}
@@ -53,7 +54,7 @@ func SignTx(sk *c_type.Uint512, paramTx *txtool.GTxParam) (tx txtool.GTx, e erro
 	return GenTx(paramTx)
 }
 
-func SignLight(sk *c_type.Uint512, paramTx *txtool.GTxParam) (tx stx.T, param txtool.GTxParam, keys []c_type.Uint256, e error) {
+func SignLight(sk *c_type.Uint512, paramTx *txtool.GTxParam) (tx stx.T, param txtool.GTxParam, keys []c_type.Uint256, bases []c_type.Uint256, e error) {
 	copy(paramTx.From.SKr[:], sk[:])
 	for i := range paramTx.Ins {
 		copy(paramTx.Ins[i].SKr[:], sk[:])
