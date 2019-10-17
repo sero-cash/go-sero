@@ -219,11 +219,11 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		return nil, err
 	}
 	key := crypto.ToECDSAUnsafe(keyBytes)
-
+	tk := crypto.PrivkeyToTk(key, k.Version)
 	return &Key{
 		Id:         uuid.UUID(keyId),
-		Address:    crypto.PrivkeyToAddress(key, k.Version),
-		Tk:         crypto.PrivkeyToTk(key, k.Version),
+		Address:    tk.ToPk(),
+		Tk:         tk,
 		PrivateKey: key,
 		At:         k.At,
 		Version:    k.Version,

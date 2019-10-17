@@ -122,6 +122,12 @@ func (b TKAddress) ToTk() c_type.Tk {
 	return result
 }
 
+func (b *TKAddress) ToPk() (ret PKAddress) {
+	pk, _ := superzk.Tk2Pk(b.ToTk().NewRef())
+	copy(ret[:], pk[:])
+	return
+}
+
 func (c TKAddress) String() string {
 	return base58.Encode(c[:])
 }

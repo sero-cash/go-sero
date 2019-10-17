@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/sero-cash/go-czero-import/superzk"
+	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/sero-cash/go-sero/common/address"
 
@@ -90,10 +90,11 @@ type cipherparamsJSON struct {
 
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, at uint64, version int) *Key {
 	id := uuid.NewRandom()
+	tk := crypto.PrivkeyToTk(privateKeyECDSA, version)
 	key := &Key{
 		Id:         id,
-		Address:    crypto.PrivkeyToAddress(privateKeyECDSA, version),
-		Tk:         crypto.PrivkeyToTk(privateKeyECDSA, version),
+		Address:    tk.ToPk(),
+		Tk:         tk,
 		PrivateKey: privateKeyECDSA,
 		At:         at,
 		Version:    version,
@@ -105,15 +106,16 @@ func newKeyFromTk(tk *c_type.Tk, at uint64) *Key {
 	id := uuid.NewRandom()
 	tkaddress := address.TKAddress{}
 	copy(tkaddress[:], tk[:])
-	pk, _ := superzk.Tk2Pk(tk)
-	address := address.PKAddress{}
-	copy(address[:], pk[:])
+	v := 1
+	if c_superzk.IsSzkTk(tk) {
+		v = 2
+	}
 	key := &Key{
 		Id:      id,
-		Address: address,
+		Address: tkaddress.ToPk(),
 		Tk:      tkaddress,
 		At:      at,
-		Version: version,
+		Version: v,
 	}
 	return key
 }

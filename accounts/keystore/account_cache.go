@@ -27,6 +27,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/common/address"
 
@@ -304,6 +307,15 @@ func (ac *accountCache) scanAccounts() error {
 		copy(addr[:], pk[:])
 		at := key.At
 		version := key.Version
+		if c_superzk.IsSzkTk(tk.ToTk().NewRef()) {
+			if version != 2 {
+				err = errors.New("invalid keystore versiong want 2 but find " + string(version))
+			}
+		} else {
+			if version != 1 {
+				err = errors.New("invalid keystore versiong want 1 but find " + string(version))
+			}
+		}
 		switch {
 		case err != nil:
 			log.Debug("Failed to decode keystore key", "path", path, "err", err)

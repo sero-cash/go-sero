@@ -201,18 +201,6 @@ func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
 	return r.Cmp(secp256k1N) < 0 && s.Cmp(secp256k1N) < 0 && (v == 0 || v == 1)
 }
 
-func PrivkeyToAddress(priv *ecdsa.PrivateKey, version int) (ret address.PKAddress) {
-	privKey := FromECDSA(priv)
-	var seed c_type.Uint256
-	copy(seed[:], privKey)
-	sk := superzk.Seed2Sk(&seed, version)
-	tk, _ := superzk.Sk2Tk(&sk)
-	var pk c_type.Uint512
-	pk, _ = superzk.Tk2Pk(&tk)
-	copy(ret[:], pk[:])
-	return
-}
-
 func PrivkeyToTk(priv *ecdsa.PrivateKey, version int) (ret address.TKAddress) {
 	privKey := FromECDSA(priv)
 	var seed c_type.Uint256
