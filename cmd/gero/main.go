@@ -87,7 +87,6 @@ var (
 		utils.TxPoolGlobalQueueFlag,
 		utils.TxPoolLifetimeFlag,
 		utils.SyncModeFlag,
-		utils.MiningModeFlag,
 		utils.GCModeFlag,
 		utils.CacheFlag,
 		utils.CacheDatabaseFlag,

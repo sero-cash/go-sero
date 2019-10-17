@@ -331,10 +331,6 @@ var (
 	}
 
 	// Miner settings
-	MiningModeFlag = cli.BoolFlag{
-		Name:  "mineMode",
-		Usage: "Enable mining",
-	}
 	MiningEnabledFlag = cli.BoolFlag{
 		Name:  "mine",
 		Usage: "Enable mining",
@@ -1222,10 +1218,6 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
-	}
-
-	if ctx.GlobalIsSet(MiningModeFlag.Name) {
-		cfg.MineMode = true
 	}
 
 	if ctx.GlobalIsSet(ExchangeFlag.Name) {
