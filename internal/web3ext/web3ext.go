@@ -689,6 +689,11 @@ web3._extend({
 	property: 'ssi',
 	methods: [
 		new web3._extend.Method({
+			name: 'szkcreatekr',
+			call: 'ssi_szkCreateKr',
+			params: 0
+		}),
+		new web3._extend.Method({
 			name: 'createkr',
 			call: 'ssi_createKr',
 			params: 0

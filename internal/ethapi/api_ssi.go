@@ -15,6 +15,10 @@ type PublicSSIAPI struct {
 	b Backend
 }
 
+func (s *PublicSSIAPI) SzkCreateKr() (kr txtool.Kr) {
+	return ssi.SSI_Inst.CreateKr(true)
+}
+
 func (s *PublicSSIAPI) CreateKr() (kr txtool.Kr) {
 	return ssi.SSI_Inst.CreateKr(false)
 }

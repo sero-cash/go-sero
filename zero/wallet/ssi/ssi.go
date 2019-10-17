@@ -30,7 +30,7 @@ type SSI struct {
 var SSI_Inst = SSI{}
 
 func (self *SSI) CreateKr(flag bool) (kr txtool.Kr) {
-	rnd := c_type.RandUint256()
+	rnd := c_superzk.RandomFr()
 	zsk := c_superzk.RandomFr()
 	vsk := c_superzk.RandomFr()
 
@@ -48,7 +48,6 @@ func (self *SSI) CreateKr(flag bool) (kr txtool.Kr) {
 	} else {
 		pk, _ = c_superzk.Tk2Pk(&tk)
 	}
-
 
 	pkr := superzk.Pk2PKr(&pk, &rnd)
 	kr.PKr = pkr
