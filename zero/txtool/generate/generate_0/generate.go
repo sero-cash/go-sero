@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
 
@@ -70,7 +71,7 @@ func (self *gen_ctx) prepare() {
 
 func (self *gen_ctx) check() (e error) {
 	sk := self.param.From.SKr.ToUint512()
-	tk, err := c_superzk.Sk2Tk(&sk)
+	tk, err := superzk.Sk2Tk(&sk)
 	if err != nil {
 		e = err
 		return
@@ -171,7 +172,7 @@ func (self *gen_ctx) setData() {
 
 func (self *gen_ctx) signTxFrom() error {
 	sk := self.param.From.SKr.ToUint512()
-	tk, err := c_superzk.Sk2Tk(&sk)
+	tk, err := superzk.Sk2Tk(&sk)
 	if err != nil {
 		return err
 	}

@@ -30,7 +30,7 @@ import (
 
 	"github.com/sero-cash/go-sero/common/address"
 
-	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/rlp"
 
@@ -205,23 +205,20 @@ func PrivkeyToAddress(priv *ecdsa.PrivateKey, version int) (ret address.PKAddres
 	privKey := FromECDSA(priv)
 	var seed c_type.Uint256
 	copy(seed[:], privKey)
-	sk := c_superzk.Seed2Sk(&seed)
-	tk, _ := c_superzk.Sk2Tk(&sk)
+	sk := superzk.Seed2Sk(&seed, version)
+	tk, _ := superzk.Sk2Tk(&sk)
 	var pk c_type.Uint512
-	if version == 2 {
-		pk, _ = c_superzk.Tk2Pk(&tk)
-	} else {
-		pk, _ = c_superzk.Czero_Tk2PK(&tk)
-	}
+	pk, _ = superzk.Tk2Pk(&tk)
 	copy(ret[:], pk[:])
 	return
 }
 
-func PrivkeyToTk(priv *ecdsa.PrivateKey) (ret address.TKAddress) {
+func PrivkeyToTk(priv *ecdsa.PrivateKey, version int) (ret address.TKAddress) {
 	privKey := FromECDSA(priv)
 	var seed c_type.Uint256
 	copy(seed[:], privKey)
-	pubBytes, _ := c_superzk.Seed2Tk(&seed)
+	sk := superzk.Seed2Sk(&seed, version)
+	pubBytes, _ := superzk.Sk2Tk(&sk)
 	copy(ret[:], pubBytes[:])
 	return
 }

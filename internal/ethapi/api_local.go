@@ -3,8 +3,6 @@ package ethapi
 import (
 	"context"
 
-	"github.com/sero-cash/go-czero-import/c_superzk"
-
 	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
@@ -69,17 +67,17 @@ func (s *PublicLocalAPI) IdToCurrency(ctx context.Context, hex c_type.Uint256) (
 	return
 }
 
-func (s *PublicLocalAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes) (c_type.Uint512, error) {
+func (s *PublicLocalAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes, version int) (c_type.Uint512, error) {
 	if len(seed) != 32 {
 		return c_type.Uint512{}, errors.New("seed len must be 32")
 	}
 	var sd c_type.Uint256
 	copy(sd[:], seed[:])
-	return c_superzk.Seed2Sk(&sd), nil
+	return superzk.Seed2Sk(&sd, version), nil
 }
 
 func (s *PublicLocalAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (ret address.TKAddress, err error) {
-	tk, err := c_superzk.Sk2Tk(&sk)
+	tk, err := superzk.Sk2Tk(&sk)
 	if err != nil {
 		return
 	}
@@ -87,16 +85,9 @@ func (s *PublicLocalAPI) Sk2Tk(ctx context.Context, sk c_type.Uint512) (ret addr
 	return
 }
 
-func (s *PublicLocalAPI) Tk2Pk(ctx context.Context, tk address.TKAddress, new bool) (ret address.PKAddress, err error) {
+func (s *PublicLocalAPI) Tk2Pk(ctx context.Context, tk address.TKAddress) (ret address.PKAddress, err error) {
 	var pk c_type.Uint512
-	if new {
-		pk, err = c_superzk.Tk2Pk(tk.ToTk().NewRef())
-	} else {
-		pk, err = c_superzk.Czero_Tk2PK(tk.ToTk().NewRef())
-	}
-	if err != nil {
-		return
-	}
+	pk, err = superzk.Tk2Pk(tk.ToTk().NewRef())
 	copy(ret[:], pk[:])
 	return
 }

@@ -86,7 +86,7 @@ If you want to encrypt an existing private key, it can be specified by setting
 		key := &keystore.Key{
 			Id:         id,
 			Address:    crypto.PrivkeyToAddress(privateKey, 2),
-			Tk:         crypto.PrivkeyToTk(privateKey),
+			Tk:         crypto.PrivkeyToTk(privateKey, 2),
 			PrivateKey: privateKey,
 		}
 

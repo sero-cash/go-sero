@@ -43,13 +43,9 @@ func (self *SSI) CreateKr(flag bool) (kr txtool.Kr) {
 
 	sk := c_type.Uint512{}
 	copy(sk[:], skr[:])
-	tk, _ := c_superzk.Sk2Tk(&sk)
+	tk, _ := superzk.Sk2Tk(&sk)
 	var pk c_type.Uint512
-	if !flag {
-		pk, _ = c_superzk.Czero_Tk2PK(&tk)
-	} else {
-		pk, _ = c_superzk.Tk2Pk(&tk)
-	}
+	pk, _ = superzk.Tk2Pk(&tk)
 
 	pkr := superzk.Pk2PKr(&pk, &rnd)
 	kr.PKr = pkr

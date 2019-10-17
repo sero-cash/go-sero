@@ -223,7 +223,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	return &Key{
 		Id:         uuid.UUID(keyId),
 		Address:    crypto.PrivkeyToAddress(key, k.Version),
-		Tk:         crypto.PrivkeyToTk(key),
+		Tk:         crypto.PrivkeyToTk(key, k.Version),
 		PrivateKey: key,
 		At:         k.At,
 		Version:    k.Version,

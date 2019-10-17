@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-czero-import/c_type"
 
@@ -43,7 +44,7 @@ type gen_input_desc struct {
 }
 
 func (self *gen_input_desc) Run() error {
-	tk, err := c_superzk.Sk2Tk(&self.desc.Sk)
+	tk, err := superzk.Sk2Tk(&self.desc.Sk)
 	if err != nil {
 		return err
 	}

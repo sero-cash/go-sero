@@ -388,12 +388,8 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string, oldVer
 	return acc.Address, err
 }
 
-func (s *PrivateAccountAPI) ImportTk(tk address.TKAddress, oldVersion bool, at uint64) (address.PKAddress, error) {
-	version := 2
-	if oldVersion {
-		version = 1
-	}
-	acc, err := fetchKeystore(s.am).ImportTk(tk.ToTk(), at, version)
+func (s *PrivateAccountAPI) ImportTk(tk address.TKAddress, at uint64) (address.PKAddress, error) {
+	acc, err := fetchKeystore(s.am).ImportTk(tk.ToTk(), at)
 	return acc.Address, err
 }
 
@@ -527,7 +523,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 			e = err
 			return
 		}
-		sk := c_superzk.Seed2Sk(seed.SeedToUint256())
+		sk := superzk.Seed2Sk(seed.SeedToUint256(), wallet.Accounts()[0].Version)
 		gtx, err := flight.SignTx(&sk, pretx)
 		if err != nil {
 			exchange.CurrentExchange().ClearTxParam(pretx)
@@ -731,11 +727,7 @@ func (s *PublicBlockChainAPI) GenIndexPKrByTk(ctx context.Context, Tk address.TK
 	r := crypto.Keccak256Hash(random).HashToUint256()
 	var pk c_type.Uint512
 	var err error
-	if oldVersion {
-		pk, err = c_superzk.Czero_Tk2PK(Tk.ToTk().NewRef())
-	} else {
-		pk, err = c_superzk.Tk2Pk(Tk.ToTk().NewRef())
-	}
+	pk, err = superzk.Tk2Pk(Tk.ToTk().NewRef())
 	if err != nil {
 		return PKrAddress{}, err
 	}

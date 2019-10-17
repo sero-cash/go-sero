@@ -203,7 +203,7 @@ func (self *StakeService) ownPkr(pkr c_type.PKr) (pk *c_type.Uint512, ok bool) {
 	var account *Account
 	self.accounts.Range(func(key, value interface{}) bool {
 		a := value.(*Account)
-		if superzk.IsMyPKr(a.tk, &pkr, a.version) {
+		if superzk.IsMyPKr(a.tk, &pkr) {
 			account = a
 			return false
 		}

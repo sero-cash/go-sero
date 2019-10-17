@@ -434,8 +434,8 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string, at ui
 	return ks.importKey(key, passphrase)
 }
 
-func (ks *KeyStore) ImportTk(tk c_type.Tk, at uint64, version int) (accounts.Account, error) {
-	key := newKeyFromTk(&tk, at, version)
+func (ks *KeyStore) ImportTk(tk c_type.Tk, at uint64) (accounts.Account, error) {
+	key := newKeyFromTk(&tk, at)
 	if ks.cache.hasAddress(key.Address) {
 		return accounts.Account{}, fmt.Errorf("account already exists")
 	}

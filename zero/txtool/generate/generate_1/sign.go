@@ -92,36 +92,36 @@ func SignTx(param *txtool.GTxParam) (ctx sign_ctx, e error) {
 
 func (self *sign_ctx) check() (e error) {
 	sk := self.param.From.SKr.ToUint512()
-	tk, e := c_superzk.Sk2Tk(&sk)
+	tk, e := superzk.Sk2Tk(&sk)
 	fmt.Println(e)
-	if !superzk.IsMyPKr(&tk, &self.param.From.PKr, 0) {
+	if !superzk.IsMyPKr(&tk, &self.param.From.PKr) {
 		e = errors.New("sk unmatch pkr for the From field")
 		return
 	}
 
 	for _, in := range self.param.Ins {
-		tk, _ := c_superzk.Sk2Tk(in.SKr.ToUint512().NewRef())
+		tk, _ := superzk.Sk2Tk(in.SKr.ToUint512().NewRef())
 		if in.Out.State.OS.Out_O != nil {
-			if e = c_superzk.Czero_isMyPKr(&tk, &in.Out.State.OS.Out_O.Addr); e != nil {
+			if !superzk.IsMyPKr(&tk, &in.Out.State.OS.Out_O.Addr) {
 				return
 			}
 			continue
 		}
 		if in.Out.State.OS.Out_Z != nil {
-			if e = c_superzk.Czero_isMyPKr(&tk, &in.Out.State.OS.Out_Z.PKr); e != nil {
+			if !superzk.IsMyPKr(&tk, &in.Out.State.OS.Out_Z.PKr) {
 				return
 			}
 			continue
 		}
 		if in.Out.State.OS.Out_P != nil {
-			if !superzk.IsMyPKr(&tk, &in.Out.State.OS.Out_P.PKr, 0) {
+			if !superzk.IsMyPKr(&tk, &in.Out.State.OS.Out_P.PKr) {
 				e = errors.New("sk unmatch pkr for out_z")
 				return
 			}
 			continue
 		}
 		if in.Out.State.OS.Out_C != nil {
-			if !superzk.IsMyPKr(&tk, &in.Out.State.OS.Out_C.PKr, 0) {
+			if !superzk.IsMyPKr(&tk, &in.Out.State.OS.Out_C.PKr) {
 				e = errors.New("sk unmatch pkr for out_z")
 				return
 			}
@@ -221,7 +221,7 @@ func (self *sign_ctx) genCmd() (e error) {
 			self.s.Desc_Pkg.Create.Pkg.AssetCM = cm
 		}
 		sk := self.param.From.SKr.ToUint512()
-		tk, err := c_superzk.Sk2Tk(&sk)
+		tk, err := superzk.Sk2Tk(&sk)
 		if err != nil {
 			e = err
 			return
@@ -262,7 +262,7 @@ func (self *sign_ctx) genCmd() (e error) {
 func (self *sign_ctx) genInsP0() (e error) {
 	for _, in := range self.p0_ins {
 		sk := in.SKr.ToUint512()
-		tk, _ := c_superzk.Sk2Tk(&sk)
+		tk, _ := superzk.Sk2Tk(&sk)
 
 		t_in := stx_v1.In_P0{}
 		t_in.Root = in.Out.Root
@@ -305,7 +305,7 @@ func (self *sign_ctx) genInsP0() (e error) {
 func (self *sign_ctx) genInsP() (e error) {
 	for _, in := range self.p_ins {
 		sk := in.SKr.ToUint512()
-		tk, _ := c_superzk.Sk2Tk(&sk)
+		tk, _ := superzk.Sk2Tk(&sk)
 
 		t_in := stx_v1.In_P{}
 		t_in.Root = in.Out.Root
@@ -350,7 +350,7 @@ func (self *sign_ctx) genInsP() (e error) {
 func (self *sign_ctx) genInsC() (e error) {
 	for _, in := range self.c_ins {
 		sk := in.SKr.ToUint512()
-		tk, _ := c_superzk.Sk2Tk(&sk)
+		tk, _ := superzk.Sk2Tk(&sk)
 
 		t_in := stx_v1.In_C{}
 
@@ -511,7 +511,7 @@ func (self *sign_ctx) signInsP() (e error) {
 		} else {
 			self.s.Tx1.Ins_P[i].ASign = sign
 		}
-		tk, _ := c_superzk.Sk2Tk(t_in.SKr.ToUint512().NewRef())
+		tk, _ := superzk.Sk2Tk(t_in.SKr.ToUint512().NewRef())
 		if sign, err := c_superzk.SignNil(
 			&tk,
 			&self.balance_desc.Hash,

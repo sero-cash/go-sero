@@ -27,9 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sero-cash/go-czero-import/c_superzk"
-	"github.com/sero-cash/go-czero-import/c_type"
-
+	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/common/address"
 
 	mapset "github.com/deckarep/golang-set"
@@ -301,12 +299,7 @@ func (ac *accountCache) scanAccounts() error {
 		key.Version = 0
 		err = json.NewDecoder(buf).Decode(&key)
 		tk := address.Base58ToTk(key.Tk)
-		var pk c_type.Uint512
-		if key.Version == 2 {
-			pk, _ = c_superzk.Tk2Pk(tk.ToTk().NewRef())
-		} else {
-			pk, _ = c_superzk.Czero_Tk2PK(tk.ToTk().NewRef())
-		}
+		pk, _ := superzk.Tk2Pk(tk.ToTk().NewRef())
 		var addr address.PKAddress
 		copy(addr[:], pk[:])
 		at := key.At

@@ -539,7 +539,7 @@ func (self *Exchange) getAccountByPk(pk c_type.Uint512) *Account {
 func (self *Exchange) getAccountByPkr(pkr c_type.PKr) (a *Account) {
 	self.accounts.Range(func(pk, value interface{}) bool {
 		account := value.(*Account)
-		if superzk.IsMyPKr(account.tk, &pkr, account.version) {
+		if superzk.IsMyPKr(account.tk, &pkr) {
 			a = account
 			return false
 		}
@@ -572,7 +572,7 @@ func (self *Exchange) genTx(account *Account, param *prepare.BeforeTxParam) (txP
 		return
 	}
 
-	sk := c_superzk.Seed2Sk(seed.SeedToUint256())
+	sk := superzk.Seed2Sk(seed.SeedToUint256(), account.version)
 	gtx, err := flight.SignTx(&sk, txParam)
 	if err != nil {
 		self.ClearTxParam(txParam)
@@ -1046,22 +1046,8 @@ func (self *Exchange) ownPkr(pks []c_type.Uint512, pkr c_type.PKr) (account *Acc
 			continue
 		}
 		account = value.(*Account)
-		if c_superzk.IsSzkPKr(&pkr) {
-			if account.version == 1 {
-				continue
-			}
-			if c_superzk.IsMyPKr(account.tk, &pkr) {
-				return account, true
-			}
-		} else {
-			if account.version == 2 {
-				continue
-			}
-			if e := c_superzk.Czero_isMyPKr(account.tk, &pkr); e != nil {
-				continue
-			} else {
-				return account, true
-			}
+		if superzk.IsMyPKr(account.tk, &pkr) {
+			return account, true
 		}
 	}
 	return

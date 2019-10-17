@@ -788,7 +788,7 @@ web3._extend({
         new web3._extend.Method({
 			name: 'seed2Sk',
 			call: 'exchange_seed2Sk',
-            params: 1
+            params: 2
 		}),
         new web3._extend.Method({
 			name: 'sk2Tk',
@@ -993,7 +993,7 @@ web3._extend({
         new web3._extend.Method({
 			name: 'seed2Sk',
 			call: 'local_seed2Sk',
-            params: 1
+            params: 2
 		}),
         new web3._extend.Method({
 			name: 'sk2Tk',

@@ -18,7 +18,6 @@
 package accounts
 
 import (
-	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero"
@@ -44,11 +43,7 @@ func (self *Account) GetPkr(rand *c_type.Uint256) c_type.PKr {
 }
 func (self *Account) GetPk() c_type.Uint512 {
 	var pk c_type.Uint512
-	if self.Version == 1 {
-		pk, _ = c_superzk.Czero_Tk2PK(self.Tk.ToTk().NewRef())
-	} else {
-		pk, _ = c_superzk.Tk2Pk(self.Tk.ToTk().NewRef())
-	}
+	pk, _ = superzk.Tk2Pk(self.Tk.ToTk().NewRef())
 	return pk
 }
 
@@ -72,7 +67,7 @@ func (self *Account) IsMyPk(pk c_type.Uint512) bool {
 func (self *Account) IsMyPkr(pkr c_type.PKr) bool {
 	tk := c_type.Tk{}
 	copy(tk[:], self.Tk[:])
-	return superzk.IsMyPKr(&tk, &pkr, self.Version)
+	return superzk.IsMyPKr(&tk, &pkr)
 }
 
 // Wallet represents a software or hardware wallet that might contain one or more

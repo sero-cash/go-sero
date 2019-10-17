@@ -25,9 +25,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/sero-cash/go-sero/common/address"
+	"github.com/sero-cash/go-czero-import/superzk"
 
-	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-czero-import/c_type"
 
@@ -93,7 +93,7 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, at uint64, version int) 
 	key := &Key{
 		Id:         id,
 		Address:    crypto.PrivkeyToAddress(privateKeyECDSA, version),
-		Tk:         crypto.PrivkeyToTk(privateKeyECDSA),
+		Tk:         crypto.PrivkeyToTk(privateKeyECDSA, version),
 		PrivateKey: privateKeyECDSA,
 		At:         at,
 		Version:    version,
@@ -101,11 +101,11 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, at uint64, version int) 
 	return key
 }
 
-func newKeyFromTk(tk *c_type.Tk, at uint64, version int) *Key {
+func newKeyFromTk(tk *c_type.Tk, at uint64) *Key {
 	id := uuid.NewRandom()
 	tkaddress := address.TKAddress{}
 	copy(tkaddress[:], tk[:])
-	pk, _ := c_superzk.Czero_Tk2PK(tk)
+	pk, _ := superzk.Tk2Pk(tk)
 	address := address.PKAddress{}
 	copy(address[:], pk[:])
 	key := &Key{

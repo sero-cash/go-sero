@@ -198,14 +198,14 @@ func (self *Voter) voteLoop() {
 }
 
 type voteInfo struct {
-	index      uint32
-	parentNum  uint64
-	shareHash  common.Hash
-	poshash    common.Hash
-	statkeHash common.Hash
-	votePKr    c_type.PKr
-	isPool     bool
-	seed       address.Seed
+	index     uint32
+	parentNum uint64
+	shareHash common.Hash
+	poshash   common.Hash
+	stakeHash common.Hash
+	votePKr   c_type.PKr
+	isPool    bool
+	seed      address.Seed
 }
 
 func cotainsVoteInfo(voteInfos []voteInfo, item voteInfo, pool *stake.StakePool) bool {
@@ -333,8 +333,12 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 
 func (self *Voter) sign(info voteInfo) {
 	data := c_type.Uint256{}
-	copy(data[:], info.statkeHash[:])
-	sk := c_superzk.Seed2Sk(info.seed.SeedToUint256())
+	copy(data[:], info.stakeHash[:])
+	version := 1
+	if c_superzk.IsSzkPKr(&info.votePKr) {
+		version = 2
+	}
+	sk := superzk.Seed2Sk(info.seed.SeedToUint256(), version)
 	sign, err := superzk.SignPKr_ByHeight(info.parentNum+1, &sk, &data, &info.votePKr)
 	if err != nil {
 		log.Error("voter sign", "sign err", err)
