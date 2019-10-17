@@ -3,6 +3,8 @@ package prepare
 import (
 	"bytes"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
 	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -37,6 +39,12 @@ func GenTxParam(param *PreTxParam, gen TxParamGenerator, state TxParamState) (tx
 		param.Cmds,
 	}
 	txParam, e = BuildTxParam(state, &bparam)
+	if txtool.Ref_inst.Bc != nil {
+		if txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()+1 >= seroparam.SIP5() {
+			Z := true
+			txParam.Z = &Z
+		}
+	}
 	return
 }
 

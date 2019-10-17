@@ -736,6 +736,11 @@ web3._extend({
 	property: 'exchange',
 	methods: [
 		new web3._extend.Method({
+			name: 'getBalances',
+			call: 'exchange_getBalances',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getLockedBalances',
 			call: 'exchange_getLockedBalances',
 			params: 1

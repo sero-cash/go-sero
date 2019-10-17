@@ -93,14 +93,17 @@ func (s *PublicExchangeAPI) GetMaxAvailable(pk address.PKAddress, currency Smbol
 	return (*Big)(s.b.GetMaxAvailable(pk.ToUint512(), string(currency)))
 }
 
-func (s *PublicExchangeAPI) GetBalances(ctx context.Context, pk address.PKAddress) (map[string]*Big, map[string][]*common.Hash) {
+func (s *PublicExchangeAPI) GetBalances(ctx context.Context, pk address.PKAddress) map[string]interface{} {
 	result := map[string]*Big{}
 
 	balances, tickets := s.b.GetBalances(pk.ToUint512())
 	for k, v := range balances {
 		result[k] = (*Big)(v)
 	}
-	return result, tickets
+	ret := make(map[string]interface{})
+	ret["tkn"] = result
+	ret["tkt"] = tickets
+	return ret
 }
 
 type ReceptionArgs struct {
@@ -206,6 +209,7 @@ func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash c_type.Uint256) (m
 		r["Pkr"] = record.Pkr
 		r["Currency"] = record.Currency
 		r["Value"] = record.Value
+		r["Root"] = record.Root
 		outs = append(outs, r)
 	}
 	fields["Outs"] = outs
@@ -220,6 +224,17 @@ func (s *PublicExchangeAPI) GetTx(ctx context.Context, txHash c_type.Uint256) (m
 				ins = append(ins, *root)
 			}
 		}
+	}
+	for _, in := range tx.Stxt().Tx1.Ins_C {
+		if root := exchange.CurrentExchange().GetRootByNil(in.Nil); root != nil {
+			ins = append(ins, *root)
+		}
+	}
+	for _, in := range tx.Stxt().Tx1.Ins_P {
+		ins = append(ins, in.Root)
+	}
+	for _, in := range tx.Stxt().Tx1.Ins_P0 {
+		ins = append(ins, in.Root)
 	}
 	fields["Ins"] = ins
 
