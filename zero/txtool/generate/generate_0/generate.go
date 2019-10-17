@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
@@ -76,7 +75,7 @@ func (self *gen_ctx) check() (e error) {
 		e = err
 		return
 	}
-	if c_superzk.Czero_isMyPKr(&tk, &self.param.From.PKr) != nil {
+	if !superzk.IsMyPKr(&tk, &self.param.From.PKr) {
 		e = errors.New("sk unmatch pkr for the From field")
 		return
 	}
@@ -176,7 +175,7 @@ func (self *gen_ctx) signTxFrom() error {
 	if err != nil {
 		return err
 	}
-	if c_superzk.Czero_isMyPKr(&tk, &self.s.From) != nil {
+	if !superzk.IsMyPKr(&tk, &self.s.From) {
 		return fmt.Errorf("sign from : sk unmatch the from (%v)", hexutil.Encode(self.s.From[:]))
 	}
 	if sign, err := c_czero.SignPKrBySk(self.param.From.SKr.ToUint512().NewRef(), &self.balance_desc.Hash, &self.s.From); err != nil {

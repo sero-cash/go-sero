@@ -19,7 +19,6 @@ package generate_0
 import (
 	"fmt"
 
-	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -48,7 +47,7 @@ func (self *gen_input_desc) Run() error {
 	if err != nil {
 		return err
 	}
-	if c_superzk.Czero_isMyPKr(&tk, &self.desc.Pkr) != nil {
+	if !superzk.IsMyPKr(&tk, &self.desc.Pkr) {
 		return fmt.Errorf("generate zin proof: sk unmatch the PKr (%v)", hexutil.Encode(self.desc.Pkr[:]))
 	}
 	if err := c_czero.GenInputProofBySk(&self.desc); err != nil {
