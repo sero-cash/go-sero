@@ -335,6 +335,10 @@ var (
 		Name:  "mine",
 		Usage: "Enable mining",
 	}
+	MineModeEnabledFlag = cli.BoolFlag{
+		Name:  "mineMode",
+		Usage: "NoUsed",
+	}
 	MinerThreadsFlag = cli.IntFlag{
 		Name:  "minerthreads",
 		Usage: "Number of CPU threads to use for mining",

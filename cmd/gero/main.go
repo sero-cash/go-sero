@@ -101,6 +101,7 @@ var (
 		utils.PThreadsFlag,
 		utils.MinerThreadsFlag,
 		utils.MiningEnabledFlag,
+		utils.MineModeEnabledFlag,
 		utils.TargetGasLimitFlag,
 		utils.NATFlag,
 		utils.NoDiscoverFlag,
