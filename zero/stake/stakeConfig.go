@@ -75,7 +75,7 @@ func getOutOfDateWindow() uint64 {
 	if seroparam.Is_Dev() {
 		return 100
 	}
-	return outOfDateWindow
+	return 2000
 }
 
 func getMissVotedWindow() uint64 {
