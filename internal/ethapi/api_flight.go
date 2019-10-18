@@ -190,7 +190,7 @@ func (s *PublicFlightAPI) GetTxReceipt(ctx context.Context, txhash c_type.Uint25
 		}
 
 		for _, oin := range tx.GetZZSTX().Tx1.Ins_P {
-			ret.Nils = append(ret.Nils, oin.Root)
+			ret.Nils = append(ret.Nils, oin.Nil)
 		}
 
 		for _, oin := range tx.GetZZSTX().Tx1.Ins_C {

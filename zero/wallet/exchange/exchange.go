@@ -1054,11 +1054,11 @@ func (self *Exchange) ownPkr(pks []c_type.Uint512, pkr c_type.PKr) (account *Acc
 }
 
 type MergeUtxos struct {
-	list    UtxoList
-	amount  big.Int
-	zcount  int
-	ocount  int
-	tickets map[c_type.Uint256]c_type.Uint256
+	list   UtxoList
+	zcount int
+	ocount int
+	//amount  big.Int
+	//tickets map[c_type.Uint256]c_type.Uint256
 }
 
 var default_fee_value = new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000))
@@ -1067,6 +1067,7 @@ func (self *Exchange) getMergeUtxos(from *c_type.Uint512, currency string, zcoun
 	if zcount > 400 {
 		e = errors.New("zout count must <= 400")
 	}
+	ck := assets.NewCKState(true, &assets.Token{utils.CurrencyToUint256("SERO"), utils.U256(*default_fee_value)})
 	prefix := utxoPkKey(*from, common.LeftPadBytes([]byte(currency), 32), nil)
 	iterator := self.db.NewIteratorWithPrefix(prefix)
 	outxos := UtxoList{}
@@ -1103,12 +1104,17 @@ func (self *Exchange) getMergeUtxos(from *c_type.Uint512, currency string, zcoun
 	sort.Sort(utxos)
 	mu.list = utxos[0 : utxos.Len()-(left-1)]
 	for _, utxo := range mu.list {
-		mu.amount.Add(&mu.amount, utxo.Asset.Tkn.Value.ToIntRef())
-		if utxo.Asset.Tkt != nil {
-			mu.tickets[utxo.Asset.Tkt.Value] = utxo.Asset.Tkt.Category
+		ck.AddIn(&utxo.Asset)
+	}
+
+	for _, tkn := range ck.Tkns() {
+		if utxos, r := self.findUtxos(from, utils.BytesToCurrency(tkn.Currency[:]), tkn.Value.ToInt()); r == nil || r.Sign() > 0 {
+			e = errors.New("No enough SERO coins for fee")
+			return
+		} else {
+			mu.list = append(mu.list, utxos...)
 		}
 	}
-	mu.amount.Sub(&mu.amount, default_fee_value)
 	return
 }
 
@@ -1134,25 +1140,40 @@ func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e er
 		return
 	}
 
-	if strings.ToUpper(mp.Currency) != "SERO" {
-		if utxos, r := self.findUtxos(&mp.From, "SERO", default_fee_value); r == nil || r.Sign() > 0 {
-			e = errors.New("No enough SERO coins for fee")
-			return
-		} else {
-			mu.list = append(mu.list, utxos...)
-		}
-	}
-
 	bytes := common.LeftPadBytes([]byte(mp.Currency), 32)
 	var Currency c_type.Uint256
 	copy(Currency[:], bytes[:])
 
-	receptions := []prepare.Reception{{Addr: *mp.To, Asset: assets.Asset{Tkn: &assets.Token{Currency: Currency, Value: utils.U256(mu.amount)}}}}
+	ck := assets.NewCKState(false, &assets.Token{utils.CurrencyToUint256("SERO"), utils.U256(*default_fee_value)})
 
-	if len(mu.tickets) > 0 {
-		for value, category := range mu.tickets {
-			receptions = append(receptions, prepare.Reception{Addr: *mp.To, Asset: assets.Asset{Tkt: &assets.Ticket{category, value}}})
-		}
+	for _, utxo := range mu.list {
+		ck.AddIn(&utxo.Asset)
+	}
+
+	receptions := []prepare.Reception{}
+
+	for _, utxo := range ck.Tkns() {
+		receptions = append(receptions, prepare.Reception{
+			Addr: *mp.To,
+			Asset: assets.Asset{
+				Tkn: &assets.Token{
+					Currency: utxo.Currency,
+					Value:    utxo.Value,
+				},
+			},
+		})
+	}
+
+	for _, utxo := range ck.Tkts() {
+		receptions = append(receptions, prepare.Reception{
+			Addr: *mp.To,
+			Asset: assets.Asset{
+				Tkt: &assets.Ticket{
+					Category: utxo.Category,
+					Value:    utxo.Value,
+				},
+			},
+		})
 	}
 
 	bparam := prepare.BeforeTxParam{
@@ -1199,12 +1220,36 @@ func (self *Exchange) Merge(pk *c_type.Uint512, currency string, force bool) (co
 		var Currency c_type.Uint256
 		copy(Currency[:], bytes[:])
 
-		receptions := []prepare.Reception{{Addr: account.mainPkr, Asset: assets.Asset{Tkn: &assets.Token{Currency: Currency, Value: utils.U256(mu.amount)}}}}
+		ck := assets.NewCKState(false, &assets.Token{utils.CurrencyToUint256("SERO"), utils.U256(*default_fee_value)})
 
-		if len(mu.tickets) > 0 {
-			for value, category := range mu.tickets {
-				receptions = append(receptions, prepare.Reception{Addr: account.mainPkr, Asset: assets.Asset{Tkt: &assets.Ticket{category, value}}})
-			}
+		for _, utxo := range mu.list {
+			ck.AddIn(&utxo.Asset)
+		}
+
+		receptions := []prepare.Reception{}
+
+		for _, utxo := range ck.Tkns() {
+			receptions = append(receptions, prepare.Reception{
+				Addr: account.mainPkr,
+				Asset: assets.Asset{
+					Tkn: &assets.Token{
+						Currency: utxo.Currency,
+						Value:    utxo.Value,
+					},
+				},
+			})
+		}
+
+		for _, utxo := range ck.Tkts() {
+			receptions = append(receptions, prepare.Reception{
+				Addr: account.mainPkr,
+				Asset: assets.Asset{
+					Tkt: &assets.Ticket{
+						Category: utxo.Category,
+						Value:    utxo.Value,
+					},
+				},
+			})
 		}
 
 		bparam := prepare.BeforeTxParam{
