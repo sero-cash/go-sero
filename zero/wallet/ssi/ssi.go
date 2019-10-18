@@ -41,6 +41,10 @@ func (self *SSI) CreateKr(flag bool) (kr txtool.Kr) {
 	copy(skr[32:], vsk[:])
 	copy(skr[64:], rnd[:])
 
+	if flag {
+		c_superzk.SetFlag(skr[:64])
+	}
+
 	sk := c_type.Uint512{}
 	copy(sk[:], skr[:])
 	tk, _ := superzk.Sk2Tk(&sk)

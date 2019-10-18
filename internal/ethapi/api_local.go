@@ -71,6 +71,9 @@ func (s *PublicLocalAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes, versio
 	if len(seed) != 32 {
 		return c_type.Uint512{}, errors.New("seed len must be 32")
 	}
+	if version == 0 {
+		version = 1
+	}
 	var sd c_type.Uint256
 	copy(sd[:], seed[:])
 	return superzk.Seed2Sk(&sd, version), nil
