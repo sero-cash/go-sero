@@ -2,6 +2,9 @@ package flight
 
 import (
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-czero-import/c_superzk"
@@ -117,4 +120,34 @@ func DecOut(tk *c_type.Tk, outs []txtool.Out) (douts []txtool.TDOut) {
 		douts = append(douts, dout)
 	}
 	return
+}
+
+func ConfirmOutZ(key *c_type.Uint256, z *stx_v0.Out_Z) (dout txtool.TDOut, e error) {
+	if out := generate_0.ConfirmOutZ(key, true, z); out != nil {
+		dout = *out
+		return
+	} else {
+		e = errors.New("confirm outz error")
+		return
+	}
+}
+
+func ConfirmOutC(key *c_type.Uint256, c *stx_v1.Out_C) (dout txtool.TDOut, e error) {
+	if out, _ := generate_1.ConfirmOutC(key, c); out != nil {
+		dout = *out
+		return
+	} else {
+		e = errors.New("confirm outz error")
+		return
+	}
+}
+
+func CurrencyToId(currency string) (ret c_type.Uint256) {
+	bs := utils.CurrencyToBytes(currency)
+	copy(ret[:], bs[:])
+	return
+}
+
+func IdToCurrency(id *c_type.Uint256) (ret string) {
+	return utils.Uint256ToCurrency(id)
 }

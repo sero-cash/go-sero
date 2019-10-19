@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/sero-cash/go-czero-import/superzk"
+
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -13,7 +15,6 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txtool"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
@@ -30,9 +31,12 @@ type SRI struct {
 var SRI_Inst = SRI{}
 
 func Trace2Root(tk *c_type.Tk, trace *c_type.Uint256, base *c_type.Uint256) (root *c_type.Uint256) {
-	root_cm := c_czero.FetchRootCM(tk, trace)
-	root = localdb.GetRootByRootCM(txtool.Ref_inst.Bc.GetDB(), &root_cm)
-	return
+	if root_cm, e := superzk.FetchRootCM(tk, trace, base); e != nil {
+		return
+	} else {
+		root = localdb.GetRootByRootCM(txtool.Ref_inst.Bc.GetDB(), &root_cm)
+		return
+	}
 }
 
 func GetOut(root *c_type.Uint256, num uint64) (out *localdb.RootState) {

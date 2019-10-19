@@ -375,13 +375,12 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string, oldVersion bool, at uint64) (address.PKAddress, error) {
+func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string, version int, at uint64) (address.PKAddress, error) {
 	key, err := crypto.HexToECDSA(privkey)
 	if err != nil {
 		return address.PKAddress{}, err
 	}
-	version := 2
-	if oldVersion {
+	if version == 0 {
 		version = 1
 	}
 	acc, err := fetchKeystore(s.am).ImportECDSA(key, password, at, version)

@@ -3,12 +3,11 @@ package ethapi
 import (
 	"context"
 
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
+
 	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
-	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_0"
-
-	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/tyler-smith/go-bip39"
 
@@ -31,13 +30,11 @@ func (s *PublicLocalAPI) DecOut(ctx context.Context, outs []txtool.Out, tk addre
 }
 
 func (s *PublicLocalAPI) ConfirmOutZ(ctx context.Context, key c_type.Uint256, outz stx_v0.Out_Z) (dout txtool.TDOut, e error) {
-	if out := generate_0.ConfirmOutZ(&key, true, &outz); out != nil {
-		dout = *out
-		return
-	} else {
-		e = errors.New("confirm outz error")
-		return
-	}
+	return flight.ConfirmOutZ(&key, &outz)
+}
+
+func (s *PublicLocalAPI) ConfirmOutC(ctx context.Context, key c_type.Uint256, outc stx_v1.Out_C) (dout txtool.TDOut, e error) {
+	return flight.ConfirmOutC(&key, &outc)
 }
 
 func (s *PublicLocalAPI) IsPkrValid(ctx context.Context, tk PKrAddress) error {
@@ -57,13 +54,12 @@ func (s *PublicLocalAPI) GenSeed(ctx context.Context) (hexutil.Bytes, error) {
 }
 
 func (s *PublicLocalAPI) CurrencyToId(ctx context.Context, currency string) (ret c_type.Uint256, e error) {
-	bs := utils.CurrencyToBytes(currency)
-	copy(ret[:], bs[:])
+	ret = flight.CurrencyToId(currency)
 	return
 }
 
 func (s *PublicLocalAPI) IdToCurrency(ctx context.Context, hex c_type.Uint256) (ret string, e error) {
-	ret = utils.Uint256ToCurrency(&hex)
+	ret = flight.IdToCurrency(&hex)
 	return
 }
 

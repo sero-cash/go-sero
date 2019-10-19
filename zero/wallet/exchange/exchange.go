@@ -1294,9 +1294,9 @@ func (self *Exchange) merge() {
 	self.accounts.Range(func(key, value interface{}) bool {
 		account := value.(*Account)
 		if count, txhash, err := self.Merge(account.pk, "SERO", false); err != nil {
-			log.Error("autoMerge fail", "accountKey", utils.Base58Encode(account.pk[:]), "count", count, "error", err)
+			log.Error("autoMerge fail", "accountKey", *utils.Base58Encode(account.pk[:]), "count", count, "error", err)
 		} else {
-			log.Info("autoMerge succ", "accountKey", utils.Base58Encode(account.pk[:]), "tx", hexutil.Encode(txhash[:]), "count", count)
+			log.Info("autoMerge succ", "accountKey", *utils.Base58Encode(account.pk[:]), "tx", hexutil.Encode(txhash[:]), "count", count)
 		}
 		return true
 	})
