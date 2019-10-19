@@ -153,7 +153,7 @@ func (b *MixAdrress) UnmarshalText(input []byte) error {
 
 type AllMixedAddress [96]byte
 
-func (b AllMixedAddress) setBytes(bs []byte) {
+func (b *AllMixedAddress) setBytes(bs []byte) {
 	copy(b[:], bs)
 }
 
