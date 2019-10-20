@@ -891,16 +891,30 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 	if strings.Contains(categoryName, "SERO") {
 		return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "categoryName can not contains SERO"), false
 	}
+
+	gas := evm.callGasTemp
+
 	value := common.BytesToHash(d[0:32])
 	if value == (common.Hash{}) {
 		if !evm.StateDB.RegisterTicket(contract.Address(), categoryName) {
 			return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "categoryName registered by other"), false
 		}
 
+		if gas > params.CreateTicketGas {
+			gas -= params.CreateTicketGas;
+		} else {
+			return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "out of gas"), false
+		}
+
 		nonce := evm.StateDB.GetTicketNonce(contract.Address())
 		evm.StateDB.SetTicketNonce(contract.Address(), nonce+1)
 		bytes, _ := rlp.EncodeToBytes([]interface{}{contract.Address(), categoryName, nonce})
 		value = crypto.Keccak256Hash(bytes)
+
+		if e := c_superzk.IsTktValid(common.BytesToHash(common.LeftPadBytes([]byte(categoryName), 32)).HashToUint256(), value.HashToUint256()); e != nil {
+			return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "categoryName has no base"), false
+		}
+
 		evm.StateDB.AddTicket(contract.Address(), categoryName, value)
 	}
 
@@ -914,11 +928,7 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 			},
 		}
 
-		if e := c_superzk.IsTktValid(&asset.Tkt.Category, &asset.Tkt.Value); e != nil {
-			return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "categoryName has no base"), false
-		}
-
-		gas := evm.callGasTemp + params.CallStipend
+		gas += params.CallStipend
 		_, returnGas, err, _alarm := evm.Call(contract, toAddr, nil, gas, &asset)
 		alarm = _alarm
 		// contract.Gas += returnGas
@@ -929,7 +939,7 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 		}
 	}
 
-	return value, evm.callGasTemp, nil, alarm
+	return value, gas, nil, alarm
 }
 
 var (

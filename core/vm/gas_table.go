@@ -210,6 +210,9 @@ func makeGasLog(n uint64) gasFunc {
 				if err != nil {
 					return 0, err
 				}
+				if (allotTicketTopic == topic) {
+					evm.callGasTemp += params.CreateTicketGas
+				}
 				if gas, overflow = math.SafeAdd(gas, evm.callGasTemp); overflow {
 					return 0, errGasUintOverflow
 				}
