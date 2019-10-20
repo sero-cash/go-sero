@@ -35,7 +35,7 @@ const (
 )
 
 // ProtocolName is the official short name of the protocol used during capability negotiation.
-var ProtocolName = "sero-superzk2.0"
+var ProtocolName = "sero"
 
 // ProtocolVersions are the upported versions of the sero protocol (first is primary).
 var ProtocolVersions = []uint{sero63, sero62}

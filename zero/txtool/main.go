@@ -46,19 +46,10 @@ func (self *Ref) GetDelayedNum(delay uint64) (ret uint64) {
 }
 
 func (self *Ref) CurrentState() (ret *zstate.ZState) {
-	defer func() {
-		if e := recover(); e != nil {
-			num := self.GetDelayedNum(0)
-			block := self.Bc.GetBlockByNumber(num)
-			hash := block.Hash()
-			ret = self.Bc.CurrentState(&hash)
-		}
-	}()
 	num := self.GetDelayedNum(seroparam.DefaultConfirmedBlock())
 	block := self.Bc.GetBlockByNumber(num)
 	hash := block.Hash()
-	ret = self.Bc.CurrentState(&hash)
-	return
+	return self.Bc.CurrentState(&hash)
 }
 
 func GetDelayNumber(current uint64, delay uint64) (num uint64) {

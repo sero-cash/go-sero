@@ -34,7 +34,7 @@ const (
 	SOLO_RATE  = 3
 	TOTAL_RATE = 4
 
-	minSharePoolSize = 412032 // 20K
+	minSharePoolSize = 20000 // 20K
 	//test
 	//minSharePoolSize = 20
 

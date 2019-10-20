@@ -233,9 +233,6 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 // the difficulty that a new block should have when created at time
 // given the parent block's time and difficulty.
 func (ethash *Ethash) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	if parent.Number.Uint64() >= uint64(1860565) {
-		return big.NewInt(100)
-	}
 	return CalcDifficulty(chain.Config(), time, parent)
 }
 
