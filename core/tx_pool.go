@@ -602,9 +602,9 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 
 	currentBlockNum := pool.chain.CurrentBlock().NumberU64()
 
-	if false {
-		if (seroparam.VP0()-50) < currentBlockNum && currentBlockNum < (seroparam.VP0()+50) {
-			return false, fmt.Errorf("protect vp0:%v", seroparam.VP0)
+	if true {
+		if (seroparam.SIP5()-50) < currentBlockNum && currentBlockNum < (seroparam.SIP5()+50) {
+			return false, fmt.Errorf("protect SIP5:%v", seroparam.SIP5())
 		}
 	}
 
