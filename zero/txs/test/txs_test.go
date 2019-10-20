@@ -116,7 +116,7 @@ func (self *user) addOut(v int) {
 		},
 		nil,
 	)
-	g_blocks.st.AddOut_O(&out)
+	g_blocks.st.addOut_O(&out)
 	g_blocks.st.Update()
 	EndBlock()
 }
@@ -134,7 +134,7 @@ func (self *user) addTkt(v int) {
 			cpt.Random(),
 		},
 	}
-	g_blocks.st.AddOut_O(&out)
+	g_blocks.st.addOut_O(&out)
 	g_blocks.st.Update()
 	EndBlock()
 }

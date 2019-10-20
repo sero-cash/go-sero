@@ -127,7 +127,7 @@ func (state *State) Revert(revid int) {
 	}
 }
 
-func (self *State) AddOut_Log(root *c_type.Uint256, out *localdb.OutState, txhash *c_type.Uint256) {
+func (self *State) addOut_Log(root *c_type.Uint256, out *localdb.OutState, txhash *c_type.Uint256) {
 	clone := out.Clone()
 	if txhash != nil {
 		self.logs = append(self.logs, data.AddOutLog{root.NewRef(), &clone, txhash.NewRef()})
@@ -138,11 +138,11 @@ func (self *State) AddOut_Log(root *c_type.Uint256, out *localdb.OutState, txhas
 	self.data.AddOut(root, out, txhash)
 	return
 }
-func (self *State) AddNil_Log(in *c_type.Uint256) {
+func (self *State) addNil_Log(in *c_type.Uint256) {
 	self.logs = append(self.logs, data.AddNilLog{in.NewRef()})
 	self.data.AddNil(in)
 }
-func (self *State) AddDel_Log(in *c_type.Uint256) {
+func (self *State) addDel_Log(in *c_type.Uint256) {
 	self.logs = append(self.logs, data.AddDelLog{in.NewRef()})
 	self.data.AddDel(in)
 }
@@ -164,23 +164,17 @@ func (state *State) AddOut_P(out_p *stx_v1.Out_P, txhash *c_type.Uint256) (root 
 	return state.addOut_P(out_p, txhash)
 }
 
-func (state *State) AddOut_Z(out_z *stx_v0.Out_Z, txhash *c_type.Uint256) (root c_type.Uint256) {
-	state.rw.Lock()
-	defer state.rw.Unlock()
-	return state.addOut_Z(out_z, txhash)
-}
-
 func (state *State) insertOS(os *localdb.OutState, txhash *c_type.Uint256) (root c_type.Uint256) {
 	if os.Out_O != nil || os.Out_Z != nil {
 		os.Index = state.CzeroTree.GetLeafSize()
 		os.GenRootCM()
 		root = state.CzeroTree.AppendLeaf(*os.RootCM)
-		state.AddOut_Log(&root, os, txhash)
+		state.addOut_Log(&root, os, txhash)
 	} else {
 		os.Index = state.SzkTree.GetLeafSize()
 		os.GenRootCM()
 		root = state.SzkTree.AppendLeaf(*os.RootCM)
-		state.AddOut_Log(&root, os, txhash)
+		state.addOut_Log(&root, os, txhash)
 	}
 	return
 }
@@ -235,15 +229,15 @@ func (state *State) addTx0(tx *stx_v0.Tx, txhash *c_type.Uint256) (e error) {
 				e = errors.New("desc_o.in.nil already be used !")
 				return
 			} else {
-				state.AddNil_Log(&in.Nil)
-				state.AddDel_Log(&in.Root)
+				state.addNil_Log(&in.Nil)
+				state.addDel_Log(&in.Root)
 			}
 		} else {
 			if state.data.HasIn(state.tri, &in.Root) {
 				e = errors.New("desc_o.in.root already be used !")
 				return
 			} else {
-				state.AddNil_Log(&in.Root)
+				state.addNil_Log(&in.Root)
 			}
 		}
 	}
@@ -254,8 +248,8 @@ func (state *State) addTx0(tx *stx_v0.Tx, txhash *c_type.Uint256) (e error) {
 			e = errors.New("desc_o.nil already be used !")
 			return
 		} else {
-			state.AddNil_Log(&in.Nil)
-			state.AddDel_Log(&in.Trace)
+			state.addNil_Log(&in.Nil)
+			state.addDel_Log(&in.Trace)
 		}
 	}
 
@@ -272,9 +266,9 @@ func (state *State) addTx1(tx *stx_v1.Tx, txhash *c_type.Uint256) (e error) {
 	for _, in := range tx.Ins_P0 {
 		if !state.data.HasIn(state.tri, &in.Nil) {
 			if !state.data.HasIn(state.tri, &in.Root) {
-				state.AddNil_Log(&in.Nil)
-				state.AddNil_Log(&in.Root)
-				state.AddDel_Log(&in.Trace)
+				state.addNil_Log(&in.Nil)
+				state.addNil_Log(&in.Root)
+				state.addDel_Log(&in.Trace)
 			} else {
 				e = errors.New("tx1.in_p0.root already be used !")
 				return
@@ -287,8 +281,8 @@ func (state *State) addTx1(tx *stx_v1.Tx, txhash *c_type.Uint256) (e error) {
 	for _, in := range tx.Ins_P {
 		if !state.data.HasIn(state.tri, &in.Nil) {
 			if !state.data.HasIn(state.tri, &in.Root) {
-				state.AddNil_Log(&in.Nil)
-				state.AddNil_Log(&in.Root)
+				state.addNil_Log(&in.Nil)
+				state.addNil_Log(&in.Root)
 			} else {
 				e = errors.New("tx1.in_p.root already be used !")
 				return
@@ -300,9 +294,9 @@ func (state *State) addTx1(tx *stx_v1.Tx, txhash *c_type.Uint256) (e error) {
 	}
 	for _, in := range tx.Ins_C {
 		if !state.data.HasIn(state.tri, &in.Nil) {
-			state.AddNil_Log(&in.Nil)
+			state.addNil_Log(&in.Nil)
 		} else {
-			e = errors.New("tx1.in_p.nil already be used !")
+			e = errors.New("tx1.in_c.nil already be used !")
 			return
 		}
 	}
@@ -349,6 +343,12 @@ func (state *State) GetOut(root *c_type.Uint256) (src *localdb.OutState) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	return state.data.GetOut(state.tri, root)
+}
+
+func (state *State) FindAnchorInSzk(root *c_type.Uint256) bool {
+	state.rw.Lock()
+	defer state.rw.Unlock()
+	return state.data.HashRoot(state.tri, root)
 }
 
 func (self *State) GetBlockRoots() (roots []c_type.Uint256) {
@@ -414,7 +414,7 @@ func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
 			for _, tx := range b.Transactions() {
 				if tx.Stxt().Tx0() != nil {
 					for _, in := range tx.Stxt().Tx0().Desc_O.Ins {
-						self.AddNil_Log(&in.Nil)
+						self.addNil_Log(&in.Nil)
 						count++
 					}
 				}

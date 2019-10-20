@@ -5,8 +5,6 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/utils"
 
-	"github.com/pkg/errors"
-
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -99,8 +97,6 @@ func (self *verifyWithoutStateCtx) verifyPkg() (e error) {
 	}
 	if self.tx.Desc_Pkg.Create != nil {
 		self.zout_count++
-		e = errors.New("pkg not support after sip5")
-		return
 	}
 	if self.tx.Desc_Pkg.Close != nil {
 		self.zin_count++

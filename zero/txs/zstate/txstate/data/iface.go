@@ -65,6 +65,8 @@ type IData interface {
 	HasIn(tr tri.Tri, hash *c_type.Uint256) (exists bool)
 	GetOut(tr tri.Tri, root *c_type.Uint256) (src *localdb.OutState)
 
+	HashRoot(tr tri.Tri, root *c_type.Uint256) bool
+
 	GetRoots() (roots []c_type.Uint256)
 	GetDels() (dels []c_type.Uint256)
 }

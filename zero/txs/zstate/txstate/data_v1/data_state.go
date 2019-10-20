@@ -34,6 +34,10 @@ func (self *Data) HasIn(tr tri.Tri, hash *c_type.Uint256) (exists bool) {
 	return self.Nils.Has(tr, hash)
 }
 
+func (self *Data) HashRoot(tr tri.Tri, root *c_type.Uint256) bool {
+	return self.Roots.Has(tr, root)
+}
+
 func (self *Data) GetOut(tr tri.Tri, root *c_type.Uint256) (src *localdb.OutState) {
 	if self.Roots.Has(tr, root) {
 		var rt *localdb.RootState

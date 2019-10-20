@@ -173,20 +173,20 @@ func (self *verifyWithStateCtx) verifyInsP0() (e error) {
 func (self *verifyWithStateCtx) verifyInsP() (e error) {
 	for _, in := range self.tx.Tx1.Ins_P {
 		if ok := self.state.State.HasIn(&in.Nil); ok {
-			e = verify_utils.ReportError("txs.verify p0_in already in nils", self.tx)
+			e = verify_utils.ReportError("txs.verify p_in already in nils", self.tx)
 			return
 		}
 		if ok := self.state.State.HasIn(&in.Root); ok {
-			e = verify_utils.ReportError("txs.verify p0_in already in nil-roots", self.tx)
+			e = verify_utils.ReportError("txs.verify p_in already in nil-roots", self.tx)
 			return
 		}
 		if src := self.state.State.GetOut(&in.Root); src != nil {
 			if e = c_superzk.VerifyNil(&self.balance_desc.Hash, &in.NSign, &in.Nil, src.RootCM, src.ToPKr()); e != nil {
-				e = verify_utils.ReportError("txs.verify p0_in verify nil error", self.tx)
+				e = verify_utils.ReportError("txs.verify p_in verify nil error", self.tx)
 				return
 			}
 			if !c_superzk.VerifyPKr_P(&self.balance_desc.Hash, &in.ASign, src.ToPKr()) {
-				e = verify_utils.ReportError("txs.verify p0_in verify pkr error", self.tx)
+				e = verify_utils.ReportError("txs.verify p_in verify pkr error", self.tx)
 				return
 			}
 			var asset_desc c_type.Asset
@@ -247,7 +247,7 @@ func (self *verifyWithStateCtx) verifyInsC() (e error) {
 			e = verify_utils.ReportError("txs.verify in already in nils", self.tx)
 			return
 		} else {
-			if out := self.state.State.GetOut(&in.Anchor); out == nil {
+			if !self.state.State.FindAnchorInSzk(&in.Anchor) {
 				e = verify_utils.ReportError("txs.verify can not find out for anchor", self.tx)
 				return
 			}

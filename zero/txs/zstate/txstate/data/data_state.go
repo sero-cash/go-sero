@@ -127,6 +127,12 @@ func (self *Data) HasIn(tr tri.Tri, hash *c_type.Uint256) (exists bool) {
 	}
 	return
 }
+func (self *Data) HashRoot(tr tri.Tri, root *c_type.Uint256) bool {
+	if out := self.GetOut(tr, root); out == nil {
+		return false
+	}
+	return true
+}
 
 func (self *Data) GetOut(tr tri.Tri, root *c_type.Uint256) (src *localdb.OutState) {
 	if out := self.G2outs[*root]; out != nil {

@@ -169,7 +169,7 @@ func (self *PkgDesc_Z) Tx1_Hash() (ret c_type.Uint256) {
 		d.Write(self.Transfer.Tx1_Hash().NewRef()[:])
 	}
 	if self.Close != nil {
-		d.Write(self.Transfer.Tx1_Hash().NewRef()[:])
+		d.Write(self.Close.Tx1_Hash().NewRef()[:])
 	}
 	copy(ret[:], d.Sum(nil))
 	return
