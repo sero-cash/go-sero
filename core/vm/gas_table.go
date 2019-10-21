@@ -206,6 +206,10 @@ func makeGasLog(n uint64) gasFunc {
 			evm.callGasTemp = 0;
 			topic := common.BigToHash(stack.Back(2)).Hex();
 			if (sendTopic == topic || allotTicketTopic == topic) {
+				if gas, overflow = math.SafeAdd(gas, params.CallValueTransferGas); overflow {
+					return 0, errGasUintOverflow
+				}
+
 				evm.callGasTemp, err = callGas(gt, contract.Gas, gas, new(big.Int).SetUint64(0))
 				if err != nil {
 					return 0, err
