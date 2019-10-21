@@ -84,6 +84,7 @@ type Config struct {
 	SyncMode  downloader.SyncMode
 	NoPruning bool
 
+	MineMode      bool
 	StartExchange bool
 	AutoMerge     bool
 

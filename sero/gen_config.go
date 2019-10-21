@@ -11,6 +11,7 @@ import (
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/sero/downloader"
 	"github.com/sero-cash/go-sero/sero/gasprice"
+	"github.com/sero-cash/go-sero/zero/proofservice"
 )
 
 var _ = (*configMarshaling)(nil)
@@ -22,6 +23,10 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		NetworkId               uint64
 		SyncMode                downloader.SyncMode
 		NoPruning               bool
+		MineMode                bool
+		StartExchange           bool
+		AutoMerge               bool
+		StartLight              bool
 		LightServ               int  `toml:",omitempty"`
 		LightPeers              int  `toml:",omitempty"`
 		SkipBcVersionCheck      bool `toml:"-"`
@@ -34,6 +39,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		GasPrice                *big.Int
 		Ethash                  ethash.Config
 		TxPool                  core.TxPoolConfig
+		Proof                   *proofservice.Config
 		GPO                     gasprice.Config
 		EnablePreimageRecording bool
 		DocRoot                 string `toml:"-"`
@@ -43,6 +49,10 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.NetworkId = c.NetworkId
 	enc.SyncMode = c.SyncMode
 	enc.NoPruning = c.NoPruning
+	enc.MineMode = c.MineMode
+	enc.StartExchange = c.StartExchange
+	enc.AutoMerge = c.AutoMerge
+	enc.StartLight = c.StartLight
 	enc.LightServ = c.LightServ
 	enc.LightPeers = c.LightPeers
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
@@ -55,6 +65,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.GasPrice = c.GasPrice
 	enc.Ethash = c.Ethash
 	enc.TxPool = c.TxPool
+	enc.Proof = c.Proof
 	enc.GPO = c.GPO
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
 	enc.DocRoot = c.DocRoot
@@ -68,6 +79,10 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		NetworkId               *uint64
 		SyncMode                *downloader.SyncMode
 		NoPruning               *bool
+		MineMode                *bool
+		StartExchange           *bool
+		AutoMerge               *bool
+		StartLight              *bool
 		LightServ               *int  `toml:",omitempty"`
 		LightPeers              *int  `toml:",omitempty"`
 		SkipBcVersionCheck      *bool `toml:"-"`
@@ -80,6 +95,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		GasPrice                *big.Int
 		Ethash                  *ethash.Config
 		TxPool                  *core.TxPoolConfig
+		Proof                   *proofservice.Config
 		GPO                     *gasprice.Config
 		EnablePreimageRecording *bool
 		DocRoot                 *string `toml:"-"`
@@ -99,6 +115,18 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.NoPruning != nil {
 		c.NoPruning = *dec.NoPruning
+	}
+	if dec.MineMode != nil {
+		c.MineMode = *dec.MineMode
+	}
+	if dec.StartExchange != nil {
+		c.StartExchange = *dec.StartExchange
+	}
+	if dec.AutoMerge != nil {
+		c.AutoMerge = *dec.AutoMerge
+	}
+	if dec.StartLight != nil {
+		c.StartLight = *dec.StartLight
 	}
 	if dec.LightServ != nil {
 		c.LightServ = *dec.LightServ
@@ -135,6 +163,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.TxPool != nil {
 		c.TxPool = *dec.TxPool
+	}
+	if dec.Proof != nil {
+		c.Proof = dec.Proof
 	}
 	if dec.GPO != nil {
 		c.GPO = *dec.GPO
