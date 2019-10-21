@@ -390,10 +390,10 @@ func (s *Sero) StartMining(local bool) error {
 	if !ret {
 		lic_t := c_type.LICr{}
 		if bytes.Equal(lic.Proof[:32], lic_t.Proof[:32]) {
-			log.Error("Cannot start mining , miner license does not exists ", "", "")
+			log.Error("Cannot start mining , miner license does not exists, or coinBase is error", "", "")
 			return fmt.Errorf(" miner license does not exists")
 		} else {
-			log.Error("Cannot start mining ,invalid miner license", "", "")
+			log.Error("Cannot start mining ,invalid miner license, or coinBase is error", "", "")
 			return fmt.Errorf("invalid miner license: %v", common.Bytes2Hex(lic.Proof[:]))
 		}
 	}

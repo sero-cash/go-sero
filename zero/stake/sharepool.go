@@ -761,7 +761,7 @@ func (self *StakeState) CheckVotes(block *types.Block, bc blockChain) error {
 		blockPosHash := parentblock.HashPos()
 		for _, vote := range header.ParentVotes {
 			ret := types.StakeHash(&blockPosHash, &parentPosHash, vote.IsPool)
-			if err := self.verifyVote(block.NumberU64(), vote, ret); err != nil {
+			if err := self.verifyVote(parentblock.NumberU64(), vote, ret); err != nil {
 				return err
 			}
 
