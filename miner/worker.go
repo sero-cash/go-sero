@@ -582,6 +582,12 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 			break
 		}
 
+		if env.header.Number.Uint64() == seroparam.SIP5() {
+			txs.Shift()
+			env.errHandledTxs = append(env.errHandledTxs, tx)
+			continue
+		}
+
 		// Start executing the transaction
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 
