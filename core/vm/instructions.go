@@ -900,7 +900,7 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 			return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "categoryName registered by other"), false
 		}
 
-		if gas > params.CreateTicketGas {
+		if gas >= params.CreateTicketGas {
 			gas -= params.CreateTicketGas;
 		} else {
 			return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "out of gas"), false
