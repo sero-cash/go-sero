@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"unsafe"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
 	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/sero-cash/go-sero/core/types/vserial"
@@ -81,10 +83,14 @@ type headerMarshaling struct {
 }
 
 func (h *Header) Valid() bool {
-	if h.Licr.H == 0 {
-		return h.Number.Uint64() >= h.Licr.L
+	if h.Number.Uint64() >= seroparam.SIP5() {
+		return true
 	} else {
-		return h.Number.Uint64() >= h.Licr.L && h.Number.Uint64() <= h.Licr.H
+		if h.Licr.H == 0 {
+			return h.Number.Uint64() >= h.Licr.L
+		} else {
+			return h.Number.Uint64() >= h.Licr.L && h.Number.Uint64() <= h.Licr.H
+		}
 	}
 }
 
@@ -134,15 +140,19 @@ func StakeHash(currentHashPos *common.Hash, parentHashPos *common.Hash, isPool b
 }
 
 func (h *Header) ActualDifficulty() *big.Int {
-	if h.Valid() {
-		c := new(big.Int).SetUint64(h.Licr.C)
-		if h.Difficulty.Cmp(c) > 0 {
-			return new(big.Int).Sub(h.Difficulty, c)
-		} else {
-			return big.NewInt(1)
-		}
+	if h.Number.Uint64() >= seroparam.SIP5() {
+		return h.Difficulty
 	} else {
-		return maxUint256
+		if h.Valid() {
+			c := new(big.Int).SetUint64(h.Licr.C)
+			if h.Difficulty.Cmp(c) > 0 {
+				return new(big.Int).Sub(h.Difficulty, c)
+			} else {
+				return big.NewInt(1)
+			}
+		} else {
+			return maxUint256
+		}
 	}
 }
 
