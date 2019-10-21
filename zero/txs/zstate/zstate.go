@@ -17,8 +17,12 @@
 package zstate
 
 import (
+	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/log"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/serodb"
@@ -29,7 +33,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/zstate/txstate"
 	"github.com/sero-cash/go-sero/zero/utils"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
@@ -73,7 +76,7 @@ func (self *ZState) PreGenerateRoot(header *types.Header, ch txstate.Chain) {
 	self.State.PreGenerateRoot(header, ch)
 }
 
-func (self *ZState) RecordBlock(db serodb.Putter, hash *keys.Uint256) {
+func (self *ZState) RecordBlock(db serodb.Putter, hash *c_type.Uint256) {
 	block := localdb.Block{}
 	block.Roots = self.State.GetBlockRoots()
 	block.Dels = self.State.GetBlockDels()
@@ -102,8 +105,12 @@ func (self *ZState) Revert(revid int) {
 	return
 }
 
-func (state *ZState) AddOut_O(out *stx.Out_O, txhash common.Hash) {
-	state.State.AddOut(out.Clone().ToRef(), nil, txhash.HashToUint256())
+func (state *ZState) addOut_O(out *stx_v0.Out_O, txhash common.Hash) {
+	state.State.AddOut_O(out.Clone().ToRef(), txhash.HashToUint256())
+}
+
+func (state *ZState) addOut_P(out *stx_v1.Out_P, txhash common.Hash) {
+	state.State.AddOut_P(out.Clone().ToRef(), txhash.HashToUint256())
 }
 
 func (state *ZState) AddStx(st *stx.T) (e error) {
@@ -150,22 +157,28 @@ func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset, txhash co
 	t := utils.TR_enter("AddTxOut-----")
 	need_add := false
 	if asset.Tkn != nil {
-		if asset.Tkn.Currency != keys.Empty_Uint256 {
-			if asset.Tkn.Value.ToUint256() != keys.Empty_Uint256 {
+		if asset.Tkn.Currency != c_type.Empty_Uint256 {
+			if asset.Tkn.Value.ToUint256() != c_type.Empty_Uint256 {
 				need_add = true
 			}
 		}
 	}
 	if asset.Tkt != nil {
-		if asset.Tkt.Category != keys.Empty_Uint256 {
-			if asset.Tkt.Value != keys.Empty_Uint256 {
+		if asset.Tkt.Category != c_type.Empty_Uint256 {
+			if asset.Tkt.Value != c_type.Empty_Uint256 {
 				need_add = true
 			}
 		}
 	}
 	if need_add {
-		o := stx.Out_O{Addr: *addr.ToPKr(), Asset: asset, Memo: keys.Uint512{}}
-		state.AddOut_O(&o, txhash)
+		pkr := addr.ToPKr()
+		if c_superzk.IsSzkPKr(pkr) {
+			o := stx_v1.Out_P{PKr: *addr.ToPKr(), Asset: asset, Memo: c_type.Uint512{}}
+			state.addOut_P(&o, txhash)
+		} else {
+			o := stx_v0.Out_O{Addr: *addr.ToPKr(), Asset: asset, Memo: c_type.Uint512{}}
+			state.addOut_O(&o, txhash)
+		}
 	}
 	t.Leave()
 

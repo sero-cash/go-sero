@@ -30,11 +30,12 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txs/tx"
 
-	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/utils"
 
@@ -78,17 +79,17 @@ func EndBlock() {
 
 type user struct {
 	i    int
-	seed keys.Uint256
-	addr keys.Uint512
+	seed c_type.Uint256
+	addr c_type.Uint512
 }
 
-var seeds = []keys.Uint256{}
+var seeds = []c_type.Uint256{}
 
 func newUser(i int) (ret user) {
 	fmt.Printf("\n\n===========new user(%v)============\n", i)
 	ret = user{}
 	ret.i = i
-	ret.seed = keys.Uint256{byte(i)}
+	ret.seed = c_type.Uint256{byte(i)}
 	ret.addr = keys.Seed2Addr(&ret.seed)
 	seeds = append(seeds, ret.seed)
 	fmt.Printf("\nseed: ")
@@ -98,8 +99,8 @@ func newUser(i int) (ret user) {
 	return
 }
 
-func (self *user) getAR() (pkr keys.PKr) {
-	pkr = keys.Addr2PKr(&self.addr, nil)
+func (self *user) getAR() (pkr c_type.PKr) {
+	pkr = superzk.Pk2PKr(&self.addr, nil)
 	fmt.Printf("\nuser(%v):get pkr: ", self.i)
 	pkr.LogOut()
 	return
@@ -115,7 +116,7 @@ func (self *user) addOut(v int) {
 		},
 		nil,
 	)
-	g_blocks.st.AddOut_O(&out)
+	g_blocks.st.addOut_O(&out)
 	g_blocks.st.Update()
 	EndBlock()
 }
@@ -133,7 +134,7 @@ func (self *user) addTkt(v int) {
 			cpt.Random(),
 		},
 	}
-	g_blocks.st.AddOut_O(&out)
+	g_blocks.st.addOut_O(&out)
 	g_blocks.st.Update()
 	EndBlock()
 }
@@ -153,7 +154,7 @@ func (self *user) GetPkgs(is_from bool) (ret []*state1.Pkg) {
 	return
 }
 
-func (self *user) Gen(seed *keys.Uint256, t *tx.T) (s stx.T, e error) {
+func (self *user) Gen(seed *c_type.Uint256, t *tx.T) (s stx.T, e error) {
 	return generate.Gen_lstate(g_blocks.st1, seed, t)
 }
 
@@ -177,7 +178,7 @@ func (self *user) Logout() (ret uint64) {
 	return
 }
 
-func (self *user) Close(id *keys.Uint256, v int, key *keys.Uint256) {
+func (self *user) Close(id *c_type.Uint256, v int, key *c_type.Uint256) {
 	fmt.Printf("user(%v) close pkg %v\n", self.i, id)
 	t := tx.T{}
 	t.Fee = assets.Token{
@@ -215,7 +216,7 @@ func (self *user) Close(id *keys.Uint256, v int, key *keys.Uint256) {
 	return
 }
 
-func (self *user) Package(v int, fee int, u user) (ret keys.PKr) {
+func (self *user) Package(v int, fee int, u user) (ret c_type.PKr) {
 	fmt.Printf("user(%v) send %v:%v to user(%v)\n", self.i, v, fee, u.i)
 	outs := self.GetOuts()
 	in := tx.In{}
@@ -322,7 +323,7 @@ func TestArrayObj(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	cpt.ZeroInit("", cpt.NET_Dev)
+	cpt.ZeroInit("", c_czero.NET_Dev)
 	NewBlock()
 	m.Run()
 }
@@ -345,7 +346,7 @@ func TestPkg(t *testing.T) {
 	if user_m.Logout() != 40 {
 		t.FailNow()
 	}
-	user_a.Close(&keys.Uint256{}, 50, &g_blocks.st1.GetPkgs(nil, true)[0].Key)
+	user_a.Close(&c_type.Uint256{}, 50, &g_blocks.st1.GetPkgs(nil, true)[0].Key)
 	if user_a.Logout() != 50 {
 		t.FailNow()
 	}
@@ -367,11 +368,11 @@ func TestTxs(t *testing.T) {
 	}
 
 	pkg_pkr := user_m.Package(50, 10, user_a)
-	if g_blocks.st.Pkgs.GetPkg(&keys.Uint256{}) == nil {
+	if g_blocks.st.Pkgs.GetPkg(&c_type.Uint256{}) == nil {
 		t.FailNow()
 	}
 
-	var key keys.Uint256
+	var key c_type.Uint256
 	if pkgs := user_m.GetPkgs(true); len(pkgs) == 0 {
 		t.FailNow()
 	} else {
@@ -381,11 +382,11 @@ func TestTxs(t *testing.T) {
 		t.FailNow()
 	}
 
-	g_blocks.st.Pkgs.Close(&keys.Uint256{}, &pkg_pkr, &key)
+	g_blocks.st.Pkgs.Close(&c_type.Uint256{}, &pkg_pkr, &key)
 	g_blocks.st.Update()
 	EndBlock()
 
-	if g_blocks.st.Pkgs.GetPkg(&keys.Uint256{}) != nil {
+	if g_blocks.st.Pkgs.GetPkg(&c_type.Uint256{}) != nil {
 		t.FailNow()
 	}
 	if pkgs := user_m.GetPkgs(true); len(pkgs) != 0 {
@@ -438,16 +439,16 @@ func TestStrTree(t *testing.T) {
 
 	outState := txstate.NewMerkleTree(g_blocks.st.Tri)
 
-	cm1 := keys.Uint256{1}
+	cm1 := c_type.Uint256{1}
 	outState.AppendLeaf(cm1)
 
-	cm2 := keys.Uint256{2}
+	cm2 := c_type.Uint256{2}
 	outState.AppendLeaf(cm2)
 
-	cm3 := keys.Uint256{3}
+	cm3 := c_type.Uint256{3}
 	outState.AppendLeaf(cm3)
 
-	cm4 := keys.Uint256{4}
+	cm4 := c_type.Uint256{4}
 	rt4 := outState.AppendLeaf(cm4)
 
 	pos, path, anchor := outState.GetPaths(cm3)

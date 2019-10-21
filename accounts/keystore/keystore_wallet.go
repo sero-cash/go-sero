@@ -17,24 +17,14 @@
 package keystore
 
 import (
-	"errors"
-
+	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/common/address"
 
-	"github.com/sero-cash/go-sero/zero/txs"
-	"github.com/sero-cash/go-sero/zero/wallet/lstate"
-	"github.com/sero-cash/go-sero/zero/wallet/lstate/generate"
-
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/accounts"
-	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/log"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/txs/tx"
 )
 
@@ -92,22 +82,6 @@ func (w *keystoreWallet) Derive(path accounts.DerivationPath, pin bool) (account
 // there is no notion of hierarchical account derivation for plain keystore accounts.
 func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain sero.ChainStateReader) {}
 
-func (w *keystoreWallet) EncryptTx(account accounts.Account, tx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
-	// Make sure the requested account is contained within
-	if account.Address != w.account.Address {
-		return nil, accounts.ErrUnknownAccount
-	}
-	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
-		return nil, accounts.ErrUnknownAccount
-	}
-	seed, err := w.keystore.GetSeed(account)
-	if err != nil {
-		return nil, err
-	}
-	return w.EncryptTxWithSeed(*seed, tx, txt, state)
-
-}
-
 func (w *keystoreWallet) AddressUnlocked(account accounts.Account) (bool, error) {
 	if account.Address != w.account.Address {
 		return false, accounts.ErrUnknownAccount
@@ -122,110 +96,8 @@ func (w *keystoreWallet) AddressUnlocked(account accounts.Account) (bool, error)
 	return true, nil
 }
 
-func (w *keystoreWallet) EncryptTxWithSeed(seed address.Seed, btx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
-	w.keystore.mu.Lock()
-	defer w.keystore.mu.Unlock()
-	ins := []tx.In{}
-	costTkn := txt.TokenCost()
-	costTkt := txt.TikectCost()
-	tk := keys.Seed2Tk(seed.SeedToUint256())
-	outs, tknMap, tktMap, err := txs.GetRoots(&tk, costTkn, costTkt)
-	if err != nil {
-		return nil, err
-	}
-	for _, out := range outs {
-		ins = append(ins, tx.In{Root: out})
-	}
-	for cy, value := range tknMap {
-		token := &assets.Token{
-			Currency: cy,
-			Value:    value,
-		}
-		asset := assets.Asset{
-			Tkn: token,
-		}
-		selfOut := tx.Out{
-			Addr:  keys.Addr2PKr(keys.Seed2Addr(seed.SeedToUint256()).NewRef(), keys.RandUint256().NewRef()),
-			Asset: asset,
-			IsZ:   true,
-		}
-		txt.Outs = append(txt.Outs, selfOut)
-	}
-	for catg, value := range tktMap {
-		for _, v := range value {
-			ticket := &assets.Ticket{
-				Category: catg,
-				Value:    v,
-			}
-			asset := assets.Asset{
-				Tkt: ticket,
-			}
-			selfOut := tx.Out{
-				Addr:  keys.Addr2PKr(keys.Seed2Addr(seed.SeedToUint256()).NewRef(), keys.RandUint256().NewRef()),
-				Asset: asset,
-				IsZ:   true,
-			}
-			txt.Outs = append(txt.Outs, selfOut)
-		}
-
-	}
-
-	if txt.PkgClose != nil {
-		zpkg := lstate.CurrentLState().CurrentZState().Pkgs.GetPkgById(&txt.PkgClose.Id)
-		if zpkg == nil || zpkg.Closed {
-			return nil, errors.New("PkgClose Id is not exists!")
-		}
-		pkg_o, err := pkg.DePkg(&txt.PkgClose.Key, &zpkg.Pack.Pkg)
-		if err != nil {
-			return nil, err
-		}
-		selfOut := tx.Out{
-			Addr:  zpkg.Pack.PKr,
-			Asset: pkg_o.Asset,
-			IsZ:   true,
-		}
-		txt.Outs = append(txt.Outs, selfOut)
-	}
-
-	txt.Ins = ins
-
-	log.Info("EncryptTxWithSeed : ", "in_num", len(txt.Ins), "out_num", len(txt.Outs))
-
-	for i, in := range txt.Ins {
-		log.Info("    ctx_in : ", "index", i, "root", in.Root)
-	}
-	for i, out := range txt.Outs {
-		log.Info("    ctx_out : ", "index", i, "to", hexutil.Encode(out.Addr[:]))
-	}
-
-	stx, err := generate.Gen(seed.SeedToUint256(), txt)
-	if err != nil {
-		return nil, err
-	}
-
-	for i, in := range stx.Desc_Z.Ins {
-		log.Info("    desc_z : ", "index", i, "nil", hexutil.Encode(in.Nil[:]), "trace", hexutil.Encode(in.Trace[:]))
-	}
-
-	return btx.WithEncrypt(&stx)
-
-}
-
-func (w *keystoreWallet) EncryptTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, txt *tx.T, state *state.StateDB) (*types.Transaction, error) {
-	// Make sure the requested account is contained within
-	if account.Address != w.account.Address {
-		return nil, accounts.ErrUnknownAccount
-	}
-	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
-		return nil, accounts.ErrUnknownAccount
-	}
-
-	seed, err := w.keystore.GetSeedWithPassphrase(account, passphrase)
-	if err != nil {
-		return nil, err
-	}
-	return w.EncryptTxWithSeed(*seed, tx, txt, state)
-
+func (w *keystoreWallet) EncryptTxWithSeed(seed address.Seed, btx *types.Transaction, txt *tx.T, state *state.StateDB) (tx *types.Transaction, e error) {
+	return
 }
 
 func (w *keystoreWallet) GetSeed() (*address.Seed, error) {
@@ -248,8 +120,8 @@ func (w *keystoreWallet) GetSeedWithPassphrase(passphrase string) (*address.Seed
 
 }
 
-func (w *keystoreWallet) IsMine(onceAddress common.Address) bool {
-	tk := w.account.Tk.ToUint512()
-	succ := keys.IsMyPKr(tk, onceAddress.ToPKr())
+func (w *keystoreWallet) IsMine(pkr c_type.PKr) bool {
+	tk := w.account.Tk.ToTk()
+	succ := superzk.IsMyPKr(&tk, &pkr)
 	return succ
 }

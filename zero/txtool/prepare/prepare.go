@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/sero-cash/go-czero-import/seroparam"
+
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -28,10 +30,14 @@ func SelectUtxos(param *PreTxParam, generator TxParamGenerator) (utxos Utxos, e 
 		}
 		return
 	} else {
-		ck := NewCKState(true, &param.Fee)
+		ck := assets.NewCKState(true, &param.Fee)
 
 		if cmdsAsset := param.Cmds.OutAsset(); cmdsAsset != nil {
 			ck.AddOut(cmdsAsset)
+		}
+
+		for _, reception := range param.Receptions {
+			ck.AddOut(&reception.Asset)
 		}
 
 		if cmdsAsset, err := param.Cmds.InAsset(); err != nil {
@@ -43,57 +49,56 @@ func SelectUtxos(param *PreTxParam, generator TxParamGenerator) (utxos Utxos, e 
 			}
 		}
 
-		for _, reception := range param.Receptions {
-			ck.AddOut(&reception.Asset)
-		}
-
-		for currency, value := range ck.cy {
-			sign := value.balance.ToIntRef().Sign()
-			if sign > 0 {
-				outs, remain := generator.FindRoots(&param.From, utils.Uint256ToCurrency(&currency), new(big.Int).Abs(value.balance.ToIntRef()))
-				if remain.Sign() <= 0 {
-					utxos = append(utxos, outs...)
-				} else {
-					e = errors.New("no enough unlocked utxos")
-					return
+		if tks := ck.Tkts(); len(tks) > 0 {
+			if outs, remain := generator.FindRootsByTicket(&param.From, tks); len(remain) == 0 {
+				utxos = append(utxos, outs...)
+				for _, out := range outs {
+					ck.AddIn(&out.Asset)
 				}
+			} else {
+				e = errors.New("no enough unlocked utxos")
+				return
 			}
 		}
 
-		for _, utxo := range utxos {
-			ck.AddIn(&utxo.Asset)
-		}
-
-		if len(ck.tk) > 0 {
-			outs, _ := generator.FindRootsByTicket(&param.From, ck.tk)
-			for _, out := range outs {
-				ck.AddIn(&out.Asset)
+		for _, tkn := range ck.Tkns() {
+			outs, remain := generator.FindRoots(&param.From, utils.Uint256ToCurrency(&tkn.Currency), tkn.Value.ToIntRef())
+			if remain.Sign() <= 0 {
+				utxos = append(utxos, outs...)
+			} else {
+				e = errors.New("no enough unlocked utxos")
+				return
 			}
 		}
+
 		return
 	}
 }
 
+type BeforeTxParam struct {
+	Fee        assets.Token
+	GasPrice   big.Int
+	Utxos      Utxos
+	RefundTo   c_type.PKr
+	Receptions []Reception
+	Cmds       Cmds
+}
+
 func BuildTxParam(
 	state TxParamState,
-	utxos Utxos,
-	refundTo *keys.PKr,
-	receptions []Reception,
-	cmds *Cmds,
-	fee *assets.Token,
-	gasPrice *big.Int,
+	param *BeforeTxParam,
 ) (txParam *txtool.GTxParam, e error) {
 
 	txParam = &txtool.GTxParam{}
 
-	ck := NewCKState(false, fee)
+	ck := assets.NewCKState(false, &param.Fee)
 
-	txParam.Fee = *fee
-	txParam.GasPrice = gasPrice
+	txParam.Fee = param.Fee
+	txParam.GasPrice = &param.GasPrice
 
-	txParam.From = txtool.Kr{PKr: *refundTo}
+	txParam.From = txtool.Kr{PKr: param.RefundTo}
 
-	wits, err := state.GetAnchor(utxos.Roots())
+	wits, err := state.GetAnchor(param.Utxos.Roots())
 	if err != nil {
 		e = err
 		return
@@ -101,17 +106,12 @@ func BuildTxParam(
 
 	Ins := []txtool.GIn{}
 	oins_count := 0
-	for index, utxo := range utxos {
+	for index, utxo := range param.Utxos {
 		if out := state.GetOut(&utxo.Root); out != nil {
-			if added, err := ck.AddIn(&utxo.Asset); err != nil {
-				e = err
-				return
-			} else {
-				if added {
-					Ins = append(Ins, txtool.GIn{Out: txtool.Out{Root: utxo.Root, State: *out}, Witness: wits[index]})
-					if out.OS.Out_O != nil {
-						oins_count++
-					}
+			if ck.AddIn(&utxo.Asset) {
+				Ins = append(Ins, txtool.GIn{Out: txtool.Out{Root: utxo.Root, State: *out}, Witness: wits[index]})
+				if out.OS.Out_O != nil {
+					oins_count++
 				}
 			}
 		} else {
@@ -125,19 +125,17 @@ func BuildTxParam(
 		return
 	}
 
-	if cmds != nil {
-		if cmdsAsset, err := cmds.InAsset(); err != nil {
-			e = err
-			return
-		} else {
-			if cmdsAsset != nil {
-				ck.AddIn(cmdsAsset)
-			}
+	if cmdsAsset, err := param.Cmds.InAsset(); err != nil {
+		e = err
+		return
+	} else {
+		if cmdsAsset != nil {
+			ck.AddIn(cmdsAsset)
 		}
 	}
 
 	Outs := []txtool.GOut{}
-	for _, reception := range receptions {
+	for _, reception := range param.Receptions {
 		pkr := reception.Addr
 		if IsPk(reception.Addr) {
 			pk := reception.Addr.ToUint512()
@@ -147,10 +145,8 @@ func BuildTxParam(
 		Outs = append(Outs, txtool.GOut{PKr: pkr, Asset: reception.Asset})
 	}
 
-	if cmds != nil {
-		if cmdsAsset := cmds.OutAsset(); cmdsAsset != nil {
-			ck.AddOut(cmdsAsset)
-		}
+	if cmdsAsset := param.Cmds.OutAsset(); cmdsAsset != nil {
+		ck.AddOut(cmdsAsset)
 	}
 
 	tkns, tkts := ck.GetList()
@@ -188,32 +184,32 @@ func BuildTxParam(
 
 	txParam.Ins = Ins
 	txParam.Outs = Outs
-	txParam.Cmds.Contract = cmds.Contract
-	txParam.Cmds.BuyShare = cmds.BuyShare
-	txParam.Cmds.RegistPool = cmds.RegistPool
-	txParam.Cmds.ClosePool = cmds.ClosePool
+	txParam.Cmds.Contract = param.Cmds.Contract
+	txParam.Cmds.BuyShare = param.Cmds.BuyShare
+	txParam.Cmds.RegistPool = param.Cmds.RegistPool
+	txParam.Cmds.ClosePool = param.Cmds.ClosePool
 
-	if cmds.PkgCreate != nil {
-		if pkg := state.GetPkgById(&cmds.PkgCreate.Id); pkg != nil {
+	if param.Cmds.PkgCreate != nil {
+		if pkg := state.GetPkgById(&param.Cmds.PkgCreate.Id); pkg != nil {
 			e = errors.New("create pkg but the pkg id is exsits")
 			return
 		}
 		txParam.Cmds.PkgCreate = &txtool.GPkgCreateCmd{}
-		txParam.Cmds.PkgCreate.Id = cmds.PkgCreate.Id
-		txParam.Cmds.PkgCreate.PKr = cmds.PkgCreate.PKr
-		txParam.Cmds.PkgCreate.Asset = cmds.PkgCreate.Asset
-		txParam.Cmds.PkgCreate.Memo = cmds.PkgCreate.Memo
+		txParam.Cmds.PkgCreate.Id = param.Cmds.PkgCreate.Id
+		txParam.Cmds.PkgCreate.PKr = param.Cmds.PkgCreate.PKr
+		txParam.Cmds.PkgCreate.Asset = param.Cmds.PkgCreate.Asset
+		txParam.Cmds.PkgCreate.Memo = param.Cmds.PkgCreate.Memo
 	}
 
-	if cmds.PkgTransfer != nil {
-		if pkg := state.GetPkgById(&cmds.PkgTransfer.Id); pkg == nil {
+	if param.Cmds.PkgTransfer != nil {
+		if pkg := state.GetPkgById(&param.Cmds.PkgTransfer.Id); pkg == nil {
 			e = errors.New("transfer pkg but the pkg id is not exsits")
 			return
 		} else {
 			if !pkg.Closed {
 				txParam.Cmds.PkgTransfer = &txtool.GPkgTransferCmd{}
-				txParam.Cmds.PkgTransfer.Id = cmds.PkgTransfer.Id
-				txParam.Cmds.PkgTransfer.PKr = cmds.PkgTransfer.PKr
+				txParam.Cmds.PkgTransfer.Id = param.Cmds.PkgTransfer.Id
+				txParam.Cmds.PkgTransfer.PKr = param.Cmds.PkgTransfer.PKr
 				txParam.Cmds.PkgTransfer.Owner = pkg.Pack.PKr
 			} else {
 				e = errors.New("transfer pkg but the pkg is closed")
@@ -222,16 +218,16 @@ func BuildTxParam(
 		}
 	}
 
-	if cmds.PkgClose != nil {
-		if p := state.GetPkgById(&cmds.PkgTransfer.Id); p == nil {
+	if param.Cmds.PkgClose != nil {
+		if p := state.GetPkgById(&param.Cmds.PkgTransfer.Id); p == nil {
 			e = errors.New("close pkg but the pkg id is not exsits")
 			return
 		} else {
 			if !p.Closed {
-				txParam.Cmds.PkgClose.Id = cmds.PkgClose.Id
+				txParam.Cmds.PkgClose.Id = param.Cmds.PkgClose.Id
 				txParam.Cmds.PkgClose.Owner = p.Pack.PKr
 				txParam.Cmds.PkgClose.AssetCM = p.Pack.Pkg.AssetCM
-				if opkg, err := pkg.DePkg(&cmds.PkgClose.Key, &p.Pack.Pkg); err != nil {
+				if opkg, err := pkg.DePkg(&param.Cmds.PkgClose.Key, &p.Pack.Pkg); err != nil {
 					e = errors.New("close pkg but password is error")
 					return
 				} else {
@@ -245,10 +241,10 @@ func BuildTxParam(
 	}
 
 	var contractTo *common.Address
-	if cmds.Contract != nil {
-		if cmds.Contract.To != nil {
+	if param.Cmds.Contract != nil {
+		if param.Cmds.Contract.To != nil {
 			contractTo = &common.Address{}
-			copy(contractTo[:], cmds.Contract.To[:])
+			copy(contractTo[:], param.Cmds.Contract.To[:])
 		}
 	}
 
@@ -257,6 +253,13 @@ func BuildTxParam(
 		return
 	} else {
 		txParam.Gas = gaslimit
+	}
+
+	if txtool.Ref_inst.Bc != nil {
+		if txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()+1 >= seroparam.SIP5() {
+			Z := true
+			txParam.Z = &Z
+		}
 	}
 
 	return

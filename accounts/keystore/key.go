@@ -25,11 +25,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/btcsuite/btcutil/base58"
-
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/sero-cash/go-sero/common/address"
+
+	"github.com/sero-cash/go-czero-import/c_type"
+
 	bip39 "github.com/tyler-smith/go-bip39"
 
 	"github.com/pborman/uuid"
@@ -38,25 +39,27 @@ import (
 )
 
 const (
-	version = 1
+	version = 2
 )
 
 type Key struct {
 	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
 	// to simplify lookups we also store the address
-	Address address.AccountAddress
+	Address address.PKAddress
 
-	Tk address.AccountAddress
+	Tk address.TKAddress
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
 	PrivateKey *ecdsa.PrivateKey
 
 	At uint64
+
+	Version int
 }
 
 type keyStore interface {
 	// Loads and decrypts the key from disk.
-	GetKey(addr address.AccountAddress, filename string, auth string) (*Key, error)
+	GetKey(address address.PKAddress, filename string, auth string) (*Key, error)
 	// Writes and encrypts the key.
 	StoreKey(filename string, k *Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
@@ -85,47 +88,52 @@ type cipherparamsJSON struct {
 	IV string `json:"iv"`
 }
 
-func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, at uint64) *Key {
+func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey, at uint64, version int) *Key {
 	id := uuid.NewRandom()
+	tk := crypto.PrivkeyToTk(privateKeyECDSA, version)
 	key := &Key{
 		Id:         id,
-		Address:    crypto.PrivkeyToAddress(privateKeyECDSA),
-		Tk:         crypto.PrivkeyToTk(privateKeyECDSA),
+		Address:    tk.ToPk(),
+		Tk:         tk,
 		PrivateKey: privateKeyECDSA,
 		At:         at,
+		Version:    version,
 	}
 	return key
 }
 
-func newKeyFromTk(tk *keys.Uint512) *Key {
+func newKeyFromTk(tk *c_type.Tk, at uint64) *Key {
 	id := uuid.NewRandom()
-	tkaddress := address.AccountAddress{}
+	tkaddress := address.TKAddress{}
 	copy(tkaddress[:], tk[:])
-	pk := keys.Tk2Pk(tk)
-	address := address.AccountAddress{}
-	copy(address[:], pk[:])
+	v := 1
+	if c_superzk.IsSzkTk(tk) {
+		v = 2
+	}
 	key := &Key{
 		Id:      id,
-		Address: address,
+		Address: tkaddress.ToPk(),
 		Tk:      tkaddress,
+		At:      at,
+		Version: v,
 	}
 	return key
 }
 
-func newKey(rand io.Reader, at uint64) (*Key, error) {
+func newKey(rand io.Reader, at uint64, version int) (*Key, error) {
 	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), rand)
 	if err != nil {
 		return nil, err
 	}
-	return newKeyFromECDSA(privateKeyECDSA, at), nil
+	return newKeyFromECDSA(privateKeyECDSA, at, version), nil
 }
 
-func storeNewKey(ks keyStore, rand io.Reader, auth string, at uint64) (*Key, accounts.Account, error) {
-	key, err := newKey(rand, at)
+func storeNewKey(ks keyStore, rand io.Reader, auth string, at uint64, version int) (*Key, accounts.Account, error) {
+	key, err := newKey(rand, at, version)
 	if err != nil {
 		return nil, accounts.Account{}, err
 	}
-	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}, At: key.At}
+	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}, At: key.At, Version: version}
 	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
 		zeroKey(key.PrivateKey)
 		return nil, a, err
@@ -133,7 +141,7 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string, at uint64) (*Key, acc
 	return key, a, err
 }
 
-func storeNewKeyWithMnemonic(ks keyStore, auth string, at uint64) (string, *Key, accounts.Account, error) {
+func storeNewKeyWithMnemonic(ks keyStore, auth string, at uint64, version int) (string, *Key, accounts.Account, error) {
 
 	entropy, err := bip39.NewEntropy(256)
 	if err != nil {
@@ -152,11 +160,14 @@ func storeNewKeyWithMnemonic(ks keyStore, auth string, at uint64) (string, *Key,
 		return "", nil, accounts.Account{}, err
 	}
 
-	key := newKeyFromECDSA(privateKeyECDSA, at)
-	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}, At: key.At}
+	key := newKeyFromECDSA(privateKeyECDSA, at, version)
+	a := accounts.Account{Address: key.Address, Tk: key.Tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}, At: key.At, Version: key.Version}
 	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
 		zeroKey(key.PrivateKey)
 		return "", nil, a, err
+	}
+	if version == 2 {
+		mnemonic = "v2 " + mnemonic
 	}
 	return mnemonic, key, a, err
 }
@@ -185,9 +196,9 @@ func writeKeyFile(file string, content []byte) error {
 
 // keyFileName implements the naming convention for keyfiles:
 // UTC--<created_at UTC ISO8601>-<address hex>
-func keyFileName(keyAddr address.AccountAddress) string {
+func keyFileName(keyAddr address.PKAddress) string {
 	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), base58.Encode(keyAddr.Bytes()))
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), keyAddr.String())
 }
 
 func toISO8601(t time.Time) string {

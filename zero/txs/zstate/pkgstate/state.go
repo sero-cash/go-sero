@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-sero/serodb"
 
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/localdb"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/pkgstate/data"
@@ -54,32 +56,32 @@ func (self *PkgState) Update() {
 	return
 }
 
-func (self *PkgState) RecordState(putter serodb.Putter, hash *keys.Uint256) {
+func (self *PkgState) RecordState(putter serodb.Putter, hash *c_type.Uint256) {
 	self.data.RecordState(putter, hash)
 }
 
-func (self *PkgState) GetPkgByHash(hash *keys.Uint256) (ret *localdb.ZPkg) {
+func (self *PkgState) GetPkgByHash(hash *c_type.Uint256) (ret *localdb.ZPkg) {
 	ret = self.data.GetPkgByHash(self.tri, hash)
 	return
 }
 
-func (self *PkgState) GetPkgById(id *keys.Uint256) (ret *localdb.ZPkg) {
+func (self *PkgState) GetPkgById(id *c_type.Uint256) (ret *localdb.ZPkg) {
 	ret = self.data.GetPkgById(self.tri, id)
 	return
 }
 
-func (state *PkgState) GetPkgHashes() (ret []keys.Uint256) {
+func (state *PkgState) GetPkgHashes() (ret []c_type.Uint256) {
 	return state.data.GetHashes()
 }
 
-func (self *PkgState) Force_del(hash *keys.Uint256, close *stx.PkgClose) (e error) {
+func (self *PkgState) Force_del(hash *c_type.Uint256, close *stx.PkgClose) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	if pg := self.data.GetPkgById(self.tri, &close.Id); pg == nil || pg.Closed {
 		e = fmt.Errorf("Close Pkg is nil: %v", hexutil.Encode(close.Id[:]))
 		return
 	} else {
-		if keys.VerifyPKr(hash, &close.Sign, &pg.Pack.PKr) {
+		if c_superzk.VerifyPKr_X(hash, &close.Sign, &pg.Pack.PKr) {
 			pg.Closed = true
 			self.data.Add(pg)
 		} else {
@@ -90,7 +92,7 @@ func (self *PkgState) Force_del(hash *keys.Uint256, close *stx.PkgClose) (e erro
 	}
 }
 
-func (self *PkgState) Force_add(from *keys.PKr, pack *stx.PkgCreate) (e error) {
+func (self *PkgState) Force_add(from *c_type.PKr, pack *stx.PkgCreate) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 
@@ -110,14 +112,14 @@ func (self *PkgState) Force_add(from *keys.PKr, pack *stx.PkgCreate) (e error) {
 
 }
 
-func (self *PkgState) Force_transfer(hash *keys.Uint256, trans *stx.PkgTransfer) (e error) {
+func (self *PkgState) Force_transfer(hash *c_type.Uint256, trans *stx.PkgTransfer) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	if pg := self.data.GetPkgById(self.tri, &trans.Id); pg == nil || pg.Closed {
 		e = fmt.Errorf("Transfer Pkg is nil: %v", hexutil.Encode(trans.Id[:]))
 		return
 	} else {
-		if keys.VerifyPKr(hash, &trans.Sign, &pg.Pack.PKr) {
+		if c_superzk.VerifyPKr_X(hash, &trans.Sign, &pg.Pack.PKr) {
 			pg.Pack.PKr = trans.PKr
 			self.data.Add(pg)
 		} else {
@@ -133,7 +135,7 @@ type OPkg struct {
 	O pkg.Pkg_O
 }
 
-func (self *PkgState) Close(id *keys.Uint256, pkr *keys.PKr, key *keys.Uint256) (ret OPkg, e error) {
+func (self *PkgState) Close(id *c_type.Uint256, pkr *c_type.PKr, key *c_type.Uint256) (ret OPkg, e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	if pg := self.data.GetPkgById(self.tri, id); pg == nil || pg.Closed {
@@ -160,7 +162,7 @@ func (self *PkgState) Close(id *keys.Uint256, pkr *keys.PKr, key *keys.Uint256) 
 	}
 }
 
-func (self *PkgState) Transfer(id *keys.Uint256, pkr *keys.PKr, to *keys.PKr) (e error) {
+func (self *PkgState) Transfer(id *c_type.Uint256, pkr *c_type.PKr, to *c_type.PKr) (e error) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	if pg := self.data.GetPkgById(self.tri, id); pg == nil || pg.Closed {

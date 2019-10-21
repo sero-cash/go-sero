@@ -5,6 +5,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/superzk"
+
 	"github.com/sero-cash/go-sero/accounts"
 
 	"github.com/sero-cash/go-sero/serodb"
@@ -13,7 +16,7 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/stake"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/sero-cash/go-sero/log"
 
@@ -195,14 +198,14 @@ func (self *Voter) voteLoop() {
 }
 
 type voteInfo struct {
-	index      uint32
-	parentNum  uint64
-	shareHash  common.Hash
-	poshash    common.Hash
-	statkeHash common.Hash
-	votePKr    keys.PKr
-	isPool     bool
-	seed       address.Seed
+	index     uint32
+	parentNum uint64
+	shareHash common.Hash
+	poshash   common.Hash
+	stakeHash common.Hash
+	votePKr   c_type.PKr
+	isPool    bool
+	seed      address.Seed
 }
 
 func cotainsVoteInfo(voteInfos []voteInfo, item voteInfo, pool *stake.StakePool) bool {
@@ -219,15 +222,15 @@ func cotainsVoteInfo(voteInfos []voteInfo, item voteInfo, pool *stake.StakePool)
 	return false
 }
 
-func pkrToAddress(pkr keys.PKr) common.Address {
+func pkrToAddress(pkr c_type.PKr) common.Address {
 	var addr common.Address
 	copy(addr[:], pkr[:])
 	return addr
 }
 
-func GetSeedByVotePkr(wallets []accounts.Wallet, pkr keys.PKr) *address.Seed {
+func GetSeedByVotePkr(wallets []accounts.Wallet, pkr c_type.PKr) *address.Seed {
 	for _, w := range wallets {
-		if w.IsMine(pkrToAddress(pkr)) {
+		if w.IsMine(pkr) {
 			seed, err := w.GetSeed()
 			if err != nil {
 				log.Trace("GetSeedByVotePkr", "err", err)
@@ -329,9 +332,14 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 }
 
 func (self *Voter) sign(info voteInfo) {
-	data := keys.Uint256{}
-	copy(data[:], info.statkeHash[:])
-	sign, err := keys.SignPKr(info.seed.SeedToUint256(), &data, &info.votePKr)
+	data := c_type.Uint256{}
+	copy(data[:], info.stakeHash[:])
+	version := 1
+	if c_superzk.IsSzkPKr(&info.votePKr) {
+		version = 2
+	}
+	sk := superzk.Seed2Sk(info.seed.SeedToUint256(), version)
+	sign, err := superzk.SignPKr_ByHeight(info.parentNum+1, &sk, &data, &info.votePKr)
 	if err != nil {
 		log.Error("voter sign", "sign err", err)
 		return

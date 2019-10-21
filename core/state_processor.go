@@ -20,7 +20,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/log"
 
@@ -169,7 +169,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 		}
 
 		value := stakeDesc.BuyShare.Value.ToInt()
-		num, avgPrice,_  := stakeState.CaleAvgPrice(value)
+		num, avgPrice, _ := stakeState.CaleAvgPrice(value)
 		if num > 0 {
 			var amount *big.Int
 			if num > 1000 {
@@ -207,7 +207,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 				Value:    stakeDesc.BuyShare.Value,
 			},
 			}
-			statedb.NextZState().AddTxOut(from, asset,txHash)
+			statedb.NextZState().AddTxOut(from, asset, txHash)
 		}
 	} else if stakeDesc.RegistPool != nil {
 		id := crypto.Keccak256Hash(pkr[:])
@@ -232,7 +232,7 @@ func applyStake(from common.Address, stakeDesc stx.DescCmd, statedb *state.State
 			return
 		} else {
 			cmd := stakeDesc.RegistPool
-			if stake.GetPoolValueThreshold().Cmp(stakeDesc.RegistPool.Value.ToInt()) != 0 || cmd.Vote == (keys.PKr{}) {
+			if stake.GetPoolValueThreshold().Cmp(stakeDesc.RegistPool.Value.ToInt()) != 0 || cmd.Vote == (c_type.PKr{}) {
 				err = errors.New("args error")
 				return
 			}

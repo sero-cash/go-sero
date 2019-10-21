@@ -1,19 +1,94 @@
 package localdb
 
 import (
-	"github.com/sero-cash/go-czero-import/cpt"
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/rlp"
-	"github.com/sero-cash/go-sero/zero/txs/stx"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type OutState struct {
 	Index  uint64
-	Out_O  *stx.Out_O    `rlp:"nil"`
-	Out_Z  *stx.Out_Z    `rlp:"nil"`
-	OutCM  *keys.Uint256 `rlp:"nil"`
-	RootCM *keys.Uint256 `rlp:"nil"`
+	Out_O  *stx_v0.Out_O   `rlp:"nil"`
+	Out_Z  *stx_v0.Out_Z   `rlp:"nil"`
+	Out_P  *stx_v1.Out_P   `rlp:"nil"`
+	Out_C  *stx_v1.Out_C   `rlp:"nil"`
+	OutCM  *c_type.Uint256 `rlp:"nil"`
+	RootCM *c_type.Uint256 `rlp:"nil"`
+}
+
+func (self *OutState) genOutCM() {
+	if self.OutCM == nil {
+		if cm, err := genOutCM(self); err != nil {
+			panic(err)
+			return
+		} else {
+			self.OutCM = &cm
+			return
+		}
+	} else {
+		return
+	}
+}
+
+func (self *OutState) TryGetOutCM() (ret *c_type.Uint256) {
+	if self.Out_O != nil {
+		ret = self.OutCM
+		return
+	} else if self.Out_Z != nil {
+		ret = &self.Out_Z.OutCM
+		return
+	} else {
+		return
+	}
+}
+
+func (self *OutState) GenRootCM() {
+	if self.Out_O != nil {
+		self.genOutCM()
+	}
+	if self.RootCM == nil {
+		if cm, err := genRootCM(self); err != nil {
+			panic(err)
+			return
+		} else {
+			self.RootCM = &cm
+			return
+		}
+	} else {
+		return
+	}
+}
+
+func (out *OutState) TxType() string {
+	if out.Out_O != nil {
+		return "Out_O"
+	}
+	if out.Out_Z != nil {
+		return "Out_Z"
+	}
+	if out.Out_P != nil {
+		return "Out_P"
+	}
+	if out.Out_C != nil {
+		return "Out_C"
+	}
+	return "EMPTY"
+}
+
+func (out *OutState) IsZero() bool {
+	if out.Out_Z != nil || out.Out_C != nil {
+		return true
+	} else {
+		return false
+	}
+}
+func (out *OutState) IsSzk() bool {
+	if out.Out_P != nil || out.Out_C != nil {
+		return true
+	}
+	return false
 }
 
 func (self *OutState) Clone() (ret OutState) {
@@ -21,54 +96,17 @@ func (self *OutState) Clone() (ret OutState) {
 	return
 }
 
-func (out *OutState) IsO() bool {
-	if out.Out_Z == nil {
-		return true
-	} else {
-		return false
-	}
-}
-
-func (self *OutState) ToIndexRsk() (ret keys.Uint256) {
-	ret = utils.NewU256(self.Index).ToRef().ToUint256()
-	return
-}
-func (self *OutState) ToOutCM() *keys.Uint256 {
-	if self.IsO() {
-		if self.OutCM == nil {
-			asset := self.Out_O.Asset.ToFlatAsset()
-			cm := cpt.GenOutCM(
-				asset.Tkn.Currency.NewRef(),
-				asset.Tkn.Value.ToUint256().NewRef(),
-				asset.Tkt.Category.NewRef(),
-				asset.Tkt.Value.NewRef(),
-				&self.Out_O.Memo,
-				&self.Out_O.Addr,
-				self.ToIndexRsk().NewRef(),
-			)
-			self.OutCM = &cm
-		}
-		return self.OutCM
-	} else {
-		return self.Out_Z.OutCM.NewRef()
-	}
-}
-
-func (self *OutState) ToRootCM() *keys.Uint256 {
-	if self.RootCM == nil {
-		out_cm := self.ToOutCM()
-		cm := cpt.GenRootCM(self.Index, out_cm)
-		self.RootCM = &cm
-	}
-	return self.RootCM
-}
-
-func (self *OutState) ToPKr() *keys.PKr {
-	if self.IsO() {
+func (self *OutState) ToPKr() *c_type.PKr {
+	if self.Out_O != nil {
 		return &self.Out_O.Addr
-	} else {
+	} else if self.Out_Z != nil {
 		return &self.Out_Z.PKr
+	} else if self.Out_P != nil {
+		return &self.Out_P.PKr
+	} else if self.Out_C != nil {
+		return &self.Out_C.PKr
 	}
+	return nil
 }
 
 func (self *OutState) Serial() (ret []byte, e error) {
@@ -97,24 +135,3 @@ func (self *OutState0Get) Unserial(v []byte) (e error) {
 		}
 	}
 }
-
-func OutKey(root *keys.Uint256) []byte {
-	key := []byte("$SERO_LOCALDB_OUTSTATE$")
-	key = append(key, root[:]...)
-	return key
-}
-
-/*
-func PutOut(db serodb.Putter, root *keys.Uint256, out *OutState) {
-	outkey := OutKey(root)
-	tri.UpdateDBObj(db, outkey, out)
-}
-
-func GetOut(db serodb.Getter, root *keys.Uint256) (ret *OutState) {
-	outkey := OutKey(root)
-	outget := OutState0Get{}
-	tri.GetDBObj(db, outkey, &outget)
-	ret = outget.Out
-	return
-}
-*/

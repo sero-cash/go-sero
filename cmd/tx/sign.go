@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
@@ -42,7 +42,7 @@ func Sign(sk string, txParam string) {
 	sk = strings.Trim(sk, "'")
 	txParam = strings.Trim(txParam, "'")
 
-	sk_bytes := keys.Uint512{}
+	sk_bytes := c_type.Uint512{}
 	if sk[1] != 'x' {
 		sk = "0x" + sk
 	}

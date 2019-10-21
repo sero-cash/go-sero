@@ -2,18 +2,23 @@ package ssi
 
 import (
 	"encoding/json"
-	"github.com/sero-cash/go-czero-import/cpt"
-	"github.com/sero-cash/go-czero-import/keys"
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/txs/stx"
-	"github.com/sero-cash/go-sero/zero/txtool"
-	"github.com/sero-cash/go-sero/zero/utils"
 	"log"
+
+	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_0"
+
+	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_1"
+
+	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/superzk"
+
+	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-sero/zero/txtool"
 )
 
-func DecNilOuts(outs []txtool.Out, skr *keys.PKr) (douts []txtool.DOut) {
-	sk := keys.Uint512{}
+func DecNilOuts(outs []txtool.Out, skr *c_type.PKr) (douts []txtool.DOut) {
+	sk := c_type.Uint512{}
 	copy(sk[:], skr[:])
+	tk, _ := superzk.Sk2Tk(&sk)
 	for _, out := range outs {
 		dout := txtool.DOut{}
 
@@ -23,35 +28,42 @@ func DecNilOuts(outs []txtool.Out, skr *keys.PKr) (douts []txtool.DOut) {
 		if out.State.OS.Out_O != nil {
 			dout.Asset = out.State.OS.Out_O.Asset.Clone()
 			dout.Memo = out.State.OS.Out_O.Memo
-			dout.Nil = cpt.GenNil(&sk, out.State.OS.RootCM)
-			log.Printf("DecOuts Out_O!= nil")
-		} else {
-			key, flag := keys.FetchKey(&sk, &out.State.OS.Out_Z.RPK)
-			info_desc := cpt.InfoDesc{}
-			info_desc.Key = key
-			info_desc.Flag = flag
-			info_desc.Einfo = out.State.OS.Out_Z.EInfo
-			cpt.DecOutput(&info_desc)
-
-			data, _ := json.Marshal(info_desc)
-			log.Printf("DecOuts info_desc : %s", string(data))
-
-			if e := stx.ConfirmOut_Z(&info_desc, out.State.OS.Out_Z); e == nil {
-				dout.Asset = assets.NewAsset(
-					&assets.Token{
-						info_desc.Tkn_currency,
-						utils.NewU256_ByKey(&info_desc.Tkn_value),
-					},
-					&assets.Ticket{
-						info_desc.Tkt_category,
-						info_desc.Tkt_value,
-					},
-				)
-				dout.Memo = info_desc.Memo
-				dout.Nil = cpt.GenNil(&sk, out.State.OS.RootCM)
+			if nl, e := c_superzk.Czero_genNil(&sk, out.State.OS.RootCM); e == nil {
+				dout.Nil = nl
+			}
+			log.Printf("DecOuts Out_O")
+		} else if out.State.OS.Out_Z != nil {
+			if key, flag, e := c_superzk.Czero_fetchKey(&tk, &out.State.OS.Out_Z.RPK); e == nil {
+				if o := generate_0.ConfirmOutZ(&key, flag, out.State.OS.Out_Z); o != nil {
+					dout.Asset = o.Asset
+					dout.Memo = o.Memo
+					if nl, e := c_superzk.Czero_genNil(&sk, out.State.OS.RootCM); e == nil {
+						dout.Nil = nl
+						log.Printf("DecOuts success")
+					}
+				}
+			}
+			log.Printf("DecOuts Out_Z")
+		} else if out.State.OS.Out_P != nil {
+			if nl, e := c_superzk.GenNil(&tk, out.State.OS.RootCM, &out.State.OS.Out_P.PKr); e == nil {
+				dout.Asset = out.State.OS.Out_P.Asset.Clone()
+				dout.Memo = out.State.OS.Out_P.Memo
+				dout.Nil = nl
 				log.Printf("DecOuts success")
 			}
-			log.Printf("DecOuts Out_O == nil")
+			log.Printf("DecOuts Out_P")
+		} else if out.State.OS.Out_C != nil {
+			if key, _, e := c_superzk.FetchKey(&out.State.OS.Out_C.PKr, &tk, &out.State.OS.Out_C.RPK); e == nil {
+				if o, _ := generate_1.ConfirmOutC(&key, out.State.OS.Out_C); o != nil {
+					if nl, e := c_superzk.GenNil(&tk, out.State.OS.RootCM.NewRef(), out.State.OS.ToPKr()); e == nil {
+						dout.Asset = o.Asset
+						dout.Memo = o.Memo
+						dout.Nil = nl
+						log.Printf("DecOuts success")
+					}
+				}
+			}
+			log.Printf("DecOuts Out_C")
 		}
 		douts = append(douts, dout)
 

@@ -102,7 +102,7 @@ type StateDB struct {
 	validRevisions []revision
 	nextRevisionId int
 
-	//seeds  []keys.Uint512
+	//seeds  []c_type.Uint512
 	number int64
 	lock   sync.Mutex
 }

@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/sero-cash/go-czero-import/superzk"
+
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
-	"github.com/sero-cash/go-czero-import/cpt"
 	"github.com/sero-cash/go-czero-import/seroparam"
 )
 
@@ -51,24 +52,23 @@ func OUTPUT_ERROR(result interface{}, e error) {
 }
 
 func main() {
-	fmt.Println("hello", "ok")
 	seroparam.InitExchangeValueStr(true)
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	fmt.Printf("PThread: %v \n", zconfig.G_p_thread_num)
 	flag.Parse()
 
 	if method == "sign" {
-		cpt.ZeroInit_OnlyInOuts()
+		superzk.ZeroInit_OnlyInOuts()
 		Sign(sk, txParam)
 		return
 	}
 	if method == "dec" {
-		cpt.ZeroInit_NoCircuit()
+		superzk.ZeroInit_NoCircuit()
 		Dec(tk, out)
 		return
 	}
 	if method == "confirm" {
-		cpt.ZeroInit_NoCircuit()
+		superzk.ZeroInit_NoCircuit()
 		Confirm(key, out)
 		return
 	}

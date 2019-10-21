@@ -3,9 +3,9 @@ package ethapi
 import (
 	"strings"
 
-	"github.com/sero-cash/go-sero/accounts/abi"
+	"github.com/sero-cash/go-czero-import/c_type"
 
-	"github.com/sero-cash/go-sero/common/address"
+	"github.com/sero-cash/go-sero/accounts/abi"
 )
 
 const getDecimalByNameDefinition = `[{
@@ -47,17 +47,16 @@ const decimalsDefinition = `[{
     }]`
 
 type SRC20Decimal struct {
-	contractAddress address.AccountAddress
-	tokenName       string
-	definition      string
-	method          string
+	tokenName  string
+	definition string
+	method     string
 }
 
-func NewSRC20Decimal(contractAddress address.AccountAddress, tokenName string) []SRC20Decimal {
+func NewSRC20Decimal(tokenName string) []SRC20Decimal {
 	result := []SRC20Decimal{
-		{contractAddress, tokenName, decimalsDefinition, "decimals"},
-		{contractAddress, tokenName, getDecimalByNameDefinition, "getDecimal"},
-		{contractAddress, tokenName, getDecimalDefinition, "getDecimal"},
+		{tokenName, decimalsDefinition, "decimals"},
+		{tokenName, getDecimalByNameDefinition, "getDecimal"},
+		{tokenName, getDecimalDefinition, "getDecimal"},
 	}
 	return result
 }
@@ -67,9 +66,10 @@ type SRCAbi interface {
 	Unpack(outData []byte) (*uint8, error)
 }
 
-func packDecimalData(contractAddess address.AccountAddress, out []byte) []byte {
+func packDecimalData(out []byte) []byte {
 	prefix := [18]byte{}
-	copy(prefix[:], contractAddess[:16])
+	rand := c_type.RandUint128()
+	copy(prefix[:], rand[:])
 	l := 18 + len(out)
 	result := make([]byte, l)
 	copy(result[:18], prefix[:])
@@ -92,7 +92,7 @@ func (d SRC20Decimal) Pack() ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-	return packDecimalData(d.contractAddress, out[:]), nil
+	return packDecimalData(out[:]), nil
 
 }
 

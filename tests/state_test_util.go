@@ -17,18 +17,8 @@
 package tests
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"math/big"
-	"strings"
-
-	"github.com/sero-cash/go-sero/common/address"
-
-	"github.com/sero-cash/go-czero-import/keys"
-
-	"github.com/sero-cash/go-sero/zero/txs/assets"
-	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -36,8 +26,6 @@ import (
 	"github.com/sero-cash/go-sero/core"
 	"github.com/sero-cash/go-sero/core/state"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/core/vm"
-	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/params"
 	"github.com/sero-cash/go-sero/rlp"
@@ -126,40 +114,6 @@ func (t *StateTest) Subtests() []StateSubtest {
 	return sub
 }
 
-// Run executes a specific subtest.
-func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateDB, error) {
-	config, ok := Forks[subtest.Fork]
-	if !ok {
-		return nil, UnsupportedForkError{subtest.Fork}
-	}
-	block := t.genesis(config).ToBlock(nil)
-	statedb := MakePreState(serodb.NewMemDatabase(), t.json.Pre)
-
-	post := t.json.Post[subtest.Fork][subtest.Index]
-	msg, err := t.json.Tx.toMessage(post)
-	if err != nil {
-		return nil, err
-	}
-	context := core.NewEVMContext(msg, block.Header(), nil, &t.json.Env.Coinbase)
-	context.GetHash = vmTestBlockHash
-	evm := vm.NewEVM(context, statedb, config, vmconfig)
-
-	gaspool := new(core.GasPool)
-	gaspool.AddGas(block.GasLimit())
-	snapshot := statedb.Snapshot()
-	if _, _, _, err := core.ApplyMessage(evm, msg, gaspool); err != nil {
-		statedb.RevertToSnapshot(snapshot)
-	}
-	if logs := rlpHash(statedb.Logs()); logs != common.Hash(post.Logs) {
-		return statedb, fmt.Errorf("post state logs hash mismatch: got %x, want %x", logs, post.Logs)
-	}
-	root, _ := statedb.Commit(true)
-	if root != common.Hash(post.Root) {
-		return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
-	}
-	return statedb, nil
-}
-
 func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {
 	return t.json.Tx.GasLimit[t.json.Post[subtest.Fork][subtest.Index].Indexes.Gas]
 }
@@ -192,67 +146,6 @@ func (t *StateTest) genesis(config *params.ChainConfig) *core.Genesis {
 		Alloc:      t.json.Pre,
 	}
 }
-
-func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
-	// Derive from private key if present.
-	var from address.AccountAddress
-	if len(tx.PrivateKey) > 0 {
-		key, err := crypto.ToECDSA(tx.PrivateKey)
-		if err != nil {
-			return nil, fmt.Errorf("invalid private key: %v", err)
-		}
-		from = crypto.PrivkeyToAddress(key)
-	}
-	// Parse recipient if present.
-	var to *common.Address
-	if tx.To != "" {
-		toAccount := new(address.AccountAddress)
-		if err := toAccount.UnmarshalText([]byte(tx.To)); err != nil {
-			return nil, fmt.Errorf("invalid to address: %v", err)
-		}
-		toPkr := keys.Addr2PKr(toAccount.ToUint512(), keys.RandUint256().NewRef())
-		toAddr := common.BytesToAddress(toPkr[:])
-		to = &toAddr
-	}
-
-	// Get values specific to this post state.
-	if ps.Indexes.Data > len(tx.Data) {
-		return nil, fmt.Errorf("tx data index %d out of bounds", ps.Indexes.Data)
-	}
-	if ps.Indexes.Value > len(tx.Value) {
-		return nil, fmt.Errorf("tx value index %d out of bounds", ps.Indexes.Value)
-	}
-	if ps.Indexes.Gas > len(tx.GasLimit) {
-		return nil, fmt.Errorf("tx gas limit index %d out of bounds", ps.Indexes.Gas)
-	}
-	dataHex := tx.Data[ps.Indexes.Data]
-	valueHex := tx.Value[ps.Indexes.Value]
-	//gasLimit := tx.GasLimit[ps.Indexes.Gas]
-
-	//Value, Data hex encoding is messy: https://github.com/ethereum/tests/issues/203
-	value := new(big.Int)
-	if valueHex != "0x" {
-		_, ok := math.ParseBig256(valueHex)
-		if !ok {
-			return nil, fmt.Errorf("invalid tx value %q", valueHex)
-		}
-		//value = v
-	}
-	data, err := hex.DecodeString(strings.TrimPrefix(dataHex, "0x"))
-	if err != nil {
-		return nil, fmt.Errorf("invalid tx data %q", dataHex)
-	}
-
-	asset := assets.Asset{Tkn: &assets.Token{
-		Currency: *common.BytesToHash(common.LeftPadBytes([]byte("sero"), 32)).HashToUint256(),
-		Value:    utils.U256(*value),
-	},
-	}
-	pkr := keys.Addr2PKr(from.ToUint512(), keys.RandUint256().NewRef())
-	msg := types.NewMessage(common.BytesToAddress(pkr[:]), to, tx.Nonce, asset, assets.Token{}, tx.GasPrice, data)
-	return msg, nil
-}
-
 func rlpHash(x interface{}) (h common.Hash) {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, x)

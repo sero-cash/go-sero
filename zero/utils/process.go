@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/pkg/errors"
+	"github.com/sero-cash/go-czero-import/c_superzk"
 
-	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/pkg/errors"
 )
 
 type Proc interface {
@@ -42,7 +42,7 @@ func (self *Procs) HasProc() bool {
 
 func (self *Procs) StartProc(run Proc) {
 	self.Runs = append(self.Runs, run)
-	if cpt.Is_czero_debug() {
+	if c_superzk.Is_czero_debug() {
 		if e := run.Run(); e != nil {
 			self.E = e
 		}

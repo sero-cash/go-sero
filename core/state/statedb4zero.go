@@ -2,7 +2,7 @@ package state
 
 import (
 	"github.com/pkg/errors"
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/zero/consensus"
@@ -27,12 +27,24 @@ func (self *StateTri) TryUpdate(key, value []byte) error {
 	return self.Tri.TryUpdate(key, value)
 }
 
-func (self *StateTri) SetState(key *keys.Uint256, value *keys.Uint256) {
-	self.db.SetState(EmptyAddress, common.Hash(*key), common.Hash(*value))
+func (self *StateTri) SetState(obj *c_type.PKr, key *c_type.Uint256, value *c_type.Uint256) {
+	var addr common.Address
+	if obj != nil {
+		copy(addr[:], obj[:])
+	} else {
+		addr = EmptyAddress
+	}
+	self.db.SetState(addr, common.Hash(*key), common.Hash(*value))
 }
-func (self *StateTri) GetState(key *keys.Uint256) (ret keys.Uint256) {
-	v := self.db.GetState(EmptyAddress, common.Hash(*key))
-	ret = keys.Uint256(v)
+func (self *StateTri) GetState(obj *c_type.PKr, key *c_type.Uint256) (ret c_type.Uint256) {
+	var addr common.Address
+	if obj != nil {
+		copy(addr[:], obj[:])
+	} else {
+		addr = EmptyAddress
+	}
+	v := self.db.GetState(addr, common.Hash(*key))
+	ret = c_type.Uint256(v)
 	return
 }
 
@@ -92,7 +104,6 @@ func (self *zeroDB) CurrentTri() serodb.Tri {
 func (self *zeroDB) GlobalGetter() serodb.Getter {
 	return self.db.db.TrieDB().DiskDB()
 }
-
 
 var StakeDB = consensus.DBObj{"STAKE$BLOCK$INDEX"}
 

@@ -25,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/zero/stake"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
@@ -33,6 +32,7 @@ import (
 	"github.com/sero-cash/go-sero/zero/txtool/verify"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/state"
@@ -481,7 +481,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 		return ErrGasLimit
 	}
 
-	if err := verify.VerifyWithoutState(tx.Ehash().NewRef(), tx.GetZZSTX(), pool.chain.CurrentBlock().NumberU64()); err != nil {
+	num := pool.chain.CurrentBlock().NumberU64()
+	if err := verify.VerifyWithoutState(tx.Ehash().NewRef(), tx.GetZZSTX(), num); err != nil {
 		log.Error("validateTx verify without state error", "hash", tx.Hash().Hex(), "verify stx err", err)
 		pool.faileds[tx.Hash()] = time.Now()
 		return ErrVerifyError
@@ -493,7 +494,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	}
 
 	state := copyState.NextZState()
-	err := verify.VerifyWithState(tx.GetZZSTX(), state)
+	err := verify.VerifyWithState(tx.GetZZSTX(), state, num)
 	//err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
 	if err != nil {
 		log.Error("validateTx error", "hash", tx.Hash().Hex(), "verify stx err", err)
@@ -547,7 +548,7 @@ func (pool *TxPool) checkDescCmd(tx *stx.T, state *state.StateDB) (err error) {
 				return
 			}
 		}
-		if !keys.PKrValid(&cmd.RegistPool.Vote) {
+		if !superzk.IsPKrValid(&cmd.RegistPool.Vote) {
 			err = errors.New("registPool Vote is invalid")
 			return
 		}
@@ -601,9 +602,9 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 
 	currentBlockNum := pool.chain.CurrentBlock().NumberU64()
 
-	if false {
-		if (seroparam.VP0()-50) < currentBlockNum && currentBlockNum < (seroparam.VP0()+50) {
-			return false, fmt.Errorf("protect vp0:%v", seroparam.VP0)
+	if true {
+		if (seroparam.SIP5()-50) < currentBlockNum && currentBlockNum < (seroparam.SIP5()+50) {
+			return false, fmt.Errorf("protect SIP5:%v", seroparam.SIP5())
 		}
 	}
 

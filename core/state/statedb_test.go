@@ -28,7 +28,7 @@ import (
 	"testing"
 	"testing/quick"
 
-	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-czero-import/c_czero"
 	"gopkg.in/check.v1"
 
 	"github.com/sero-cash/go-sero/common"
@@ -167,7 +167,7 @@ func TestCopy(t *testing.T) {
 }
 
 func TestSnapshotRandom(t *testing.T) {
-	cpt.ZeroInit("", cpt.NET_Alpha)
+	cpt.ZeroInit("", c_czero.NET_Alpha)
 	config := &quick.Config{MaxCount: 1000}
 	err := quick.Check((*snapshotTest).run, config)
 	if cerr, ok := err.(*quick.CheckError); ok {

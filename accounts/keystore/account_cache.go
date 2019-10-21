@@ -27,6 +27,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
+	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/common/address"
 
 	mapset "github.com/deckarep/golang-set"
@@ -55,7 +59,7 @@ func (s accountsByTag) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 // AmbiguousAddrError is returned when attempting to unlock
 // an address for which more than one file exists.
 type AmbiguousAddrError struct {
-	Addr    address.AccountAddress
+	Address address.PKAddress
 	Matches []accounts.Account
 }
 
@@ -76,7 +80,7 @@ type accountCache struct {
 	watcher  *watcher
 	mu       sync.Mutex
 	all      accountsByTag
-	byAddr   map[address.AccountAddress][]accounts.Account
+	byAddr   map[address.PKAddress][]accounts.Account
 	throttle *time.Timer
 	notify   chan struct{}
 	fileC    fileCache
@@ -85,7 +89,7 @@ type accountCache struct {
 func newAccountCache(keydir string) (*accountCache, chan struct{}) {
 	ac := &accountCache{
 		keydir: keydir,
-		byAddr: make(map[address.AccountAddress][]accounts.Account),
+		byAddr: make(map[address.PKAddress][]accounts.Account),
 		notify: make(chan struct{}, 1),
 		fileC:  fileCache{all: mapset.NewThreadUnsafeSet()},
 	}
@@ -113,7 +117,7 @@ func (ac *accountCache) accountsByTag() []accountByTag {
 	return cpy
 }
 
-func (ac *accountCache) hasAddress(addr address.AccountAddress) bool {
+func (ac *accountCache) hasAddress(addr address.PKAddress) bool {
 	ac.maybeReload()
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
@@ -194,7 +198,7 @@ func (ac *accountCache) find(a accounts.Account) (accounts.Account, error) {
 		matches = append(matches, accT.accountByURL)
 	}
 
-	if (a.Address != address.AccountAddress{}) {
+	if (a.Address != address.PKAddress{}) {
 		matches = ac.byAddr[a.Address]
 	}
 	if a.URL.Path != "" {
@@ -207,7 +211,7 @@ func (ac *accountCache) find(a accounts.Account) (accounts.Account, error) {
 				return matches[i], nil
 			}
 		}
-		if (a.Address == address.AccountAddress{}) {
+		if (a.Address == address.PKAddress{}) {
 			return accounts.Account{}, ErrNoMatch
 		}
 	}
@@ -217,7 +221,7 @@ func (ac *accountCache) find(a accounts.Account) (accounts.Account, error) {
 	case 0:
 		return accounts.Account{}, ErrNoMatch
 	default:
-		err := &AmbiguousAddrError{Addr: a.Address, Matches: make([]accounts.Account, len(matches))}
+		err := &AmbiguousAddrError{Address: a.Address, Matches: make([]accounts.Account, len(matches))}
 		copy(err.Matches, matches)
 		//sort.Sort(accountsByURL(err.Matches))
 		return accounts.Account{}, err
@@ -280,6 +284,7 @@ func (ac *accountCache) scanAccounts() error {
 			Address string `json:"address"`
 			Tk      string `json:"tk"`
 			At      uint64 `json:"at"`
+			Version int    `json:"version"`
 		}
 	)
 	readAccount := func(path string) *accounts.Account {
@@ -294,17 +299,30 @@ func (ac *accountCache) scanAccounts() error {
 		key.Address = ""
 		key.Tk = ""
 		key.At = 0
+		key.Version = 0
 		err = json.NewDecoder(buf).Decode(&key)
-		addr := address.Base58ToAccount(key.Address)
-		tk := address.Base58ToAccount(key.Tk)
+		tk := address.Base58ToTk(key.Tk)
+		pk, _ := superzk.Tk2Pk(tk.ToTk().NewRef())
+		var addr address.PKAddress
+		copy(addr[:], pk[:])
 		at := key.At
+		version := key.Version
+		if c_superzk.IsSzkTk(tk.ToTk().NewRef()) {
+			if version != 2 {
+				err = errors.New("invalid keystore versiong want 2 but find " + string(version))
+			}
+		} else {
+			if version != 1 {
+				err = errors.New("invalid keystore versiong want 1 but find " + string(version))
+			}
+		}
 		switch {
 		case err != nil:
 			log.Debug("Failed to decode keystore key", "path", path, "err", err)
-		case (addr == address.AccountAddress{}):
+		case (addr == address.PKAddress{}):
 			log.Debug("Failed to decode keystore key", "path", path, "err", "missing or zero address")
 		default:
-			return &accounts.Account{Address: addr, Tk: tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: path}, At: at}
+			return &accounts.Account{Address: addr, Tk: tk, URL: accounts.URL{Scheme: KeyStoreScheme, Path: path}, At: at, Version: version}
 		}
 		return nil
 	}

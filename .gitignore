@@ -64,3 +64,5 @@ makePos.sh
 /pkg
 build/deploy.sh
 containers/docker/gero-ubuntu/gero-*.tar
+
+pullup

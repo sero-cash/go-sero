@@ -19,14 +19,14 @@ package utils
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/big"
 	"runtime"
 	"strings"
 
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
-
-	"github.com/sero-cash/go-czero-import/keys"
 )
 
 func Uint64ToBytes(r uint64) []byte {
@@ -37,7 +37,7 @@ func Int64ToBytes(r int64) []byte {
 	value := new(big.Int).SetInt64(r)
 	return value.Bytes()
 }
-func Uint256SliceCut(is []keys.Uint256, l int) (ret []keys.Uint256) {
+func Uint256SliceCut(is []c_type.Uint256, l int) (ret []c_type.Uint256) {
 	is_l := len(is)
 	if is_l < l {
 		l = is_l
@@ -46,7 +46,7 @@ func Uint256SliceCut(is []keys.Uint256, l int) (ret []keys.Uint256) {
 	return
 }
 
-type Uint256s []keys.Uint256
+type Uint256s []c_type.Uint256
 
 func (self Uint256s) Len() int {
 	return len(self)
@@ -58,13 +58,13 @@ func (self Uint256s) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
 }
 
-func CurrencyToUint256(str string) (ret keys.Uint256) {
+func CurrencyToUint256(str string) (ret c_type.Uint256) {
 	bs := CurrencyToBytes(str)
 	copy(ret[:], bs)
 	return
 }
 
-func Uint256ToCurrency(u *keys.Uint256) (ret string) {
+func Uint256ToCurrency(u *c_type.Uint256) (ret string) {
 	return BytesToCurrency(u[:])
 }
 
@@ -106,4 +106,31 @@ func DecodeNumber(data []byte) uint64 {
 		return 0
 	}
 	return binary.BigEndian.Uint64(data)
+}
+
+var (
+	sero = 1000000000000000000
+	gta  = big.NewInt(1000000000)
+	ta   = big.NewInt(1)
+)
+
+func ParseAmount(s string) (*big.Int, error) {
+	s = strings.ToUpper(s);
+	base := 1.0
+	if strings.HasSuffix(s, "SERO") {
+		s = s[0 : len(s)-4]
+		base = 1000000000000000000.0
+	} else if strings.HasSuffix(s, "GTA") {
+		s = s[0 : len(s)-3]
+		base = 1000000000.0
+	} else if strings.HasSuffix(s, "TA") {
+		s = s[0 : len(s)-2]
+	}
+	if valFloat, ok := new(big.Float).SetString(s); ok {
+		valFloat = new(big.Float).Mul(valFloat, big.NewFloat(base))
+		ret, _ := valFloat.Int(nil)
+		return ret, nil;
+	}
+
+	return nil, errors.New("illegal args")
 }

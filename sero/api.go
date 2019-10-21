@@ -55,12 +55,16 @@ func NewPublicSeroAPI(e *Sero) *PublicSeroAPI {
 }
 
 // Serobase is the address that mining rewards will be send to
-func (api *PublicSeroAPI) Serobase() (address.AccountAddress, error) {
-	return api.e.Serobase()
+func (api *PublicSeroAPI) Serobase() (address.PKAddress, error) {
+	account, err := api.e.Serobase()
+	if err != nil {
+		return address.PKAddress{}, err
+	}
+	return account.Address, nil
 }
 
 // Coinbase is the address that mining rewards will be send to (alias for Serobase)
-func (api *PublicSeroAPI) Coinbase() (address.AccountAddress, error) {
+func (api *PublicSeroAPI) Coinbase() (address.PKAddress, error) {
 	return api.Serobase()
 }
 
@@ -201,7 +205,7 @@ func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 }
 
 // SetSerobase sets the serobase of the miner
-func (api *PrivateMinerAPI) SetSerobase(serobase address.AccountAddress) bool {
+func (api *PrivateMinerAPI) SetSerobase(serobase address.MixBase58Adrress) bool {
 	api.s.SetSerobase(serobase)
 	return true
 }

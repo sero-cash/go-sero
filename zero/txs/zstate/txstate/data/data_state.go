@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/serodb"
-
-	"github.com/sero-cash/go-czero-import/keys"
 
 	"github.com/sero-cash/go-sero/zero/localdb"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
@@ -25,18 +24,18 @@ func Name2BKey(name string, num uint64) (ret []byte) {
 	ret = []byte(key)
 	return
 }
-func InName(k *keys.Uint256) (ret []byte) {
+func InName(k *c_type.Uint256) (ret []byte) {
 	ret = []byte(ZSTATE0_INNAME)
 	ret = append(ret, k[:]...)
 	return
 }
-func OutName0(k *keys.Uint256) (ret []byte) {
+func OutName0(k *c_type.Uint256) (ret []byte) {
 	ret = []byte(ZSTATE0_OUTNAME)
 	ret = append(ret, k[:]...)
 	return
 }
 
-func (self *Data) RecordState(putter serodb.Putter, root *keys.Uint256) {
+func (self *Data) RecordState(putter serodb.Putter, root *c_type.Uint256) {
 	if int64(self.Num) > int64(seroparam.SIP2())-13000 {
 		if out, ok := self.G2outs[*root]; ok {
 			rs := localdb.RootState{}
@@ -115,7 +114,7 @@ func (self *Data) SaveState(tr tri.Tri) {
 	return
 }
 
-func (self *Data) HasIn(tr tri.Tri, hash *keys.Uint256) (exists bool) {
+func (self *Data) HasIn(tr tri.Tri, hash *c_type.Uint256) (exists bool) {
 	if v, err := tr.TryGet(InName(hash)); err != nil {
 		panic(err)
 		return
@@ -128,8 +127,14 @@ func (self *Data) HasIn(tr tri.Tri, hash *keys.Uint256) (exists bool) {
 	}
 	return
 }
+func (self *Data) HashRoot(tr tri.Tri, root *c_type.Uint256) bool {
+	if out := self.GetOut(tr, root); out == nil {
+		return false
+	}
+	return true
+}
 
-func (self *Data) GetOut(tr tri.Tri, root *keys.Uint256) (src *localdb.OutState) {
+func (self *Data) GetOut(tr tri.Tri, root *c_type.Uint256) (src *localdb.OutState) {
 	if out := self.G2outs[*root]; out != nil {
 		return out
 	} else {

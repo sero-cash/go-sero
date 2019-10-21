@@ -406,6 +406,11 @@ web3._extend({
 	property: 'sero',
 	methods: [
 		new web3._extend.Method({
+			name: 'getSzkAccounts',
+			call: 'sero_getSzkAccounts',
+			params: 0
+		}),
+		new web3._extend.Method({
 			name: 'sign',
 			call: 'sero_sign',
 			params: 2,
@@ -549,7 +554,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'importRawKey',
 			call: 'personal_importRawKey',
-			params: 2
+			params: 4
 		}),
         new web3._extend.Method({
 			name: 'exportRawKey',
@@ -684,6 +689,11 @@ web3._extend({
 	property: 'ssi',
 	methods: [
 		new web3._extend.Method({
+			name: 'szkcreatekr',
+			call: 'ssi_szkCreateKr',
+			params: 0
+		}),
+		new web3._extend.Method({
 			name: 'createkr',
 			call: 'ssi_createKr',
 			params: 0
@@ -725,6 +735,11 @@ const Exchange_JS = `
 web3._extend({
 	property: 'exchange',
 	methods: [
+		new web3._extend.Method({
+			name: 'getBalances',
+			call: 'exchange_getBalances',
+			params: 1
+		}),
 		new web3._extend.Method({
 			name: 'getLockedBalances',
 			call: 'exchange_getLockedBalances',
@@ -773,7 +788,7 @@ web3._extend({
         new web3._extend.Method({
 			name: 'seed2Sk',
 			call: 'exchange_seed2Sk',
-            params: 1
+            params: 2
 		}),
         new web3._extend.Method({
 			name: 'sk2Tk',
@@ -978,7 +993,7 @@ web3._extend({
         new web3._extend.Method({
 			name: 'seed2Sk',
 			call: 'local_seed2Sk',
-            params: 1
+            params: 2
 		}),
         new web3._extend.Method({
 			name: 'sk2Tk',
@@ -1008,6 +1023,11 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'confirmOutZ',
 			call: 'local_confirmOutZ',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'confirmOutC',
+			call: 'local_confirmOutC',
 			params: 2
 		}),
 		new web3._extend.Method({

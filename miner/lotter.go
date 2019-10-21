@@ -3,7 +3,8 @@ package miner
 import (
 	"time"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/zero/utils"
@@ -75,7 +76,7 @@ func (self *votesFilter) result() (ret []types.Vote) {
 }
 
 func (self *votesFilter) RunFilter(votes voteSet) (dels []types.Vote) {
-	voteNumMap := map[keys.Uint512]bool{}
+	voteNumMap := map[c_type.Uint512]bool{}
 	for _, sets := range votes {
 		for _, vote := range sets {
 			if _, ok := voteNumMap[vote.Sign]; ok {
@@ -102,7 +103,7 @@ func (self *votesFilter) RunFilter(votes voteSet) (dels []types.Vote) {
 }
 
 func (self *votesFilter) verify(vote *types.Vote, share *stake.Share) bool {
-	var votePkr *keys.PKr
+	var votePkr *c_type.PKr
 	if vote.IsPool {
 		if share.PoolId != nil {
 			pool := self.stake.GetStakePool(*share.PoolId)
@@ -116,7 +117,7 @@ func (self *votesFilter) verify(vote *types.Vote, share *stake.Share) bool {
 	if votePkr != nil {
 		parentPosHash := self.parentBlock.HashPos()
 		stakHash := types.StakeHash(&vote.PosHash, &parentPosHash, vote.IsPool)
-		if keys.VerifyPKr(stakHash.HashToUint256(), &vote.Sign, votePkr) {
+		if superzk.VerifyPKr_ByHeight(self.block.NumberU64(), stakHash.HashToUint256(), &vote.Sign, votePkr) {
 			return true
 		}
 	}
@@ -177,13 +178,13 @@ func (self *Lotter) wait() bool {
 	parentfilter := NewVotesFilter(self.stake, pidx, pshares, parentBlock, ppBlock)
 	parentfilter.RunFilter(parentVoteSet)
 
-	voteNumMap := map[keys.Uint512]bool{}
+	voteNumMap := map[c_type.Uint512]bool{}
 	for _, vote := range filter.result() {
 		//log.Info("pos currentVotes", "posHash", vote.PosHash, "block", vote.ParentNum+1, "share", vote.ShareId, "idx", vote.Idx)
 		if _, ok := voteNumMap[vote.Sign]; ok {
 			continue
 		} else {
-			voteNumMap[vote.Sign]=true
+			voteNumMap[vote.Sign] = true
 			self.currentHeaderVotes = append(self.currentHeaderVotes, types.HeaderVote{vote.ShareId, vote.IsPool, vote.Sign})
 			if len(self.currentHeaderVotes) == 3 {
 				break
@@ -199,7 +200,7 @@ func (self *Lotter) wait() bool {
 			voteNumMap[common.BytesToHash(share.Id())] += 1
 		}
 
-		voteMap := map[keys.Uint512]bool{}
+		voteMap := map[c_type.Uint512]bool{}
 		for _, vote := range parentBlock.Header().CurrentVotes {
 			voteMap[vote.Sign] = true
 			voteNumMap[vote.Id] -= 1

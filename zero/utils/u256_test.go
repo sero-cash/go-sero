@@ -16,6 +16,14 @@ func TestU256_MarshalText(t *testing.T) {
 	m, _ := json.Marshal(b)
 	fmt.Print(string(m))
 }
+
+func TestU256_M(t *testing.T) {
+	u := U256_0
+	b, e := u.MarshalJSON()
+	fmt.Println((e))
+	fmt.Println(string(b))
+}
+
 func TestU256_UnmarshalText(t *testing.T) {
 	b := []byte("\"750000000000000000000000000\"")
 	a := U256{}

@@ -34,13 +34,13 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/zero/stake"
 
 	"github.com/hashicorp/golang-lru"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/accounts"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/mclock"
@@ -288,18 +288,18 @@ func (self *State1BlockChain) CurrentState(hash *common.Hash) *zstate.ZState {
 	}
 	return st.CurrentZState()
 }
-func (self *State1BlockChain) GetTks() []keys.Uint512 {
-	tks := []keys.Uint512{}
+func (self *State1BlockChain) GetTks() []c_type.Tk {
+	tks := []c_type.Tk{}
 	for _, w := range self.Bc.accountManager.Wallets() {
 		tk := w.Accounts()[0].Tk
-		tks = append(tks, *tk.ToUint512())
+		tks = append(tks, tk.ToTk())
 	}
 	return tks
 }
 
-func (self *State1BlockChain) GetTkAt(tk *keys.Uint512) uint64 {
+func (self *State1BlockChain) GetTkAt(tk *c_type.Tk) uint64 {
 	for _, w := range self.Bc.accountManager.Wallets() {
-		if *w.Accounts()[0].Tk.ToUint512() == *tk {
+		if w.Accounts()[0].Tk.ToTk() == *tk {
 			return w.Accounts()[0].At
 		}
 	}
@@ -1303,7 +1303,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		for _, tx := range block.Transactions() {
 			err := <-tx_results
 			if err == nil {
-				err = verify.VerifyWithState(tx.GetZZSTX(), state.NextZState())
+				err = verify.VerifyWithState(tx.GetZZSTX(), state.NextZState(), block.NumberU64())
 			}
 			//err := verify.Verify(tx.GetZZSTX(), state.GetZState())
 			if err != nil {

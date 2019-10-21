@@ -7,7 +7,7 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txtool/prepare"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/zero/txtool"
 )
 
@@ -21,15 +21,9 @@ func (self *Exchange) GenTx(param prepare.PreTxParam) (txParam *txtool.GTxParam,
 	return
 }
 
-func (self *Exchange) buildTxParam(
-	utxos prepare.Utxos,
-	refundTo *keys.PKr,
-	receptions []prepare.Reception,
-	cmds *prepare.Cmds,
-	fee *assets.Token,
-	gasPrice *big.Int) (txParam *txtool.GTxParam, e error) {
+func (self *Exchange) buildTxParam(param *prepare.BeforeTxParam) (txParam *txtool.GTxParam, e error) {
 
-	txParam, e = prepare.BuildTxParam(&prepare.DefaultTxParamState{}, utxos, refundTo, receptions, cmds, fee, gasPrice)
+	txParam, e = prepare.BuildTxParam(&prepare.DefaultTxParamState{}, param)
 
 	if e == nil && txParam != nil {
 		for _, in := range txParam.Ins {
@@ -39,7 +33,7 @@ func (self *Exchange) buildTxParam(
 	return
 }
 
-func (self *Exchange) FindRoots(pk *keys.Uint512, currency string, amount *big.Int) (roots prepare.Utxos, remain big.Int) {
+func (self *Exchange) FindRoots(pk *c_type.Uint512, currency string, amount *big.Int) (roots prepare.Utxos, remain big.Int) {
 	utxos, r := self.findUtxos(pk, currency, amount)
 	for _, utxo := range utxos {
 		roots = append(roots, prepare.Utxo{utxo.Root, utxo.Asset})
@@ -48,7 +42,7 @@ func (self *Exchange) FindRoots(pk *keys.Uint512, currency string, amount *big.I
 	return
 }
 
-func (self *Exchange) FindRootsByTicket(pk *keys.Uint512, tickets map[keys.Uint256]keys.Uint256) (roots prepare.Utxos, remain map[keys.Uint256]keys.Uint256) {
+func (self *Exchange) FindRootsByTicket(pk *c_type.Uint512, tickets []assets.Ticket) (roots prepare.Utxos, remain map[c_type.Uint256]c_type.Uint256) {
 	utxos, remain := self.findUtxosByTicket(pk, tickets)
 	for _, utxo := range utxos {
 		roots = append(roots, prepare.Utxo{utxo.Root, utxo.Asset})
@@ -56,16 +50,15 @@ func (self *Exchange) FindRootsByTicket(pk *keys.Uint512, tickets map[keys.Uint2
 	return
 }
 
-func (self *Exchange) DefaultRefundTo(from *keys.Uint512) (ret *keys.PKr) {
-	if value, ok := self.accounts.Load(*from); ok {
+func (self *Exchange) DefaultRefundTo(pk *c_type.Uint512) (ret *c_type.PKr) {
+	if value, ok := self.accounts.Load(*pk); ok {
 		account := value.(*Account)
 		return &account.mainPkr
-	} else {
-		return nil
 	}
+	return nil
 }
 
-func (self *Exchange) GetRoot(root *keys.Uint256) (utxos *prepare.Utxo) {
+func (self *Exchange) GetRoot(root *c_type.Uint256) (utxos *prepare.Utxo) {
 	if u, e := self.getUtxo(*root); e != nil {
 		return nil
 	} else {

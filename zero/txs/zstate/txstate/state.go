@@ -21,6 +21,14 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
+
+	"github.com/sero-cash/go-sero/zero/txs/zstate/merkle"
+
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-sero/serodb"
@@ -39,17 +47,17 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/localdb"
 
-	"github.com/sero-cash/go-czero-import/keys"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 type State struct {
-	tri   tri.Tri
-	rw    *sync.RWMutex
-	num   uint64
-	MTree MerkleTree
+	tri       tri.Tri
+	rw        *sync.RWMutex
+	num       uint64
+	CzeroTree merkle.MerkleTree
+	SzkTree   merkle.MerkleTree
 
 	data data.IData
 
@@ -68,7 +76,8 @@ func (self *State) Tri() tri.Tri {
 func NewState(tri tri.Tri, num uint64) (state State) {
 	state = State{tri: tri, num: num}
 	state.rw = new(sync.RWMutex)
-	state.MTree = NewMerkleTree(tri)
+	state.CzeroTree = CzeroMerkleParam.NewMerkleTree(tri)
+	state.SzkTree = SzkMerkleParam.NewMerkleTree(tri)
 	if state.num >= seroparam.SIP2() {
 		state.data = data_v1.NewData(num)
 	} else {
@@ -79,7 +88,7 @@ func NewState(tri tri.Tri, num uint64) (state State) {
 	return
 }
 
-func (self *State) RecordState(putter serodb.Putter, root *keys.Uint256) {
+func (self *State) RecordState(putter serodb.Putter, root *c_type.Uint256) {
 	self.data.RecordState(putter, root)
 }
 
@@ -118,7 +127,7 @@ func (state *State) Revert(revid int) {
 	}
 }
 
-func (self *State) AddOut_Log(root *keys.Uint256, out *localdb.OutState, txhash *keys.Uint256) {
+func (self *State) addOut_Log(root *c_type.Uint256, out *localdb.OutState, txhash *c_type.Uint256) {
 	clone := out.Clone()
 	if txhash != nil {
 		self.logs = append(self.logs, data.AddOutLog{root.NewRef(), &clone, txhash.NewRef()})
@@ -129,112 +138,224 @@ func (self *State) AddOut_Log(root *keys.Uint256, out *localdb.OutState, txhash 
 	self.data.AddOut(root, out, txhash)
 	return
 }
-func (self *State) AddNil_Log(in *keys.Uint256) {
+func (self *State) addNil_Log(in *c_type.Uint256) {
 	self.logs = append(self.logs, data.AddNilLog{in.NewRef()})
 	self.data.AddNil(in)
 }
-func (self *State) AddDel_Log(in *keys.Uint256) {
+func (self *State) addDel_Log(in *c_type.Uint256) {
 	self.logs = append(self.logs, data.AddDelLog{in.NewRef()})
 	self.data.AddDel(in)
 }
 
-func (self *State) AddTxOut_Log(pkr *keys.PKr) int {
+func (self *State) AddTxOut_Log(pkr *c_type.PKr) int {
 	self.logs = append(self.logs, data.AddTxOutLog{pkr.NewRef()})
 	return self.data.AddTxOut(pkr)
 }
 
-func (state *State) AddOut(out_o *stx.Out_O, out_z *stx.Out_Z, txhash *keys.Uint256) (root keys.Uint256) {
+func (state *State) AddOut_O(out_o *stx_v0.Out_O, txhash *c_type.Uint256) (root c_type.Uint256) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
-	return state.addOut(out_o, out_z, txhash)
+	return state.addOut_O(out_o, txhash)
 }
 
-func (state *State) addOut(out_o *stx.Out_O, out_z *stx.Out_Z, txhash *keys.Uint256) (root keys.Uint256) {
+func (state *State) AddOut_P(out_p *stx_v1.Out_P, txhash *c_type.Uint256) (root c_type.Uint256) {
+	state.rw.Lock()
+	defer state.rw.Unlock()
+	return state.addOut_P(out_p, txhash)
+}
+
+func (state *State) insertOS(os *localdb.OutState, txhash *c_type.Uint256) (root c_type.Uint256) {
+	if os.Out_O != nil || os.Out_Z != nil {
+		os.Index = state.CzeroTree.GetLeafSize()
+		os.GenRootCM()
+		root = state.CzeroTree.AppendLeaf(*os.RootCM)
+		state.addOut_Log(&root, os, txhash)
+	} else {
+		os.Index = state.SzkTree.GetLeafSize()
+		os.GenRootCM()
+		root = state.SzkTree.AppendLeaf(*os.RootCM)
+		state.addOut_Log(&root, os, txhash)
+	}
+	return
+}
+
+func (state *State) addOut_O(out_o *stx_v0.Out_O, txhash *c_type.Uint256) (root c_type.Uint256) {
 	os := localdb.OutState{}
 	if out_o != nil {
 		o := *out_o
 		os.Out_O = &o
 	}
+	return state.insertOS(&os, txhash)
+}
+
+func (state *State) addOut_Z(out_z *stx_v0.Out_Z, txhash *c_type.Uint256) (root c_type.Uint256) {
+	os := localdb.OutState{}
 	if out_z != nil {
 		o := out_z.Clone()
 		os.Out_Z = &o
 	}
-
-	//index := state.MTree.GetCurrentIndex()
-
-	//os.Index = uint64(state.data.GetIndex() + 1)
-	os.Index = state.MTree.GetLeafSize()
-
-	commitment := os.ToRootCM()
-
-	root = state.MTree.AppendLeaf(*commitment)
-
-	state.AddOut_Log(&root, &os, txhash)
-	return
+	return state.insertOS(&os, txhash)
 }
 
-func (self *State) HasIn(hash *keys.Uint256) (exists bool) {
+func (state *State) addOut_C(out_c *stx_v1.Out_C, txhash *c_type.Uint256) (root c_type.Uint256) {
+	os := localdb.OutState{}
+	if out_c != nil {
+		o := out_c.Clone()
+		os.Out_C = &o
+	}
+	return state.insertOS(&os, txhash)
+}
+
+func (state *State) addOut_P(out_p *stx_v1.Out_P, txhash *c_type.Uint256) (root c_type.Uint256) {
+	os := localdb.OutState{}
+	if out_p != nil {
+		o := out_p.Clone()
+		os.Out_P = &o
+	}
+	return state.insertOS(&os, txhash)
+}
+
+func (self *State) HasIn(hash *c_type.Uint256) (exists bool) {
 	self.rw.Lock()
 	defer self.rw.Unlock()
 	return self.data.HasIn(self.tri, hash)
 }
 
-func (state *State) AddStx(st *stx.T) (e error) {
-	state.rw.Lock()
-	defer state.rw.Unlock()
+func (state *State) addTx0(tx *stx_v0.Tx, txhash *c_type.Uint256) (e error) {
 	t := utils.TR_enter("AddStx---ins")
-	for _, in := range st.Desc_O.Ins {
+	for _, in := range tx.Desc_O.Ins {
 		if state.num >= seroparam.SIP2() {
 			if state.data.HasIn(state.tri, &in.Nil) {
 				e = errors.New("desc_o.in.nil already be used !")
 				return
 			} else {
-				state.AddNil_Log(&in.Nil)
-				state.AddDel_Log(&in.Root)
+				state.addNil_Log(&in.Nil)
+				state.addDel_Log(&in.Root)
 			}
 		} else {
 			if state.data.HasIn(state.tri, &in.Root) {
 				e = errors.New("desc_o.in.root already be used !")
 				return
 			} else {
-				state.AddNil_Log(&in.Root)
+				state.addNil_Log(&in.Root)
 			}
 		}
 	}
 
 	t.Renter("AddStx---z_ins")
-	for _, in := range st.Desc_Z.Ins {
+	for _, in := range tx.Desc_Z.Ins {
 		if state.data.HasIn(state.tri, &in.Nil) {
 			e = errors.New("desc_o.nil already be used !")
 			return
 		} else {
-			state.AddNil_Log(&in.Nil)
-			state.AddDel_Log(&in.Trace)
+			state.addNil_Log(&in.Nil)
+			state.addDel_Log(&in.Trace)
 		}
 	}
 
 	t.Renter("AddStx---z_outs")
-	txhash := st.ToHash()
-	for _, out := range st.Desc_Z.Outs {
-		state.addOut(nil, &out, &txhash)
+	for _, out := range tx.Desc_Z.Outs {
+		state.addOut_Z(&out, txhash)
 	}
 
 	t.Leave()
+	return
+}
+
+func (state *State) addTx1(tx *stx_v1.Tx, txhash *c_type.Uint256) (e error) {
+	for _, in := range tx.Ins_P0 {
+		if !state.data.HasIn(state.tri, &in.Nil) {
+			if !state.data.HasIn(state.tri, &in.Root) {
+				state.addNil_Log(&in.Nil)
+				state.addNil_Log(&in.Root)
+				state.addDel_Log(&in.Trace)
+			} else {
+				e = errors.New("tx1.in_p0.root already be used !")
+				return
+			}
+		} else {
+			e = errors.New("tx1.in_p0.nil already be used !")
+			return
+		}
+	}
+	for _, in := range tx.Ins_P {
+		if !state.data.HasIn(state.tri, &in.Nil) {
+			if !state.data.HasIn(state.tri, &in.Root) {
+				state.addNil_Log(&in.Nil)
+				state.addNil_Log(&in.Root)
+			} else {
+				e = errors.New("tx1.in_p.root already be used !")
+				return
+			}
+		} else {
+			e = errors.New("tx1.in_p.nil already be used !")
+			return
+		}
+	}
+	for _, in := range tx.Ins_C {
+		if !state.data.HasIn(state.tri, &in.Nil) {
+			state.addNil_Log(&in.Nil)
+		} else {
+			e = errors.New("tx1.in_c.nil already be used !")
+			return
+		}
+	}
+	for _, out := range tx.Outs_C {
+		state.addOut_C(&out, txhash)
+	}
+	for _, out := range tx.Outs_P {
+		if c_superzk.IsSzkPKr(&out.PKr) {
+			state.addOut_P(&out, txhash)
+		} else {
+			state.addOut_O(
+				&stx_v0.Out_O{
+					Addr:  out.PKr,
+					Asset: out.Asset,
+					Memo:  out.Memo,
+				},
+				txhash,
+			)
+		}
+	}
+	return
+}
+
+func (state *State) AddStx(st *stx.T) (e error) {
+	state.rw.Lock()
+	defer state.rw.Unlock()
+	txhash := st.ToHash()
+	if st.Tx0() != nil && st.Tx1.Count() > 0 {
+		return fmt.Errorf("add stx, tx0 & tx1 only one can has value ")
+	}
+
+	if st.Tx0() != nil {
+		return state.addTx0(st.Tx0(), &txhash)
+	}
+
+	if st.Tx1.Count() > 0 {
+		return state.addTx1(&st.Tx1, &txhash)
+	}
 
 	return
 }
 
-func (state *State) GetOut(root *keys.Uint256) (src *localdb.OutState) {
+func (state *State) GetOut(root *c_type.Uint256) (src *localdb.OutState) {
 	state.rw.Lock()
 	defer state.rw.Unlock()
 	return state.data.GetOut(state.tri, root)
 }
 
-func (self *State) GetBlockRoots() (roots []keys.Uint256) {
+func (state *State) FindAnchorInSzk(root *c_type.Uint256) bool {
+	state.rw.Lock()
+	defer state.rw.Unlock()
+	return state.data.HashRoot(state.tri, root)
+}
+
+func (self *State) GetBlockRoots() (roots []c_type.Uint256) {
 	return self.data.GetRoots()
 }
 
-func (self *State) GetBlockDels() (dels []keys.Uint256) {
+func (self *State) GetBlockDels() (dels []c_type.Uint256) {
 	return self.data.GetDels()
 }
 
@@ -245,29 +366,31 @@ type Chain interface {
 func AnalyzeNils(header *types.Header, ch Chain) {
 	hash := header.ParentHash
 	number := header.Number.Uint64() - 1
-	m := make(map[keys.Uint256]int)
+	m := make(map[c_type.Uint256]int)
 	for {
 		b := ch.GetBlock(hash, number)
 		for _, tx := range b.Transactions() {
-			for _, in := range tx.Stxt().Desc_O.Ins {
-				if v, ok := m[in.Root]; ok {
-					fmt.Printf("num=%v,block=%v,tx=%v,current=%v,hit=%v\n", number, hexutil.Encode(hash[:]), hexutil.Encode(in.ToHash().NewRef()[:]), 1, v)
-				} else {
-					m[in.Root] = 1
+			if tx.Stxt().Tx0() != nil {
+				for _, in := range tx.Stxt().Tx0().Desc_O.Ins {
+					if v, ok := m[in.Root]; ok {
+						fmt.Printf("num=%v,block=%v,tx=%v,current=%v,hit=%v\n", number, hexutil.Encode(hash[:]), hexutil.Encode(in.ToHash().NewRef()[:]), 1, v)
+					} else {
+						m[in.Root] = 1
+					}
 				}
-			}
-			for _, in := range tx.Stxt().Desc_O.Ins {
-				if v, ok := m[in.Nil]; ok {
-					fmt.Printf("num=%v,block=%v,tx=%v,current=%v,hit=%v\n", number, hexutil.Encode(hash[:]), hexutil.Encode(in.ToHash().NewRef()[:]), 2, v)
-				} else {
-					m[in.Nil] = 2
+				for _, in := range tx.Stxt().Tx0().Desc_O.Ins {
+					if v, ok := m[in.Nil]; ok {
+						fmt.Printf("num=%v,block=%v,tx=%v,current=%v,hit=%v\n", number, hexutil.Encode(hash[:]), hexutil.Encode(in.ToHash().NewRef()[:]), 2, v)
+					} else {
+						m[in.Nil] = 2
+					}
 				}
-			}
-			for _, in := range tx.Stxt().Desc_Z.Ins {
-				if v, ok := m[in.Nil]; ok {
-					fmt.Printf("num=%v,block=%v,tx=%v,current=%v,hit=%v\n", number, hexutil.Encode(hash[:]), hexutil.Encode(in.ToHash().NewRef()[:]), 3, v)
-				} else {
-					m[in.Nil] = 3
+				for _, in := range tx.Stxt().Tx0().Desc_Z.Ins {
+					if v, ok := m[in.Nil]; ok {
+						fmt.Printf("num=%v,block=%v,tx=%v,current=%v,hit=%v\n", number, hexutil.Encode(hash[:]), hexutil.Encode(in.ToHash().NewRef()[:]), 3, v)
+					} else {
+						m[in.Nil] = 3
+					}
 				}
 			}
 		}
@@ -289,9 +412,11 @@ func (self *State) PreGenerateRoot(header *types.Header, ch Chain) {
 		for {
 			b := ch.GetBlock(hash, number)
 			for _, tx := range b.Transactions() {
-				for _, in := range tx.Stxt().Desc_O.Ins {
-					self.AddNil_Log(&in.Nil)
-					count++
+				if tx.Stxt().Tx0() != nil {
+					for _, in := range tx.Stxt().Tx0().Desc_O.Ins {
+						self.addNil_Log(&in.Nil)
+						count++
+					}
 				}
 			}
 			progress.Tick(size-number, "count", count)

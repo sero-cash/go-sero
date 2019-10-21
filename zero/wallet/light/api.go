@@ -2,7 +2,8 @@ package light
 
 import (
 	"bytes"
-	"github.com/sero-cash/go-czero-import/keys"
+
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/zero/txtool"
@@ -14,9 +15,12 @@ func (self *LightNode) CurrentLight() *LightNode {
 	return current_light
 }
 
-func (self *LightNode) GetOutsByPKr(pkrs []keys.PKr, start, end uint64) (br BlockOutResp, e error) {
+func (self *LightNode) GetOutsByPKr(pkrs []c_type.PKr, start, end uint64) (br BlockOutResp, e error) {
 	br.CurrentNum = self.getLastNumber()
 	blockOuts := []BlockOut{}
+	if end == 0  {
+		end = br.CurrentNum
+	}
 	for _, pkr := range pkrs {
 		//uPKr := pkr.ToUint512()
 		prefix := append(pkrPrefix, pkr[:]...)
@@ -29,12 +33,12 @@ func (self *LightNode) GetOutsByPKr(pkrs []keys.PKr, start, end uint64) (br Bloc
 			if num > end {
 				break
 			}
-			var outs []txtool.Out
-			if err := rlp.Decode(bytes.NewReader(iterator.Value()), &outs); err != nil {
+			var bds []BlockData
+			if err := rlp.Decode(bytes.NewReader(iterator.Value()), &bds); err != nil {
 				log.Error("Light Invalid block RLP", "Num:", num, "err:", err)
 				return br, err
 			} else {
-				blockOut := BlockOut{Num: num, Outs: outs}
+				blockOut := BlockOut{Num: num, Data: bds}
 				blockOuts = append(blockOuts, blockOut)
 			}
 		}
@@ -43,7 +47,7 @@ func (self *LightNode) GetOutsByPKr(pkrs []keys.PKr, start, end uint64) (br Bloc
 	return br, nil
 }
 
-func (self *LightNode) CheckNil(Nils []keys.Uint256) (nilResps []NilValue, e error) {
+func (self *LightNode) CheckNil(Nils []c_type.Uint256) (nilResps []NilValue, e error) {
 	if len(Nils) == 0 {
 		return
 	}
@@ -53,9 +57,9 @@ func (self *LightNode) CheckNil(Nils []keys.Uint256) (nilResps []NilValue, e err
 		} else {
 
 			nilResp := NilValue{}
-			if err:=rlp.DecodeBytes(data,&nilResp);err!=nil{
+			if err := rlp.DecodeBytes(data, &nilResp); err != nil {
 				continue
-			}else{
+			} else {
 				nilResp.Nil = Nil
 				nilResps = append(nilResps, nilResp)
 			}
@@ -71,6 +75,10 @@ type BlockOutResp struct {
 
 type BlockOut struct {
 	Num  uint64
-	Outs []txtool.Out
+	Data []BlockData
 }
 
+type BlockData struct {
+	TxInfo TxInfo
+	Out txtool.Out
+}

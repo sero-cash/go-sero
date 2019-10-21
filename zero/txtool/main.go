@@ -5,7 +5,7 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
-	"github.com/sero-cash/go-czero-import/keys"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
@@ -20,8 +20,8 @@ type BlockChain interface {
 	CurrentState(hash *common.Hash) *zstate.ZState
 	IsContract(address common.Address) (ret bool, e error)
 	GetSeroGasLimit(to *common.Address, tfee *assets.Token, gasPrice *big.Int) (gaslimit uint64, e error)
-	GetTks() []keys.Uint512
-	GetTkAt(tk *keys.Uint512) uint64
+	GetTks() []c_type.Tk
+	GetTkAt(tk *c_type.Tk) uint64
 	GetBlockByNumber(num uint64) *types.Block
 	GetHeaderByNumber(num uint64) *types.Header
 	GetDB() serodb.Database

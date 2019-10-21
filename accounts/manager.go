@@ -21,6 +21,8 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/sero-cash/go-czero-import/c_type"
+
 	"github.com/sero-cash/go-sero/event"
 )
 
@@ -159,6 +161,28 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 		}
 	}
 	return nil, ErrUnknownAccount
+}
+
+func (am *Manager) FindAccountByPk(pk c_type.Uint512) (Account, error) {
+	am.lock.RLock()
+	defer am.lock.RUnlock()
+	for _, wallet := range am.wallets {
+		if wallet.Accounts()[0].GetPk() == pk {
+			return wallet.Accounts()[0], nil
+		}
+	}
+	return Account{}, ErrUnknownAccount
+}
+
+func (am *Manager) FindAccountByPkr(pkr c_type.PKr) (Account, error) {
+	am.lock.RLock()
+	defer am.lock.RUnlock()
+	for _, wallet := range am.wallets {
+		if wallet.Accounts()[0].IsMyPkr(pkr) {
+			return wallet.Accounts()[0], nil
+		}
+	}
+	return Account{}, ErrUnknownAccount
 }
 
 // Subscribe creates an async subscription to receive notifications when the
