@@ -6607,7 +6607,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var genIndexPKrByTk=new Method({
                 name: 'genIndexPKrByTk',
                 call: 'sero_genIndexPKrByTk',
-                params: 3,
+                params: 2,
             });
 
             var reSendTransaction = new Method({

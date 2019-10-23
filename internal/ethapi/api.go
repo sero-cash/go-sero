@@ -715,7 +715,7 @@ func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk address.PKAddr
 	return result, nil
 }
 
-func (s *PublicBlockChainAPI) GenIndexPKrByTk(ctx context.Context, Tk address.TKAddress, index uint64, oldVersion bool) (PKrAddress, error) {
+func (s *PublicBlockChainAPI) GenIndexPKrByTk(ctx context.Context, Tk address.TKAddress, index uint64) (PKrAddress, error) {
 
 	salt := encodeNumber(index)
 	random := append(Tk[:], salt...)
