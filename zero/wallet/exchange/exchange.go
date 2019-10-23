@@ -331,12 +331,18 @@ func (self *Exchange) GetLockedBalances(pk c_type.Uint512) (balances map[string]
 			copy(root[:], key[98:130])
 			if utxo, err := self.getUtxo(root); err == nil {
 				if utxo.Asset.Tkn != nil {
+					currency := common.BytesToString(utxo.Asset.Tkn.Currency[:])
 					if _, flag := self.usedFlag.Load(utxo.Root); flag {
-						currency := common.BytesToString(utxo.Asset.Tkn.Currency[:])
 						if amount, ok := balances[currency]; ok {
 							amount.Add(amount, utxo.Asset.Tkn.Value.ToIntRef())
 						} else {
 							balances[currency] = new(big.Int).Set(utxo.Asset.Tkn.Value.ToIntRef())
+						}
+						currency_locked_key := currency + "_locked"
+						if amount, ok := balances[currency_locked_key]; ok {
+							amount.Add(amount, big.NewInt(1))
+						} else {
+							balances[currency_locked_key] = big.NewInt(1)
 						}
 					}
 				}

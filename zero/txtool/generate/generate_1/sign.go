@@ -2,7 +2,6 @@ package generate_1
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
 
@@ -93,7 +92,6 @@ func SignTx(param *txtool.GTxParam) (ctx sign_ctx, e error) {
 func (self *sign_ctx) check() (e error) {
 	sk := self.param.From.SKr.ToUint512()
 	tk, e := superzk.Sk2Tk(&sk)
-	fmt.Println(e)
 	if !superzk.IsMyPKr(&tk, &self.param.From.PKr) {
 		e = errors.New("sk unmatch pkr for the From field")
 		return
