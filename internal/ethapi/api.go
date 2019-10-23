@@ -19,6 +19,7 @@ package ethapi
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
@@ -693,14 +694,18 @@ func (s *PublicBlockChainAPI) GenPKr(ctx context.Context, Pk address.PKAddress) 
 	return result, nil
 }
 
+func encodeNumber(number uint64) []byte {
+	enc := make([]byte, 8)
+	binary.BigEndian.PutUint64(enc, number)
+	return enc
+}
+
 func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk address.PKAddress, index uint64) (PKrAddress, error) {
 	account, err := s.b.AccountManager().FindAccountByPk(Pk.ToUint512())
 	if err != nil {
 		return PKrAddress{}, err
 	}
-	enc := big.NewInt(0).SetUint64(index).Bytes()
-	salt := make([]byte, 8)
-	copy(salt[:], enc)
+	salt := encodeNumber(index)
 	//log.Info("GenIndexPKr", "salt", hexutil.Encode(salt))
 	random := append(account.Tk[:], salt...)
 	r := crypto.Keccak256Hash(random).HashToUint256()
@@ -708,19 +713,11 @@ func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk address.PKAddr
 	result := PKrAddress{}
 	copy(result[:], PKr[:])
 	return result, nil
-	//currentBlock := uint64(s.BlockNumber())
-	//if currentBlock >= seroparam.SIP5() {
-	//	return result.String(), nil
-	//} else {
-	//	return result.Base58(), nil
-	//}
 }
 
 func (s *PublicBlockChainAPI) GenIndexPKrByTk(ctx context.Context, Tk address.TKAddress, index uint64, oldVersion bool) (PKrAddress, error) {
 
-	enc := big.NewInt(0).SetUint64(index).Bytes()
-	salt := make([]byte, 8)
-	copy(salt[:], enc)
+	salt := encodeNumber(index)
 	random := append(Tk[:], salt...)
 	//log.Info("GenIndexPKr", "salt", hexutil.Encode(salt))
 	r := crypto.Keccak256Hash(random).HashToUint256()
