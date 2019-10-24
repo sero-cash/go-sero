@@ -1039,6 +1039,11 @@ web3._extend({
 			name: 'isPkValid',
 			call: 'local_isPkValid',
 			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'isMyPkr',
+			call: 'local_isMyPkr',
+			params: 2
 		})
 	]
 });

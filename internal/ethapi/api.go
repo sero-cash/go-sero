@@ -376,24 +376,33 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string, version int, at uint64) (address.PKAddress, error) {
+func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string, v *int, a *uint64) (address.PKAddress, error) {
 	key, err := crypto.HexToECDSA(privkey)
 	if err != nil {
 		return address.PKAddress{}, err
 	}
-	if version == 0 {
-		version = 1
+	version := 1
+	if v != nil {
+		version = *v
+	}
+	at := uint64(0)
+	if a != nil {
+		at = *a
 	}
 	acc, err := fetchKeystore(s.am).ImportECDSA(key, password, at, version)
 	return acc.Address, err
 }
 
-func (s *PrivateAccountAPI) ImportTk(tk address.TKAddress, at uint64) (address.PKAddress, error) {
+func (s *PrivateAccountAPI) ImportTk(tk address.TKAddress, a *uint64) (address.PKAddress, error) {
+	at := uint64(0)
+	if a != nil {
+		at = *a
+	}
 	acc, err := fetchKeystore(s.am).ImportTk(tk.ToTk(), at)
 	return acc.Address, err
 }
 
-func (s *PrivateAccountAPI) ImportMnemonic(mnemonic string, password string, at uint64) (address.PKAddress, error) {
+func (s *PrivateAccountAPI) ImportMnemonic(mnemonic string, password string, a *uint64) (address.PKAddress, error) {
 	mnemonicSlice := strings.Split(mnemonic, " ")
 	version := 1
 	if len(mnemonicSlice) == 25 {
@@ -418,6 +427,11 @@ func (s *PrivateAccountAPI) ImportMnemonic(mnemonic string, password string, at 
 	key, err := crypto.ToECDSA(seed[:32])
 	if err != nil {
 		return address.PKAddress{}, err
+	}
+
+	at := uint64(0)
+	if a != nil {
+		at = *a
 	}
 	acc, err := fetchKeystore(s.am).ImportECDSA(key, password, at, version)
 	return acc.Address, err

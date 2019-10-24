@@ -63,12 +63,18 @@ func (s *PublicLocalAPI) IdToCurrency(ctx context.Context, hex c_type.Uint256) (
 	return
 }
 
-func (s *PublicLocalAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes, version int) (c_type.Uint512, error) {
+func (s *PublicLocalAPI) IsMyPkr(ctx context.Context, tk address.TKAddress, pkr PKrAddress) (ret bool, e error) {
+	ret = superzk.IsMyPKr(tk.ToTk().NewRef(), pkr.ToPKr().NewRef())
+	return
+}
+
+func (s *PublicLocalAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes, v *int) (c_type.Uint512, error) {
 	if len(seed) != 32 {
 		return c_type.Uint512{}, errors.New("seed len must be 32")
 	}
-	if version == 0 {
-		version = 1
+	version := 1
+	if v != nil {
+		version = *v
 	}
 	var sd c_type.Uint256
 	copy(sd[:], seed[:])

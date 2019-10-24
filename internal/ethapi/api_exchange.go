@@ -512,12 +512,14 @@ func (s *PublicExchangeAPI) GetBlockByNumber(ctx context.Context, blockNum *int6
 	return fields, nil
 }
 
-func (s *PublicExchangeAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes, version int) (c_type.Uint512, error) {
+func (s *PublicExchangeAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes, v *int) (c_type.Uint512, error) {
 	if len(seed) != 32 {
 		return c_type.Uint512{}, errors.New("seed len must be 32")
 	}
-	if version == 0 {
-		version = 1
+
+	version := 1
+	if v != nil {
+		version = *v
 	}
 	var sd c_type.Uint256
 	copy(sd[:], seed[:])
