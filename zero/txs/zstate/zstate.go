@@ -172,9 +172,14 @@ func (state *ZState) AddTxOut(addr common.Address, asset assets.Asset, txhash co
 	}
 	if need_add {
 		pkr := addr.ToPKr()
-		if c_superzk.IsSzkPKr(pkr) {
-			o := stx_v1.Out_P{PKr: *addr.ToPKr(), Asset: asset, Memo: c_type.Uint512{}}
-			state.addOut_P(&o, txhash)
+		if state.Num() >= seroparam.SIP5() {
+			if c_superzk.IsSzkPKr(pkr) {
+				o := stx_v1.Out_P{PKr: *addr.ToPKr(), Asset: asset, Memo: c_type.Uint512{}}
+				state.addOut_P(&o, txhash)
+			} else {
+				o := stx_v0.Out_O{Addr: *addr.ToPKr(), Asset: asset, Memo: c_type.Uint512{}}
+				state.addOut_O(&o, txhash)
+			}
 		} else {
 			o := stx_v0.Out_O{Addr: *addr.ToPKr(), Asset: asset, Memo: c_type.Uint512{}}
 			state.addOut_O(&o, txhash)
