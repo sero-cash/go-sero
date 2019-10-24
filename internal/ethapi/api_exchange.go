@@ -521,6 +521,10 @@ func (s *PublicExchangeAPI) Seed2Sk(ctx context.Context, seed hexutil.Bytes, v *
 	if v != nil {
 		version = *v
 	}
+	if version > 2 || version < 1 {
+		return c_type.Uint512{}, errors.New("version must 1 or 2")
+	}
+
 	var sd c_type.Uint256
 	copy(sd[:], seed[:])
 	return superzk.Seed2Sk(&sd, version), nil
