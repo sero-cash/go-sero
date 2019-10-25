@@ -19,7 +19,7 @@ import (
 func GenTx(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
 	var need_szk = true
 
-	if txtool.Ref_inst.Bc != nil {
+	if (txtool.Ref_inst.Bc != nil) && (!seroparam.Is_Offline()) {
 		if txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()+1 < seroparam.SIP5() {
 			need_szk = false
 		} else {

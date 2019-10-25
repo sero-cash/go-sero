@@ -255,7 +255,7 @@ func BuildTxParam(
 		txParam.Gas = gaslimit
 	}
 
-	if txtool.Ref_inst.Bc != nil {
+	if txtool.Ref_inst.Bc != nil && !seroparam.Is_Offline() {
 		if txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()+1 >= seroparam.SIP5() {
 			Z := true
 			txParam.Z = &Z

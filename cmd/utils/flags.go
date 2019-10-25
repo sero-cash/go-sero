@@ -149,6 +149,10 @@ var (
 		Name:  "dev",
 		Usage: "Dev network: pre-configured proof-of-work in development network",
 	}
+	OfflineFlag = cli.BoolFlag{
+		Name:  "offline",
+		Usage: "Use gero as the offline mode",
+	}
 	SnapshotFlag = cli.Uint64Flag{
 		Name:  "snapshot",
 		Usage: "Use for create chaindata snapshot",
@@ -1009,6 +1013,9 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
 		seroparam.Init_Dev(true)
+	}
+	if ctx.GlobalBool(OfflineFlag.Name) {
+		seroparam.Init_Offline(true)
 	}
 	if ctx.GlobalIsSet(SnapshotFlag.Name) {
 		snapshot := ctx.GlobalUint64(SnapshotFlag.Name)
