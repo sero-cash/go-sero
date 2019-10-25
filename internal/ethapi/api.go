@@ -399,7 +399,7 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string, v *int
 	maxBlockNumber := getMaxBlockNumer(s.b)
 	if maxBlockNumber < seroparam.SIP5() {
 		if version == 2 {
-			return address.PKAddress{}, errors.New("account version is 2 must be after SIP5=" + string(seroparam.SIP5()))
+			return address.PKAddress{}, errors.New(fmt.Sprintf("account version is 2 must be after SIP5=%v", seroparam.SIP5()))
 		}
 	}
 	if version != 1 && version != 2 {
@@ -429,7 +429,7 @@ func (s *PrivateAccountAPI) ImportTk(tk address.TKAddress, a *uint64) (address.P
 			at = seroparam.SIP5()
 		}
 		if maxBlockNumber < seroparam.SIP5() {
-			return address.PKAddress{}, errors.New("account version is 2 must be after SIP5=" + string(seroparam.SIP5()))
+			return address.PKAddress{}, errors.New(fmt.Sprintf("account version is 2 must be after SIP5=%v", seroparam.SIP5()))
 		}
 	}
 	acc, err := fetchKeystore(s.am).ImportTk(tk.ToTk(), at)
@@ -470,7 +470,7 @@ func (s *PrivateAccountAPI) ImportMnemonic(mnemonic string, password string, a *
 	maxBlockNumber := getMaxBlockNumer(s.b)
 	if maxBlockNumber < seroparam.SIP5() {
 		if version == 2 {
-			return address.PKAddress{}, errors.New("account version is 2 must be after SIP5=" + string(seroparam.SIP5()))
+			return address.PKAddress{}, errors.New(fmt.Sprintf("account version is 2 must be after SIP5=%v", seroparam.SIP5()))
 		}
 	}
 	if version == 2 {
