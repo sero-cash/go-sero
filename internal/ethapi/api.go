@@ -308,6 +308,17 @@ func (s *PrivateAccountAPI) ListWallets() []rawWallet {
 	return wallets
 }
 
+func getMaxBlockNumer(b Backend) uint64 {
+	maxNumber := b.Downloader().Progress().HighestBlock
+	current := b.CurrentBlock()
+	if current != nil {
+		if maxNumber < current.NumberU64() {
+			maxNumber = current.NumberU64()
+		}
+	}
+	return maxNumber
+}
+
 // NewAccount will create a new account and returns the address for the new account.
 func (s *PrivateAccountAPI) NewAccount(password string) (address.PKAddress, error) {
 	maxNumber := s.b.Downloader().Progress().HighestBlock
@@ -385,6 +396,15 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string, v *int
 	if v != nil {
 		version = *v
 	}
+	maxBlockNumber := getMaxBlockNumer(s.b)
+	if maxBlockNumber < seroparam.SIP5() {
+		if version == 2 {
+			return address.PKAddress{}, errors.New("account version is 2 must be after SIP5=" + string(seroparam.SIP5()))
+		}
+	}
+	if version != 1 && version != 2 {
+		return address.PKAddress{}, errors.New("account version is only be 1 or 2 ")
+	}
 	at := uint64(0)
 	if a != nil {
 		at = *a
@@ -432,6 +452,12 @@ func (s *PrivateAccountAPI) ImportMnemonic(mnemonic string, password string, a *
 	at := uint64(0)
 	if a != nil {
 		at = *a
+	}
+	maxBlockNumber := getMaxBlockNumer(s.b)
+	if maxBlockNumber < seroparam.SIP5() {
+		if version == 2 {
+			return address.PKAddress{}, errors.New("account version is 2 must be after SIP5=" + string(seroparam.SIP5()))
+		}
 	}
 	acc, err := fetchKeystore(s.am).ImportECDSA(key, password, at, version)
 	return acc.Address, err
