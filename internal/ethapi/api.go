@@ -423,9 +423,13 @@ func (s *PrivateAccountAPI) ImportTk(tk address.TKAddress, a *uint64) (address.P
 	if a != nil {
 		at = *a
 	}
+	maxBlockNumber := getMaxBlockNumer(s.b)
 	if c_superzk.IsFlagSet(tk[:]) {
 		if at < seroparam.SIP5() {
 			at = seroparam.SIP5()
+		}
+		if maxBlockNumber < seroparam.SIP5() {
+			return address.PKAddress{}, errors.New("account version is 2 must be after SIP5=" + string(seroparam.SIP5()))
 		}
 	}
 	acc, err := fetchKeystore(s.am).ImportTk(tk.ToTk(), at)
