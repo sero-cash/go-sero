@@ -22,6 +22,7 @@ func GenTx(param *txtool.GTxParam) (gtx txtool.GTx, e error) {
 	if (txtool.Ref_inst.Bc != nil) && (!seroparam.Is_Offline()) {
 		if txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()+1 < seroparam.SIP5() {
 			need_szk = false
+			param.Z = nil
 		} else {
 			param.Z = &need_szk
 		}
