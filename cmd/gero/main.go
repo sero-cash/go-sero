@@ -121,6 +121,7 @@ var (
 		utils.ResetBlockNumber,
 
 		utils.DeveloperFlag,
+		utils.OfflineFlag,
 		utils.SnapshotFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
