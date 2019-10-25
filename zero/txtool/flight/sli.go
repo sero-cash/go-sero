@@ -118,9 +118,7 @@ func DecOut(tk *c_type.Tk, outs []txtool.Out) (douts []txtool.TDOut) {
 
 		}
 
-		if len(dout.Nils) > 0 {
-			douts = append(douts, dout)
-		}
+		douts = append(douts, dout)
 	}
 	return
 }

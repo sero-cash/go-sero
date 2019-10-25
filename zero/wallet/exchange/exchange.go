@@ -709,11 +709,14 @@ func DecOuts(outs []txtool.Out, skr *c_type.PKr) (douts []txtool.DOut) {
 	copy(tk[:], skr[:])
 	tdouts := flight.DecOut(&tk, outs)
 	for _, tdout := range tdouts {
-		douts = append(douts, txtool.DOut{
-			tdout.Asset,
-			tdout.Memo,
-			tdout.Nils[0],
-		})
+		ot := txtool.DOut{
+			Asset: tdout.Asset,
+			Memo:  tdout.Memo,
+		}
+		if len(tdout.Nils) > 0 {
+			ot.Nil = tdout.Nils[0]
+		}
+		douts = append(douts)
 	}
 	return
 }
@@ -812,6 +815,11 @@ func (self *Exchange) fetchAndIndexUtxo(start, countBlock uint64, pks []c_type.U
 
 			key := PkKey{key: *account.pk, Num: out.State.Num}
 			dout := DecOuts([]txtool.Out{out}, &account.skr)[0]
+
+			if dout.Nil == c_type.Empty_Uint256 {
+				continue
+			}
+
 			utxo := Utxo{Pkr: *pkr, Root: out.Root, Nil: dout.Nil, TxHash: out.State.TxHash, Num: out.State.Num, Asset: dout.Asset, IsZ: out.State.OS.IsZero()}
 			nilsMap[utxo.Root] = utxo
 			nilsMap[utxo.Nil] = utxo
