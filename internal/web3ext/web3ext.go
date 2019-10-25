@@ -411,6 +411,11 @@ web3._extend({
 			params: 0
 		}),
 		new web3._extend.Method({
+			name: 'genOldIndexPKr',
+			call: 'sero_genOldIndexPKr',
+			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'sign',
 			call: 'sero_sign',
 			params: 2,
@@ -735,6 +740,11 @@ const Exchange_JS = `
 web3._extend({
 	property: 'exchange',
 	methods: [
+		new web3._extend.Method({
+			name: 'getOut',
+			call: 'exchange_getOut',
+			params: 1
+		}),
 		new web3._extend.Method({
 			name: 'getBalances',
 			call: 'exchange_getBalances',

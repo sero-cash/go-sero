@@ -774,6 +774,19 @@ func (s *PublicBlockChainAPI) GenIndexPKr(ctx context.Context, Pk address.PKAddr
 	return result, nil
 }
 
+func (s *PublicBlockChainAPI) GenOldIndexPKr(ctx context.Context, Pk address.PKAddress, index uint64) (PKrAddress, error) {
+	account, err := s.b.AccountManager().FindAccountByPk(Pk.ToUint512())
+	if err != nil {
+		return PKrAddress{}, err
+	}
+	r := c_type.Uint256{}
+	copy(r[:], common.LeftPadBytes(encodeNumber(index), 32))
+	PKr := account.GetPkr(&r)
+	result := PKrAddress{}
+	copy(result[:], PKr[:])
+	return result, nil
+}
+
 func (s *PublicBlockChainAPI) GenIndexPKrByTk(ctx context.Context, Tk address.TKAddress, index uint64) (PKrAddress, error) {
 
 	salt := encodeNumber(index)

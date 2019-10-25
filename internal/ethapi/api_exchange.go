@@ -570,6 +570,6 @@ func (s *PublicExchangeAPI) FindRoots(pk address.PKAddress, cy Smbol, amount Big
 	return result, nil
 }
 
-func (s *PublicExchangeAPI) GetRoot(root *c_type.Uint256) *prepare.Utxo {
-	return exchange.CurrentExchange().GetRoot(root)
+func (s *PublicExchangeAPI) GetOut(ctx context.Context, root c_type.Uint256) *prepare.Utxo {
+	return exchange.CurrentExchange().GetRoot(&root)
 }

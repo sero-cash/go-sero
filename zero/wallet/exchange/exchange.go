@@ -716,7 +716,7 @@ func DecOuts(outs []txtool.Out, skr *c_type.PKr) (douts []txtool.DOut) {
 		if len(tdout.Nils) > 0 {
 			ot.Nil = tdout.Nils[0]
 		}
-		douts = append(douts)
+		douts = append(douts, ot)
 	}
 	return
 }
