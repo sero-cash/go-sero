@@ -409,6 +409,11 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string, v *int
 	if a != nil {
 		at = *a
 	}
+	if version == 2 {
+		if at < seroparam.SIP5() {
+			at = seroparam.SIP5()
+		}
+	}
 	acc, err := fetchKeystore(s.am).ImportECDSA(key, password, at, version)
 	return acc.Address, err
 }
@@ -417,6 +422,11 @@ func (s *PrivateAccountAPI) ImportTk(tk address.TKAddress, a *uint64) (address.P
 	at := uint64(0)
 	if a != nil {
 		at = *a
+	}
+	if c_superzk.IsFlagSet(tk[:]) {
+		if at < seroparam.SIP5() {
+			at = seroparam.SIP5()
+		}
 	}
 	acc, err := fetchKeystore(s.am).ImportTk(tk.ToTk(), at)
 	return acc.Address, err
@@ -457,6 +467,11 @@ func (s *PrivateAccountAPI) ImportMnemonic(mnemonic string, password string, a *
 	if maxBlockNumber < seroparam.SIP5() {
 		if version == 2 {
 			return address.PKAddress{}, errors.New("account version is 2 must be after SIP5=" + string(seroparam.SIP5()))
+		}
+	}
+	if version == 2 {
+		if at < seroparam.SIP5() {
+			at = seroparam.SIP5()
 		}
 	}
 	acc, err := fetchKeystore(s.am).ImportECDSA(key, password, at, version)
