@@ -1,9 +1,11 @@
 package verify_0
 
 import (
+	"encoding/hex"
 	"errors"
 
 	"github.com/sero-cash/go-czero-import/c_czero"
+	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -22,6 +24,9 @@ func (self *verify_output_desc) Run() error {
 	if c_czero.IsPKrValid(&self.pkr) {
 		if err := c_czero.VerifyOutput(&self.desc); err != nil {
 			self.e = err
+
+			log.Warn("verify out_z proof error", "out_cm", hex.EncodeToString(self.desc.OutCM[:]))
+
 			return err
 		} else {
 			return nil

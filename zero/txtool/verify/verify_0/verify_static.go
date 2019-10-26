@@ -1,6 +1,7 @@
 package verify_0
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -236,6 +237,11 @@ func (self *verifyWithoutStateCtx) Verify() (e error) {
 	}
 
 	if e = self.WaitVerifyProof(); e != nil {
+		if tx_bs, err := json.Marshal(self.tx); err == nil {
+			fmt.Println("The tx json is:", string(tx_bs))
+		} else {
+			fmt.Println("Can not marshal the tx")
+		}
 		return
 	}
 
