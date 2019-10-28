@@ -1,8 +1,11 @@
 package stx
 
 import (
+	"encoding/hex"
 	"math/big"
 	"sync/atomic"
+
+	"github.com/pkg/errors"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
@@ -71,10 +74,62 @@ func (self *ClosePoolCmd) ToHash() (ret c_type.Uint256) {
 	return
 }
 
+//go:generate gencodec -type ContractCmd -field-override ContractCmdMarshaling -out gen_contractCmd_json.go
+
 type ContractCmd struct {
 	Asset assets.Asset
 	To    *c_type.PKr `rlp:"nil"`
 	Data  []byte
+}
+
+type ContractData []byte
+
+// MarshalText implements encoding.TextMarshaler
+func (b ContractData) MarshalText() ([]byte, error) {
+	result := make([]byte, len(b)*2+2)
+	copy(result, `0x`)
+	hex.Encode(result[2:], b)
+	return result, nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (b *ContractData) UnmarshalText(input []byte) error {
+	raw, err := checkText(input, true)
+	if err != nil {
+		return err
+	}
+	dec := make([]byte, len(raw)/2)
+	if _, err = hex.Decode(dec, raw); err != nil {
+		err = err
+	} else {
+		*b = dec
+	}
+	return err
+}
+
+func checkText(input []byte, wantPrefix bool) ([]byte, error) {
+	if len(input) == 0 {
+		return nil, nil // empty strings are allowed
+	}
+	if bytesHave0xPrefix(input) {
+		input = input[2:]
+	} else if wantPrefix {
+		return nil, errors.New("hex string without 0x prefi")
+	}
+	if len(input)%2 != 0 {
+		return nil, errors.New("hex string of odd lengt")
+	}
+	return input, nil
+}
+
+func bytesHave0xPrefix(input []byte) bool {
+	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
+}
+
+type ContractCmdMarshaling struct {
+	Asset assets.Asset
+	To    *c_type.PKr
+	Data  ContractData
 }
 
 func (self *ContractCmd) ToHash() (ret c_type.Uint256) {
