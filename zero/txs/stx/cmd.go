@@ -1,6 +1,7 @@
 package stx
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"math/big"
 	"sync/atomic"
@@ -92,19 +93,32 @@ func (b ContractData) MarshalText() ([]byte, error) {
 	return result, nil
 }
 
-// UnmarshalText implements encoding.TextUnmarshaler.
 func (b *ContractData) UnmarshalText(input []byte) error {
-	raw, err := checkText(input, true)
-	if err != nil {
-		return err
-	}
-	dec := make([]byte, len(raw)/2)
-	if _, err = hex.Decode(dec, raw); err != nil {
-		err = err
-	} else {
+	if len(input) == 0 {
+		dec := make([]byte, len(input)/2)
 		*b = dec
+		return nil
 	}
-	return err
+	if IsHex(string(input)) {
+		raw, err := checkText(input, true)
+		if err != nil {
+			return err
+		}
+		dec := make([]byte, len(raw)/2)
+		if _, err = hex.Decode(dec, raw); err != nil {
+			return err
+		} else {
+			*b = dec
+		}
+		return nil
+	} else {
+		if dec, err := base64.StdEncoding.DecodeString(string(input)); err != nil {
+			return err
+		} else {
+			*b = dec
+		}
+		return nil
+	}
 }
 
 func checkText(input []byte, wantPrefix bool) ([]byte, error) {
@@ -124,6 +138,26 @@ func checkText(input []byte, wantPrefix bool) ([]byte, error) {
 
 func bytesHave0xPrefix(input []byte) bool {
 	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
+}
+
+func has0xPrefix(input string) bool {
+	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
+}
+func isHexCharacter(c byte) bool {
+	return ('0' <= c && c <= '9') || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
+}
+
+func IsHex(s string) bool {
+	if has0xPrefix(s) {
+		s = s[2:]
+	}
+
+	for _, c := range []byte(s) {
+		if !isHexCharacter(c) {
+			return false
+		}
+	}
+	return true
 }
 
 type ContractCmdMarshaling struct {
