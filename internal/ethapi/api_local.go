@@ -53,6 +53,10 @@ func (s *PublicLocalAPI) GenSeed(ctx context.Context) (hexutil.Bytes, error) {
 	return hexutil.Bytes(entropy), nil
 }
 
+func (s *PublicLocalAPI) Seed2Mnemonic(ctx context.Context, seed hexutil.Bytes) (string, error) {
+	return bip39.NewMnemonic(seed[:])
+}
+
 func (s *PublicLocalAPI) CurrencyToId(ctx context.Context, currency string) (ret c_type.Uint256, e error) {
 	ret = flight.CurrencyToId(currency)
 	return

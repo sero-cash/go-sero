@@ -1001,6 +1001,11 @@ web3._extend({
             params: 0
 		}),
         new web3._extend.Method({
+			name: 'seed2Mnemonic',
+			call: 'local_seed2Mnemonic',
+            params: 1
+		}),
+        new web3._extend.Method({
 			name: 'seed2Sk',
 			call: 'local_seed2Sk',
             params: 2
