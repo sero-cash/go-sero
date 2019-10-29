@@ -266,6 +266,10 @@ func IsHex(s string) bool {
 		s = s[2:]
 	}
 
+	if len(s)%2 != 0 {
+		return false
+	}
+
 	for _, c := range []byte(s) {
 		if !isHexCharacter(c) {
 			return false
