@@ -94,12 +94,12 @@ func (s *PublicExchangeAPI) GetMaxAvailable(pk address.PKAddress, currency Smbol
 
 func (s *PublicExchangeAPI) GetBalances(ctx context.Context, pk address.PKAddress) map[string]interface{} {
 	result := map[string]*Big{}
-
+	ret := make(map[string]interface{})
 	balances, tickets := s.b.GetBalances(pk.ToUint512())
 	for k, v := range balances {
 		result[k] = (*Big)(v)
+		ret[k] = (*Big)(v)
 	}
-	ret := make(map[string]interface{})
 	ret["tkn"] = result
 	ret["tkt"] = tickets
 	return ret
