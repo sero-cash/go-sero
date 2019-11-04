@@ -819,6 +819,11 @@ web3._extend({
 			name: 'signTxWithSk',
 			call: 'exchange_signTxWithSk',
             params: 2
+		}),
+		new web3._extend.Method({
+			name: 'setBalancePkr',
+			call: 'exchange_setBalancePkr',
+			params: 1
 		})
 	]
 });

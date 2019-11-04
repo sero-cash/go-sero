@@ -43,6 +43,7 @@ type Account struct {
 	tk            *c_type.Tk
 	skr           c_type.PKr
 	mainPkr       c_type.PKr
+	balancePkr    *c_type.PKr
 	balances      map[string]*big.Int
 	tickets       map[string][]*common.Hash
 	utxoNums      map[string]uint64
@@ -196,6 +197,12 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 		account.nextMergeTime = time.Now()
 		account.version = w.Accounts()[0].Version
 		self.accounts.Store(*account.pk, &account)
+		balancePkr := self.getBalancePkr(account.pk)
+		if balancePkr != nil {
+			if superzk.IsMyPKr(account.tk, balancePkr) {
+				account.balancePkr = balancePkr
+			}
+		}
 
 		if num := self.starNum(account.pk); num > w.Accounts()[0].At {
 			self.numbers.Store(*account.pk, num)
@@ -213,6 +220,47 @@ func (self *Exchange) starNum(pk *c_type.Uint512) uint64 {
 		return 0
 	}
 	return utils.DecodeNumber(value)
+}
+
+func (self *Exchange) getBalancePkr(pk *c_type.Uint512) *c_type.PKr {
+	value, err := self.db.Get(balancPkrKey(*pk))
+	if err != nil {
+		return nil
+	}
+	var pkr c_type.PKr
+	err = rlp.DecodeBytes(value, &pkr)
+	if err != nil {
+		return nil
+	}
+	return &pkr
+}
+
+func (self *Exchange) putBalancePkr(pk *c_type.Uint512, pkr c_type.PKr) error {
+	data, err := rlp.EncodeToBytes(&pkr)
+	if err != nil {
+		return err
+	}
+	err = self.db.Put(balancPkrKey(*pk), data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (self *Exchange) SetBalancePkr(pk *c_type.Uint512, pkr c_type.PKr) error {
+
+	err := self.putBalancePkr(pk, pkr)
+	if err != nil {
+		return err
+	}
+	value, ok := self.accounts.Load(*pk)
+	if !ok {
+		return errors.New("account not exists")
+	}
+	account := value.(*Account)
+	account.balancePkr = &pkr
+	self.accounts.Store(pk, account)
+	return nil
 }
 
 func (self *Exchange) updateAccount() {
@@ -1060,9 +1108,16 @@ func (self *Exchange) ownPkr(pks []c_type.Uint512, pkr c_type.PKr) (account *Acc
 			continue
 		}
 		account = value.(*Account)
-		if superzk.IsMyPKr(account.tk, &pkr) {
-			return account, true
+		if account.balancePkr != nil {
+			if pkr == *account.balancePkr {
+				return account, true
+			}
+		} else {
+			if superzk.IsMyPKr(account.tk, &pkr) {
+				return account, true
+			}
 		}
+
 	}
 	return
 }
@@ -1318,11 +1373,12 @@ func (self *Exchange) merge() {
 }
 
 var (
-	numPrefix  = []byte("NUM")
-	pkPrefix   = []byte("PK")
-	utxoPrefix = []byte("UTXO")
-	rootPrefix = []byte("ROOT")
-	nilPrefix  = []byte("NIL")
+	numPrefix       = []byte("NUM")
+	balancPkrPrefix = []byte("BALANCPKR")
+	pkPrefix        = []byte("PK")
+	utxoPrefix      = []byte("UTXO")
+	rootPrefix      = []byte("ROOT")
+	nilPrefix       = []byte("NIL")
 
 	blockPrefix   = []byte("BLOCK")
 	outUtxoPrefix = []byte("OUTUTXO")
@@ -1344,6 +1400,10 @@ func blockKey(number uint64) []byte {
 
 func numKey(pk c_type.Uint512) []byte {
 	return append(numPrefix, pk[:]...)
+}
+
+func balancPkrKey(pk c_type.Uint512) []byte {
+	return append(balancPkrPrefix, pk[:]...)
 }
 
 func nilKey(nil c_type.Uint256) []byte {
