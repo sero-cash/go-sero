@@ -1278,7 +1278,7 @@ func (self *Exchange) Merge(pk *c_type.Uint512, currency string, force bool) (co
 	}
 
 	var mu MergeUtxos
-	if mu, e = self.getMergeUtxos(account.pk, currency, 100, 10); e != nil {
+	if mu, e = self.getMergeUtxos(account.pk, currency, 100, 50); e != nil {
 		return
 	}
 
