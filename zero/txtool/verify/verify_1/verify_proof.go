@@ -1,5 +1,7 @@
 package verify_1
 
+import "github.com/sero-cash/go-czero-import/seroparam"
+
 func (self *verifyWithoutStateCtx) ProcessVerifyProof() {
 	for _, in := range self.tx.Tx1.Ins_C {
 		g := verify_input_desc{}
@@ -15,6 +17,9 @@ func (self *verifyWithoutStateCtx) ProcessVerifyProof() {
 		g.proof = out.Proof
 		g.asset_cm = out.AssetCM
 		g.pkr = out.PKr
+		if self.num >= seroparam.SIP6() {
+			g.isEx = true
+		}
 		self.cout_proof_proc.StartProc(&g)
 	}
 	if self.tx.Desc_Pkg.Create != nil {

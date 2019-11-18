@@ -267,6 +267,10 @@ func GenTxParam(param *PreTxParam, tk c_type.Tk) (p txtool.GTxParam, e error) {
 		p.Ins = append(p.Ins, in)
 	}
 
+	if e = p.GenZ(); e != nil {
+		return
+	}
+
 	log.Debug("genTxParam ins : %v, outs : %v", len(p.Ins), len(p.Outs))
 	return
 }

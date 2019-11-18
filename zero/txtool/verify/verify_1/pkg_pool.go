@@ -16,7 +16,7 @@ type verify_pkg_desc struct {
 }
 
 func (self *verify_pkg_desc) Run() error {
-	if e := c_superzk.VerifyOutput(&self.asset_cm, &self.proof); e != nil {
+	if e := c_superzk.VerifyOutput(&self.asset_cm, &self.proof, true); e != nil {
 		self.e = e
 		return e
 	} else {

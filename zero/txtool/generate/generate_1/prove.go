@@ -2,6 +2,7 @@ package generate_1
 
 import (
 	"github.com/sero-cash/go-czero-import/c_superzk"
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txtool"
 )
@@ -69,6 +70,10 @@ func (self *prove_ctx) prove() (e error) {
 		g.ar = *out.Ar
 		g.asset = out.Asset.ToTypeAsset()
 		g.index = i
+
+		if self.param.Num != nil && *self.param.Num >= seroparam.SIP6() {
+			g.isEx = true
+		}
 
 		gen_output_procs.StartProc(&g)
 	}
