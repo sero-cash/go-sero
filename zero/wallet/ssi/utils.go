@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_0"
-
 	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_1"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
@@ -34,7 +32,7 @@ func DecNilOuts(outs []txtool.Out, skr *c_type.PKr) (douts []txtool.DOut) {
 			log.Printf("DecOuts Out_O")
 		} else if out.State.OS.Out_Z != nil {
 			if key, flag, e := c_superzk.Czero_fetchKey(&tk, &out.State.OS.Out_Z.RPK); e == nil {
-				if o := generate_0.ConfirmOutZ(&key, flag, out.State.OS.Out_Z); o != nil {
+				if o := generate_1.ConfirmOutZ(&key, flag, out.State.OS.Out_Z); o != nil {
 					dout.Asset = o.Asset
 					dout.Memo = o.Memo
 					if nl, e := c_superzk.Czero_genNil(&sk, out.State.OS.RootCM); e == nil {
