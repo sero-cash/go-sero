@@ -573,3 +573,15 @@ func (s *PublicExchangeAPI) FindRoots(pk address.PKAddress, cy Smbol, amount Big
 func (s *PublicExchangeAPI) GetOut(ctx context.Context, root c_type.Uint256) *prepare.Utxo {
 	return exchange.CurrentExchange().GetRoot(&root)
 }
+
+func (s *PublicExchangeAPI) SetBalancePkr(ctx context.Context, pkr PKrAddress) error {
+	account, err := s.b.AccountManager().FindAccountByPkr(*pkr.ToPKr())
+	if err != nil {
+		return err
+	}
+	return exchange.CurrentExchange().SetBalancePkr(account.Address.ToUint512().NewRef(), *pkr.ToPKr())
+}
+
+func (s *PublicExchangeAPI) IgnorePkrUtxos(ctx context.Context, pkr PKrAddress, ignore bool) (utxos []exchange.Utxo, e error) {
+	return exchange.CurrentExchange().IgnorePkrUtxos(*pkr.ToPKr(), ignore)
+}

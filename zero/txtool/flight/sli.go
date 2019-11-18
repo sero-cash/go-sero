@@ -10,7 +10,6 @@ import (
 	"github.com/sero-cash/go-czero-import/c_superzk"
 	"github.com/sero-cash/go-sero/zero/txs/stx"
 	"github.com/sero-cash/go-sero/zero/txtool"
-	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_0"
 	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_1"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -84,7 +83,7 @@ func DecOut(tk *c_type.Tk, outs []txtool.Out) (douts []txtool.TDOut) {
 		} else if out.State.OS.Out_Z != nil {
 
 			if key, flag, e := c_superzk.Czero_fetchKey(tk, &out.State.OS.Out_Z.RPK); e == nil {
-				if confirm_out := generate_0.ConfirmOutZ(&key, flag, out.State.OS.Out_Z); confirm_out != nil {
+				if confirm_out := generate_1.ConfirmOutZ(&key, flag, out.State.OS.Out_Z); confirm_out != nil {
 					dout = *confirm_out
 					if til, e := c_superzk.Czero_genTrace(tk, out.State.OS.RootCM); e == nil {
 						dout.Nils = append(dout.Nils, til)
@@ -124,7 +123,7 @@ func DecOut(tk *c_type.Tk, outs []txtool.Out) (douts []txtool.TDOut) {
 }
 
 func ConfirmOutZ(key *c_type.Uint256, z *stx_v0.Out_Z) (dout txtool.TDOut, e error) {
-	if out := generate_0.ConfirmOutZ(key, true, z); out != nil {
+	if out := generate_1.ConfirmOutZ(key, true, z); out != nil {
 		dout = *out
 		return
 	} else {

@@ -24,7 +24,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/txs/assets"
@@ -47,9 +46,8 @@ type T struct {
 	Tx1      stx_v1.Tx
 
 	//cache
-	hash        atomic.Value
-	feeCC_Szk   atomic.Value
-	feeCC_Czero atomic.Value
+	hash      atomic.Value
+	feeCC_Szk atomic.Value
 }
 
 func (self *T) Tx0() (ret *stx_v0.Tx) {
@@ -97,19 +95,6 @@ func (self *T) IsOpContract() bool {
 		}
 	}
 	return false
-}
-
-func (self *T) ToFeeCC_Czero() c_type.Uint256 {
-	if cc, ok := self.feeCC_Czero.Load().(c_type.Uint256); ok {
-		return cc
-	}
-	asset_desc := c_czero.AssetDesc{
-		Asset: self.Fee.ToTypeAsset(),
-	}
-	c_czero.GenAssetCC(&asset_desc)
-	v := asset_desc.Asset_cc
-	self.feeCC_Czero.Store(v)
-	return v
 }
 
 func (self *T) ToFeeCC_Szk() c_type.Uint256 {

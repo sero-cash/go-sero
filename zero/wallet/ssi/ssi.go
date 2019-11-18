@@ -7,8 +7,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sero-cash/go-czero-import/seroparam"
-
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
 	"github.com/sero-cash/go-czero-import/superzk"
@@ -211,11 +209,8 @@ func (self *SSI) GenTxParam(param *PreTxParam) (p txtool.GTxParam, e error) {
 		p.Ins = append(p.Ins, in)
 	}
 
-	if txtool.Ref_inst.Bc != nil && !seroparam.Is_Offline() {
-		if txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()+1 >= seroparam.SIP5() {
-			Z := true
-			p.Z = &Z
-		}
+	if e = p.GenZ(); e != nil {
+		return
 	}
 
 	log.Printf("genTxParam ins : %v, outs : %v", len(p.Ins), len(p.Outs))
