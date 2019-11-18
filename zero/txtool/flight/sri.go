@@ -267,6 +267,13 @@ func GenTxParam(param *PreTxParam, tk c_type.Tk) (p txtool.GTxParam, e error) {
 		p.Ins = append(p.Ins, in)
 	}
 
+	if txtool.Ref_inst.Bc != nil && !seroparam.Is_Offline() {
+		if txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()+1 >= seroparam.SIP5() {
+			Z := true
+			p.Z = &Z
+		}
+	}
+
 	log.Debug("genTxParam ins : %v, outs : %v", len(p.Ins), len(p.Outs))
 	return
 }

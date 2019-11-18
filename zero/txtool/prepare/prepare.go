@@ -260,6 +260,13 @@ func BuildTxParam(
 			Z := true
 			txParam.Z = &Z
 		}
+		if txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64() < seroparam.SIP6() {
+			if len(param.Receptions) > 8 {
+				e = errors.New("only 8 receipt allowed before sip6")
+				return
+			}
+		}
+
 	}
 
 	return
