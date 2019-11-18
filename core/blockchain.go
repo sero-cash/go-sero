@@ -1029,6 +1029,13 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		log.Error("WriteBlockWithState.Commit Error:", "root", root, "err", err)
 		return NonStatTy, err
 	}
+	if block.Number().Uint64() <= zconfig.CheckPoints.MaxNum() {
+		if err := zconfig.CheckPoints.Check(block.NumberU64(), block.Header().Root[:]); err != nil {
+			log.Error("WriteBlockWithState.CheckPoints.Check Error:", "root", root, "err", err)
+			return NonStatTy, err
+		}
+	}
+
 	triedb := bc.stateCache.TrieDB()
 
 	// If we're running an archive node, always flush
@@ -1158,6 +1165,18 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
 func test(i interface{}) {}
 
+func (bc *BlockChain) NewHeaderChecker(chain types.Blocks) (chan<- struct{}, <-chan error) {
+	headers := make([]*types.Header, len(chain))
+	seals := make([]bool, len(chain))
+
+	for i, block := range chain {
+		headers[i] = block.Header()
+		seals[i] = true
+	}
+
+	return bc.engine.VerifyHeaders(bc, headers, seals)
+}
+
 // insertChain will execute the actual chain insertion and event aggregation. The
 // only reason this method exists as a separate one is to make locking cleaner
 // with deferred statements.
@@ -1193,21 +1212,21 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		lastCanon     *types.Block
 		coalescedLogs []*types.Log
 	)
-	// Start the parallel header verifier
-	headers := make([]*types.Header, len(chain))
-	seals := make([]bool, len(chain))
 
-	for i, block := range chain {
-		headers[i] = block.Header()
-		seals[i] = true
+	var chain_after_checkpoint types.Blocks
+	for _, block := range chain {
+		if block.Header().Number.Uint64() > uint64(zconfig.CheckPoints.MaxNum()) {
+			chain_after_checkpoint = append(chain_after_checkpoint, block)
+		}
 	}
 
-	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
+	// Start the parallel header verifier
+	abort, results := bc.NewHeaderChecker(chain_after_checkpoint)
 	defer close(abort)
 
 	// Start a parallel signature recovery (abi will fluke on fork transition, minimal perf loss)
 	//senderCacher.recoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number()), chain)
-	tx_abort, tx_results := NewTxChecker(bc, chain)
+	tx_abort, tx_results := NewTxChecker(bc, chain_after_checkpoint)
 	defer close(tx_abort)
 
 	// Iterate over the blocks and insert when the verifier permits
@@ -1220,10 +1239,20 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		// Wait for the block's verification to complete
 		bstart := time.Now()
 
-		err := <-results
+		is_in_checkpoints := false
+		if block.Header().Number.Uint64() <= uint64(zconfig.CheckPoints.MaxNum()) {
+			is_in_checkpoints = true
+		}
+
+		var err error
+		if !is_in_checkpoints {
+			err = <-results
+		}
+
 		if err == nil {
 			err = bc.Validator().ValidateBody(block)
 		}
+
 		switch {
 		case err == ErrKnownBlock:
 			// Block and state both already known. However if the current block is below
@@ -1300,14 +1329,16 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 			return i, events, coalescedLogs, err
 		}
 
-		for _, tx := range block.Transactions() {
-			err := <-tx_results
-			if err == nil {
-				err = verify.VerifyWithState(tx.GetZZSTX(), state.NextZState(), block.NumberU64())
-			}
-			//err := verify.Verify(tx.GetZZSTX(), state.GetZState())
-			if err != nil {
-				return i, events, coalescedLogs, err
+		if !is_in_checkpoints {
+			for _, tx := range block.Transactions() {
+				err := <-tx_results
+				if err == nil {
+					err = verify.VerifyWithState(tx.GetZZSTX(), state.NextZState(), block.NumberU64())
+				}
+				//err := verify.Verify(tx.GetZZSTX(), state.GetZState())
+				if err != nil {
+					return i, events, coalescedLogs, err
+				}
 			}
 		}
 

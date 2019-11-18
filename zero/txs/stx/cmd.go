@@ -10,7 +10,6 @@ import (
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
 
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/sero-cash/go-sero/crypto/sha3"
@@ -184,8 +183,7 @@ type DescCmd struct {
 	Contract   *ContractCmd   `rlp:"nil"`
 
 	//Cache
-	assetCC_Czero atomic.Value
-	assetCC_Szk   atomic.Value
+	assetCC_Szk atomic.Value
 }
 
 func (self *DescCmd) ToPkr() *c_type.PKr {
@@ -196,24 +194,6 @@ func (self *DescCmd) ToPkr() *c_type.PKr {
 		return &self.RegistPool.Vote
 	}
 	return nil
-}
-
-func (self *DescCmd) ToAssetCC_Czero() *c_type.Uint256 {
-	if asset := self.OutAsset(); asset != nil {
-		if cc, ok := self.assetCC_Czero.Load().(c_type.Uint256); ok {
-			return &cc
-		}
-
-		asset_desc := c_czero.AssetDesc{
-			Asset: asset.ToTypeAsset(),
-		}
-		c_czero.GenAssetCC(&asset_desc)
-		v := asset_desc.Asset_cc
-		self.assetCC_Czero.Store(v)
-		return &v
-	} else {
-		return nil
-	}
 }
 
 func (self *DescCmd) ToAssetCC_Szk() *c_type.Uint256 {
