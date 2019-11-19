@@ -12,7 +12,7 @@ import (
 
 func VerifyWithoutState(ehash *c_type.Uint256, tx *stx.T, num uint64) (e error) {
 	if num >= seroparam.SIP5() {
-		return verify_1.VerifyWithoutState(ehash, tx)
+		return verify_1.VerifyWithoutState(ehash, tx, num)
 	} else {
 		return fmt.Errorf("VerifyWithoutState Error: verify_0 no longer be used")
 		//return verify_0.VerifyWithoutState(ehash, tx, num)

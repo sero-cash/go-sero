@@ -15,11 +15,12 @@ type gen_output_desc struct {
 	asset_cm c_type.Uint256
 	proof    c_type.Proof
 	index    int
+	isEx     bool
 	e        error
 }
 
 func (self *gen_output_desc) Run() error {
-	if proof, err := c_superzk.ProveOutput(&self.asset, &self.ar, &self.asset_cm); err != nil {
+	if proof, err := c_superzk.ProveOutput(&self.asset, &self.ar, &self.asset_cm, self.isEx); err != nil {
 		self.e = err
 		return err
 	} else {
@@ -85,7 +86,7 @@ type gen_pkg_desc struct {
 }
 
 func (self *gen_pkg_desc) Run() error {
-	if proof, e := c_superzk.ProveOutput(&self.asset, &self.ar, &self.asset_cm); e != nil {
+	if proof, e := c_superzk.ProveOutput(&self.asset, &self.ar, &self.asset_cm, true); e != nil {
 		self.e = e
 		return e
 	} else {

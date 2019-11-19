@@ -16,6 +16,7 @@ import (
 
 type verifyWithoutStateCtx struct {
 	tx              *stx.T
+	num             uint64
 	hash            c_type.Uint256
 	oout_count      int
 	oin_count       int
@@ -26,12 +27,13 @@ type verifyWithoutStateCtx struct {
 	pkg_proof_proc  *utils.Procs
 }
 
-func VerifyWithoutState(ehash *c_type.Uint256, tx *stx.T) (e error) {
+func VerifyWithoutState(ehash *c_type.Uint256, tx *stx.T, num uint64) (e error) {
 	if *ehash != tx.Ehash {
 		e = verify_utils.ReportError("ehash error", tx)
 		return
 	}
 	ctx := verifyWithoutStateCtx{}
+	ctx.num = num
 	ctx.tx = tx
 	return ctx.verify()
 }
@@ -198,9 +200,20 @@ func (self *verifyWithoutStateCtx) verifyOutC() (e error) {
 }
 
 func (self *verifyWithoutStateCtx) verifyBalance() (e error) {
-	if self.oout_count+self.zout_count > seroparam.MAX_Z_OUT_LENGTH_SIP2 {
-		e = verify_utils.ReportError("verify error: out_size > 500", self.tx)
-		return
+	if self.num >= seroparam.SIP6() {
+		if self.oout_count+self.zout_count > seroparam.MAX_Z_OUT_LENGTH_SIP2 {
+			e = verify_utils.ReportError("verify error: out_size > 500", self.tx)
+			return
+		}
+	} else {
+		if self.oout_count > seroparam.MAX_O_OUT_LENGTH {
+			e = verify_utils.ReportError("verify error: oout_size > 10", self.tx)
+			return
+		}
+		if self.zout_count > seroparam.MAX_Z_OUT_LENGTH_OLD {
+			e = verify_utils.ReportError("verify error: zout_size > 6", self.tx)
+			return
+		}
 	}
 	return
 }
