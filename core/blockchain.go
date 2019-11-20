@@ -1350,7 +1350,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 				return i, events, coalescedLogs, err
 			}
 
-			err = stakeState.CheckVotes(block, bc)
+			if !is_in_checkpoints {
+				err = stakeState.CheckVotes(block, bc)
+			}
+
 			if err != nil {
 				log.Error("insert chain pos block checkVote", "err", err)
 				return i, events, coalescedLogs, err
