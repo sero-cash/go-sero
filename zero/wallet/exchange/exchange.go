@@ -11,8 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sero-cash/go-czero-import/c_superzk"
-
 	"github.com/sero-cash/go-czero-import/superzk"
 
 	"github.com/sero-cash/go-sero/common/address"
@@ -43,6 +41,7 @@ type Account struct {
 	tk            *c_type.Tk
 	skr           c_type.PKr
 	mainPkr       c_type.PKr
+	balancePkr    *c_type.PKr
 	balances      map[string]*big.Int
 	tickets       map[string][]*common.Hash
 	utxoNums      map[string]uint64
@@ -55,25 +54,6 @@ type PkrAccount struct {
 	Pkr      c_type.PKr
 	balances map[string]*big.Int
 	num      uint64
-}
-
-type Utxo struct {
-	Pkr    c_type.PKr
-	Root   c_type.Uint256
-	TxHash c_type.Uint256
-	Nil    c_type.Uint256
-	Num    uint64
-	Asset  assets.Asset
-	IsZ    bool
-	flag   int
-}
-
-func (utxo *Utxo) NilTxType() string {
-	if c_superzk.IsSzkNil(&utxo.Nil) {
-		return "SZK"
-	} else {
-		return "CZERO"
-	}
 }
 
 type UtxoList []Utxo
@@ -196,6 +176,12 @@ func (self *Exchange) initWallet(w accounts.Wallet) {
 		account.nextMergeTime = time.Now()
 		account.version = w.Accounts()[0].Version
 		self.accounts.Store(*account.pk, &account)
+		balancePkr := self.getBalancePkr(account.pk)
+		if balancePkr != nil {
+			if superzk.IsMyPKr(account.tk, balancePkr) {
+				account.balancePkr = balancePkr
+			}
+		}
 
 		if num := self.starNum(account.pk); num > w.Accounts()[0].At {
 			self.numbers.Store(*account.pk, num)
@@ -213,6 +199,47 @@ func (self *Exchange) starNum(pk *c_type.Uint512) uint64 {
 		return 0
 	}
 	return utils.DecodeNumber(value)
+}
+
+func (self *Exchange) getBalancePkr(pk *c_type.Uint512) *c_type.PKr {
+	value, err := self.db.Get(balancPkrKey(*pk))
+	if err != nil {
+		return nil
+	}
+	var pkr c_type.PKr
+	err = rlp.DecodeBytes(value, &pkr)
+	if err != nil {
+		return nil
+	}
+	return &pkr
+}
+
+func (self *Exchange) putBalancePkr(pk *c_type.Uint512, pkr c_type.PKr) error {
+	data, err := rlp.EncodeToBytes(&pkr)
+	if err != nil {
+		return err
+	}
+	err = self.db.Put(balancPkrKey(*pk), data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (self *Exchange) SetBalancePkr(pk *c_type.Uint512, pkr c_type.PKr) error {
+
+	err := self.putBalancePkr(pk, pkr)
+	if err != nil {
+		return err
+	}
+	value, ok := self.accounts.Load(*pk)
+	if !ok {
+		return errors.New("account not exists")
+	}
+	account := value.(*Account)
+	account.balancePkr = &pkr
+	self.accounts.Store(pk, account)
+	return nil
 }
 
 func (self *Exchange) updateAccount() {
@@ -366,6 +393,9 @@ func (self *Exchange) GetMaxAvailable(pk c_type.Uint512, currency string) (amoun
 		copy(root[:], key[98:130])
 
 		if utxo, err := self.getUtxo(root); err == nil {
+			if utxo.Ignore {
+				continue
+			}
 			if _, flag := self.usedFlag.Load(utxo.Root); !flag {
 				if utxo.Asset.Tkn != nil {
 					if utxo.IsZ {
@@ -383,6 +413,53 @@ func (self *Exchange) GetMaxAvailable(pk c_type.Uint512, currency string) (amoun
 	return
 }
 
+func (self *Exchange) IgnorePkrUtxos(pkr c_type.PKr, ignore bool) (utxos []Utxo, e error) {
+	account := self.getAccountByPkr(pkr)
+	if account == nil {
+		e = errors.New("not found PK by pkr")
+		return
+	}
+	pk := account.pk
+
+	prefix := append(pkPrefix, pk[:]...)
+	iterator := self.db.NewIteratorWithPrefix(prefix)
+	for iterator.Next() {
+		key := iterator.Key()
+		var root c_type.Uint256
+		copy(root[:], key[98:130])
+		if utxo, err := self.getUtxo(root); err == nil {
+			if utxo.Pkr == pkr {
+				utxos = append(utxos, utxo)
+			}
+		} else {
+			e = err
+			return
+		}
+	}
+
+	if len(utxos) > 0 {
+		batch := self.db.NewBatch()
+		for _, utxo := range utxos {
+			utxo.Ignore = ignore
+			if bs, err := rlp.EncodeToBytes(&utxo); err == nil {
+				if err := batch.Put(rootKey(utxo.Root), bs); err != nil {
+					e = err
+					return
+				}
+			} else {
+				e = err
+				return
+			}
+		}
+		if e = batch.Write(); e != nil {
+			return
+		}
+		account.isChanged = true
+	}
+	return
+
+}
+
 func (self *Exchange) GetBalances(pk c_type.Uint512) (balances map[string]*big.Int, tickets map[string][]*common.Hash) {
 	if value, ok := self.accounts.Load(pk); ok {
 		account := value.(*Account)
@@ -397,6 +474,9 @@ func (self *Exchange) GetBalances(pk c_type.Uint512) (balances map[string]*big.I
 				var root c_type.Uint256
 				copy(root[:], key[98:130])
 				if utxo, err := self.getUtxo(root); err == nil {
+					if utxo.Ignore {
+						continue
+					}
 					if utxo.Asset.Tkn != nil {
 						currency := common.BytesToString(utxo.Asset.Tkn.Currency[:])
 						if amount, ok := balances[currency]; ok {
@@ -665,6 +745,9 @@ func (self *Exchange) findUtxosByTicket(pk *c_type.Uint512, tickets []assets.Tic
 			copy(root[:], key[98:130])
 
 			if utxo, err := self.getUtxo(root); err == nil {
+				if utxo.Ignore {
+					continue
+				}
 				if utxo.Asset.Tkt != nil && utxo.Asset.Tkt.Category == ticket.Category {
 					if _, ok := self.usedFlag.Load(utxo.Root); !ok {
 						utxos = append(utxos, utxo)
@@ -690,6 +773,9 @@ func (self *Exchange) findUtxos(pk *c_type.Uint512, currency string, amount *big
 		copy(root[:], key[98:130])
 
 		if utxo, err := self.getUtxo(root); err == nil {
+			if utxo.Ignore {
+				continue
+			}
 			if utxo.Asset.Tkn != nil {
 				if _, ok := self.usedFlag.Load(utxo.Root); !ok {
 					utxos = append(utxos, utxo)
@@ -909,7 +995,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 	ops := map[string]string{}
 
 	for num, blockInfo := range blockMap {
-		data, e := rlp.EncodeToBytes(blockInfo)
+		data, e := rlp.EncodeToBytes(&blockInfo)
 		if e != nil {
 			err = e
 			return
@@ -921,7 +1007,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 	for key, list := range utxosMap {
 		roots := []c_type.Uint256{}
 		for _, utxo := range list {
-			data, e := rlp.EncodeToBytes(utxo)
+			data, e := rlp.EncodeToBytes(&utxo)
 			if e != nil {
 				err = e
 				return
@@ -967,7 +1053,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 			// log.Info("Index add", "PK", base58.EncodeToString(key.PK[:]), "Nil", common.Bytes2Hex(utxo.Nil[:]), "root", common.Bytes2Hex(utxo.Root[:]), "Value", utxo.Asset.Tkn.Value)
 		}
 
-		data, e := rlp.EncodeToBytes(roots)
+		data, e := rlp.EncodeToBytes(&roots)
 		if e != nil {
 			err = e
 			return
@@ -992,7 +1078,7 @@ func (self *Exchange) indexBlocks(batch serodb.Batch, utxosMap map[PkKey][]Utxo,
 			}
 		}
 		records = append(records, list...)
-		data, err = rlp.EncodeToBytes(records)
+		data, err = rlp.EncodeToBytes(&records)
 		if err != nil {
 			return nil, err
 		}
@@ -1060,9 +1146,16 @@ func (self *Exchange) ownPkr(pks []c_type.Uint512, pkr c_type.PKr) (account *Acc
 			continue
 		}
 		account = value.(*Account)
-		if superzk.IsMyPKr(account.tk, &pkr) {
-			return account, true
+		if account.balancePkr != nil {
+			if pkr == *account.balancePkr {
+				return account, true
+			}
+		} else {
+			if superzk.IsMyPKr(account.tk, &pkr) {
+				return account, true
+			}
 		}
+
 	}
 	return
 }
@@ -1092,6 +1185,9 @@ func (self *Exchange) getMergeUtxos(from *c_type.Uint512, currency string, zcoun
 		copy(root[:], key[98:130])
 
 		if utxo, err := self.getUtxo(root); err == nil {
+			if utxo.Ignore {
+				continue
+			}
 			if _, ok := self.usedFlag.Load(utxo.Root); !ok {
 				if utxo.IsZ {
 					zutxos = append(zutxos, utxo)
@@ -1223,7 +1319,7 @@ func (self *Exchange) Merge(pk *c_type.Uint512, currency string, force bool) (co
 	}
 
 	var mu MergeUtxos
-	if mu, e = self.getMergeUtxos(account.pk, currency, 100, 10); e != nil {
+	if mu, e = self.getMergeUtxos(account.pk, currency, 100, 50); e != nil {
 		return
 	}
 
@@ -1318,11 +1414,12 @@ func (self *Exchange) merge() {
 }
 
 var (
-	numPrefix  = []byte("NUM")
-	pkPrefix   = []byte("PK")
-	utxoPrefix = []byte("UTXO")
-	rootPrefix = []byte("ROOT")
-	nilPrefix  = []byte("NIL")
+	numPrefix       = []byte("NUM")
+	balancPkrPrefix = []byte("BALANCPKR")
+	pkPrefix        = []byte("PK")
+	utxoPrefix      = []byte("UTXO")
+	rootPrefix      = []byte("ROOT")
+	nilPrefix       = []byte("NIL")
 
 	blockPrefix   = []byte("BLOCK")
 	outUtxoPrefix = []byte("OUTUTXO")
@@ -1344,6 +1441,10 @@ func blockKey(number uint64) []byte {
 
 func numKey(pk c_type.Uint512) []byte {
 	return append(numPrefix, pk[:]...)
+}
+
+func balancPkrKey(pk c_type.Uint512) []byte {
+	return append(balancPkrPrefix, pk[:]...)
 }
 
 func nilKey(nil c_type.Uint256) []byte {

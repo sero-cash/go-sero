@@ -14,12 +14,13 @@ type verify_output_desc struct {
 	pkr      c_type.PKr
 	asset_cm c_type.Uint256
 	proof    c_type.Proof
+	isEx     bool
 	e        error
 }
 
 func (self *verify_output_desc) Run() error {
 	if c_superzk.IsPKrValid(&self.pkr) {
-		if err := c_superzk.VerifyOutput(&self.asset_cm, &self.proof); err != nil {
+		if err := c_superzk.VerifyOutput(&self.asset_cm, &self.proof, self.isEx); err != nil {
 			self.e = err
 			return err
 		} else {

@@ -12,7 +12,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v1"
 
 	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
-	"github.com/sero-cash/go-sero/zero/txtool/generate/generate_0"
 
 	"github.com/sero-cash/go-czero-import/c_type"
 
@@ -57,7 +56,7 @@ func Confirm(key_str string, out_str string) {
 			if strings.Contains(out_str, "\"OutCM\":") {
 				var out stx_v0.Out_Z
 				if e := json.Unmarshal([]byte(out_str), &out); e == nil {
-					if dout := generate_0.ConfirmOutZ(&key, true, &out); dout != nil {
+					if dout := generate_1.ConfirmOutZ(&key, true, &out); dout != nil {
 						if dout_bs, e := json.Marshal(dout); e == nil {
 							OUTPUT_RESULT(string(dout_bs))
 						} else {

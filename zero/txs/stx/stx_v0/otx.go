@@ -17,9 +17,6 @@
 package stx_v0
 
 import (
-	"sync/atomic"
-
-	"github.com/sero-cash/go-czero-import/c_czero"
 	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/sero-cash/go-sero/crypto/sha3"
@@ -34,22 +31,6 @@ type Out_O struct {
 	Addr  c_type.PKr
 	Asset assets.Asset
 	Memo  c_type.Uint512
-
-	//Cache
-	assetCC_Czero atomic.Value
-}
-
-func (self *Out_O) ToAssetCC_Czero() c_type.Uint256 {
-	if cc, ok := self.assetCC_Czero.Load().(c_type.Uint256); ok {
-		return cc
-	}
-	asset_desc := c_czero.AssetDesc{
-		Asset: self.Asset.ToTypeAsset(),
-	}
-	c_czero.GenAssetCC(&asset_desc)
-	v := asset_desc.Asset_cc
-	self.assetCC_Czero.Store(v)
-	return v
 }
 
 func (self *Out_O) Clone() (ret Out_O) {

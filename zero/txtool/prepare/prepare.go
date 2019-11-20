@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/sero-cash/go-czero-import/seroparam"
-
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
 
@@ -255,11 +253,8 @@ func BuildTxParam(
 		txParam.Gas = gaslimit
 	}
 
-	if txtool.Ref_inst.Bc != nil && !seroparam.Is_Offline() {
-		if txtool.Ref_inst.Bc.GetCurrenHeader().Number.Uint64()+1 >= seroparam.SIP5() {
-			Z := true
-			txParam.Z = &Z
-		}
+	if e = txParam.GenZ(); e != nil {
+		return
 	}
 
 	return
