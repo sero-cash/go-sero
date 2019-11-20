@@ -1213,20 +1213,25 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		coalescedLogs []*types.Log
 	)
 
-	var chain_after_checkpoint types.Blocks
+	is_all_in_checkpoints := true
+	var all_chain types.Blocks
 	for _, block := range chain {
 		if block.Header().Number.Uint64() > uint64(zconfig.CheckPoints.MaxNum()) {
-			chain_after_checkpoint = append(chain_after_checkpoint, block)
+			is_all_in_checkpoints = false
+			break
 		}
+	}
+	if !is_all_in_checkpoints {
+		all_chain = chain
 	}
 
 	// Start the parallel header verifier
-	abort, results := bc.NewHeaderChecker(chain_after_checkpoint)
+	abort, results := bc.NewHeaderChecker(all_chain)
 	defer close(abort)
 
 	// Start a parallel signature recovery (abi will fluke on fork transition, minimal perf loss)
 	//senderCacher.recoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number()), chain)
-	tx_abort, tx_results := NewTxChecker(bc, chain_after_checkpoint)
+	tx_abort, tx_results := NewTxChecker(bc, all_chain)
 	defer close(tx_abort)
 
 	// Iterate over the blocks and insert when the verifier permits
@@ -1239,13 +1244,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		// Wait for the block's verification to complete
 		bstart := time.Now()
 
-		is_in_checkpoints := false
-		if block.Header().Number.Uint64() <= uint64(zconfig.CheckPoints.MaxNum()) {
-			is_in_checkpoints = true
-		}
-
 		var err error
-		if !is_in_checkpoints {
+		if !is_all_in_checkpoints {
 			err = <-results
 		}
 
@@ -1329,7 +1329,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 			return i, events, coalescedLogs, err
 		}
 
-		if !is_in_checkpoints {
+		if !is_all_in_checkpoints {
 			for _, tx := range block.Transactions() {
 				err := <-tx_results
 				if err == nil {
@@ -1350,7 +1350,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 				return i, events, coalescedLogs, err
 			}
 
-			if !is_in_checkpoints {
+			if !is_all_in_checkpoints {
 				err = stakeState.CheckVotes(block, bc)
 			}
 
