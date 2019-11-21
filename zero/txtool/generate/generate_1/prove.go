@@ -71,7 +71,11 @@ func (self *prove_ctx) prove() (e error) {
 		g.asset = out.Asset.ToTypeAsset()
 		g.index = i
 
-		if self.param.Num != nil && *self.param.Num >= seroparam.SIP6() {
+		sip6 := seroparam.SIP6()
+		if seroparam.Is_Offline() {
+			sip6 = uint64(2123558)
+		}
+		if self.param.Num != nil && *self.param.Num >= sip6 {
 			g.isEx = true
 		}
 
