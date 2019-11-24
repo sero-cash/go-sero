@@ -24,11 +24,12 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/txtool"
+
 	sero "github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
 	"github.com/sero-cash/go-sero/core/types"
-	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/rpc"
 )
 
@@ -448,22 +449,63 @@ func (ec *Client) EstimateGas(ctx context.Context, msg sero.CallMsg) (uint64, er
 	return uint64(hex), nil
 }
 
-// SendTransaction injects a signed transaction into the pending pool for execution.
-//
-// If the transaction was a contract creation use the TransactionReceipt method to get the
-// contract address after the transaction has been mined.
-func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	data, err := rlp.EncodeToBytes(tx)
-	if err != nil {
+func (ec *Client) GenContractTx(ctx context.Context, msg sero.CallMsg) (*txtool.GTxParam, error) {
+	var param txtool.GTxParam
+	if err := ec.c.CallContext(ctx, &param, "sero_genTx", toContractTxArgs(msg)); err != nil {
+		return nil, err
+	}
+	return &param, nil
+}
+
+func (ec *Client) CommitTx(ctx context.Context, arg *txtool.GTx) error {
+	var hash common.Hash
+	if err := ec.c.CallContext(ctx, &hash, "sero_commitContractTx", arg); err != nil {
 		return err
 	}
-	return ec.c.CallContext(ctx, nil, "sero_sendRawTransaction", common.ToHex(data))
+	return nil
+}
+
+func toContractTxArgs(msg sero.CallMsg) interface{} {
+	arg := map[string]interface{}{
+		"From":     msg.From,
+		"RefundTo": msg.RefundTo,
+	}
+
+	if msg.Gas != 0 {
+		arg["Gas"] = msg.Gas
+	}
+	if msg.GasPrice != nil {
+		arg["GasPrice"] = msg.GasPrice
+	}
+
+	contractArgs := map[string]interface{}{}
+
+	if msg.Currency != "" {
+		contractArgs["Currency"] = msg.Currency
+	} else {
+		contractArgs["Currency"] = "SERO"
+	}
+	contractArgs["Value"] = msg.Value
+	if msg.To != nil {
+		contractArgs["To"] = hexutil.Bytes(msg.To[:])
+	}
+	if len(msg.Data) > 0 {
+		contractArgs["Data"] = hexutil.Bytes(msg.Data)
+	}
+	cmdArgs := map[string]interface{}{}
+	cmdArgs["Contract"] = contractArgs
+
+	arg["Cmds"] = cmdArgs
+	return arg
 }
 
 func toCallArg(msg sero.CallMsg) interface{} {
 	arg := map[string]interface{}{
 		"from": msg.From,
 		"to":   msg.To,
+	}
+	if msg.RefundTo != nil {
+		arg["from"] = msg.RefundTo
 	}
 	if len(msg.Data) > 0 {
 		arg["data"] = hexutil.Bytes(msg.Data)
