@@ -18,34 +18,42 @@ package bind
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
-	sero "github.com/sero-cash/go-sero"
+	"github.com/sero-cash/go-sero/common/hexutil"
+
+	"github.com/sero-cash/go-sero/common/address"
+
+	"github.com/sero-cash/go-sero"
+
+	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/accounts/abi"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/event"
-	"github.com/sero-cash/go-sero/zero/txs/tx"
+	"github.com/sero-cash/go-sero/zero/txtool"
 )
 
-// SignerFn is a abi function callback when a contract requires a method to
+// SignerFn is a signer function callback when a contract requires a method to
 // sign the transaction before submission.
-type EncrypterFn func(common.Address, *types.Transaction, *tx.T) (*types.Transaction, error)
+type EncrypterFn func(txParam *txtool.GTxParam) (tx *txtool.GTx, e error)
 
 // CallOpts is the collection of options to fine tune a contract call request.
 type CallOpts struct {
-	Pending bool           // Whether to operate on the pending state or the last known one
-	From    common.Address // Optional the sender address, otherwise the first account is used
-
-	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
+	Pending     bool               // Whether to operate on the pending state or the last known one
+	From        *address.PKAddress // Optional the sender address, otherwise the first account is used
+	RefundTo    *c_type.PKr
+	BlockNumber *big.Int        // Optional the block number on which the call should be performed
+	Context     context.Context // Network context to support cancellation and timeouts (nil = no timeout)
 }
 
 // TransactOpts is the collection of authorization data required to create a
-// valid Sero transaction.
+// valid Ethereum transaction.
 type TransactOpts struct {
-	From      common.Address // Sero account to send the transaction from
-	Nonce     *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
-	Encrypter EncrypterFn    // Method to use for signing the transaction (mandatory)
+	From      address.PKAddress // Ethereum account to send the transaction from
+	RefundTo  *c_type.PKr
+	Encrypter EncrypterFn // Method to use for signing the transaction (mandatory)
 
 	Value    *big.Int // Funds to transfer along along the transaction (nil = 0 = no funds)
 	GasPrice *big.Int // Gas price to use for the transaction execution (nil = gas price oracle)
@@ -74,8 +82,8 @@ type WatchOpts struct {
 // Ethereum network. It contains a collection of methods that are used by the
 // higher level contract bindings to operate.
 type BoundContract struct {
-	address    common.Address     // Deployment address of the contract on the Sero blockchain
-	abi        abi.ABI            // Reflect based ABI to access the correct Sero methods
+	address    common.Address     // Deployment address of the contract on the Ethereum blockchain
+	abi        abi.ABI            // Reflect based ABI to access the correct Ethereum methods
 	caller     ContractCaller     // Read interface to interact with the blockchain
 	transactor ContractTransactor // Write interface to interact with the blockchain
 	filterer   ContractFilterer   // Event filtering to interact with the blockchain
@@ -93,6 +101,33 @@ func NewBoundContract(address common.Address, abi abi.ABI, caller ContractCaller
 	}
 }
 
+// DeployContract deploys a contract onto the Ethereum blockchain and binds the
+// deployment address with a Go wrapper.
+func DeployContract(opts *TransactOpts, abi abi.ABI, bytecode []byte, backend ContractBackend, params ...interface{}) (common.Address, *types.Transaction, *BoundContract, error) {
+	// Otherwise try to deploy the contract
+	c := NewBoundContract(common.Address{}, abi, backend, backend, backend)
+
+	prefix, err := c.abi.PackPrefix("", c_type.RandUint128(), params...)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	input, err := c.abi.Pack("", params...)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	data := append(prefix, bytecode...)
+	input = append(data, input...)
+	fmt.Println("DeployContract prefix", hexutil.Encode(prefix[:]))
+	fmt.Println("DeployContract byteCode", hexutil.Encode(bytecode[:]))
+	fmt.Println("DeployContract data", hexutil.Encode(input))
+
+	tx, err := c.transact(opts, nil, input)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return common.Address{}, tx, c, nil
+}
+
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -102,13 +137,20 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 	if opts == nil {
 		opts = new(CallOpts)
 	}
+	var rand c_type.Uint128
+	copy(rand[:], c.address[:16])
+	prefix, err := c.abi.PackPrefix(method, rand, params...)
+	if err != nil {
+		return err
+	}
 	// Pack the input, call and unpack the results
 	input, err := c.abi.Pack(method, params...)
 	if err != nil {
 		return err
 	}
+	input = append(prefix, input...)
 	var (
-		msg    = sero.CallMsg{From: opts.From, To: &c.address, Data: input}
+		msg    = sero.CallMsg{From: opts.From, RefundTo: opts.RefundTo, To: &c.address, Data: input}
 		ctx    = ensureContext(opts.Context)
 		code   []byte
 		output []byte
@@ -128,10 +170,10 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 			}
 		}
 	} else {
-		output, err = c.caller.CallContract(ctx, msg, nil)
+		output, err = c.caller.CallContract(ctx, msg, opts.BlockNumber)
 		if err == nil && len(output) == 0 {
 			// Make sure we have a contract to operate on, and bail out otherwise.
-			if code, err = c.caller.CodeAt(ctx, c.address, nil); err != nil {
+			if code, err = c.caller.CodeAt(ctx, c.address, opts.BlockNumber); err != nil {
 				return err
 			} else if len(code) == 0 {
 				return ErrNoCode
@@ -142,6 +184,82 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 		return err
 	}
 	return c.abi.Unpack(result, method, output)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (c *BoundContract) Transact(opts *TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	// Otherwise pack up the parameters and invoke the contract
+	var rand c_type.Uint128
+	copy(rand[:], c.address[:16])
+	prefix, err := c.abi.PackPrefix(method, rand, params...)
+	if err != nil {
+		return nil, err
+	}
+	input, err := c.abi.Pack(method, params...)
+	if err != nil {
+		return nil, err
+	}
+	input = append(prefix, input...)
+	return c.transact(opts, &c.address, input)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (c *BoundContract) Transfer(opts *TransactOpts) (*types.Transaction, error) {
+	return c.transact(opts, &c.address, nil)
+}
+
+// transact executes an actual transaction invocation, first deriving any missing
+// authorization fields, and then scheduling the transaction for execution.
+func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, input []byte) (*types.Transaction, error) {
+	var err error
+
+	// Ensure a valid value field and resolve the account nonce
+	value := opts.Value
+	if value == nil {
+		value = new(big.Int)
+	}
+
+	// Figure out the gas allowance and gas price values
+	gasPrice := opts.GasPrice
+	if gasPrice == nil {
+		gasPrice, err = c.transactor.SuggestGasPrice(ensureContext(opts.Context))
+		if err != nil {
+			return nil, fmt.Errorf("failed to suggest gas price: %v", err)
+		}
+	}
+	gasLimit := opts.GasLimit
+	if gasLimit == 0 {
+		// Gas estimation cannot succeed without code for method invocations
+		if contract != nil {
+			if code, err := c.transactor.PendingCodeAt(ensureContext(opts.Context), c.address); err != nil {
+				return nil, err
+			} else if len(code) == 0 {
+				return nil, ErrNoCode
+			}
+		}
+		// If the contract surely has code (or code is not needed), estimate the transaction
+		msg := sero.CallMsg{From: &opts.From, To: contract, Value: value, Data: input}
+		gasLimit, err = c.transactor.EstimateGas(ensureContext(opts.Context), msg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to estimate gas needed: %v", err)
+		}
+	}
+
+	msg := sero.CallMsg{From: &opts.From, RefundTo: opts.RefundTo, To: contract, Gas: gasLimit, Value: value, GasPrice: gasPrice, Data: input}
+	preTx, err := c.transactor.GenContractTx(ensureContext(opts.Context), msg)
+	if err != nil {
+		return nil, err
+	}
+	gtx, err := opts.Encrypter(preTx)
+
+	err = c.transactor.CommitTx(ensureContext(opts.Context), gtx)
+	if err != nil {
+		return nil, err
+	}
+
+	signedTx := types.NewTxWithGTx(opts.GasLimit, gasPrice, &gtx.Tx)
+	return signedTx, nil
 }
 
 // FilterLogs filters contract logs for past blocks, returning the necessary
@@ -238,6 +356,22 @@ func (c *BoundContract) UnpackLog(out interface{}, event string, log types.Log) 
 		}
 	}
 	return parseTopics(out, indexed, log.Topics[1:])
+}
+
+// UnpackLogIntoMap unpacks a retrieved log into the provided map.
+func (c *BoundContract) UnpackLogIntoMap(out map[string]interface{}, event string, log types.Log) error {
+	if len(log.Data) > 0 {
+		if err := c.abi.UnpackIntoMap(out, event, log.Data); err != nil {
+			return err
+		}
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events[event].Inputs {
+		if arg.Indexed {
+			indexed = append(indexed, arg)
+		}
+	}
+	return parseTopicsIntoMap(out, indexed, log.Topics[1:])
 }
 
 // ensureContext is a helper method to ensure a context is not nil, even if the
