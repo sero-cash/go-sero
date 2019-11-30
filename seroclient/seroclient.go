@@ -451,7 +451,7 @@ func (ec *Client) EstimateGas(ctx context.Context, msg sero.CallMsg) (uint64, er
 
 func (ec *Client) GenContractTx(ctx context.Context, msg sero.CallMsg) (*txtool.GTxParam, error) {
 	var param txtool.GTxParam
-	if err := ec.c.CallContext(ctx, &param, "exchange_genTx", toContractTxArgs(msg)); err != nil {
+	if err := ec.c.CallContext(ctx, &param, "sero_genTx", toContractTxArgs(msg)); err != nil {
 		return nil, err
 	}
 	return &param, nil

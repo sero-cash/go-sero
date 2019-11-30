@@ -95,7 +95,7 @@ func encodeStringParams(abiArgs abi.Arguments, args []string) ([]interface{}, []
 				return nil, nil, err
 			}
 			//caddr := (c_superzk.HashPKr(addr.ToPKr().NewRef()))
-			packArgs[index] = address
+			packArgs[index] = addr
 			address = append(address, addr.ToPKrAddress())
 		case "address[]":
 			var addrs []AllMixedAddress

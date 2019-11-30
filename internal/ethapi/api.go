@@ -1974,6 +1974,14 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 
 }
 
+func (s *PublicTransactionPoolAPI) GenTx(ctx context.Context, param GenTxArgs) (*txtool.GTxParam, error) {
+	if err := param.check(); err != nil {
+		return nil, err
+	}
+
+	return s.b.GenTx(param.toTxParam())
+}
+
 func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.Hash, error) {
 
 	// Set some sanity defaults and terminate on failure
