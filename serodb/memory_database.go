@@ -105,15 +105,22 @@ type memBatch struct {
 	db     *MemDatabase
 	writes []kv
 	size   int
+	lock sync.RWMutex
 }
 
 func (b *memBatch) Put(key, value []byte) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	b.writes = append(b.writes, kv{common.CopyBytes(key), common.CopyBytes(value), false})
 	b.size += len(value)
 	return nil
 }
 
 func (b *memBatch) Delete(key []byte) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	b.writes = append(b.writes, kv{common.CopyBytes(key), nil, true})
 	b.size += 1
 	return nil

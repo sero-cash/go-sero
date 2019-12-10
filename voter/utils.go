@@ -22,17 +22,17 @@ type Item struct {
 	Index int //index of the item in the heap
 }
 
-type ItemSlice struct {
+type itemslice struct {
 	items    []*Item
 	itemsMap map[interface{}]*Item //find item according to the key (inteface {} type)
 }
 
-func (s ItemSlice) Len() int { return len(s.items) }
-func (s ItemSlice) Less(i, j int) bool {
+func (s itemslice) Len() int { return len(s.items) }
+func (s itemslice) Less(i, j int) bool {
 	return s.items[i].Block > s.items[j].Block
 }
 
-func (s ItemSlice) Swap(i, j int) {
+func (s itemslice) Swap(i, j int) {
 	s.items[i], s.items[j] = s.items[j], s.items[i]
 	s.items[i].Index = i
 	s.items[j].Index = j
@@ -42,7 +42,7 @@ func (s ItemSlice) Swap(i, j int) {
 	}
 }
 
-func (s *ItemSlice) Push(x interface{}) {
+func (s *itemslice) Push(x interface{}) {
 	n := len(s.items)
 	item := x.(*Item)
 	item.Index = n
@@ -50,7 +50,7 @@ func (s *ItemSlice) Push(x interface{}) {
 	s.itemsMap[item.Key] = item
 }
 
-func (s *ItemSlice) Pop() interface{} {
+func (s *itemslice) Pop() interface{} {
 	old := s.items
 	n := len(old)
 	item := old[n-1]
@@ -60,7 +60,7 @@ func (s *ItemSlice) Pop() interface{} {
 	return item
 }
 
-func (s *ItemSlice) Update(key interface{}, value interface{}, block uint64) {
+func (s *itemslice) Update(key interface{}, value interface{}, block uint64) {
 	item := s.itemByKey(key)
 	if item != nil {
 		s.updateItem(item, value, block)
@@ -68,14 +68,14 @@ func (s *ItemSlice) Update(key interface{}, value interface{}, block uint64) {
 
 }
 
-func (s *ItemSlice) itemByKey(key interface{}) *Item {
+func (s *itemslice) itemByKey(key interface{}) *Item {
 	if item, found := s.itemsMap[key]; found {
 		return item
 	}
 	return nil
 }
 
-func (s *ItemSlice) updateItem(item *Item,
+func (s *itemslice) updateItem(item *Item,
 	value interface{}, block uint64) {
 	item.Value = value
 	item.Block = block
@@ -83,7 +83,7 @@ func (s *ItemSlice) updateItem(item *Item,
 }
 
 type PriorityQueue struct {
-	slice   ItemSlice
+	slice   itemslice
 	maxSize int
 	mutex   sync.RWMutex
 }
@@ -176,7 +176,7 @@ func (pq PriorityQueue) GetQueueItems() []*Item {
 	if size == 0 {
 		return []*Item{}
 	}
-	s := ItemSlice{}
+	s := itemslice{}
 	s.items = make([]*Item, size)
 	pq.mutex.RLock()
 	for i := 0; i < size; i++ {

@@ -375,8 +375,8 @@ func (self *StakeState) getNewShareNum() uint32 {
 }
 
 func (self *StakeState) AddPendingShare(share *Share) {
-	//tree := NewTree(self)
-	//tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.InitNum})
+	// tree := NewTree(self)
+	// tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.InitNum})
 	share.Status = STATUS_VALID
 	share.Num = share.InitNum
 	if share.Income == nil {
@@ -440,7 +440,7 @@ func (self *StakeState) ShareSize() uint32 {
 
 func (self *StakeState) SeleteShare(seed common.Hash) (ints []uint32, shares []*Share, err error) {
 	tree := NewTree(self)
-	//tree.MiddleOrder()
+	// tree.MiddleOrder()
 
 	if tree.size() < MaxVoteCount {
 		return
@@ -535,6 +535,7 @@ func (self *StakeState) getBlockRecords(getter serodb.Getter, blockHash common.H
 				pool := self.GetStakePool(key)
 				if pool == nil {
 					err = errors.New("not found pool by poolId")
+					return
 				}
 				pools = append(pools, pool)
 			}
@@ -571,6 +572,9 @@ func GetSharesByBlock(getter serodb.Getter, blockHash common.Hash, blockNumber u
 		if record.Name == "share" {
 			for _, each := range record.Pairs {
 				ret := ShareDB.GetObject(getter, each.Hash, &Share{})
+				if (ret == nil) {
+					panic("not found share by hash")
+				}
 				shares = append(shares, ret.(*Share))
 			}
 		}
@@ -630,7 +634,7 @@ func (self *StakeState) CaleAvgPrice(amount *big.Int) (uint32, *big.Int, *big.In
 		return uint32(right), basePrice, basePrice
 	}
 	minx := new(big.Int).Set(amount)
-	//n := int64(0)
+	// n := int64(0)
 	for {
 		if right < left {
 			break
@@ -641,7 +645,7 @@ func (self *StakeState) CaleAvgPrice(amount *big.Int) (uint32, *big.Int, *big.In
 		abs := new(big.Int).Abs(sub)
 
 		if minx.Cmp(new(big.Int).Abs(abs)) > 0 {
-			//n = mid
+			// n = mid
 			minx = abs
 		}
 
@@ -1156,13 +1160,13 @@ func (self *StakeState) processMissVoted(header *types.Header, bc blockChain) (e
 func (self *StakeState) processNowShares(header *types.Header, bc blockChain) (err error) {
 	perHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	shares := GetSharesByBlock(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64())
-	//shares := self.getShares(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64(), shareCacheMap)
+	// shares := self.getShares(bc.GetDB(), perHeader.Hash(), perHeader.Number.Uint64(), shareCacheMap)
 	if len(shares) > 0 {
 		for _, share := range shares {
 			if share.BlockNumber != perHeader.Number.Uint64() {
 				continue
 			}
-			//tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num, nodeNum: 1})
+			// tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num, nodeNum: 1})
 			err = self.insertSharePool(share)
 			if err != nil {
 				return
@@ -1180,7 +1184,7 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) (e
 		}
 		if self.getNewShareNum() != 0 {
 			return fmt.Errorf("processNowShares: newShareNum(%v) != 0", self.getNewShareNum())
-			//log.Crit("processNowShares newShareNum != 0")
+			// log.Crit("processNowShares newShareNum != 0")
 		}
 	}
 	return nil

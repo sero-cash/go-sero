@@ -228,7 +228,7 @@ loop:
 					},
 				})
 			}
-			if opened, err = os.OpenFile(event.Path(), os.O_RDONLY, 0644); err != nil {
+			if opened, err = os.OpenFile(event.Path(), os.O_RDONLY, 0600); err != nil {
 				log.Warn("Failed to open file", "name", event.Path(), "err", err)
 				break loop
 			}

@@ -42,7 +42,6 @@ type Config struct {
 	MaxWorkNumber  int
 	MaxQueueNumber int
 	Fee            ServiceFee
-	RedisConfig    RedisConfig
 }
 
 type ProofService struct {
@@ -107,13 +106,8 @@ func NewProofService(rpc string, backend Backend, config *Config) *ProofService 
 		queueChan: make(chan *Job, config.MaxQueueNumber),
 	}
 
-	if rpc != "" {
-		proof.client = NewRemoteClient(rpc)
-		proof.storage = NewRedisClient(&config.RedisConfig, "proof")
-	} else {
-		proof.client = NewLocalClient(backend)
-		proof.storage = newMapStorage()
-	}
+	proof.client = NewLocalClient(backend)
+	proof.storage = newMapStorage()
 
 	instance = proof
 	go proof.loop()
