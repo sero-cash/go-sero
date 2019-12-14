@@ -66,10 +66,10 @@ func initConfig() (string, *proofservice.Config, rpc.HTTPTimeouts) {
 
 		pkrString = flag.String("pkr", "0sero", "outFee")
 
-		endpoint = flag.String("redis", "127.0.0.1:6379", "redis endpoint")
-		password = flag.String("password", "", "redis password")
-		database = flag.Int64("database", 0, "redis database")
-		poolSize = flag.Int("poolSize", 10, "redis poolSize")
+		// endpoint = flag.String("redis", "127.0.0.1:6379", "redis endpoint")
+		// password = flag.String("password", "", "redis password")
+		// database = flag.Int64("database", 0, "redis database")
+		// poolSize = flag.Int("poolSize", 10, "redis poolSize")
 	)
 
 	if strings.TrimSpace(*pkrString) == "" {
