@@ -96,6 +96,5 @@ func initConfig() (string, *proofservice.Config, rpc.HTTPTimeouts) {
 	pkr := c_type.NewPKrByBytes(base58.Decode(*pkrString))
 	timeout := rpc.HTTPTimeouts{*readTimeout, *writeTimeout, *idleTimeout}
 	fee := proofservice.ServiceFee{zinFeeAmount, oinFeeAmount, outFeeAmount, fixedFeeAmount}
-	redisConfig := proofservice.RedisConfig{*endpoint, *password, *database, *poolSize}
-	return *rpcAddr, &proofservice.Config{pkr, *maxWorkNumber, *maxQueueNumber, fee, redisConfig}, timeout
+	return *rpcAddr, &proofservice.Config{pkr, *maxWorkNumber, *maxQueueNumber, fee}, timeout
 }
