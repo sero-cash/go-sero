@@ -1,5 +1,7 @@
 # Go Sero
 
+The SERO system is the world's first blockchain platform to support conﬁdential transactions based on Zero-knowledge proof and supports Turing complete smart contracts.
+
 ## What's SERO
 
 https://wiki.sero.cash/en/index.html?file=home-Home
