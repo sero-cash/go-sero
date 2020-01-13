@@ -1,32 +1,32 @@
 # Go Sero
 
-## 1. What's SERO
+## What's SERO
 
 https://wiki.sero.cash/en/index.html?file=home-Home
 
 
-## 2. From Source Code -- base on CentOS7
+## From Source Code -- base on CentOS7
 
 https://wiki.sero.cash/en/index.html?file=Start/from-the-sourcecode-base-on-centos7
 
 
-## 3. How to Mine using gero
+## How to Mine using gero
 
 https://wiki.sero.cash/en/index.html?file=Start/from-the-binary-package
 
  **Now You don't need license anymore to mine SERO.**
 
 
-## 4. How to use Snapshots
+## How to use Snapshots
 
 https://wiki.sero.cash/en/index.html?file=Start/sero-chain-snapshot-list
 
 
-## 5. How to start SERO Staking on gero
+## How to start SERO Staking on gero
 
 https://wiki.sero.cash/en/index.html?file=Tutorial/how-to-staking-using-gero
 
-## 6. Decentralized light wallet
+## Decentralized light wallet
 
 **PC:**
 https://github.com/sero-cash/pullup
@@ -35,11 +35,11 @@ https://github.com/sero-cash/pullup
 https://sero.cash/app/popup.html
 
 
-## 7. POW Pool List
+## POW Pool List
 
 https://wiki.sero.cash/en/index.html?file=Start/sero-pool-list
 
-## 8. PoS Stake Node List
+## PoS Stake Node List
 
 https://wiki.sero.cash/en/index.html?file=Start/stake-node-list
 
