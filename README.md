@@ -5,19 +5,19 @@
 https://wiki.sero.cash/en/index.html?file=home-Home
 
 
-## From Source Code -- base on CentOS7
+## From source code -- base on CentOS7
 
 https://wiki.sero.cash/en/index.html?file=Start/from-the-sourcecode-base-on-centos7
 
 
-## How to Mine using gero
+## How to mine using gero
 
 https://wiki.sero.cash/en/index.html?file=Start/from-the-binary-package
 
  **Now You don't need license anymore to mine SERO.**
 
 
-## How to use Snapshots
+## How to use snapshots
 
 https://wiki.sero.cash/en/index.html?file=Start/sero-chain-snapshot-list
 
@@ -35,11 +35,11 @@ https://github.com/sero-cash/pullup
 https://sero.cash/app/popup.html
 
 
-## POW Pool List
+## POW pool list
 
 https://wiki.sero.cash/en/index.html?file=Start/sero-pool-list
 
-## PoS Stake Node List
+## PoS stake node List
 
 https://wiki.sero.cash/en/index.html?file=Start/stake-node-list
 
