@@ -280,6 +280,7 @@ type MergeArgs struct {
 	Currency Smbol
 	Zcount   uint64
 	Left     uint64
+	Icount   *uint64
 }
 
 func (args MergeArgs) ToMergParam() *exchange.MergeParam {
@@ -291,6 +292,11 @@ func (args MergeArgs) ToMergParam() *exchange.MergeParam {
 	mergeParam.Currency = string(args.Currency)
 	mergeParam.Zcount = args.Zcount
 	mergeParam.Left = args.Left
+	if args.Icount != nil {
+		mergeParam.Icount = *args.Icount
+	} else {
+		mergeParam.Icount = 0
+	}
 	return &mergeParam
 
 }

@@ -1170,9 +1170,12 @@ type MergeUtxos struct {
 
 var default_fee_value = new(big.Int).Mul(big.NewInt(25000), big.NewInt(1000000000))
 
-func (self *Exchange) getMergeUtxos(from *c_type.Uint512, currency string, zcount int, left int) (mu MergeUtxos, e error) {
+func (self *Exchange) getMergeUtxos(from *c_type.Uint512, currency string, zcount int, left int, icount int) (mu MergeUtxos, e error) {
 	if zcount > 400 {
 		e = errors.New("zout count must <= 400")
+	}
+	if icount <= 0 {
+		icount = 1000
 	}
 	ck := assets.NewCKState(true, &assets.Token{utils.CurrencyToUint256("SERO"), utils.U256(*default_fee_value)})
 	prefix := utxoPkKey(*from, common.LeftPadBytes([]byte(currency), 32), nil)
@@ -1197,11 +1200,14 @@ func (self *Exchange) getMergeUtxos(from *c_type.Uint512, currency string, zcoun
 
 			}
 		}
-		if zutxos.Len() >= zcount+left || outxos.Len() >= 2400+left {
+		if zutxos.Len() >= zcount+left {
+			break
+		}
+		if outxos.Len()+zutxos.Len() >= icount+left {
 			break
 		}
 	}
-	if outxos.Len() >= 2400 {
+	if outxos.Len() >= icount {
 		zutxos = UtxoList{}
 	}
 	mu.ocount = outxos.Len()
@@ -1234,6 +1240,7 @@ type MergeParam struct {
 	Currency string
 	Zcount   uint64
 	Left     uint64
+	Icount   uint64
 }
 
 func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e error) {
@@ -1246,7 +1253,7 @@ func (self *Exchange) GenMergeTx(mp *MergeParam) (txParam *txtool.GTxParam, e er
 		mp.To = account.wallet.Accounts()[0].GetDefaultPkr(1).NewRef()
 	}
 	var mu MergeUtxos
-	if mu, e = self.getMergeUtxos(account.pk, mp.Currency, int(mp.Zcount), int(mp.Left)); e != nil {
+	if mu, e = self.getMergeUtxos(account.pk, mp.Currency, int(mp.Zcount), int(mp.Left), int(mp.Icount)); e != nil {
 		return
 	}
 
@@ -1319,7 +1326,7 @@ func (self *Exchange) Merge(pk *c_type.Uint512, currency string, force bool) (co
 	}
 
 	var mu MergeUtxos
-	if mu, e = self.getMergeUtxos(account.pk, currency, 100, 50); e != nil {
+	if mu, e = self.getMergeUtxos(account.pk, currency, 100, 50, 0); e != nil {
 		return
 	}
 
