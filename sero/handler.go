@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/consensus"
 	"github.com/sero-cash/go-sero/core"
@@ -132,8 +134,12 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		}
 		// Compatible; initialise the sub-protocol
 		version := version // Closure for the run
+		protocolName := ProtocolName
+		if zconfig.IsTestFork() {
+			protocolName = "fork-sero"
+		}
 		manager.SubProtocols = append(manager.SubProtocols, p2p.Protocol{
-			Name:    ProtocolName,
+			Name:    protocolName,
 			Version: version,
 			Length:  ProtocolLengths[i],
 			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
