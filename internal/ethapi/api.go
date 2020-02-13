@@ -1974,6 +1974,14 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 
 }
 
+func (s *PublicTransactionPoolAPI) GenTx(ctx context.Context, param GenTxArgs) (*txtool.GTxParam, error) {
+	if err := param.check(); err != nil {
+		return nil, err
+	}
+
+	return s.b.GenTx(param.toTxParam())
+}
+
 func commitSendTxArgs(ctx context.Context, b Backend, args SendTxArgs) (common.Hash, error) {
 
 	// Set some sanity defaults and terminate on failure
@@ -2026,6 +2034,15 @@ func commitPreTx(txParam prepare.PreTxParam, b Backend, to *AllBase58Adrress) (c
 
 func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args *txtool.GTx) error {
 	return s.b.CommitTx(args)
+}
+
+func (s *PublicTransactionPoolAPI) CommitContractTx(ctx context.Context, args *txtool.GTx) (hash common.Hash, err error) {
+	err = s.b.CommitTx(args)
+	if err != nil {
+		return
+	}
+	hash = common.BytesToHash(args.Hash[:])
+	return
 }
 
 func (s *PublicTransactionPoolAPI) ReSendTransaction(ctx context.Context, txhash common.Hash) (common.Hash, error) {

@@ -3,6 +3,8 @@ package stake
 import (
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 )
 
@@ -44,9 +46,13 @@ const (
 )
 
 func getMinSharePoolSize() uint32 {
+	if zconfig.IsTestFork() {
+		return 10000000
+	}
 	if seroparam.Is_Dev() {
 		return 20
 	}
+
 	return minSharePoolSize
 }
 

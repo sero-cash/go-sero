@@ -1,7 +1,6 @@
 package txtool
 
 import (
-	"errors"
 	"math/big"
 
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -88,6 +87,7 @@ type GTxParam struct {
 	Cmds     Cmds
 	Z        *bool
 	Num      *uint64
+	IsExt    *bool
 }
 
 func (self *GTxParam) IsSzk() (ret bool) {
@@ -107,11 +107,9 @@ func (self *GTxParam) GenZ() (e error) {
 	self.Z = &Z
 	if Ref_inst.Bc != nil {
 		num := Ref_inst.Bc.GetCurrenHeader().Number.Uint64()
-		if num < seroparam.SIP6() {
-			if len(self.Outs) > 9 {
-				e = errors.New("only 9 outs allowed before sip6")
-				return
-			}
+		if num >= seroparam.SIP7() {
+			isExt := true
+			self.IsExt = &isExt
 		}
 		self.Num = &num
 	}
