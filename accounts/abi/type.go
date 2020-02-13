@@ -22,6 +22,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
+
+	"github.com/sero-cash/go-czero-import/c_type"
 )
 
 // Type enumerator
@@ -195,6 +199,39 @@ func (t Type) pack(v reflect.Value) ([]byte, error) {
 		}
 	}
 	return packElement(t, v), nil
+}
+
+func (t Type) getAllAddress(v reflect.Value) (pkrs []c_type.PKr, err error) {
+	// dereference pointer first if it's a pointer
+	v = indirect(v)
+
+	if err := typeCheck(t, v); err != nil {
+		return nil, err
+	}
+	if t.T == SliceTy || t.T == ArrayTy {
+		for i := 0; i < v.Len(); i++ {
+			val, err := t.Elem.getAllAddress(v.Index(i))
+			if err != nil {
+				return nil, err
+			}
+			pkrs = append(pkrs, val...)
+		}
+		return
+	}
+	if t.T == AddressTy {
+		if v.Kind() == reflect.Array {
+			v = mustArrayToByteSlice(v)
+		}
+		if len(v.Bytes()) != 96 {
+			return nil, errors.New("address params only support pkr")
+		}
+		var pkr c_type.PKr
+		copy(pkr[:], v.Bytes())
+		pkrs = append(pkrs, pkr)
+		return
+	}
+	return
+
 }
 
 // requireLengthPrefix returns whether the type requires any sort of length
