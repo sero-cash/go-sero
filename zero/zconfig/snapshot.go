@@ -19,3 +19,26 @@ func NeedSnapshot(num uint64) bool {
 	}
 	return false
 }
+
+var testForkStartBlock uint64
+
+func Init_TestForkStartBlock(num uint64) {
+	testForkStartBlock = num
+}
+
+func GetTestForkStartBlock() uint64 {
+	return testForkStartBlock
+}
+
+var testFork bool
+
+func Init_TestFork() {
+	testFork = true
+}
+
+func IsTestFork() bool {
+	if testFork && testForkStartBlock == 0 {
+		panic("please set testForkStartBlock")
+	}
+	return testFork
+}

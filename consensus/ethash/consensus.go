@@ -24,6 +24,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-czero-import/superzk"
 
@@ -240,6 +242,12 @@ func (ethash *Ethash) CalcDifficulty(chain consensus.ChainReader, time uint64, p
 // the difficulty that a new block should have when created at time
 // given the parent block's time and difficulty.
 func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
+	if zconfig.IsTestFork() {
+		if parent.Number.Uint64() >= zconfig.GetTestForkStartBlock() {
+			return big.NewInt(10000)
+		}
+	}
+
 	return calcDifficultyAutumnTwilight(time, parent)
 }
 

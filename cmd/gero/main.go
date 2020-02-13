@@ -123,6 +123,8 @@ var (
 		utils.DeveloperFlag,
 		utils.OfflineFlag,
 		utils.SnapshotFlag,
+		utils.TestStartBlockFlag,
+		utils.TestForkFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,

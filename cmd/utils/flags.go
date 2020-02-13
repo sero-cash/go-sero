@@ -158,6 +158,16 @@ var (
 		Usage: "Use for create chaindata snapshot",
 	}
 
+	TestStartBlockFlag = cli.Uint64Flag{
+		Name:  "testStartBlock",
+		Usage: "test from startBlock",
+	}
+
+	TestForkFlag = cli.BoolFlag{
+		Name:  "testFork",
+		Usage: "test fork start",
+	}
+
 	DeveloperPasswordFlag = cli.StringFlag{
 		Name:  "devpassword",
 		Usage: "devpassword to use create and unlock dev account",
@@ -1042,6 +1052,19 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
 		cfg.KeyStoreDir = ctx.GlobalString(KeyStoreDirFlag.Name)
+	}
+	if ctx.GlobalIsSet(TestForkFlag.Name) {
+		zconfig.Init_TestFork()
+		if ctx.GlobalIsSet(TestStartBlockFlag.Name) {
+			testFrokStartBlock := ctx.GlobalUint64(TestStartBlockFlag.Name)
+			if testFrokStartBlock == 0 {
+				panic("testFrokStartBlock must great 100")
+			}
+			zconfig.Init_TestForkStartBlock(testFrokStartBlock)
+		} else {
+			panic("must set testFrokStartBlock")
+		}
+
 	}
 }
 
