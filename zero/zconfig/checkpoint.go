@@ -6,9 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/sero-cash/go-czero-import/seroparam"
-
 	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-czero-import/seroparam"
 )
 
 var checkpoints_json = `[
@@ -263,6 +262,9 @@ var checkpoints_json = `[
 {"Num":2480000,"Root":"0xadcf99a569b55794e2a25bf30c1b5e84a5298e3455991cffc728adc01a139b05"},
 {"Num":2490000,"Root":"0x70fc9b888109563c8c39b08229056de63d7d551ecf13ac022bfc9a08c225d59e"},
 {"Num":2500000,"Root":"0xcfecf832ee946ee0f006f4eb267952606d07df9bd7f152ee7ec3d768cb4b485e"},
+]`
+
+/*
 {"Num":2510000,"Root":"0x81c50a16ba67979ccb2c503a5b096f993e9b6d2be11131be0426cba1865b5cf8"},
 {"Num":2520000,"Root":"0x6ce442b69866f384a34bfcc5bd395e2c8d412c5a16540665044b01eb7664e307"},
 {"Num":2530000,"Root":"0xfefe66793bbc8dc414759a4048649729a6e3c8f2d8b06f3a06dd045fe008c63e"},
@@ -273,7 +275,7 @@ var checkpoints_json = `[
 {"Num":2580000,"Root":"0x8935c958e056fd6a8f44f04bf7c4fc1802ff68a7c3a7929d6e6be32674c300a3"},
 {"Num":2590000,"Root":"0xc262f7ce5f0e774b93a87c38b9480acfbef92fd1e34c51522b3a04a2ad1c71ec"},
 {"Num":2600000,"Root":"0xd765b50f579521cf11e228a41eb09e97f48bf9c62a6f21dbbb15c7c3b9024da0"},
-]`
+*/
 
 type checkPoint struct {
 	Num  uint64
