@@ -200,20 +200,9 @@ func (self *verifyWithoutStateCtx) verifyOutC() (e error) {
 }
 
 func (self *verifyWithoutStateCtx) verifyBalance() (e error) {
-	if self.num >= seroparam.SIP6() {
-		if self.oout_count+self.zout_count > seroparam.MAX_Z_OUT_LENGTH_SIP2 {
-			e = verify_utils.ReportError("verify error: out_size > 500", self.tx)
-			return
-		}
-	} else {
-		if self.oout_count > seroparam.MAX_O_OUT_LENGTH {
-			e = verify_utils.ReportError("verify error: oout_size > 10", self.tx)
-			return
-		}
-		if self.zout_count > seroparam.MAX_Z_OUT_LENGTH_OLD {
-			e = verify_utils.ReportError("verify error: zout_size > 6", self.tx)
-			return
-		}
+	if self.oout_count+self.zout_count > seroparam.MAX_Z_OUT_LENGTH_SIP2 {
+		e = verify_utils.ReportError("verify error: out_size > 500", self.tx)
+		return
 	}
 	return
 }
