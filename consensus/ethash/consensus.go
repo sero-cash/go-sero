@@ -416,7 +416,7 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 		addr := common.Base58ToAddress("2P6a7rSNUpm9GfuKyzXMEpsbxkZpr9EdUTUrDCFnnB5XntzpfdHEJhotnsF2Ff436ugriuforVtaYmDDWpY4c17B")
 		stateDB.SetCode(addr, code0)
 
-		addr = common.Base58ToAddress("4dFDQSoCWKwKPMwQg5XWAnTnW2pCte1HeX6fKpDs8PGCSFL5qMkCHsBaq1XW3GAWrKZvu9Vy4B5NFY1roVFGppVw")
+		addr = common.Base58ToAddress("25CHRYtgyxS1juHEv5ERh3PyD4X2PZZF529fgWDTLYbZ1K187MAQf4rVk2cBMLnhNL1APH6i1rSt6HGZZE3c3c2s")
 		stateDB.SetCode(addr, code1)
 	}
 
