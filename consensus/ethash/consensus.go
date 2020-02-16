@@ -679,8 +679,8 @@ func accumulateRewardsV5(statedb *state.StateDB, header *types.Header) *big.Int 
 		reward = new(big.Int).Set(hRewardV4)
 	}
 
-	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(header.Number, halveNimber), interval), big2)
-	reward.Div(reward, new(big.Int).Exp(big2, i, nil))
+	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(header.Number, halveNimber), interval), big1)
+	reward.Div(reward, new(big.Int).Exp(big2, new(big.Int).Add(i, big1), nil))
 
 	teamReward := new(big.Int).Div(hRewardV4, big.NewInt(4))
 	teamReward = new(big.Int).Div(teamReward, new(big.Int).Exp(big2, i, nil))
