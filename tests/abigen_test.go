@@ -91,7 +91,7 @@ func TestCall(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
-	contractAddress := common.Base58ToAddress("5KCRLWsEFGiXSWaSCwTeMV7MuN14vUhrsmeNAk8DgGT3Fxeo957HwRRzswbfpyjJwhktX3qdgAvpUQ91QLf16g44")
+	contractAddress := common.Base58ToAddress("5RiKcXABU1GpCqpYU8xxEiCP4niwF1ue1DRyCstpTo4L5VTEVEbMfYNLTXitkXbqpSTYPfuMc1pwsbYoBji5dStr")
 	testAbi, err := abigen.NewTestabi(contractAddress, conn)
 	if err != nil {
 		log.Fatalf("Failed to NewTestabi : %v", err)

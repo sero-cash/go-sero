@@ -22,11 +22,11 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/common/address"
+
 	"github.com/sero-cash/go-sero/zero/txtool"
 
 	"github.com/sero-cash/go-czero-import/c_type"
-
-	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
@@ -119,8 +119,8 @@ type ChainSyncReader interface {
 
 // CallMsg contains parameters for contract calls.
 type CallMsg struct {
-	From     *address.PKAddress // the sender of the 'transaction'
-	RefundTo *c_type.PKr
+	From     address.PKAddress
+	FromPKr  *c_type.PKr     // the sender of the 'transaction'
 	To       *common.Address // the destination contract (nil for contract creation)
 	Gas      uint64          // if 0, the call executes with near-infinite gas
 	GasPrice *big.Int        // wei <-> gas exchange ratio

@@ -451,6 +451,9 @@ func (ec *Client) EstimateGas(ctx context.Context, msg sero.CallMsg) (uint64, er
 
 func (ec *Client) GenContractTx(ctx context.Context, msg sero.CallMsg) (*txtool.GTxParam, error) {
 	var param txtool.GTxParam
+	if msg.FromPKr == nil {
+		return nil, errors.New("from is nil")
+	}
 	if err := ec.c.CallContext(ctx, &param, "sero_genTx", toContractTxArgs(msg)); err != nil {
 		return nil, err
 	}
@@ -467,9 +470,12 @@ func (ec *Client) CommitTx(ctx context.Context, arg *txtool.GTx) error {
 
 func toContractTxArgs(msg sero.CallMsg) interface{} {
 	arg := map[string]interface{}{
-		"From":     msg.From,
-		"RefundTo": msg.RefundTo,
+		"to": msg.To,
 	}
+	arg["From"] = msg.From
+	var fromPkr common.Address
+	copy(fromPkr[:], msg.FromPKr[:])
+	arg["RefundTo"] = fromPkr
 
 	if msg.Gas != 0 {
 		arg["Gas"] = msg.Gas
@@ -501,11 +507,12 @@ func toContractTxArgs(msg sero.CallMsg) interface{} {
 
 func toCallArg(msg sero.CallMsg) interface{} {
 	arg := map[string]interface{}{
-		"from": msg.From,
-		"to":   msg.To,
+		"to": msg.To,
 	}
-	if msg.RefundTo != nil {
-		arg["from"] = msg.RefundTo
+	if msg.FromPKr != nil {
+		var fromPkr common.Address
+		copy(fromPkr[:], msg.FromPKr[:])
+		arg["from"] = fromPkr
 	}
 	if len(msg.Data) > 0 {
 		arg["data"] = hexutil.Bytes(msg.Data)

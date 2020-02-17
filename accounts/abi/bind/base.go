@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/common/hexutil"
-
 	"github.com/sero-cash/go-sero/common/address"
+
+	"github.com/sero-cash/go-sero/common/hexutil"
 
 	"github.com/sero-cash/go-sero"
 
@@ -41,9 +41,8 @@ type EncrypterFn func(txParam *txtool.GTxParam) (tx *txtool.GTx, e error)
 
 // CallOpts is the collection of options to fine tune a contract call request.
 type CallOpts struct {
-	Pending     bool               // Whether to operate on the pending state or the last known one
-	From        *address.PKAddress // Optional the sender address, otherwise the first account is used
-	RefundTo    *c_type.PKr
+	Pending     bool            // Whether to operate on the pending state or the last known one
+	FromPKr     *c_type.PKr     // Optional the sender address, otherwise the first account is used
 	BlockNumber *big.Int        // Optional the block number on which the call should be performed
 	Context     context.Context // Network context to support cancellation and timeouts (nil = no timeout)
 }
@@ -51,8 +50,8 @@ type CallOpts struct {
 // TransactOpts is the collection of authorization data required to create a
 // valid Ethereum transaction.
 type TransactOpts struct {
-	From      address.PKAddress // Ethereum account to send the transaction from
-	RefundTo  *c_type.PKr
+	From      address.PKAddress
+	FromPKr   c_type.PKr  // the pkr of form account
 	Encrypter EncrypterFn // Method to use for signing the transaction (mandatory)
 
 	Value    *big.Int // Funds to transfer along along the transaction (nil = 0 = no funds)
@@ -150,7 +149,7 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 	}
 	input = append(prefix, input...)
 	var (
-		msg    = sero.CallMsg{From: opts.From, RefundTo: opts.RefundTo, To: &c.address, Data: input}
+		msg    = sero.CallMsg{FromPKr: opts.FromPKr, To: &c.address, Data: input}
 		ctx    = ensureContext(opts.Context)
 		code   []byte
 		output []byte
@@ -239,14 +238,14 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 			}
 		}
 		// If the contract surely has code (or code is not needed), estimate the transaction
-		msg := sero.CallMsg{From: &opts.From, To: contract, Value: value, Data: input}
+		msg := sero.CallMsg{FromPKr: &opts.FromPKr, To: contract, Value: value, Data: input}
 		gasLimit, err = c.transactor.EstimateGas(ensureContext(opts.Context), msg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to estimate gas needed: %v", err)
 		}
 	}
 
-	msg := sero.CallMsg{From: &opts.From, RefundTo: opts.RefundTo, To: contract, Gas: gasLimit, Value: value, GasPrice: gasPrice, Data: input}
+	msg := sero.CallMsg{From: opts.From, FromPKr: &opts.FromPKr, To: contract, GasPrice: gasPrice, Gas: gasLimit, Value: value, Data: input}
 	preTx, err := c.transactor.GenContractTx(ensureContext(opts.Context), msg)
 	if err != nil {
 		return nil, err

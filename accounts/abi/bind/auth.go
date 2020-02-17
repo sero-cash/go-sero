@@ -45,9 +45,9 @@ func NewTransactor(keyin io.Reader, passphrase string, value *big.Int) (*Transac
 	if err != nil {
 		return nil, err
 	}
-	fromPkr := getMainPkr(key)
+	fromPkr := GetMainPkr(key)
 
-	return NewKeyedTransactor(key, &fromPkr, value), nil
+	return NewKeyedTransactor(key, fromPkr, value), nil
 }
 
 func encodeNumber(number uint64) []byte {
@@ -56,7 +56,7 @@ func encodeNumber(number uint64) []byte {
 	return enc
 }
 
-func getMainPkr(key *keystore.Key) c_type.PKr {
+func GetMainPkr(key *keystore.Key) c_type.PKr {
 
 	salt := encodeNumber(1)
 	//log.Info("GenIndexPKr", "salt", hexutil.Encode(salt))
@@ -68,12 +68,12 @@ func getMainPkr(key *keystore.Key) c_type.PKr {
 
 // NewKeyedTransactor is a utility method to easily create a transaction signer
 // from a single private key.
-func NewKeyedTransactor(key *keystore.Key, refundTo *c_type.PKr, value *big.Int) *TransactOpts {
+func NewKeyedTransactor(key *keystore.Key, refundTo c_type.PKr, value *big.Int) *TransactOpts {
 	tk := crypto.PrivkeyToTk(key.PrivateKey, key.Version)
 	return &TransactOpts{
-		From:     tk.ToPk(),
-		Value:    value,
-		RefundTo: refundTo,
+		From:    tk.ToPk(),
+		FromPKr: refundTo,
+		Value:   value,
 		Encrypter: func(txParam *txtool.GTxParam) (*txtool.GTx, error) {
 			priKey := crypto.FromECDSA(key.PrivateKey)
 			var seed c_type.Uint256
