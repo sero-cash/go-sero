@@ -136,6 +136,25 @@ func accumulateRewardsV4(number, bdiff *big.Int) [2]*big.Int {
 	return res
 
 }
+func accumulateRewardsV5(number, bdiff *big.Int) [2]*big.Int {
+	var res [2]*big.Int
+	diff := new(big.Int).Div(bdiff, big.NewInt(1000000000))
+	reward := new(big.Int).Add(new(big.Int).Mul(argA, diff), argB)
+
+	if reward.Cmp(lReward) < 0 {
+		reward = new(big.Int).Set(lReward)
+	} else if reward.Cmp(hRewardV4) > 0 {
+		reward = new(big.Int).Set(hRewardV4)
+	}
+
+	i := new(big.Int).Add(new(big.Int).Div(new(big.Int).Sub(number, halveNimber), interval), big1)
+	reward.Div(reward, new(big.Int).Exp(big2, new(big.Int).Add(i, big1), nil))
+
+	res[0] = reward
+	res[1] = big.NewInt(0)
+	return res
+
+}
 
 /**
   [0] block reward
@@ -147,7 +166,9 @@ func GetBlockReward(block *types.Block) [2]*big.Int {
 	diff := block.Difficulty()
 	gasUsed := block.GasUsed()
 	gasLimit := block.GasLimit()
-	if number.Uint64() >= seroparam.SIP4() {
+	if number.Uint64() >= seroparam.SIP7() {
+		return accumulateRewardsV5(number, diff)
+	} else if number.Uint64() >= seroparam.SIP4() {
 		return accumulateRewardsV4(number, diff)
 	} else if number.Uint64() >= seroparam.SIP3() {
 		return accumulateRewardsV3(number, diff)
