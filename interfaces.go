@@ -22,12 +22,6 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/zero/txtool"
-
-	"github.com/sero-cash/go-czero-import/c_type"
-
-	"github.com/sero-cash/go-sero/common/address"
-
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
 )
@@ -119,14 +113,12 @@ type ChainSyncReader interface {
 
 // CallMsg contains parameters for contract calls.
 type CallMsg struct {
-	From     *address.PKAddress // the sender of the 'transaction'
-	RefundTo *c_type.PKr
+	From     common.Address  // the sender of the 'transaction'
 	To       *common.Address // the destination contract (nil for contract creation)
 	Gas      uint64          // if 0, the call executes with near-infinite gas
 	GasPrice *big.Int        // wei <-> gas exchange ratio
 	Value    *big.Int        // amount of wei sent along with the call
 	Data     []byte          // input data, usually an ABI-encoded contract method invocation
-	Currency string
 }
 
 // A ContractCaller provides contract calls, essentially transactions that are executed by
@@ -177,7 +169,7 @@ type LogFilterer interface {
 // API can use package accounts to maintain local private keys and need can retrieve the
 // next available nonce using PendingNonceAt.
 type TransactionSender interface {
-	CommitTx(ctx context.Context, arg *txtool.GTx) error
+	SendTransaction(ctx context.Context, tx *types.Transaction) error
 }
 
 // GasPricer wraps the gas price oracle, which monitors the blockchain to determine the

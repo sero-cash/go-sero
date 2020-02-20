@@ -21,8 +21,6 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/sero-cash/go-sero/zero/txtool"
-
 	sero "github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
@@ -82,10 +80,8 @@ type ContractTransactor interface {
 	// transactions may be added or removed by miners, but it should provide a basis
 	// for setting a reasonable default.
 	EstimateGas(ctx context.Context, call sero.CallMsg) (gas uint64, err error)
-
-	GenContractTx(ctx context.Context, msg sero.CallMsg) (*txtool.GTxParam, error)
-
-	CommitTx(ctx context.Context, arg *txtool.GTx) error
+	// SendTransaction injects the transaction into the pending pool for execution.
+	SendTransaction(ctx context.Context, tx *types.Transaction) error
 }
 
 // ContractFilterer defines the methods needed to access log events using one-off

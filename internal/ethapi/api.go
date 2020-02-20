@@ -2028,15 +2028,6 @@ func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args *txtool.GT
 	return s.b.CommitTx(args)
 }
 
-func (s *PublicTransactionPoolAPI) CommitContractTx(ctx context.Context, args *txtool.GTx) (hash common.Hash, err error) {
-	err = s.b.CommitTx(args)
-	if err != nil {
-		return
-	}
-	hash = common.BytesToHash(args.Hash[:])
-	return
-}
-
 func (s *PublicTransactionPoolAPI) ReSendTransaction(ctx context.Context, txhash common.Hash) (common.Hash, error) {
 
 	pending, err := s.b.GetPoolTransactions()

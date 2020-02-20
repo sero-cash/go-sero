@@ -52,7 +52,8 @@ type tmplEvent struct {
 // tmplSource is language to template mapping containing all the supported
 // programming languages the package can generate to.
 var tmplSource = map[Lang]string{
-	LangGo: tmplSourceGo,
+	LangGo:   tmplSourceGo,
+	LangJava: tmplSourceJava,
 }
 
 // tmplSourceGo is the Go source template use to generate the contract binding
@@ -72,14 +73,14 @@ package {{.Package}}
 		const {{.Type}}Bin = ` + "`" + `{{.InputBin}}` + "`" + `
 
 		// Deploy{{.Type}} deploys a new Ethereum contract, binding an instance of {{.Type}} to it.
-		func Deploy{{.Type}}(auth *bind.TransactOpts, backend bind.ContractBackend {{range .Constructor.Inputs}}, {{.Name}} {{bindtype .Type}}{{end}}) (common.Address, *types.Transaction, *{{.Type}}, error) {
+		func Deploy{{.Type}}(auth *bind.TransactOpts, backend bind.ContractBackend {{range .Constructor.Inputs}}, {{.Name}} {{bindtype .Type}}{{end}}) (common.Data, *types.Transaction, *{{.Type}}, error) {
 		  parsed, err := abi.JSON(strings.NewReader({{.Type}}ABI))
 		  if err != nil {
-		    return common.Address{}, nil, nil, err
+		    return common.Data{}, nil, nil, err
 		  }
 		  address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex({{.Type}}Bin), backend {{range .Constructor.Inputs}}, {{.Name}}{{end}})
 		  if err != nil {
-		    return common.Address{}, nil, nil, err
+		    return common.Data{}, nil, nil, err
 		  }
 		  return address, tx, &{{.Type}}{ {{.Type}}Caller: {{.Type}}Caller{contract: contract}, {{.Type}}Transactor: {{.Type}}Transactor{contract: contract}, {{.Type}}Filterer: {{.Type}}Filterer{contract: contract} }, nil
 		}
@@ -145,7 +146,7 @@ package {{.Package}}
 	}
 
 	// New{{.Type}} creates a new instance of {{.Type}}, bound to a specific deployed contract.
-	func New{{.Type}}(address common.Address, backend bind.ContractBackend) (*{{.Type}}, error) {
+	func New{{.Type}}(address common.Data, backend bind.ContractBackend) (*{{.Type}}, error) {
 	  contract, err := bind{{.Type}}(address, backend, backend, backend)
 	  if err != nil {
 	    return nil, err
@@ -154,7 +155,7 @@ package {{.Package}}
 	}
 
 	// New{{.Type}}Caller creates a new read-only instance of {{.Type}}, bound to a specific deployed contract.
-	func New{{.Type}}Caller(address common.Address, caller bind.ContractCaller) (*{{.Type}}Caller, error) {
+	func New{{.Type}}Caller(address common.Data, caller bind.ContractCaller) (*{{.Type}}Caller, error) {
 	  contract, err := bind{{.Type}}(address, caller, nil, nil)
 	  if err != nil {
 	    return nil, err
@@ -163,7 +164,7 @@ package {{.Package}}
 	}
 
 	// New{{.Type}}Transactor creates a new write-only instance of {{.Type}}, bound to a specific deployed contract.
-	func New{{.Type}}Transactor(address common.Address, transactor bind.ContractTransactor) (*{{.Type}}Transactor, error) {
+	func New{{.Type}}Transactor(address common.Data, transactor bind.ContractTransactor) (*{{.Type}}Transactor, error) {
 	  contract, err := bind{{.Type}}(address, nil, transactor, nil)
 	  if err != nil {
 	    return nil, err
@@ -172,7 +173,7 @@ package {{.Package}}
 	}
 
 	// New{{.Type}}Filterer creates a new log filterer instance of {{.Type}}, bound to a specific deployed contract.
- 	func New{{.Type}}Filterer(address common.Address, filterer bind.ContractFilterer) (*{{.Type}}Filterer, error) {
+ 	func New{{.Type}}Filterer(address common.Data, filterer bind.ContractFilterer) (*{{.Type}}Filterer, error) {
  	  contract, err := bind{{.Type}}(address, nil, nil, filterer)
  	  if err != nil {
  	    return nil, err
@@ -181,7 +182,7 @@ package {{.Package}}
  	}
 
 	// bind{{.Type}} binds a generic wrapper to an already deployed contract.
-	func bind{{.Type}}(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	func bind{{.Type}}(address common.Data, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
 	  parsed, err := abi.JSON(strings.NewReader({{.Type}}ABI))
 	  if err != nil {
 	    return nil, err
@@ -294,7 +295,7 @@ package {{.Package}}
 			event    string              // Event name to use for unpacking event data
 
 			logs chan types.Log        // Log channel receiving the found contract events
-			sub  sero.Subscription     // Subscription for errors, completion and termination
+			sub  ethereum.Subscription // Subscription for errors, completion and termination
 			done bool                  // Whether the subscription completed delivering logs
 			fail error                 // Occurred error to stop iteration
 		}
@@ -426,8 +427,8 @@ const tmplSourceJava = `
 
 package {{.Package}};
 
-import org.ethereum.geth.*;
-import org.ethereum.geth.internal.*;
+import org.ethereum.gero.*;
+import org.ethereum.gero.internal.*;
 
 {{range $contract := .Contracts}}
 	public class {{.Type}} {
@@ -449,14 +450,14 @@ import org.ethereum.geth.internal.*;
 
 			// Internal constructor used by contract deployment.
 			private {{.Type}}(BoundContract deployment) {
-				this.Address  = deployment.getAddress();
+				this.Data  = deployment.getAddress();
 				this.Deployer = deployment.getDeployer();
 				this.Contract = deployment;
 			}
 		{{end}}
 
 		// Ethereum address where this contract is located at.
-		public final Address Address;
+		public final Data Data;
 
 		// Ethereum transaction in which this contract was deployed (if known!).
 		public final Transaction Deployer;
@@ -465,7 +466,7 @@ import org.ethereum.geth.internal.*;
 		private final BoundContract Contract;
 
 		// Creates a new instance of {{.Type}}, bound to a specific deployed contract.
-		public {{.Type}}(Address address, EthereumClient client) throws Exception {
+		public {{.Type}}(Data address, EthereumClient client) throws Exception {
 			this(Geth.bindContract(address, ABI, client));
 		}
 

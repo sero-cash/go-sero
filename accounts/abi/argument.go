@@ -19,13 +19,8 @@ package abi
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"reflect"
 	"strings"
-
-	"github.com/sero-cash/go-sero/common/math"
-
-	"github.com/sero-cash/go-czero-import/c_type"
 )
 
 // Argument holds the name of the argument and the corresponding type.
@@ -103,29 +98,6 @@ func (arguments Arguments) Unpack(v interface{}, data []byte) error {
 		return arguments.unpackTuple(v, marshalledValues)
 	}
 	return arguments.unpackAtomic(v, marshalledValues)
-}
-
-// UnpackIntoMap performs the operation hexdata -> mapping of argument name to argument value
-func (arguments Arguments) UnpackIntoMap(v map[string]interface{}, data []byte) error {
-	marshalledValues, err := arguments.UnpackValues(data)
-	if err != nil {
-		return err
-	}
-
-	return arguments.unpackIntoMap(v, marshalledValues)
-}
-
-// unpackIntoMap unpacks marshalledValues into the provided map[string]interface{}
-func (arguments Arguments) unpackIntoMap(v map[string]interface{}, marshalledValues []interface{}) error {
-	// Make sure map is not nil
-	if v == nil {
-		return fmt.Errorf("abi: cannot unpack into a nil map")
-	}
-
-	for i, arg := range arguments.NonIndexed() {
-		v[arg.Name] = marshalledValues[i]
-	}
-	return nil
 }
 
 func (arguments Arguments) unpackTuple(v interface{}, marshalledValues []interface{}) error {
@@ -255,31 +227,6 @@ func (arguments Arguments) UnpackValues(data []byte) ([]interface{}, error) {
 // It is the semantic opposite of UnpackValues
 func (arguments Arguments) PackValues(args []interface{}) ([]byte, error) {
 	return arguments.Pack(args...)
-}
-
-func (arguments Arguments) PackPrefix(args ...interface{}) ([]byte, error) {
-	abiArgs := arguments
-	if len(args) != len(abiArgs) {
-		return nil, fmt.Errorf("argument count mismatch: %d for %d", len(args), len(abiArgs))
-	}
-	var result []c_type.PKr
-	for i, a := range args {
-		input := abiArgs[i]
-		// pack the input
-		pkrs, err := input.Type.getAllAddress(reflect.ValueOf(a))
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, pkrs...)
-	}
-	var ret []byte
-	lenBytes := math.PaddedBigBytes(big.NewInt(int64(len(result))), 2)
-	ret = append(ret, lenBytes...)
-	for _, pkr := range result {
-		ret = append(ret, pkr[:]...)
-	}
-	return ret, nil
-
 }
 
 // Pack performs the operation Go format -> Hexdata
