@@ -582,7 +582,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 			break
 		}
 
-		if false {
+		if true && (!seroparam.Is_Dev()) {
 			if env.header.Number.Uint64() == seroparam.SIP7() {
 				txs.Shift()
 				env.errHandledTxs = append(env.errHandledTxs, tx)

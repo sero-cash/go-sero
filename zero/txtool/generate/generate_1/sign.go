@@ -370,7 +370,7 @@ func (self *sign_ctx) genInsC() (e error) {
 			return
 		}
 		in.ArOld = &ar_old
-		self.keys = append(self.keys, key)
+		//self.keys = append(self.keys, key)
 
 		in.Ar = c_superzk.RandomFr().NewRef()
 		cm, cc, err := c_superzk.GenAssetCM_PC(dout.Asset.ToTypeAsset().NewRef(), in.Ar)

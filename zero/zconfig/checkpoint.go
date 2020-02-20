@@ -10,6 +10,13 @@ import (
 	"github.com/sero-cash/go-czero-import/seroparam"
 )
 
+/*******
+var current=sero.blockNumber
+for(var i=0;i<current;i+=10000) {
+	console.log('{"Num":'+i+',"Root":"'+sero.getBlock(i).stateRoot+'"},')
+}
+********/
+
 var checkpoints_json = `[
 {"Num":10000,"Root":"0xcd9587c499db006a592554f4abcb4bb8365c1770df95583471bde010d6b5a490"},
 {"Num":20000,"Root":"0xefdfb2c3fd89654fdbf820c825315ba1bfd1e4db5f24c76fbc49ace31dcb5cae"},
@@ -261,10 +268,7 @@ var checkpoints_json = `[
 {"Num":2470000,"Root":"0x44f589a903eb66b531f528d9bae1d435431e3f7b978113b060472cb9cb8a977f"},
 {"Num":2480000,"Root":"0xadcf99a569b55794e2a25bf30c1b5e84a5298e3455991cffc728adc01a139b05"},
 {"Num":2490000,"Root":"0x70fc9b888109563c8c39b08229056de63d7d551ecf13ac022bfc9a08c225d59e"},
-{"Num":2500000,"Root":"0xcfecf832ee946ee0f006f4eb267952606d07df9bd7f152ee7ec3d768cb4b485e"}
-]`
-
-/*
+{"Num":2500000,"Root":"0xcfecf832ee946ee0f006f4eb267952606d07df9bd7f152ee7ec3d768cb4b485e"},
 {"Num":2510000,"Root":"0x81c50a16ba67979ccb2c503a5b096f993e9b6d2be11131be0426cba1865b5cf8"},
 {"Num":2520000,"Root":"0x6ce442b69866f384a34bfcc5bd395e2c8d412c5a16540665044b01eb7664e307"},
 {"Num":2530000,"Root":"0xfefe66793bbc8dc414759a4048649729a6e3c8f2d8b06f3a06dd045fe008c63e"},
@@ -275,7 +279,17 @@ var checkpoints_json = `[
 {"Num":2580000,"Root":"0x8935c958e056fd6a8f44f04bf7c4fc1802ff68a7c3a7929d6e6be32674c300a3"},
 {"Num":2590000,"Root":"0xc262f7ce5f0e774b93a87c38b9480acfbef92fd1e34c51522b3a04a2ad1c71ec"},
 {"Num":2600000,"Root":"0xd765b50f579521cf11e228a41eb09e97f48bf9c62a6f21dbbb15c7c3b9024da0"},
-*/
+{"Num":2610000,"Root":"0x9eab5ff1dc3a758051c9357ceb14f01f27ff484e76c8fa5ce93e355173297baa"},
+{"Num":2620000,"Root":"0x4f0f24a0aa6997f84721bdb1c1208d0d456298fcb101c7685d65cc87fbbbe8bf"},
+{"Num":2630000,"Root":"0x68b863421769763ad923f86726c72625aceecf2da3872061fe8c4d478d99cb4c"},
+{"Num":2640000,"Root":"0xd4042a6cd2a01e5fafbc23db127d60e265a9e242edc95fff8638c3297cae7803"},
+{"Num":2650000,"Root":"0x4b9317e642306af20ae72dfeff8d3fbacfa74ae302ba3ab639c709115788dcf7"},
+{"Num":2660000,"Root":"0xcbedce982f698eb089f85fc338e5f73d7a09fc474930c979510c138b5c556f5e"},
+{"Num":2670000,"Root":"0x442cda0379772c8f608bcdcf12e28a80a4075cf9770ea78c37ac8c55f501a9b7"}
+]`
+
+/*
+ */
 
 type checkPoint struct {
 	Num  uint64
