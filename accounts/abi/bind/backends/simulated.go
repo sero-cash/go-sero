@@ -273,10 +273,8 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call sero.CallMsg, 
 	if call.Value == nil {
 		call.Value = new(big.Int)
 	}
-	var fromAddr common.Address
-	copy(fromAddr[:], call.From[:])
 	// Set infinite balance to the fake caller account.
-	from := statedb.GetOrNewStateObject(fromAddr)
+	from := statedb.GetOrNewStateObject(call.From)
 	from.SetBalance("sero", math.MaxBig256)
 	// Execute the call.
 	msg := callmsg{call}
@@ -381,11 +379,7 @@ type callmsg struct {
 	sero.CallMsg
 }
 
-func (m callmsg) From() common.Address {
-	var from common.Address
-	copy(from[:], m.CallMsg.From[:])
-	return from
-}
+func (m callmsg) From() common.Address           { return m.CallMsg.From }
 func (m callmsg) FromNonceAddr() *common.Address { return nil }
 func (m callmsg) Nonce() uint64                  { return 0 }
 func (m callmsg) CheckNonce() bool               { return false }
