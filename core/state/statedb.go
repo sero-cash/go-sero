@@ -574,7 +574,6 @@ func (self *StateDB) SetBalance(addr common.Address, coinName string, amount *bi
 }
 
 func (self *StateDB) SetCode(addr common.Address, code []byte) {
-	fmt.Println("code", common.Bytes2Hex(code))
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetCode(crypto.Keccak256Hash(code), code)
