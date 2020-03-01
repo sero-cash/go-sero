@@ -344,6 +344,11 @@ var (
 		Usage: "reset currentblock, gcmode must be archive",
 	}
 
+	RecordBlockShareNumber = cli.BoolFlag{
+		Name:  "recordBlockShareNumber",
+		Usage: "",
+	}
+
 	// Miner settings
 	MiningEnabledFlag = cli.BoolFlag{
 		Name:  "mine",
@@ -1009,6 +1014,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		if balanceDelay >= 0 {
 			seroparam.InitComfirmedBlock(balanceDelay)
 		}
+	}
+
+	if ctx.GlobalIsSet(RecordBlockShareNumber.Name) {
+		seroparam.Init_RecordShareNum()
 	}
 
 	if ctx.GlobalIsSet(ResetBlockNumber.Name) {

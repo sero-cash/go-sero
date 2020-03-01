@@ -117,6 +117,7 @@ var (
 		utils.ExchangeValueStrFlag,
 		utils.AutoMergeFlag,
 		utils.ConfirmedBlockFlag,
+		utils.RecordBlockShareNumber,
 		utils.LightNodeFlag,
 		utils.ResetBlockNumber,
 

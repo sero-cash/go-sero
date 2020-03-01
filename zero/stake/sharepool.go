@@ -280,6 +280,7 @@ var (
 	StakePoolDB      = consensus.DBObj{"STAKE$POOL$"}
 	missedNumKey     = []byte("missednum")
 	blockVotesPrefix = []byte("STAKE$BLOCKVOTES$")
+	blockShareNumPrefix = []byte("STAKE$SHARE$NUM$")
 )
 
 type selectShare struct {
@@ -289,6 +290,10 @@ type selectShare struct {
 
 func blockVotesKey(hash common.Hash) []byte {
 	return append(blockVotesPrefix, hash[:]...)
+}
+
+func blockShareNum(hash common.Hash) []byte {
+	return append(blockShareNumPrefix, hash[:]...)
 }
 
 func (self *StakeState) RecordVotes(batch serodb.Batch, block *types.Block) error {
@@ -310,7 +315,20 @@ func (self *StakeState) RecordVotes(batch serodb.Batch, block *types.Block) erro
 	if err := batch.Put(blockVotesKey(block.Hash()), data); err != nil {
 		log.Crit("Failed to store blockVotes to number mapping", "err", err)
 	}
+
+	if seroparam.RecordShareNum() {
+		batch.Put(blockShareNum(block.Hash()), new(big.Int).SetUint64(uint64(self.ShareSize())).Bytes())
+	}
 	return nil
+}
+
+func BlockShareNum(getter serodb.Getter, block common.Hash) (num uint64) {
+	data, _ := getter.Get(blockShareNum(block))
+	if len(data) == 0 {
+		return
+	}
+
+	return new(big.Int).SetBytes(data).Uint64()
 }
 
 func SeleteBlockShare(getter serodb.Getter, block common.Hash) (idx []uint32, shares []*Share) {
