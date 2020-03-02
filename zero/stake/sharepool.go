@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
 	"github.com/sero-cash/go-sero/consensus/ethash"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -276,10 +278,10 @@ type StakeState struct {
 }
 
 var (
-	ShareDB          = consensus.DBObj{"STAKE$SHARE$"}
-	StakePoolDB      = consensus.DBObj{"STAKE$POOL$"}
-	missedNumKey     = []byte("missednum")
-	blockVotesPrefix = []byte("STAKE$BLOCKVOTES$")
+	ShareDB             = consensus.DBObj{"STAKE$SHARE$"}
+	StakePoolDB         = consensus.DBObj{"STAKE$POOL$"}
+	missedNumKey        = []byte("missednum")
+	blockVotesPrefix    = []byte("STAKE$BLOCKVOTES$")
 	blockShareNumPrefix = []byte("STAKE$SHARE$NUM$")
 )
 
@@ -316,7 +318,7 @@ func (self *StakeState) RecordVotes(batch serodb.Batch, block *types.Block) erro
 		log.Crit("Failed to store blockVotes to number mapping", "err", err)
 	}
 
-	if seroparam.RecordShareNum() {
+	if zconfig.RecordShareNum() {
 		batch.Put(blockShareNum(block.Hash()), new(big.Int).SetUint64(uint64(self.ShareSize())).Bytes())
 	}
 	return nil
@@ -590,7 +592,7 @@ func GetSharesByBlock(getter serodb.Getter, blockHash common.Hash, blockNumber u
 		if record.Name == "share" {
 			for _, each := range record.Pairs {
 				ret := ShareDB.GetObject(getter, each.Hash, &Share{})
-				if (ret == nil) {
+				if ret == nil {
 					panic("not found share by hash")
 				}
 				shares = append(shares, ret.(*Share))
@@ -694,6 +696,21 @@ func (self *StakeState) StakeCurrentReward(blockNumber *big.Int) (soloRewards *b
 	}
 
 	halve := ethash.Halve(blockNumber)
+	totalReward = new(big.Int).Div(totalReward, halve)
+	totalReward = new(big.Int).Div(totalReward, big.NewInt(3))
+
+	return new(big.Int).Div(new(big.Int).Mul(totalReward, big.NewInt(SOLO_RATE)), big.NewInt(TOTAL_RATE)), totalReward
+}
+
+func GetPosRewardBySize(size uint64, blockNumber int64) (soloRewards *big.Int, totalRewards *big.Int) {
+
+	totalReward := new(big.Int).Add(baseReware, new(big.Int).Mul(rewareStep, big.NewInt(int64(size))))
+
+	if totalReward.Cmp(maxReware) > 0 {
+		totalReward = new(big.Int).Set(maxReware)
+	}
+
+	halve := ethash.Halve(big.NewInt(0).SetInt64(blockNumber))
 	totalReward = new(big.Int).Div(totalReward, halve)
 	totalReward = new(big.Int).Div(totalReward, big.NewInt(3))
 

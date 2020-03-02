@@ -42,3 +42,13 @@ func IsTestFork() bool {
 	}
 	return testFork
 }
+
+var recordBlockShareNumber bool
+
+func Init_RecordShareNum() {
+	recordBlockShareNumber = true
+}
+
+func RecordShareNum() bool {
+	return recordBlockShareNumber
+}

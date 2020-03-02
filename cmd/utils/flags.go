@@ -1017,7 +1017,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 
 	if ctx.GlobalIsSet(RecordBlockShareNumber.Name) {
-		seroparam.Init_RecordShareNum()
+		zconfig.Init_RecordShareNum()
 	}
 
 	if ctx.GlobalIsSet(ResetBlockNumber.Name) {

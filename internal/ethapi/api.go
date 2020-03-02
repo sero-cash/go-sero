@@ -1031,21 +1031,20 @@ func (s *PublicBlockChainAPI) GetBlockTotalRewardByNumber(ctx context.Context, b
 		}
 	}
 	if block != nil && blockNr >= 1300000 {
-		state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 
-		if err != nil {
+		shareNum := stake.BlockShareNum(s.b.ChainDb(), block.Hash())
+		if shareNum == 0 {
 			return hexutil.Big(*reward)
 		}
-		stakeState := stake.NewStakeState(state)
-		solo, total := stakeState.StakeCurrentReward(big.NewInt(int64(blockNr)))
-		for _, v := range header.CurrentVotes {
+		solo, total := stake.GetPosRewardBySize(shareNum, blockNr.Int64())
+		for _, v := range block.Header().CurrentVotes {
 			if v.IsPool {
 				reward.Add(reward, total)
 			} else {
 				reward.Add(reward, solo)
 			}
 		}
-		for _, v := range header.ParentVotes {
+		for _, v := range block.Header().ParentVotes {
 			if v.IsPool {
 				reward.Add(reward, total)
 			} else {
