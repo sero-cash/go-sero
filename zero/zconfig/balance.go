@@ -63,9 +63,10 @@ func error_roots() (ret map[c_type.Uint256]bool) {
 var ERS = error_roots()
 
 func IsValidRoot(root c_type.Uint256) bool {
-	if _, ok := ERS[root]; ok {
+	return true
+	/*if _, ok := ERS[root]; ok {
 		return false
 	} else {
 		return true
-	}
+	}*/
 }
