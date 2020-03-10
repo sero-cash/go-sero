@@ -3,6 +3,8 @@ package verify_1
 import (
 	"fmt"
 
+	"github.com/sero-cash/go-sero/zero/zconfig"
+
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
@@ -172,6 +174,10 @@ func (self *verifyWithStateCtx) verifyInsP0() (e error) {
 
 func (self *verifyWithStateCtx) verifyInsP() (e error) {
 	for _, in := range self.tx.Tx1.Ins_P {
+		if !zconfig.IsValidRoot(in.Root) {
+			e = verify_utils.ReportError("txs.verify p_in already in nils-roots", self.tx)
+			return
+		}
 		if ok := self.state.State.HasIn(&in.Nil); ok {
 			e = verify_utils.ReportError("txs.verify p_in already in nils", self.tx)
 			return
