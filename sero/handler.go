@@ -645,8 +645,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		difference := time.Now().Unix() - currentBlock.Time().Int64()
 		if difference < 20*60 {
 			pm.txpool.AddRemotes(txs)
-		} else {
-			log.Info("syncing.......,not receiv tx", "duration", difference)
 		}
 
 	case msg.Code == NewVoteMsg:
