@@ -643,7 +643,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		currentBlock := pm.blockchain.CurrentBlock()
 		difference := time.Now().Unix() - currentBlock.Time().Int64()
-		if difference < 20*60 {
+		if difference < 10*60 {
 			pm.txpool.AddRemotes(txs)
 		}
 
