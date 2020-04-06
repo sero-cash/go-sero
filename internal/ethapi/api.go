@@ -1259,7 +1259,11 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	res, gas, failed, err := core.ApplyMessage(evm, msg, gp)
 
 	if err := vmError(); err != nil {
+
 		return nil, 0, false, err
+	}
+	if failed {
+		log.Info("call error", "msg", string(res))
 	}
 	return res, gas, failed, err
 
