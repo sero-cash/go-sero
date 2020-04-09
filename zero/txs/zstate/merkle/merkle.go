@@ -2,14 +2,20 @@ package merkle
 
 import (
 	"fmt"
-
 	"github.com/sero-cash/go-czero-import/c_type"
-
-	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
-
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/rlp"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/tls"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/tri"
 )
+
+func SetPaths(paths []c_type.Uint256, mining bool) {
+	tls.Set(&tls.PathsCache{paths, 0, mining})
+}
+
+func GetPaths() []c_type.Uint256 {
+	return tls.Get().Paths
+}
 
 type CombinFunc func(*c_type.Uint256, *c_type.Uint256) (out c_type.Uint256)
 
@@ -91,6 +97,8 @@ func (self *MerkleTree) AppendLeaf(value c_type.Uint256) c_type.Uint256 {
 
 	current_value := value
 	depth := toDepth(leafIndex)
+
+	outLeafs := tls.Get()
 	for leafIndex != 1 {
 		brotherIndex := brother(leafIndex)
 		var brotherValue c_type.Uint256
@@ -103,10 +111,18 @@ func (self *MerkleTree) AppendLeaf(value c_type.Uint256) c_type.Uint256 {
 			}
 		}
 
-		if leafIndex%2 == 0 {
-			current_value = self.param.combine(&current_value, &brotherValue)
+		if ok, value := outLeafs.Next(); ok {
+			current_value = value
 		} else {
-			current_value = self.param.combine(&brotherValue, &current_value)
+			if leafIndex%2 == 0 {
+				current_value = self.param.combine(&current_value, &brotherValue)
+			} else {
+				current_value = self.param.combine(&brotherValue, &current_value)
+			}
+
+			// if outLeafs.Mining {
+			outLeafs.Add(current_value)
+			// }
 		}
 
 		leafIndex = parent(leafIndex)

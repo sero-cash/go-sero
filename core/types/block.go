@@ -19,6 +19,7 @@ package types
 
 import (
 	"encoding/binary"
+	"github.com/sero-cash/go-czero-import/c_type"
 	"math/big"
 	"sort"
 	"sync/atomic"
@@ -57,6 +58,14 @@ type Block struct {
 	// inter-peer block relay.
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
+}
+
+func (b *Block) GetPaths() []c_type.Uint256 {
+	return b.header.Paths
+}
+
+func (b *Block) SetPaths(paths []c_type.Uint256) {
+	b.header.Paths = paths
 }
 
 func (b *Block) SetVotes(CurrentVotes []HeaderVote, ParentVotes []HeaderVote) {

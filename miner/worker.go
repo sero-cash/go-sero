@@ -18,6 +18,8 @@ package miner
 
 import (
 	"fmt"
+	"github.com/sero-cash/go-czero-import/c_type"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/merkle"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -483,6 +485,8 @@ func (self *worker) commitNewWork() {
 		time.Sleep(wait)
 	}
 
+	merkle.SetPaths([]c_type.Uint256{}, true)
+
 	num := parent.Number()
 	header := &types.Header{
 		ParentHash: parent.Hash(),
@@ -542,6 +546,9 @@ func (self *worker) commitNewWork() {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
 	}
+
+	work.Block.SetPaths(merkle.GetPaths())
+
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "elapsed", common.PrettyDuration(time.Since(tstart)))

@@ -18,6 +18,7 @@ package core
 
 import (
 	"errors"
+	"github.com/sero-cash/go-sero/zero/txs/zstate/merkle"
 	"math/big"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -64,6 +65,7 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consen
 // Process returns the receipts and logs accumulated during the process and
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
+
 func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, error) {
 	var (
 		receipts types.Receipts
@@ -73,6 +75,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		gp       = new(GasPool).AddGas(block.GasLimit())
 	)
 
+	merkle.SetPaths(block.GetPaths(), false)
 	// Iterate over and process the individual transactions
 	gasReward := uint64(0)
 
@@ -86,8 +89,10 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
+
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), receipts, gasReward)
+	block.SetPaths(merkle.GetPaths());
 
 	return receipts, allLogs, *usedGas, nil
 }

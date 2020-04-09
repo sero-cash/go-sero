@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/binary"
+	"github.com/sero-cash/go-sero/core/types/vserial"
 	"io"
 	"math/big"
 	"unsafe"
@@ -9,8 +10,6 @@ import (
 	"github.com/sero-cash/go-czero-import/seroparam"
 
 	"github.com/sero-cash/go-czero-import/c_type"
-
-	"github.com/sero-cash/go-sero/core/types/vserial"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/hexutil"
@@ -49,7 +48,7 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 // Version_0 represents a block header in the Ethereum blockchain.
 type Header struct {
-	//Data
+	// Data
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
 	Licr        c_type.LICr    `json:"licr"            	gencodec:"required"`
@@ -63,12 +62,18 @@ type Header struct {
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	//POW
+	// POW
 	MixDigest common.Hash `json:"mixHash"          gencodec:"required"`
 	Nonce     BlockNonce  `json:"nonce"            gencodec:"required"`
-	//POS
+	// POS
 	CurrentVotes []HeaderVote
 	ParentVotes  []HeaderVote
+
+	Paths []c_type.Uint256
+}
+
+func (h *Header) SetPaths(paths []c_type.Uint256) {
+	h.Paths = paths
 }
 
 // field type overrides for gencodec
@@ -97,7 +102,25 @@ func (h *Header) Valid() bool {
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
-	return rlpHash(h)
+	return rlpHash(&Header{
+		ParentHash:   h.ParentHash,
+		Coinbase:     h.Coinbase,
+		Licr:         h.Licr,
+		Root:         h.Root,
+		TxHash:       h.TxHash,
+		ReceiptHash:  h.ReceiptHash,
+		Bloom:        h.Bloom,
+		Difficulty:   h.Difficulty,
+		Number:       h.Number,
+		GasLimit:     h.GasLimit,
+		GasUsed:      h.GasUsed,
+		Time:         h.Time,
+		Extra:        h.Extra,
+		MixDigest:    h.MixDigest,
+		Nonce:        h.Nonce,
+		CurrentVotes: h.CurrentVotes,
+		ParentVotes:  h.ParentVotes,
+	})
 }
 
 // HashNoNonce returns the hash which is used as input for the proof-of-work search.
@@ -192,11 +215,14 @@ func CopyHeader(h *Header) *Header {
 	if len(h.ParentVotes) > 0 {
 		cpy.ParentVotes = append([]HeaderVote{}, h.ParentVotes...)
 	}
+	if len(h.Paths) > 0 {
+		cpy.Paths = append([]c_type.Uint256{}, h.Paths...)
+	}
 	return &cpy
 }
 
 type Header_Version_0 struct {
-	//Data
+	// Data
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
 	Licr        c_type.LICr    `json:"licr"            	gencodec:"required"`
@@ -210,29 +236,90 @@ type Header_Version_0 struct {
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	//POW
+	// POW
 	MixDigest common.Hash `json:"mixHash"          gencodec:"required"`
 	Nonce     BlockNonce  `json:"nonce"            gencodec:"required"`
 }
 
 type Header_Version_1 struct {
-	//POS
+	// POS
 	CurrentVotes []HeaderVote
 	ParentVotes  []HeaderVote
 }
 
-// DecodeRLP decodes the Ethereum
-func (b *Header) DecodeRLP(s *rlp.Stream) error {
-	h0 := Header_Version_0{}
-	h1 := Header_Version_1{}
-	vs := vserial.NewVSerial()
-	vs.Add(&h0, vserial.VERSION_0)
-	vs.Add(&h1, vserial.VERSION_1)
+// // DecodeRLP decodes the Ethereum
+// func (b *Header) DecodeRLP(s *rlp.Stream) error {
+// 	h0 := Header_Version_0{}
+// 	h1 := Header_Version_1{}
+// 	vs := vserial.NewVSerial()
+// 	vs.Add(&h0, vserial.VERSION_0)
+// 	vs.Add(&h1, vserial.VERSION_1)
+//
+// 	if e := s.Decode(&vs); e != nil {
+// 		return e
+// 	}
+//
+// 	b.ParentHash = h0.ParentHash
+// 	b.Coinbase = h0.Coinbase
+// 	b.Licr = h0.Licr
+// 	b.Root = h0.Root
+// 	b.TxHash = h0.TxHash
+// 	b.ReceiptHash = h0.ReceiptHash
+// 	b.Bloom = h0.Bloom
+// 	b.Difficulty = h0.Difficulty
+// 	b.Number = h0.Number
+// 	b.GasLimit = h0.GasLimit
+// 	b.GasUsed = h0.GasUsed
+// 	b.Time = h0.Time
+// 	b.Extra = h0.Extra
+// 	b.MixDigest = h0.MixDigest
+// 	b.Nonce = h0.Nonce
+//
+// 	b.CurrentVotes = h1.CurrentVotes
+// 	b.ParentVotes = h1.ParentVotes
+// 	return nil
+// }
+//
+// // EncodeRLP serializes b into the Ethereum RLP block format.
+// func (b *Header) EncodeRLP(w io.Writer) error {
+// 	vs := vserial.NewVSerial()
+//
+// 	h0 := Header_Version_0{}
+// 	h0.ParentHash = b.ParentHash
+// 	h0.Coinbase = b.Coinbase
+// 	h0.Licr = b.Licr
+// 	h0.Root = b.Root
+// 	h0.TxHash = b.TxHash
+// 	h0.ReceiptHash = b.ReceiptHash
+// 	h0.Bloom = b.Bloom
+// 	h0.Difficulty = b.Difficulty
+// 	h0.Number = b.Number
+// 	h0.GasLimit = b.GasLimit
+// 	h0.GasUsed = b.GasUsed
+// 	h0.Time = b.Time
+// 	h0.Extra = b.Extra
+// 	h0.MixDigest = b.MixDigest
+// 	h0.Nonce = b.Nonce
+//
+// 	vs.Add(&h0, vserial.VERSION_0)
+//
+// 	if len(b.CurrentVotes) > 0 || len(b.ParentVotes) > 0 {
+// 		h1 := Header_Version_1{}
+// 		h1.CurrentVotes = b.CurrentVotes
+// 		h1.ParentVotes = b.ParentVotes
+// 		vs.Add(&h1, vserial.VERSION_1)
+// 	}
+//
+// 	return rlp.Encode(w, &vs)
+// }
 
-	if e := s.Decode(&vs); e != nil {
-		return e
-	}
+type Header_Version_2 struct {
+	V0    Header_Version_0
+	V1    Header_Version_1
+	Paths []c_type.Uint256
+}
 
+func Version0To(b *Header, h0 *Header_Version_0) {
 	b.ParentHash = h0.ParentHash
 	b.Coinbase = h0.Coinbase
 	b.Licr = h0.Licr
@@ -248,17 +335,44 @@ func (b *Header) DecodeRLP(s *rlp.Stream) error {
 	b.Extra = h0.Extra
 	b.MixDigest = h0.MixDigest
 	b.Nonce = h0.Nonce
-
+}
+func Version1To(b *Header, h1 *Header_Version_1) {
 	b.CurrentVotes = h1.CurrentVotes
 	b.ParentVotes = h1.ParentVotes
+}
+
+func Version2To(b *Header, h2 *Header_Version_2) {
+	Version0To(b, &h2.V0)
+	Version1To(b, &h2.V1)
+	b.Paths = h2.Paths
+}
+
+// DecodeRLP decodes the Ethereum
+func (b *Header) DecodeRLP(s *rlp.Stream) error {
+	h0 := Header_Version_0{}
+	h1 := Header_Version_1{}
+	h2 := Header_Version_2{}
+	vs := vserial.NewVSerial()
+	vs.Add(&h0, vserial.VERSION_0)
+	vs.Add(&h1, vserial.VERSION_1)
+	vs.Add(&h2, vserial.VERSION_2)
+
+	if e := s.Decode(&vs); e != nil {
+		return e
+	}
+
+	if vs.V() <= vserial.VERSION_1 {
+		Version0To(b, &h0)
+		if vs.V() >= vserial.VERSION_1 {
+			Version1To(b, &h1)
+		}
+	} else if vs.V() >= vserial.VERSION_2 {
+		Version2To(b, &h2)
+	}
 	return nil
 }
 
-// EncodeRLP serializes b into the Ethereum RLP block format.
-func (b *Header) EncodeRLP(w io.Writer) error {
-	vs := vserial.NewVSerial()
-
-	h0 := Header_Version_0{}
+func ToVersion0(h0 *Header_Version_0, b *Header) {
 	h0.ParentHash = b.ParentHash
 	h0.Coinbase = b.Coinbase
 	h0.Licr = b.Licr
@@ -274,13 +388,38 @@ func (b *Header) EncodeRLP(w io.Writer) error {
 	h0.Extra = b.Extra
 	h0.MixDigest = b.MixDigest
 	h0.Nonce = b.Nonce
+}
 
+func ToVersion1(h1 *Header_Version_1, b *Header) {
+	h1.CurrentVotes = b.CurrentVotes
+	h1.ParentVotes = b.ParentVotes
+}
+
+func ToVersion2(h2 *Header_Version_2, b *Header) {
+	ToVersion0(&h2.V0, b)
+	ToVersion1(&h2.V1, b)
+	h2.Paths = b.Paths
+}
+
+// EncodeRLP serializes b into the Ethereum RLP block format.
+func (b *Header) EncodeRLP(w io.Writer) error {
+	vs := vserial.NewVSerial()
+
+	if len(b.Paths) > 0 {
+		h2 := Header_Version_2{}
+		ToVersion2(&h2, b)
+		vs.Add(&h2, vserial.VERSION_2)
+		return rlp.Encode(w, &vs)
+	}
+
+	h0 := Header_Version_0{}
+	ToVersion0(&h0, b)
 	vs.Add(&h0, vserial.VERSION_0)
 
 	if len(b.CurrentVotes) > 0 || len(b.ParentVotes) > 0 {
 		h1 := Header_Version_1{}
-		h1.CurrentVotes = b.CurrentVotes
-		h1.ParentVotes = b.ParentVotes
+		ToVersion1(&h1, b)
+
 		vs.Add(&h1, vserial.VERSION_1)
 	}
 
