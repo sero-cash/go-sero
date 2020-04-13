@@ -121,6 +121,7 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node, error) {
 // hashChildren replaces the children of a node with their hashes if the encoded
 // size of the child is larger than a hash, returning the collapsed node as well
 // as a replacement for the original node with the child hashes cached in.
+
 func (h *hasher) hashChildren(original node, db *Database) (node, node, error) {
 	var err error
 
@@ -143,14 +144,33 @@ func (h *hasher) hashChildren(original node, db *Database) (node, node, error) {
 		// Hash the full node's children, caching the newly hashed subtrees
 		collapsed, cached := n.copy(), n.copy()
 
+		// retCh := make(chan hret)
+		wg := sync.WaitGroup{}
+		wg.Add(16)
 		for i := 0; i < 16; i++ {
-			if n.Children[i] != nil {
-				collapsed.Children[i], cached.Children[i], err = h.hash(n.Children[i], db, false)
-				if err != nil {
-					return original, original, err
+			go func(node node, index int) {
+				if node != nil {
+					collapsed.Children[index], cached.Children[index], err = newHasher(h.cachegen, h.cachelimit, h.onleaf).hash(node, db, false)
+					// node1, node2, e := h.hash(node, db, false)
+					// retCh <- hret{index, node1, node2, e}
+					// if err != nil {
+					// 	return original, original, err
+					// }
 				}
-			}
+				wg.Done()
+			}(n.Children[i], i)
 		}
+		wg.Wait()
+
+		// for i := 0; i < 16; i++ {
+		// 	if n.Children[i] != nil {
+		// 		collapsed.Children[i], cached.Children[i], err = h.hash(n.Children[i], db, false)
+		// 		if err != nil {
+		// 			return original, original, err
+		// 		}
+		// 	}
+		// }
+
 		cached.Children[16] = n.Children[16]
 		return collapsed, cached, nil
 
