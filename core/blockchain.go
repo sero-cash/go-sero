@@ -30,8 +30,6 @@ import (
 
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
-	"github.com/sero-cash/go-sero/zero/txtool/verify"
-
 	"github.com/sero-cash/go-sero/zero/txs/assets"
 
 	"github.com/sero-cash/go-czero-import/c_type"
@@ -1214,7 +1212,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 	)
 
 	is_all_in_checkpoints := true
-	var all_chain types.Blocks
+	// var all_chain types.Blocks
 	for _, block := range chain {
 		if block.Header().Number.Uint64() > uint64(zconfig.CheckPoints.MaxNum()) {
 			is_all_in_checkpoints = false
@@ -1222,17 +1220,17 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		}
 	}
 	if !is_all_in_checkpoints {
-		all_chain = chain
+		// all_chain = chain
 	}
-
-	// Start the parallel header verifier
-	abort, results := bc.NewHeaderChecker(all_chain)
-	defer close(abort)
+	//
+	// // Start the parallel header verifier
+	// abort, results := bc.NewHeaderChecker(all_chain)
+	// defer close(abort)
 
 	// Start a parallel signature recovery (abi will fluke on fork transition, minimal perf loss)
 	//senderCacher.recoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number()), chain)
-	tx_abort, tx_results := NewTxChecker(bc, all_chain)
-	defer close(tx_abort)
+	// tx_abort, tx_results := NewTxChecker(bc, all_chain)
+	// defer close(tx_abort)
 
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
@@ -1245,9 +1243,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 		bstart := time.Now()
 
 		var err error
-		if !is_all_in_checkpoints {
-			err = <-results
-		}
+		// if !is_all_in_checkpoints {
+		// 	err = <-results
+		// }
 
 		if err == nil {
 			err = bc.Validator().ValidateBody(block)
@@ -1329,18 +1327,18 @@ func (bc *BlockChain) insertChain(chain types.Blocks, local bool) (int, []interf
 			return i, events, coalescedLogs, err
 		}
 
-		if !is_all_in_checkpoints {
-			for _, tx := range block.Transactions() {
-				err := <-tx_results
-				if err == nil {
-					err = verify.VerifyWithState(tx.GetZZSTX(), state.NextZState(), block.NumberU64())
-				}
-				//err := verify.Verify(tx.GetZZSTX(), state.GetZState())
-				if err != nil {
-					return i, events, coalescedLogs, err
-				}
-			}
-		}
+		// if !is_all_in_checkpoints {
+		// 	for _, tx := range block.Transactions() {
+		// 		err := <-tx_results
+		// 		if err == nil {
+		// 			err = verify.VerifyWithState(tx.GetZZSTX(), state.NextZState(), block.NumberU64())
+		// 		}
+		// 		//err := verify.Verify(tx.GetZZSTX(), state.GetZState())
+		// 		if err != nil {
+		// 			return i, events, coalescedLogs, err
+		// 		}
+		// 	}
+		// }
 
 		if seroparam.SIP4() <= block.NumberU64() {
 			stakeState := stake.NewStakeState(state)
