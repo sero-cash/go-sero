@@ -271,7 +271,7 @@ func (self *Voter) SelfShares(poshash common.Hash, parent common.Hash, parentNum
 		if stakeState.ShareSize() == 0 {
 			return nil, nil
 		}
-		ints, shares, err := stakeState.SeleteShare(poshash)
+		ints, shares, err := stakeState.SeleteShare(poshash, header.Number.Uint64())
 		log.Info("SelfShares selete share", "poshash", poshash, "blockNumber", header.Number.Uint64(), "indexs", ints, "pool size", stakeState.ShareSize())
 		if err != nil {
 			log.Info("lotteryTaskLoop", "SeleteShare", poshash, "err", err)

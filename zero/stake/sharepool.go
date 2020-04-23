@@ -299,7 +299,7 @@ func blockShareNum(hash common.Hash) []byte {
 }
 
 func (self *StakeState) RecordVotes(batch serodb.Batch, block *types.Block) error {
-	idx, shares, err := self.SeleteShare(block.HashPos())
+	idx, shares, err := self.SeleteShare(block.HashPos(), block.NumberU64())
 	if err != nil {
 		return err
 	}
@@ -395,7 +395,7 @@ func (self *StakeState) getNewShareNum() uint32 {
 }
 
 func (self *StakeState) AddPendingShare(share *Share) {
-	// tree := NewTree(self)
+	// tree := newOldTree(self)
 	// tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.InitNum})
 	share.Status = STATUS_VALID
 	share.Num = share.InitNum
@@ -409,14 +409,14 @@ func (self *StakeState) AddPendingShare(share *Share) {
 	self.updateShare(share)
 }
 
-func (self *StakeState) insertSharePool(share *Share) error {
+func (self *StakeState) insertSharePool(share *Share, blockNumber uint64) error {
 	num := self.getNewShareNum()
 	if num < share.InitNum {
 		return errors.New("newsharenum < share.InitNum")
 	}
 	self.setNewShareNum(num - share.InitNum)
-	tree := NewTree(self)
-	tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num, nodeNum: 1})
+	tree := NewTree(self, blockNumber)
+	tree.Insert(&Node{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num, factor: 1})
 	return nil
 }
 
@@ -454,21 +454,20 @@ func (self *StakeState) NeedTwoVote(num uint64) bool {
 }
 
 func (self *StakeState) ShareSize() uint32 {
-	tree := NewTree(self)
-	return tree.size()
+	tree := NewTree(self, 0)
+	return tree.Size()
 }
 
-func (self *StakeState) SeleteShare(seed common.Hash) (ints []uint32, shares []*Share, err error) {
-	tree := NewTree(self)
-	// tree.MiddleOrder()
+func (self *StakeState) SeleteShare(seed common.Hash, blockNumber uint64) (ints []uint32, shares []*Share, err error) {
+	tree := NewTree(self, blockNumber)
 
-	if tree.size() < MaxVoteCount {
+	if tree.Size() < MaxVoteCount {
 		return
 	}
 
-	ints, _ = FindShareIdxs(tree.size(), MaxVoteCount, NewHash256PRNG(seed[:]))
+	ints, _ = FindShareIdxs(tree.Size(), MaxVoteCount, NewHash256PRNG(seed[:]))
 	for _, i := range ints {
-		node, e := tree.findByIndex(uint32(i))
+		node, e := tree.FindByIndex(uint32(i))
 		if e != nil {
 			err = e
 			return
@@ -623,9 +622,9 @@ func (self *StakeState) getShares(getter serodb.Getter, blockHash common.Hash, b
 }
 
 func (self *StakeState) CurrentPrice() *big.Int {
-	tree := NewTree(self)
+	tree := NewTree(self, 0)
 	newNum := self.getNewShareNum()
-	size := tree.size() + newNum
+	size := tree.Size() + newNum
 	return new(big.Int).Add(basePrice, new(big.Int).Mul(addition, big.NewInt(int64(size))))
 }
 
@@ -688,7 +687,7 @@ func (self *StakeState) StakeCurrentReward(blockNumber *big.Int) (soloRewards *b
 		return big.NewInt(600000000000000000), big.NewInt(900000000000000000)
 	}
 
-	size := NewTree(self).size()
+	size := NewTree(self, blockNumber.Uint64()).Size()
 	totalReward := new(big.Int).Add(baseReware, new(big.Int).Mul(rewareStep, big.NewInt(int64(size))))
 
 	if totalReward.Cmp(maxReware) > 0 {
@@ -718,16 +717,16 @@ func GetPosRewardBySize(size uint64, blockNumber int64) (soloRewards *big.Int, t
 }
 
 func (self *StakeState) checkShareRepeated(header *types.Header) error {
-	tree := NewTree(self)
+	tree := NewTree(self, header.Number.Uint64())
 	seed := header.HashPos()
-	indexs, err := FindShareIdxs(tree.size(), 3, NewHash256PRNG(seed[:]))
+	indexs, err := FindShareIdxs(tree.Size(), 3, NewHash256PRNG(seed[:]))
 	if err != nil {
 		return err
 	}
 
 	voteNumMap := map[common.Hash]int{}
 	for _, index := range indexs {
-		sndoe, err := tree.findByIndex(index)
+		sndoe, err := tree.FindByIndex(index)
 		if err != nil {
 			return err
 		}
@@ -871,6 +870,15 @@ func (self *StakeState) processRemedyRewards(bc blockChain, header *types.Header
 }
 
 func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) (err error) {
+	if header.Number.Uint64() == seroparam.SIP8() {
+		InitAVLTree(self)
+		// NewTree(self, header.Number.Uint64()).Midtraverse()
+	}
+
+	// if header.Number.Uint64() > seroparam.SIP8() && header.Number.Uint64()%100 == 0 {
+	// 	NewTree(self, header.Number.Uint64()).Midtraverse()
+	// }
+
 	self.setBlockHash(header.Number.Uint64()-1, header.ParentHash)
 	// last round
 	err = self.processVotedShare(header, bc)
@@ -942,13 +950,13 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) (
 		return
 	}
 	preHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-	tree := NewTree(self)
+	tree := NewTree(self, header.Number.Uint64())
 	poshash := preHeader.HashPos()
-	indexs, e := FindShareIdxs(tree.size(), MaxVoteCount, NewHash256PRNG(poshash[:]))
+	indexs, e := FindShareIdxs(tree.Size(), MaxVoteCount, NewHash256PRNG(poshash[:]))
 	if e == nil {
-		ndoes := []*SNode{}
+		ndoes := []*Node{}
 		for _, index := range indexs {
-			sndoe, e1 := tree.findByIndex(index)
+			sndoe, e1 := tree.FindByIndex(index)
 			if e1 != nil {
 				err = e1
 				return
@@ -988,7 +996,7 @@ func (self *StakeState) processVotedShare(header *types.Header, bc blockChain) (
 			}
 		}
 		for _, node := range ndoes {
-			tree.deleteNodeByHash(node.key, 1)
+			tree.Delete(node.key, 1)
 		}
 	}
 
@@ -1088,7 +1096,7 @@ func (self *StakeState) processOutDate(header *types.Header, bc blockChain) (err
 		return
 	}
 	if len(shares) > 0 {
-		tree := NewTree(self)
+		tree := NewTree(self, header.Number.Uint64())
 		for _, share := range shares {
 			if share.BlockNumber == preHeader.Number.Uint64() {
 				if share.Status == STATUS_OUTOFDATE {
@@ -1099,7 +1107,7 @@ func (self *StakeState) processOutDate(header *types.Header, bc blockChain) (err
 					self.updateShare(share)
 					continue
 				}
-				sndoe := tree.deleteNodeByHash(common.BytesToHash(share.Id()), share.Num)
+				sndoe := tree.Delete(common.BytesToHash(share.Id()), share.Num)
 				if sndoe == nil {
 					err = errors.New("processOutDate share not found")
 					return
@@ -1202,7 +1210,7 @@ func (self *StakeState) processNowShares(header *types.Header, bc blockChain) (e
 				continue
 			}
 			// tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num, nodeNum: 1})
-			err = self.insertSharePool(share)
+			err = self.insertSharePool(share, header.Number.Uint64())
 			if err != nil {
 				return
 			}
@@ -1274,3 +1282,21 @@ func (self *StakeState) payIncome(bc blockChain, header *types.Header) (err erro
 	}
 	return nil
 }
+
+//
+// func (self *StakeState) ChangeVersion() {
+// 	oldTree := newOldTree(self)
+//
+// 	list := make([]*SNode, 0)
+// 	oldTree.Midtraverse(oldTree.newRootNode(), func(node *SNode) {
+// 		list = append(list, node)
+// 	})
+// 	// state2, _ := newState()
+// 	newTree := NewAVLTree(self.statedb)
+// 	for _, each := range list {
+// 		newTree.Insert(&Node{pkey: common.Hash{}, key: each.key, total: each.num, num: each.num, height: 1})
+// 	}
+// 	if oldTree.size() != newTree.size() {
+// 		panic("stake changeVersion err")
+// 	}
+// }
