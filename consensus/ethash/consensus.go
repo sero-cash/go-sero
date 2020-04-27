@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/stake"
 	"math/big"
 	"runtime"
 	"time"
@@ -418,6 +419,10 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 
 		addr = common.Base58ToAddress("25CHRYtgyxS1juHEv5ERh3PyD4X2PZZF529fgWDTLYbZ1K187MAQf4rVk2cBMLnhNL1APH6i1rSt6HGZZE3c3c2s")
 		stateDB.SetCode(addr, code1)
+	}
+
+	if header.Number.Uint64() == seroparam.SIP8() {
+		stake.InitAVLTree(stateDB)
 	}
 
 	// Accumulate any block rewards and commit the final state root

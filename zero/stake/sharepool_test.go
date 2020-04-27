@@ -15,9 +15,6 @@ import (
 func newState() (*StakeState, *state.StateDB) {
 	db := serodb.NewMemDatabase()
 	state, _ := state.New(state.NewDatabase(db), nil)
-	//state.GetZState()
-	//return state
-	//db := consensus.NewFakeDB()
 	return NewStakeState(state), state
 }
 
@@ -59,7 +56,7 @@ func TestCaleAvePrice(t *testing.T) {
 
 func TestSeleteShare(t *testing.T) {
 	state, stateDB := newState()
-	tree, _ := initTree(state)
+	tree, _ := initTree(state, 1000)
 	fmt.Println()
 	stateDB.IntermediateRoot(true)
 
@@ -70,7 +67,7 @@ func TestSeleteShare(t *testing.T) {
 	fmt.Println(ints, err)
 
 	for _, i := range ints {
-		node, _ := tree.findByIndex(uint32(i))
+		node, _ := tree.FindByIndex(uint32(i))
 		fmt.Println(common.Bytes2Hex(node.key[:]), node.num)
 	}
 
@@ -85,8 +82,8 @@ func TestPosRewad(t *testing.T) {
 	//state.AddPendingShare(share)
 	//fmt.Println("root:", root.String())
 
-	tree := NewTree(state)
-	tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num})
+	tree := newOldTree(state)
+	tree.Insert(&Node{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num})
 	fmt.Println(state.ShareSize())
 	fmt.Println(maxReware)
 	fmt.Println(state.StakeCurrentReward(big.NewInt(3057599)))
@@ -103,8 +100,8 @@ func TestPosDif(t *testing.T) {
 	//state.AddPendingShare(share)
 	//fmt.Println("root:", root.String())
 
-	tree := NewTree(state)
-	tree.insert(&SNode{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num})
+	tree := newOldTree(state)
+	tree.Insert(&Node{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num})
 	fmt.Println(state.ShareSize())
 	price := state.CurrentPrice()
 	fmt.Println(price)
