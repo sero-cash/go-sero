@@ -80,31 +80,29 @@ func TestAVLTreeFindByIndex(t *testing.T) {
 func TestAVLDelByIndex(t *testing.T) {
 
 	db, _ := newState()
-	tree, _ := initAVLTree(db, 1000)
+	tree, _ := initAVLTree(db, 100)
 
 	count := uint32(0)
 	all := tree.newRootNode().total
 	fmt.Println()
 	for {
-		rootNode := tree.newRootNode()
 
-		if rootNode == nil || count >= all {
+		if tree.Size() == 0 || count >= all {
 			break
 		}
-		size := rootNode.total
 		count++
-		if size == 43 {
-			fmt.Println("12345")
-		}
-		index := rand.Uint32() % size
+		index := rand.Uint32() % tree.Size()
 		node, err := tree.FindByIndex(index)
 		if err != nil {
 			panic(err)
 		}
-		tree.Delete(node.key, 1)
+		ret := tree.Delete(node.key, 1)
+		if ret == nil || node.num != ret.num {
+			panic("delete err")
+		}
 		tree.Midtraverse()
 		fmt.Println()
-		tree.newRootNode().Print()
+		// tree.newRootNode().Print()
 		fmt.Println("------------------------------------------")
 	}
 	if all != count {

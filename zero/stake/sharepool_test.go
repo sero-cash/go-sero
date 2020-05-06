@@ -63,7 +63,7 @@ func TestSeleteShare(t *testing.T) {
 	seed := crypto.Keccak256Hash([]byte("abc"))
 	prng := NewHash256PRNG(seed[:])
 
-	ints, err := FindShareIdxs(tree.size(), 3, prng)
+	ints, err := FindShareIdxs(tree.Size(), 3, prng)
 	fmt.Println(ints, err)
 
 	for _, i := range ints {
@@ -82,7 +82,7 @@ func TestPosRewad(t *testing.T) {
 	//state.AddPendingShare(share)
 	//fmt.Println("root:", root.String())
 
-	tree := newOldTree(state)
+	tree := NewTree(state,0)
 	tree.Insert(&Node{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num})
 	fmt.Println(state.ShareSize())
 	fmt.Println(maxReware)
@@ -100,7 +100,7 @@ func TestPosDif(t *testing.T) {
 	//state.AddPendingShare(share)
 	//fmt.Println("root:", root.String())
 
-	tree := newOldTree(state)
+	tree := NewTree(state, 0)
 	tree.Insert(&Node{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num})
 	fmt.Println(state.ShareSize())
 	price := state.CurrentPrice()

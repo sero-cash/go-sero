@@ -186,7 +186,7 @@ func (tree *AVLTree) insertNode(parent *Node, node *Node) *Node {
 	return parent
 }
 
-func (tree *AVLTree) Midtraverse()  {
+func (tree *AVLTree) Midtraverse() {
 	tree.midtraverse(tree.newRootNode(), func(node *Node) {
 		node.Print()
 	}, nil)
@@ -261,7 +261,8 @@ func (tree *AVLTree) FindByIndex(index uint32) (*Node, error) {
 
 func (tree *AVLTree) Delete(key common.Hash, num uint32) *Node {
 	rootNode := tree.newRootNode()
-	node := tree.delete(rootNode, key, num)
+	node, ret := tree.delete(rootNode, key, num)
+
 	if node == nil {
 		tree.state.SetStakeState(rootKey_new, emptyHash)
 	} else {
@@ -269,26 +270,28 @@ func (tree *AVLTree) Delete(key common.Hash, num uint32) *Node {
 			tree.state.SetStakeState(rootKey_new, node.key)
 		}
 	}
-	return node
+	return ret
 }
 
-func (tree *AVLTree) delete(node *Node, key common.Hash, num uint32) *Node {
+func (tree *AVLTree) delete(node *Node, key common.Hash, num uint32) (*Node, *Node) {
 	if node == nil {
-		return nil
+		return nil, nil
 	}
 
+	var ret *Node
 	lchild := node.left(tree.state)
 	rchild := node.right(tree.state)
 	if node.key == key {
+		ret = &Node{key: key}
+		ret.load(tree.state)
 		if node.num == num {
 			if lchild == nil && rchild == nil {
-
-				return nil
+				return nil, ret
 			} else if lchild == nil || rchild == nil {
 				if lchild != nil {
-					return lchild
+					return lchild, ret
 				} else {
-					return rchild
+					return rchild, ret
 				}
 			} else {
 				n := lchild
@@ -327,17 +330,17 @@ func (tree *AVLTree) delete(node *Node, key common.Hash, num uint32) *Node {
 					n.setNode(tree.state, nodeCopy, ncpoy.pkey, ncpoylchild, ncpoyrchild)
 				}
 
-				lchild = tree.delete(node.left(tree.state), key, num)
+				lchild, ret = tree.delete(node.left(tree.state), key, num)
 				node.setLeftChild(tree.state, lchild)
 			}
 		} else {
 			node.setNum(tree.state, safeSub(node.num, num))
 		}
 	} else if cmp(node.key, key) > 0 {
-		lchild = tree.delete(lchild, key, num)
+		lchild, ret = tree.delete(lchild, key, num)
 		node.setLeftChild(tree.state, lchild)
 	} else {
-		rchild = tree.delete(rchild, key, num)
+		rchild, ret = tree.delete(rchild, key, num)
 		node.setRightChild(tree.state, rchild)
 	}
 
@@ -345,9 +348,13 @@ func (tree *AVLTree) delete(node *Node, key common.Hash, num uint32) *Node {
 	node.setTotal(tree.state, safeSub(node.total, num))
 
 	node = tree.handleBF(node)
-	return node
+	return node, ret
 }
 
 func (tree *AVLTree) Size() uint32 {
-	return tree.newRootNode().total
+	node := tree.newRootNode()
+	if node == nil {
+		return 0
+	}
+	return node.total
 }
