@@ -53,27 +53,25 @@ func initAVLNode(seed uint64, num uint32, all map[common.Hash]uint32) *Node {
 func TestAVLTree(t *testing.T) {
 	db, _ := newState()
 	tree, all := initAVLTree(db, 10)
-	tree.Midtraverse(tree.newRootNode(), newprint, nil)
+	tree.Midtraverse()
 	fmt.Println(tree.Size(), len(all), tree.newRootNode().factor)
 }
 
 func TestAVLTreeCopy(t *testing.T) {
 	db1, _ := newState()
 	tree, all := initAVLTree(db1, 20)
-	tree.Midtraverse(tree.newRootNode(), newprint, nil)
+	tree.Midtraverse()
 	fmt.Println(tree.Size(), len(all), tree.newRootNode().factor)
 	db2, _ := newState()
 	newTree := Copy(db2, tree)
-	newTree.Midtraverse(newTree.newRootNode(), newprint, nil)
+	newTree.Midtraverse()
 	fmt.Println(newTree.Size(), newTree.newRootNode().factor)
 }
 
 func TestAVLTreeFindByIndex(t *testing.T) {
 	db, _ := newState()
 	tree, _ := initAVLTree(db, 10)
-	tree.Midtraverse(tree.newRootNode(), func(node *Node) {
-		node.Print()
-	}, nil)
+	tree.Midtraverse()
 	fmt.Println()
 	node, _ := tree.FindByIndex(0)
 	node.Print()
@@ -104,9 +102,7 @@ func TestAVLDelByIndex(t *testing.T) {
 			panic(err)
 		}
 		tree.Delete(node.key, 1)
-		tree.Midtraverse(tree.newRootNode(), func(node *Node) {
-			// node.Print()
-		}, nil)
+		tree.Midtraverse()
 		fmt.Println()
 		tree.newRootNode().Print()
 		fmt.Println("------------------------------------------")
@@ -140,7 +136,7 @@ func TestAVLDelByHash(t *testing.T) {
 			// dTree := Copy(ddb, tree)
 			fmt.Println("delete ", common.Bytes2Hex(key[:]), num)
 			tree.Delete(key, num)
-			tree.Midtraverse(tree.newRootNode(), func(node *Node) {
+			tree.midtraverse(tree.newRootNode(), func(node *Node) {
 				// node.Print()
 			}, func(node *Node) {
 				if !check(node, node.left(tree.state), node.right(tree.state)) {
@@ -161,7 +157,7 @@ func TestAVLDelByHash(t *testing.T) {
 			// iTree := Copy(idb, tree)
 			tree.Insert(node)
 
-			tree.Midtraverse(tree.newRootNode(), func(node *Node) {
+			tree.midtraverse(tree.newRootNode(), func(node *Node) {
 				// node.Print()
 			}, func(node *Node) {
 				if !check(node, node.left(tree.state), node.right(tree.state)) {
@@ -193,7 +189,7 @@ func TestAVLDelByHash(t *testing.T) {
 	rootNode := tree.newRootNode()
 
 	fmt.Println("rootNode", rootNode.key)
-	tree.Midtraverse(rootNode, newprint, nil)
+	tree.Midtraverse()
 	fmt.Println()
 }
 
@@ -204,7 +200,7 @@ func TestOldAndNew(t *testing.T) {
 	oldTree.newRootNode().Print()
 
 	newTree := CopyFromOldV1(oldTree)
-	newTree.Midtraverse(newTree.newRootNode(), newprint, nil)
+	newTree.Midtraverse()
 	fmt.Println()
 	newTree.newRootNode().Print()
 	fmt.Println()
@@ -216,7 +212,7 @@ func TestOldAndNew(t *testing.T) {
 		newTree.Insert(node)
 	}
 
-	newTree.Midtraverse(newTree.newRootNode(), newprint, nil)
+	newTree.Midtraverse()
 	fmt.Println()
 	newTree.newRootNode().Print()
 	fmt.Println()

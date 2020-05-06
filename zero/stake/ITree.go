@@ -12,6 +12,7 @@ type ITree interface {
 	Delete(nodeHash common.Hash, num uint32) *Node
 	FindByIndex(index uint32) (*Node, error)
 
+	Midtraverse()
 	// GetNode(nodeHash common.Hash) *Node
 	Size() uint32
 }

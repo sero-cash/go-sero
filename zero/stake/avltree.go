@@ -27,9 +27,9 @@ func NewAVLTree(state State) *AVLTree {
 
 func CopyFromOldV0(state State, old *STree) *AVLTree {
 	list := make([]*Node, 0)
-	old.Midtraverse(old.newRootNode(), func(node *Node) {
+	old.midtraverse(old.newRootNode(), func(node *Node) {
 		list = append(list, node)
-	})
+	}, nil)
 
 	tree := NewAVLTree(state)
 	return tree
@@ -69,7 +69,7 @@ func Copy(state State, old *AVLTree) *AVLTree {
 	tree := NewAVLTree(state)
 	node := old.newRootNode()
 	state.SetStakeState(rootKey_new, node.key)
-	old.Midtraverse(node, func(node *Node) {
+	old.midtraverse(node, func(node *Node) {
 		node.store(state)
 		node.setLeftChild(state, node.left(old.state))
 		node.setRightChild(state, node.right(old.state))
@@ -186,8 +186,14 @@ func (tree *AVLTree) insertNode(parent *Node, node *Node) *Node {
 	return parent
 }
 
+func (tree *AVLTree) Midtraverse()  {
+	tree.midtraverse(tree.newRootNode(), func(node *Node) {
+		node.Print()
+	}, nil)
+}
+
 // 中序遍历树，并根据钩子函数处理数据
-func (tree *AVLTree) Midtraverse(node *Node, handle func(*Node), check func(*Node)) error {
+func (tree *AVLTree) midtraverse(node *Node, handle func(*Node), check func(*Node)) error {
 	if node == nil {
 		return nil
 	} else {
@@ -195,11 +201,11 @@ func (tree *AVLTree) Midtraverse(node *Node, handle func(*Node), check func(*Nod
 			check(node)
 		}
 
-		if err := tree.Midtraverse(node.left(tree.state), handle, check); err != nil { // 处理左子树
+		if err := tree.midtraverse(node.left(tree.state), handle, check); err != nil { // 处理左子树
 			return err
 		}
 		handle(node)
-		if err := tree.Midtraverse(node.right(tree.state), handle, check); err != nil { // 处理右子树
+		if err := tree.midtraverse(node.right(tree.state), handle, check); err != nil { // 处理右子树
 			return err
 		}
 	}

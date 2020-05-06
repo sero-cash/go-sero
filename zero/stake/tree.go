@@ -28,13 +28,19 @@ func (tree *STree) newRootNode() *Node {
 	return rootNode
 }
 
-func (tree *STree) Midtraverse(node *Node, handle func(*Node)) {
+func (tree *STree) Midtraverse() {
+	tree.midtraverse(tree.newRootNode(), func(node *Node) {
+		node.Print()
+	}, nil)
+}
+
+func (tree *STree) midtraverse(node *Node, handle func(*Node), check func(*Node)) {
 	if node == nil {
 		return
 	}
-	tree.Midtraverse(node.left(tree.state), handle)
+	tree.midtraverse(node.left(tree.state), handle, check)
 	handle(node)
-	tree.Midtraverse(node.right(tree.state), handle)
+	tree.midtraverse(node.right(tree.state), handle, check)
 }
 
 func (tree *STree) Lasttraverse(node *Node, handle func(*Node)) {

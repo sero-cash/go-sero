@@ -25,7 +25,7 @@ func TestTree(t *testing.T) {
 	tree, _ := initTree(db, 1000)
 	root = stateDB.IntermediateRoot(true)
 	fmt.Println("root:", root.String())
-	fmt.Println(tree.size())
+	fmt.Println(tree.Size())
 }
 
 func initNode(seed uint64, num uint32, all map[common.Hash]uint32) *Node {
@@ -42,7 +42,7 @@ func initNode(seed uint64, num uint32, all map[common.Hash]uint32) *Node {
 
 func initTree(state State, n int) (*STree, map[common.Hash]uint32) {
 	all := map[common.Hash]uint32{}
-	tree := newOldTree(state)
+	tree := &STree{state: state}
 	for i := 1; i <= n; i++ {
 
 		u := uint64(rand.Intn(100))
@@ -52,9 +52,9 @@ func initTree(state State, n int) (*STree, map[common.Hash]uint32) {
 	hash := state.GetStakeState(rootKey)
 	root := &Node{key: hash}
 	root.load(tree.state)
-	tree.Midtraverse(root, func(node *Node) {
+	tree.midtraverse(root, func(node *Node) {
 		node.Print()
-	})
+	}, nil)
 	return tree, all
 }
 
@@ -63,10 +63,9 @@ func TestTreeFindByIndex(t *testing.T) {
 	tree, _ := initTree(db, 10)
 
 	fmt.Println()
-	node,_ := tree.FindByIndex(0)
+	node, _ := tree.FindByIndex(0)
 	node.Print()
 }
-
 
 func TestDelByIndex(t *testing.T) {
 
@@ -75,7 +74,7 @@ func TestDelByIndex(t *testing.T) {
 
 	fmt.Println()
 	for {
-		size := tree.size()
+		size := tree.Size()
 
 		if size == 0 {
 			break
@@ -84,7 +83,7 @@ func TestDelByIndex(t *testing.T) {
 		// snapshot := stateDB.Snapshot()
 		fmt.Println("size : ", size)
 		index := rand.Uint32() % size
-		node,err := tree.FindByIndex(index)
+		node, err := tree.FindByIndex(index)
 		if err != nil {
 			panic(err)
 		}
@@ -93,18 +92,18 @@ func TestDelByIndex(t *testing.T) {
 
 		// stateDB.RevertToSnapshot(snapshot)
 
-		tree.Midtraverse(tree.newRootNode(), func(node *Node) {
+		tree.midtraverse(tree.newRootNode(), func(node *Node) {
 			node.Print()
-		})
+		}, nil)
 
 		root := stateDB.IntermediateRoot(true)
 		fmt.Println("root:", root.String())
 		fmt.Println()
 	}
 
-	tree.Midtraverse(tree.newRootNode(), func(node *Node) {
+	tree.midtraverse(tree.newRootNode(), func(node *Node) {
 		node.Print()
-	})
+	}, nil)
 
 	root := stateDB.IntermediateRoot(true)
 	fmt.Println("root:", root.String())
@@ -168,8 +167,8 @@ func TestDelByHash(t *testing.T) {
 	root := &Node{key: hash}
 	fmt.Println("rootNode", common.Bytes2Hex(hash[:]))
 
-	tree.Midtraverse(root, func(node *Node) {
+	tree.midtraverse(root, func(node *Node) {
 		node.Print()
-	})
+	}, nil)
 	fmt.Println()
 }
