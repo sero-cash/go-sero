@@ -28,8 +28,6 @@ import (
 
 type Status int8
 
-var Tree_version = crypto.Keccak256Hash([]byte("TREEVERSION"))
-
 const (
 	STATUS_VALID     Status = 0
 	STATUS_OUTOFDATE Status = 1
@@ -872,6 +870,10 @@ func (self *StakeState) processRemedyRewards(bc blockChain, header *types.Header
 }
 
 func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) (err error) {
+	if header.Number.Uint64() == seroparam.SIP8() {
+		InitAVLTree(self.statedb)
+	}
+
 	self.setBlockHash(header.Number.Uint64()-1, header.ParentHash)
 	// last round
 	err = self.processVotedShare(header, bc)

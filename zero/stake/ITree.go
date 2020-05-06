@@ -17,7 +17,7 @@ type ITree interface {
 }
 
 func NewTree(state State, blockNumber uint64) ITree {
-	if blockNumber > seroparam.SIP8() {
+	if blockNumber >= seroparam.SIP8() {
 		return &AVLTree{state}
 	} else {
 		return &STree{state}
