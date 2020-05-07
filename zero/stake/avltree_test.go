@@ -194,10 +194,11 @@ func TestAVLDelByHash(t *testing.T) {
 func TestOldAndNew(t *testing.T) {
 	state1, _ := newState()
 	oldTree, all := initTree(state1, 10)
-	fmt.Println()
-	oldTree.newRootNode().Print()
+	oldTree.Midtraverse()
+	fmt.Println("____________________________")
+	// oldTree.newRootNode().Print()
 
-	newTree := CopyFromOldV1(oldTree)
+	newTree := CopyFromOldV0(oldTree)
 	newTree.Midtraverse()
 	fmt.Println()
 	newTree.newRootNode().Print()

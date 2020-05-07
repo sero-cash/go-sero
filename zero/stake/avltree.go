@@ -25,19 +25,26 @@ func NewAVLTree(state State) *AVLTree {
 	return &AVLTree{state}
 }
 
-func CopyFromOldV0(state State, old *STree) *AVLTree {
+func InitAVLTree(state State) {
+	oldTree := &STree{state}
+	CopyFromOldV0(oldTree)
+}
+
+func CopyFromOldV0(old *STree) *AVLTree {
 	list := make([]*Node, 0)
 	old.midtraverse(old.newRootNode(), func(node *Node) {
 		list = append(list, node)
+
 	}, nil)
+	old.state.SetStakeState(rootKey, emptyHash)
 
-	tree := NewAVLTree(state)
+	tree := NewAVLTree(old.state)
+	for _, node := range list {
+		old.state.SetStakeState(node.leftKey(), emptyHash)
+		old.state.SetStakeState(node.rightKey(), emptyHash)
+		tree.Insert(&Node{key: node.key, total: node.num, num: node.num, factor: 1})
+	}
 	return tree
-}
-
-func InitAVLTree(state State) {
-	oldTree := &STree{state}
-	CopyFromOldV1(oldTree)
 }
 
 func CopyFromOldV1(old *STree) *AVLTree {
@@ -74,7 +81,7 @@ func Copy(state State, old *AVLTree) *AVLTree {
 		node.setLeftChild(state, node.left(old.state))
 		node.setRightChild(state, node.right(old.state))
 
-		// tree.Insert(&Node{key: node.key, total: node.num, num: node.num, height: 1})
+		//
 	}, nil)
 	return tree
 }
@@ -135,7 +142,6 @@ func (tree *AVLTree) rlRotation(node *Node) *Node {
 	return tree.llRotation(node)
 }
 
-// 处理节点高度问题
 func (tree *AVLTree) handleBF(node *Node) *Node {
 	leftChild := node.left(tree.state)
 	rightChild := node.right(tree.state)
@@ -156,7 +162,6 @@ func (tree *AVLTree) handleBF(node *Node) *Node {
 	return node
 }
 
-// 插入节点 ---> 依次向上递归，调整树平衡
 func (tree *AVLTree) Insert(node *Node) {
 	hash := tree.state.GetStakeState(rootKey_new)
 	rootNode := tree.insertNode(tree.newRootNode(), node)
@@ -192,7 +197,6 @@ func (tree *AVLTree) Midtraverse() {
 	}, nil)
 }
 
-// 中序遍历树，并根据钩子函数处理数据
 func (tree *AVLTree) midtraverse(node *Node, handle func(*Node), check func(*Node)) error {
 	if node == nil {
 		return nil
@@ -232,7 +236,6 @@ func (tree *AVLTree) newRootNode() *Node {
 	return node
 }
 
-// 查找并返回节点
 func (tree *AVLTree) FindByIndex(index uint32) (*Node, error) {
 	node := tree.newRootNode()
 

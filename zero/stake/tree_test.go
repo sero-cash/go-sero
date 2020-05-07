@@ -49,12 +49,12 @@ func initTree(state State, n int) (*STree, map[common.Hash]uint32) {
 		num := uint32(u%10 + 1)
 		tree.Insert(initNode(uint64(i), num, all))
 	}
-	hash := state.GetStakeState(rootKey)
-	root := &Node{key: hash}
-	root.load(tree.state)
-	tree.midtraverse(root, func(node *Node) {
-		node.Print()
-	}, nil)
+	// hash := state.GetStakeState(rootKey)
+	// root := &Node{key: hash}
+	// root.load(tree.state)
+	// tree.midtraverse(root, func(node *Node) {
+	// 	node.Print()
+	// }, nil)
 	return tree, all
 }
 
