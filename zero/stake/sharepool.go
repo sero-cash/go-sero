@@ -872,12 +872,12 @@ func (self *StakeState) processRemedyRewards(bc blockChain, header *types.Header
 func (self *StakeState) ProcessBeforeApply(bc blockChain, header *types.Header) (err error) {
 	if header.Number.Uint64() == seroparam.SIP8() {
 		InitAVLTree(self)
-		NewTree(self, header.Number.Uint64()).Midtraverse()
+		// NewTree(self, header.Number.Uint64()).Midtraverse()
 	}
 
-	if header.Number.Uint64() > seroparam.SIP8() && header.Number.Uint64()%100 == 0 {
-		NewTree(self, header.Number.Uint64()).Midtraverse()
-	}
+	// if header.Number.Uint64() > seroparam.SIP8() && header.Number.Uint64()%100 == 0 {
+	// 	NewTree(self, header.Number.Uint64()).Midtraverse()
+	// }
 
 	self.setBlockHash(header.Number.Uint64()-1, header.ParentHash)
 	// last round
