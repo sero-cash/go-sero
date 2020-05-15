@@ -716,6 +716,8 @@ func (self *Exchange) iteratorUtxo(Pk *c_type.Uint512, begin, end uint64, handle
 	return
 }
 
+var ignorePKr = common.Base58ToAddress("i3zesDa26i7jAtkR2fBYBeZsoQ7NAJxQNCsbgwvaWap3HVDGmvzsQSLqTZRyadswzBoC4edWYJzejyY6AXVhGkcqFYVvVPH1w5vHfvbazp1ReQ5Wa9qi15UPAwztrxe9oJQ").ToPKr()
+
 func (self *Exchange) getUtxo(root c_type.Uint256) (utxo Utxo, e error) {
 	data, err := self.db.Get(rootKey(root))
 	if err != nil {
@@ -725,6 +727,10 @@ func (self *Exchange) getUtxo(root c_type.Uint256) (utxo Utxo, e error) {
 		log.Error("Exchange Invalid utxo RLP", "root", common.Bytes2Hex(root[:]), "err", err)
 		e = err
 		return
+	}
+
+	if utxo.Pkr == *ignorePKr {
+		utxo.Ignore = true
 	}
 
 	if value, ok := self.usedFlag.Load(utxo.Root); ok {
