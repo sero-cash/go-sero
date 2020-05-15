@@ -37,7 +37,7 @@ function sysname() {
     elif [ "Linux" == "$SYSTEM" ]
     then
         kernal=`uname -v |cut -f 1 -d \ |cut -f 2 -d -`
-        if ["Ubuntu"  == "$kernal"]
+        if [ "Ubuntu"  == "$kernal" ]
         then
             echo "Linux-V3"
         else
