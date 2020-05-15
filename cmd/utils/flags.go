@@ -324,6 +324,11 @@ var (
 		Usage: "big int return value as number string",
 	}
 
+	StakeFlag = cli.BoolFlag{
+		Name:  "stake",
+		Usage: "start stake",
+	}
+
 	AutoMergeFlag = cli.BoolFlag{
 		Name:  "autoMerge",
 		Usage: "autoMerge outs",
@@ -1275,9 +1280,15 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 		seroparam.InitExchangeValueStr(true)
 	}
 
+	if ctx.GlobalIsSet(StakeFlag.Name) {
+		cfg.StartStake = true
+	}
+
 	if ctx.GlobalIsSet(LightNodeFlag.Name) {
 		cfg.StartLight = true
 	}
+
+
 
 	// Override any default configs for hard coded networks.
 	switch {

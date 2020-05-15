@@ -115,6 +115,7 @@ var (
 		//utils.RinkebyFlag,
 		utils.ExchangeFlag,
 		utils.ExchangeValueStrFlag,
+		utils.StakeFlag,
 		utils.AutoMergeFlag,
 		utils.ConfirmedBlockFlag,
 		utils.RecordBlockShareNumber,

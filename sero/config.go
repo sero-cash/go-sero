@@ -87,6 +87,7 @@ type Config struct {
 	MineMode      bool
 	StartExchange bool
 	AutoMerge     bool
+	StartStake bool
 
 	StartLight bool
 
