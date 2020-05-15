@@ -134,7 +134,7 @@ func (self *Lotter) wait() bool {
 
 	startTime := time.Now()
 
-	idx, shares, err := self.stake.SeleteShare(self.block.HashPos())
+	idx, shares, err := self.stake.SeleteShare(self.block.HashPos(), self.block.NumberU64())
 	if err != nil {
 		log.Error("Lotter wait ", "error", err)
 		return false
