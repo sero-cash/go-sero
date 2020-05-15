@@ -53,16 +53,16 @@ for os in ${os_version[@]}
       mkdir -p $BUILD_PATH/geropkg/czero/include/
       mkdir -p $BUILD_PATH/geropkg/czero/lib/
       cp -rf $CZERO_PATH/czero/data/* $SERO_PATH/build/geropkg/czero/data/
-      cp -rf $CZERO_PATH/czero/include/* $SERO_PATH/build/geropkg/czero/include/
+#      cp -rf $CZERO_PATH/czero/include/* $SERO_PATH/build/geropkg/czero/include/
       if [ $os == "windows-amd64" ];then
         mv $BUILD_PATH/bin/gero*.exe $BUILD_PATH/geropkg/bin/gero.exe
         cp -rf  $CZERO_PATH/czero/lib_WINDOWS_AMD64/* $SERO_PATH/build/geropkg/czero/lib/
       elif [ $os == "linux-amd64-v3" ];then
-        mv $BUILD_PATH/bin/bootnode-v3*  $BUILD_PATH/geropkg/bin/bootnode
+#        mv $BUILD_PATH/bin/bootnode-v3*  $BUILD_PATH/geropkg/bin/bootnode
         mv $BUILD_PATH/bin/gero-v3* $BUILD_PATH/geropkg/bin/gero
         cp -rf  $CZERO_PATH/czero/lib_LINUX_AMD64_V3/* $SERO_PATH/build/geropkg/czero/lib/
       elif [ $os == "linux-amd64-v4" ];then
-        mv $BUILD_PATH/bin/bootnode-v4*  $BUILD_PATH/geropkg/bin/bootnode
+#        mv $BUILD_PATH/bin/bootnode-v4*  $BUILD_PATH/geropkg/bin/bootnode
         mv $BUILD_PATH/bin/gero-v4* $BUILD_PATH/geropkg/bin/gero
         cp -rf  $CZERO_PATH/czero/lib_LINUX_AMD64_V4/* $SERO_PATH/build/geropkg/czero/lib/
       else
