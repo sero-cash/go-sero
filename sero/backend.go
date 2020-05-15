@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
 	"math/big"
 	"runtime"
 	"sync"
@@ -33,8 +34,6 @@ import (
 	"github.com/sero-cash/go-sero/common/address"
 
 	"github.com/sero-cash/go-sero/voter"
-	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
-
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/zconfig"
 
@@ -204,7 +203,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 		sero.exchange = exchange.NewExchange(zconfig.Exchange_dir(), sero.txPool, sero.accountManager, config.AutoMerge)
 	}
 
-	stakeservice.NewStakeService(zconfig.Stake_dir(), sero.blockchain, sero.accountManager)
+	if config.StartStake {
+		stakeservice.NewStakeService(zconfig.Stake_dir(), sero.blockchain, sero.accountManager)
+	}
 
 	// init light
 	if config.StartLight {
