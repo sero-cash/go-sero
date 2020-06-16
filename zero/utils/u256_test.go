@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
+
+	"github.com/sero-cash/go-sero/common/hexutil"
 )
 
 func TestU256_MarshalText(t *testing.T) {
@@ -38,4 +40,18 @@ func TestU256_UnmarshalText(t *testing.T) {
 		t.Error(err)
 	}
 	fmt.Printf("%v", a)
+}
+
+func TestU256_ToBEBytes(t *testing.T) {
+	//a := big.NewInt(339014133842837404430)
+	//b := U256(*a)
+	b := []byte("\"339014133842837404430\"")
+	a := U256{}
+	err := json.Unmarshal(b, &a)
+	if err != nil {
+		t.Error(err)
+	}
+
+	r := a.ToBEBytes()
+	fmt.Println(hexutil.Encode(r))
 }
