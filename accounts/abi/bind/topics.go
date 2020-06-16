@@ -207,7 +207,7 @@ func parseTopicsIntoMap(out map[string]interface{}, fields abi.Arguments, topics
 			num := new(big.Int).SetBytes(topics[0][:])
 			out[arg.Name] = num
 		case abi.AddressTy:
-			var addr common.Address
+			var addr common.ContractAddress
 			copy(addr[:], topics[0][12:])
 			out[arg.Name] = addr
 		case abi.HashTy:

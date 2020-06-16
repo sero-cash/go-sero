@@ -46,7 +46,6 @@ import (
 	"github.com/sero-cash/go-sero/metrics"
 	"github.com/sero-cash/go-sero/node"
 	"github.com/sero-cash/go-sero/sero"
-	"github.com/sero-cash/go-sero/seroclient"
 )
 
 const (
@@ -414,11 +413,11 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 
 	go func() {
 		// Create a chain state reader for self-derivation
-		rpcClient, err := stack.Attach()
-		if err != nil {
-			utils.Fatalf("Failed to attach to self: %v", err)
-		}
-		stateReader := seroclient.NewClient(rpcClient)
+		//rpcClient, err := stack.Attach()
+		//if err != nil {
+		//	utils.Fatalf("Failed to attach to self: %v", err)
+		//}
+		//stateReader := seroclient.NewClient(rpcClient)
 
 		// Open any wallets already attached
 		for _, wallet := range stack.AccountManager().Wallets() {
@@ -433,15 +432,6 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 				if err := event.Wallet.Open(""); err != nil {
 					log.Warn("New wallet appeared, failed to open", "url", event.Wallet.URL(), "err", err)
 				}
-			case accounts.WalletOpened:
-				status, _ := event.Wallet.Status()
-				log.Info("New wallet appeared", "url", event.Wallet.URL(), "status", status)
-
-				derivationPath := accounts.DefaultBaseDerivationPath
-				if event.Wallet.URL().Scheme == "ledger" {
-					derivationPath = accounts.DefaultLedgerBaseDerivationPath
-				}
-				event.Wallet.SelfDerive(derivationPath, stateReader)
 
 			case accounts.WalletDropped:
 				log.Info("Old wallet dropped", "url", event.Wallet.URL())

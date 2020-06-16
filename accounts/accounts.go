@@ -20,7 +20,6 @@ package accounts
 import (
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/superzk"
-	"github.com/sero-cash/go-sero"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/address"
 	"github.com/sero-cash/go-sero/event"
@@ -122,7 +121,6 @@ type Wallet interface {
 	//
 	// You can disable automatic account discovery by calling SelfDerive with a nil
 	// chain state reader.
-	SelfDerive(base DerivationPath, chain sero.ChainStateReader)
 
 	// IsMine return whether an once address is mine or not
 	IsMine(pkr c_type.PKr) bool

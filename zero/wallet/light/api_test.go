@@ -1,13 +1,13 @@
 package light
 
 import (
-	"testing"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
-	"encoding/json"
-	"time"
 	"net/http"
-	"bytes"
+	"testing"
+	"time"
 )
 
 var (
@@ -16,10 +16,10 @@ var (
 
 /**
 curl -i -H 'Content-Type:application/json' -d '{"jsonrpc":"2.0","id":2,"method":"light_getOutsByPKr","params":["2HVVk8CN2qTSTKUd4GgqKN4nkMMA4KjE97PwczEv9nkz5VEKG6P5kiLbYMHM7ihKcY36MSxMpCvxGt8zqzwpS7ag5pq4EweHzNpUtjYBGJov4hgcEGf26DRGrTTiR2nSeNm6",0,200]}' http://127.0.0.1:8545
- */
+*/
 
 func TestLightNode_GetOutsByPKr(t *testing.T) {
-	GetOutsByPKr("2HVVk8CN2qTSTKUd4GgqKN4nkMMA4KjE97PwczEv9nkz5VEKG6P5kiLbYMHM7ihKcY36MSxMpCvxGt8zqzwpS7ag5pq4EweHzNpUtjYBGJov4hgcEGf26DRGrTTiR2nSeNm6",0,100)
+	GetOutsByPKr("2HVVk8CN2qTSTKUd4GgqKN4nkMMA4KjE97PwczEv9nkz5VEKG6P5kiLbYMHM7ihKcY36MSxMpCvxGt8zqzwpS7ag5pq4EweHzNpUtjYBGJov4hgcEGf26DRGrTTiR2nSeNm6", 0, 100)
 }
 
 func GetOutsByPKr(pkr string, begin, end uint64) {
