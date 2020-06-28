@@ -3793,6 +3793,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             indexed = indexed || {};
             options = options || {};
             var result = {};
+            var _that = this;
 
             ['fromBlock', 'toBlock'].filter(function (f) {
                 return options[f] !== undefined;
@@ -3814,8 +3815,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 if (value === undefined || value === null) {
                     return null;
                 }
-                var rand = utils.bytesToHex(utils.base58ToBytes(this._address).slice(0,16));
-                value = coder.opParams([i.type],[value],rand,this._sero,false)[0]
+                var rand = utils.bytesToHex(utils.base58ToBytes(_that._address).slice(0,16));
+                value = coder.opParams([i.type],[value],rand,_that._sero,false)[0]
                 if (utils.isArray(value)) {
                     return value.map(function (v) {
                         return '0x' + coder.encodeParam(i.type, v);
@@ -4808,8 +4809,26 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             this._outputTypes = json.outputs.map(function (i) {
                 return i.type;
             });
-            this._constant = json.constant;
-            this._payable = json.payable;
+            if (json.stateMutability !== "nonpayable" && json.stateMutability !== "payable" ){
+                this._constant = true;
+            }else {
+                this._constant = false;
+            }
+
+            if (json.stateMutability === "payable" ){
+                this._payable = true;
+            }else {
+                this._payable= false;
+            }
+
+            if (json.hasOwnProperty("constant") ){
+                this._constant = json.constant;
+            }
+
+            if (json.hasOwnProperty("payable") ){
+                this._payable = json.payable;
+            }
+
             this._name = utils.transformToFullName(json);
             this._address = address;
             this.abi = json;
@@ -4914,13 +4933,42 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
             output = output.length >= 2 ? output.slice(2) : output;
             var self = this;
+            var shortAddress=[];
+            try{
+                if (this._outputTypes.length >0  && output.length>0){
 
-            var shortAddress = coder.decodeShortAddress(this._outputTypes,output);
+                    shortAddress = coder.decodeShortAddress(this._outputTypes,output);
+
+                }else {
+
+                    var result = coder.decodeParams(["string"],output,null);
+
+                    throw new Error("output invalid, output=" + output + ", reason = "+ result);
+                }
+
+            }catch(e){
+
+                throw new Error(e.toString()+",output =" + output);
+
+            }
+
+
 
             if (!callback) {
-                var addrMap = this._sero.getFullAddress(shortAddress);
-                var result = coder.decodeParams(this._outputTypes, output,addrMap);
-                return result.length === 1 ? result[0] : result;
+                try {
+                    if (this._outputTypes.length >0  && output.length>0){
+                        var addrMap = this._sero.getFullAddress(shortAddress);
+                        var result = coder.decodeParams(this._outputTypes, output,addrMap);
+                        return result.length === 1 ? result[0] : result;
+                    }else {
+                        var result = coder.decodeParams(["string"],output,null);
+                        throw new Error("output invalid, output=" + output + ", reason = "+ result);
+                    }
+                }catch (e) {
+                    var result = coder.decodeParams(["string"],output,null);
+                    throw new Error("output invalid, output=" + output + ", reason = "+ result);
+                }
+
             }
 
             if (shortAddress.length>0) {
@@ -7372,6 +7420,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
 
             var self = this;
+
             this.provider.sendAsync(payload, function (error, results) {
 
 
