@@ -711,6 +711,26 @@ func newRPCStatisticsShare(mg *accounts.Manager, shares []*stake.Share, api *Pub
 
 }
 
+func (s *PublicStakeApI) GetShareByPkrV2(ctx context.Context, pkr PKrAddress) map[string]interface{} {
+	sharesInfo := stakeservice.CurrentStakeService().SharesInfoByPKr(*pkr.ToPKr())
+
+	statistics := map[string]interface{}{}
+	if sharesInfo == nil {
+		return statistics
+	}
+
+	statistics["total"] = hexutil.Uint64(sharesInfo.Total)
+	statistics["missed"] = hexutil.Uint64(sharesInfo.Missed)
+	statistics["remaining"] = hexutil.Uint64(sharesInfo.Remaining)
+	statistics["expired"] = hexutil.Uint64(sharesInfo.Expired)
+	statistics["shareIds"] = sharesInfo.ShareIds
+	statistics["profit"] = hexutil.Big(*sharesInfo.Profit)
+	if sharesInfo.TotalAmount != nil {
+		statistics["totalAmount"] = hexutil.Big(*sharesInfo.TotalAmount)
+	}
+	return statistics
+}
+
 func (s *PublicStakeApI) MyShare(ctx context.Context, addr address.MixBase58Adrress) []map[string]interface{} {
 	//wallets := s.b.AccountManager().Wallets()
 	account, err := s.b.AccountManager().FindAccountByPkr(addr.ToPkr())
