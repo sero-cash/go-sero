@@ -21,11 +21,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
 	"math/big"
 	"runtime"
 	"sync"
 	"sync/atomic"
+
+	"github.com/sero-cash/go-sero/zero/wallet/stakeservice"
 
 	"github.com/sero-cash/go-czero-import/c_type"
 
@@ -179,6 +180,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	// if config.TxPool.Journal != "" {
 	//	config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	// }
+
+	config.TxPool.StartLight = config.StartLight
+
 	sero.txPool = core.NewTxPool(config.TxPool, sero.chainConfig, sero.blockchain)
 
 	sero.voter = voter.NewVoter(sero.chainConfig, sero.blockchain, sero)

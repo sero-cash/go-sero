@@ -945,6 +945,11 @@ web3._extend({
 			call: 'light_getOutsByPKr',
 			params: 3
 		}),
+        new web3._extend.Method({
+			name: 'getPendingOuts',
+			call: 'light_getPendingOuts',
+			params: 1
+		}),
 		new web3._extend.Method({
 			name: 'checkNil',
 			call: 'light_checkNil',

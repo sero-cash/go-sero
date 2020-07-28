@@ -1262,10 +1262,10 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 
 		return nil, 0, false, err
 	}
-	if failed {
-		log.Info("call error", "msg", string(res))
-	}
-	log.Info("result", "data", hexutil.Encode(res))
+	//if failed {
+	//	log.Info("call error", "msg", string(res))
+	//}
+	//log.Info("result", "data", hexutil.Encode(res))
 	return res, gas, failed, err
 
 }

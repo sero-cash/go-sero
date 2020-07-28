@@ -2,6 +2,7 @@ package light
 
 import (
 	"bytes"
+	"sort"
 
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/log"
@@ -9,16 +10,16 @@ import (
 	"github.com/sero-cash/go-sero/zero/txtool"
 )
 
-var current_light *LightNode
+var Current_light *LightNode
 
 func (self *LightNode) CurrentLight() *LightNode {
-	return current_light
+	return Current_light
 }
 
 func (self *LightNode) GetOutsByPKr(pkrs []c_type.PKr, start, end uint64) (br BlockOutResp, e error) {
 	br.CurrentNum = self.getLastNumber()
 	blockOuts := []BlockOut{}
-	if end == 0  {
+	if end == 0 {
 		end = br.CurrentNum
 	}
 	for _, pkr := range pkrs {
@@ -43,6 +44,32 @@ func (self *LightNode) GetOutsByPKr(pkrs []c_type.PKr, start, end uint64) (br Bl
 			}
 		}
 	}
+	br.BlockOuts = blockOuts
+	return br, nil
+}
+
+func (self *LightNode) GetPendingOuts(pkrs []c_type.PKr) (br BlockOutResp, e error) {
+	blockOuts := []BlockOut{}
+
+	numBlokcDatas := self.CurrentLight().getImmatureTx(pkrs)
+
+	if pendingBlockOuts, ok := numBlokcDatas[0]; ok {
+		if len(pendingBlockOuts) > 0 {
+			blockOut := BlockOut{Num: 0, Data: pendingBlockOuts}
+			blockOuts = append(blockOuts, blockOut)
+		}
+	}
+
+	immatureBlokOuts := BlocOuts{}
+	for k, v := range numBlokcDatas {
+		if k != 0 {
+			blockOut := BlockOut{Num: k, Data: v}
+			immatureBlokOuts = append(immatureBlokOuts, blockOut)
+		}
+
+	}
+	sort.Sort(immatureBlokOuts)
+	blockOuts = append(blockOuts, immatureBlokOuts[:]...)
 	br.BlockOuts = blockOuts
 	return br, nil
 }
@@ -80,5 +107,11 @@ type BlockOut struct {
 
 type BlockData struct {
 	TxInfo TxInfo
-	Out txtool.Out
+	Out    txtool.Out
 }
+
+type BlocOuts []BlockOut
+
+func (s BlocOuts) Len() int           { return len(s) }
+func (s BlocOuts) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s BlocOuts) Less(i, j int) bool { return s[i].Num > s[j].Num }
