@@ -918,8 +918,13 @@ web3._extend({
 			call: 'stake_getShareByPkrV2',
 			params:1,
             outputFormatter: web3._extend.formatters.outputStakeShareFormatter
+		}),
+		new web3._extend.Method({
+			name: 'myShareV2',
+			call: 'stake_myShareV2',
+			params:1,
+            outputFormatter: web3._extend.formatters.outputStakeShareFormatter
 		})
-
 	],
     properties: [
        new web3._extend.Property({
