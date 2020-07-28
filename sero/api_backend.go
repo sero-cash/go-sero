@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"math/big"
+	"time"
 
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
 
@@ -264,6 +265,11 @@ func (b *SeroAPIBackend) GetAnchor(roots []c_type.Uint256) ([]txtool.Witness, er
 
 }
 func (b *SeroAPIBackend) CommitTx(tx *txtool.GTx) error {
+
+	difference := time.Now().Unix() - b.CurrentBlock().Time().Int64()
+	if difference > 10*60 {
+		return errors.New("The current chain is too behind")
+	}
 	gasPrice := big.Int(tx.GasPrice)
 	gas := uint64(tx.Gas)
 	signedTx := types.NewTxWithGTx(gas, &gasPrice, &tx.Tx)

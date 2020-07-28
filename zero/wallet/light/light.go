@@ -21,6 +21,7 @@ import (
 type LightNode struct {
 	db   *serodb.LDBDatabase
 	bcDB serodb.Database
+	//immatureTx *ImmatureTx
 
 	txPool *core.TxPool
 
@@ -47,13 +48,15 @@ func NewLightNode(dbPath string, txPool *core.TxPool, bcDB serodb.Database) (lig
 	if err != nil {
 		panic(err)
 	}
+	//immatureTx := NewImmatureTx(db, txPool)
 	lightNode = &LightNode{
 		txPool: txPool,
 		sri:    flight.SRI_Inst,
 		db:     db,
 		bcDB:   bcDB,
+		//immatureTx: immatureTx,
 	}
-	current_light = lightNode
+	Current_light = lightNode
 
 	AddJob("0/10 * * * * ?", lightNode.fetchBlockInfo)
 
@@ -91,10 +94,15 @@ func numKey() []byte {
 }
 
 func (self *LightNode) fetchBlockInfo() {
+
+	//self.immatureTx.fetchBlockInfo()
+
 	if txtool.Ref_inst.Bc == nil || !txtool.Ref_inst.Bc.IsValid() {
 		return
 	}
+
 	start := self.getLastNumber()
+
 	blocks, err := self.sri.GetBlocksInfo(start+1, fetchCount)
 	if err != nil {
 		log.Error("light GetBlocksInfo err:", err.Error())
@@ -118,7 +126,7 @@ func (self *LightNode) fetchBlockInfo() {
 			txHash := common.Hash{}
 			copy(txHash[:], out.State.TxHash[:])
 
-			if (teamReward == txHash) {
+			if teamReward == txHash {
 				continue
 			}
 
@@ -139,6 +147,7 @@ func (self *LightNode) fetchBlockInfo() {
 					// To:       *tx.To(),
 					Time: *blockDB.Time(),
 				}
+				self.txPool.DelMaturedOuts(*out.State.OS.ToPKr(), out.State.TxHash, blockNum)
 			} else {
 				txInfo = TxInfo{
 					Num:       blockNum,
@@ -155,6 +164,9 @@ func (self *LightNode) fetchBlockInfo() {
 			}
 
 			pkr := *out.State.OS.ToPKr()
+
+			//self.immatureTx.lockedDelImmatureTx(pkr, blockData.TxInfo.TxHash)
+
 			if value, ok := pkrMap[pkr]; ok {
 				v := value
 				v = append(v, blockData)
@@ -320,4 +332,49 @@ func (r *RunJob) Run() {
 	}()
 
 	r.run()
+}
+
+func outInfoToTxInfo(info core.TxOutInfo) TxInfo {
+
+	txInfo := TxInfo{
+		TxHash:    info.TxHash,
+		Num:       info.BlockNumber,
+		BlockHash: info.BlockHash,
+		Gas:       info.Gas,
+		GasUsed:   info.GasUsed,
+		GasPrice:  *info.GasPrice,
+		From:      info.From,
+		Time:      *big.NewInt(0).SetUint64(info.Time),
+	}
+	return txInfo
+}
+
+func (self *LightNode) getImmatureTx(pkrs []c_type.PKr) (immatureBlockOuts map[uint64][]BlockData) {
+
+	immatureBlockOuts = make(map[uint64][]BlockData)
+
+	lastLightNum := self.getLastNumber()
+
+	for _, pkr := range pkrs {
+
+		txPoolTxOut := self.txPool.PendingOuts(pkr)
+
+		for _, outInfo := range txPoolTxOut {
+
+			if outInfo != nil {
+				txInfo := outInfoToTxInfo(*outInfo)
+				for index := range outInfo.Outs {
+					blockData := BlockData{
+						TxInfo: txInfo,
+						Out:    outInfo.Outs[index],
+					}
+					if blockData.TxInfo.Num == 0 || (blockData.TxInfo.Num+seroparam.DefaultConfirmedBlock()) > lastLightNum {
+						immatureBlockOuts[blockData.TxInfo.Num] = append(immatureBlockOuts[blockData.TxInfo.Num], blockData)
+					}
+				}
+			}
+		}
+	}
+	return
+
 }
