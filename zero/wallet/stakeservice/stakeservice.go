@@ -282,6 +282,26 @@ func (self *StakeService) stakeIndex() {
 		}
 	}
 
+	for key, val := range pkrStakeInfoCache {
+		if b, err := rlp.EncodeToBytes(val); err != nil {
+			panic(err)
+		} else {
+			if err := batch.Put(pkrInfoKey(key), b); err != nil {
+				panic(err)
+			}
+		}
+	}
+
+	for key, val := range pkStakeInfoCache {
+		if b, err := rlp.EncodeToBytes(&val); err != nil {
+			panic(err)
+		} else {
+			if err := batch.Put(pkInfoKey(key), b); err != nil {
+				panic(err)
+			}
+		}
+	}
+
 	if blocNumber == start {
 		return
 	}
@@ -382,14 +402,6 @@ func (self *StakeService) indexStakeInfoByPKr(pkr c_type.PKr, stakeInfoCache map
 			}
 		}
 	}
-
-	if b, err := rlp.EncodeToBytes(&sharesInfo); err != nil {
-		panic(err)
-	} else {
-		if err := batch.Put(pkrInfoKey(pkr), b); err != nil {
-			panic(err)
-		}
-	}
 }
 
 func (self *StakeService) indexStakeInfoByPK(pk c_type.Uint512, stakeInfoCache map[c_type.Uint512]*SharesInfo, share *stake.Share, sharesCache map[common.Hash]*stake.Share, blocNumber uint64, batch serodb.Batch) {
@@ -470,14 +482,6 @@ func (self *StakeService) indexStakeInfoByPK(pk c_type.Uint512, stakeInfoCache m
 				sharesInfo.ShareIds = append(sharesInfo.ShareIds[:i], sharesInfo.ShareIds[i+1:]...)
 				break
 			}
-		}
-	}
-
-	if b, err := rlp.EncodeToBytes(&sharesInfo); err != nil {
-		panic(err)
-	} else {
-		if err := batch.Put(pkInfoKey(pk), b); err != nil {
-			panic(err)
 		}
 	}
 }
