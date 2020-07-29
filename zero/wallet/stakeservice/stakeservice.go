@@ -260,12 +260,12 @@ func (self *StakeService) stakeIndex() {
 	for blocNumber+seroparam.DefaultConfirmedBlock() <= header.Number.Uint64() {
 		shares, pools := self.GetBlockRecords(blocNumber)
 		for _, share := range shares {
-			batch.Put(sharekey(share.Id()), share.State())
-			batch.Put(pkrShareKey(share.PKr, share.Id()), share.State())
+			// batch.Put(sharekey(share.Id()), share.State())
+			// batch.Put(pkrShareKey(share.PKr, share.Id()), share.State())
 
 			self.indexStakeInfoByPKr(share.PKr, pkrStakeInfoCache, share, sharesCache, blocNumber, batch)
 			if accountKey, ok := self.ownPkr(share.PKr); ok {
-				batch.Put(pkShareKey(accountKey, share.Id()), share.State())
+				// batch.Put(pkShareKey(accountKey, share.Id()), share.State())
 				self.indexStakeInfoByPK(*accountKey, pkStakeInfoCache, share, sharesCache, blocNumber, batch)
 			}
 			sharesCache[common.BytesToHash(share.Id())] = share
@@ -279,6 +279,17 @@ func (self *StakeService) stakeIndex() {
 		blocNumber++
 		if blocNumber-start >= 10000 {
 			break
+		}
+	}
+
+	for _, share := range sharesCache {
+		hash := share.State()
+		id := share.Id()
+		batch.Put(sharekey(id), hash)
+		batch.Put(pkrShareKey(share.PKr, id), hash)
+
+		if accountKey, ok := self.ownPkr(share.PKr); ok {
+			batch.Put(pkShareKey(accountKey, id), hash)
 		}
 	}
 
