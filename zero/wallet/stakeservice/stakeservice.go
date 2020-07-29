@@ -175,7 +175,6 @@ func (self *StakeService) SharesInfoByPk(pk c_type.Uint512) (sharesInfo *SharesI
 	return
 }
 
-
 func (self *StakeService) SharesByPkr(pkr c_type.PKr) (shares []*stake.Share) {
 	iterator := self.db.NewIteratorWithPrefix(pkr[:])
 	for iterator.Next() {
@@ -343,94 +342,7 @@ func (self *StakeService) indexStakeInfoByPKr(pkr c_type.PKr, stakeInfoCache map
 		stakeInfoCache[pkr] = sharesInfo
 	}
 
-	id := common.BytesToHash(share.Id())
-
-	oldShare := self.getShare(id, sharesCache)
-	// sharesCache[id] = share
-	if oldShare != nil {
-		if share.WillVoteNum > oldShare.WillVoteNum {
-			sharesInfo.Missed += (share.WillVoteNum - oldShare.WillVoteNum)
-		} else if share.WillVoteNum < oldShare.WillVoteNum {
-			if sharesInfo.Missed >= (oldShare.WillVoteNum - share.WillVoteNum) {
-				sharesInfo.Missed -= (oldShare.WillVoteNum - share.WillVoteNum)
-			}
-		}
-
-		if oldShare.Status == stake.STATUS_VALID {
-			if sharesInfo.Remaining >= (oldShare.Num - share.Num) {
-				sharesInfo.Remaining -= (oldShare.Num - share.Num)
-			}
-		}
-
-		if oldShare.Status == stake.STATUS_VALID && share.Status == stake.STATUS_OUTOFDATE {
-			if sharesInfo.Remaining >= share.Num {
-				sharesInfo.Remaining -= share.Num
-			}
-			sharesInfo.Expired += share.Num
-		}
-		sharesInfo.Profit = big.NewInt(0).Add(sharesInfo.Profit, new(big.Int).Sub(share.Profit, oldShare.Profit))
-	} else {
-		sharesInfo.ShareIds = append(sharesInfo.ShareIds, id)
-		sharesInfo.Total += share.InitNum
-
-		if share.Status == stake.STATUS_VALID {
-			sharesInfo.Remaining += share.Num
-		} else {
-			sharesInfo.Expired += share.Num
-		}
-
-		sharesInfo.Missed += share.WillVoteNum
-		sharesInfo.Profit = new(big.Int).Add(sharesInfo.Profit, share.Profit)
-		sharesInfo.TotalAmount = new(big.Int).Add(sharesInfo.TotalAmount, new(big.Int).Mul(big.NewInt(int64(share.InitNum)), share.Value))
-	}
-
-	if share.LastPayTime == blocNumber {
-		if oldShare != nil && oldShare.LastPayTime != 0 {
-			header := self.bc.GetBlockByNumber(oldShare.LastPayTime)
-			snapshot := stake.GetShareByBlockNumber(self.bc.GetDB(), id, header.Hash(), header.NumberU64())
-			if snapshot != nil {
-				mul := new(big.Int).Mul(big.NewInt(int64(
-					(snapshot.Num+snapshot.WillVoteNum)-(share.Num+share.WillVoteNum))),
-					share.Value)
-				if sharesInfo.TotalAmount.Cmp(mul) >= 0 {
-					sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, mul)
-				}
-			}
-		} else {
-			mul := new(big.Int).Mul(big.NewInt(int64(
-				share.InitNum-share.Num-share.WillVoteNum)),
-				share.Value)
-			if sharesInfo.TotalAmount.Cmp(mul) >= 0 {
-				sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, mul)
-			}
-		}
-
-		if share.Status == stake.STATUS_OUTOFDATE {
-			mul := new(big.Int).Mul(big.NewInt(int64(
-				share.Num)),
-				share.Value)
-			if sharesInfo.TotalAmount.Cmp(mul) >= 0 {
-				sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, mul)
-			}
-		}
-		if share.Status == stake.STATUS_FINISHED {
-			mul := new(big.Int).Mul(big.NewInt(int64(
-				share.WillVoteNum)),
-				share.Value)
-			if sharesInfo.TotalAmount.Cmp(mul) >= 0 {
-				sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, mul)
-			}
-		}
-	}
-
-	if stake.STATUS_FINISHED == share.Status {
-		for i, each := range sharesInfo.ShareIds {
-			if each == id {
-				sharesInfo.ShareIds = append(sharesInfo.ShareIds[:i], sharesInfo.ShareIds[i+1:]...)
-				break
-			}
-		}
-	}
+	self.updateSharesInfo(share, sharesCache, sharesInfo, blocNumber)
 }
 
 func (self *StakeService) indexStakeInfoByPK(pk c_type.Uint512, stakeInfoCache map[c_type.Uint512]*SharesInfo, share *stake.Share, sharesCache map[common.Hash]*stake.Share, blocNumber uint64, batch serodb.Batch) {
@@ -443,6 +355,10 @@ func (self *StakeService) indexStakeInfoByPK(pk c_type.Uint512, stakeInfoCache m
 		stakeInfoCache[pk] = sharesInfo
 	}
 
+	self.updateSharesInfo(share, sharesCache, sharesInfo, blocNumber)
+}
+
+func (self *StakeService) updateSharesInfo(share *stake.Share, sharesCache map[common.Hash]*stake.Share, sharesInfo *SharesInfo, blocNumber uint64) {
 	id := common.BytesToHash(share.Id())
 
 	oldShare := self.getShare(id, sharesCache)
@@ -532,8 +448,6 @@ func (self *StakeService) indexStakeInfoByPK(pk c_type.Uint512, stakeInfoCache m
 		}
 	}
 }
-
-
 
 func (self *StakeService) ownPkr(pkr c_type.PKr) (pk *c_type.Uint512, ok bool) {
 	var account *Account
