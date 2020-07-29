@@ -351,15 +351,21 @@ func (self *StakeService) indexStakeInfoByPKr(pkr c_type.PKr, stakeInfoCache map
 		if share.WillVoteNum > oldShare.WillVoteNum {
 			sharesInfo.Missed += (share.WillVoteNum - oldShare.WillVoteNum)
 		} else if share.WillVoteNum < oldShare.WillVoteNum {
-			sharesInfo.Missed -= (oldShare.WillVoteNum - share.WillVoteNum)
+			if sharesInfo.Missed >= (oldShare.WillVoteNum - share.WillVoteNum) {
+				sharesInfo.Missed -= (oldShare.WillVoteNum - share.WillVoteNum)
+			}
 		}
 
 		if oldShare.Status == stake.STATUS_VALID {
-			sharesInfo.Remaining -= (oldShare.Num - share.Num)
+			if sharesInfo.Remaining >= (oldShare.Num - share.Num) {
+				sharesInfo.Remaining -= (oldShare.Num - share.Num)
+			}
 		}
 
 		if oldShare.Status == stake.STATUS_VALID && share.Status == stake.STATUS_OUTOFDATE {
-			sharesInfo.Remaining -= share.Num
+			if sharesInfo.Remaining >= share.Num {
+				sharesInfo.Remaining -= share.Num
+			}
 			sharesInfo.Expired += share.Num
 		}
 		sharesInfo.Profit = big.NewInt(0).Add(sharesInfo.Profit, new(big.Int).Sub(share.Profit, oldShare.Profit))
@@ -383,25 +389,37 @@ func (self *StakeService) indexStakeInfoByPKr(pkr c_type.PKr, stakeInfoCache map
 			header := self.bc.GetBlockByNumber(oldShare.LastPayTime)
 			snapshot := stake.GetShareByBlockNumber(self.bc.GetDB(), id, header.Hash(), header.NumberU64())
 			if snapshot != nil {
-				sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, new(big.Int).Mul(big.NewInt(int64(
+				mul := new(big.Int).Mul(big.NewInt(int64(
 					(snapshot.Num+snapshot.WillVoteNum)-(share.Num+share.WillVoteNum))),
-					share.Value))
+					share.Value)
+				if sharesInfo.TotalAmount.Cmp(mul) >= 0 {
+					sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, mul)
+				}
 			}
 		} else {
-			sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, new(big.Int).Mul(big.NewInt(int64(
+			mul := new(big.Int).Mul(big.NewInt(int64(
 				share.InitNum-share.Num-share.WillVoteNum)),
-				share.Value))
+				share.Value)
+			if sharesInfo.TotalAmount.Cmp(mul) >= 0 {
+				sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, mul)
+			}
 		}
 
 		if share.Status == stake.STATUS_OUTOFDATE {
-			sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, new(big.Int).Mul(big.NewInt(int64(
+			mul := new(big.Int).Mul(big.NewInt(int64(
 				share.Num)),
-				share.Value))
+				share.Value)
+			if sharesInfo.TotalAmount.Cmp(mul) >= 0 {
+				sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, mul)
+			}
 		}
 		if share.Status == stake.STATUS_FINISHED {
-			sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, new(big.Int).Mul(big.NewInt(int64(
+			mul := new(big.Int).Mul(big.NewInt(int64(
 				share.WillVoteNum)),
-				share.Value))
+				share.Value)
+			if sharesInfo.TotalAmount.Cmp(mul) >= 0 {
+				sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, mul)
+			}
 		}
 	}
 
@@ -433,15 +451,21 @@ func (self *StakeService) indexStakeInfoByPK(pk c_type.Uint512, stakeInfoCache m
 		if share.WillVoteNum > oldShare.WillVoteNum {
 			sharesInfo.Missed += (share.WillVoteNum - oldShare.WillVoteNum)
 		} else if share.WillVoteNum < oldShare.WillVoteNum {
-			sharesInfo.Missed -= (oldShare.WillVoteNum - share.WillVoteNum)
+			if sharesInfo.Missed >= (oldShare.WillVoteNum - share.WillVoteNum) {
+				sharesInfo.Missed -= (oldShare.WillVoteNum - share.WillVoteNum)
+			}
 		}
 
 		if oldShare.Status == stake.STATUS_VALID {
-			sharesInfo.Remaining -= (oldShare.Num - share.Num)
+			if sharesInfo.Remaining >= (oldShare.Num - share.Num) {
+				sharesInfo.Remaining -= (oldShare.Num - share.Num)
+			}
 		}
 
 		if oldShare.Status == stake.STATUS_VALID && share.Status == stake.STATUS_OUTOFDATE {
-			sharesInfo.Remaining -= share.Num
+			if sharesInfo.Remaining >= share.Num {
+				sharesInfo.Remaining -= share.Num
+			}
 			sharesInfo.Expired += share.Num
 		}
 		sharesInfo.Profit = big.NewInt(0).Add(sharesInfo.Profit, new(big.Int).Sub(share.Profit, oldShare.Profit))
@@ -465,25 +489,37 @@ func (self *StakeService) indexStakeInfoByPK(pk c_type.Uint512, stakeInfoCache m
 			header := self.bc.GetBlockByNumber(oldShare.LastPayTime)
 			snapshot := stake.GetShareByBlockNumber(self.bc.GetDB(), id, header.Hash(), header.NumberU64())
 			if snapshot != nil {
-				sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, new(big.Int).Mul(big.NewInt(int64(
+				mul := new(big.Int).Mul(big.NewInt(int64(
 					(snapshot.Num+snapshot.WillVoteNum)-(share.Num+share.WillVoteNum))),
-					share.Value))
+					share.Value)
+				if sharesInfo.TotalAmount.Cmp(mul) >= 0 {
+					sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, mul)
+				}
 			}
 		} else {
-			sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, new(big.Int).Mul(big.NewInt(int64(
+			mul := new(big.Int).Mul(big.NewInt(int64(
 				share.InitNum-share.Num-share.WillVoteNum)),
-				share.Value))
+				share.Value)
+			if sharesInfo.TotalAmount.Cmp(mul) >= 0 {
+				sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, mul)
+			}
 		}
 
 		if share.Status == stake.STATUS_OUTOFDATE {
-			sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, new(big.Int).Mul(big.NewInt(int64(
+			mul := new(big.Int).Mul(big.NewInt(int64(
 				share.Num)),
-				share.Value))
+				share.Value)
+			if sharesInfo.TotalAmount.Cmp(mul) >= 0 {
+				sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, mul)
+			}
 		}
 		if share.Status == stake.STATUS_FINISHED {
-			sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, new(big.Int).Mul(big.NewInt(int64(
+			mul := new(big.Int).Mul(big.NewInt(int64(
 				share.WillVoteNum)),
-				share.Value))
+				share.Value)
+			if sharesInfo.TotalAmount.Cmp(mul) >= 0 {
+				sharesInfo.TotalAmount = new(big.Int).Sub(sharesInfo.TotalAmount, mul)
+			}
 		}
 	}
 
