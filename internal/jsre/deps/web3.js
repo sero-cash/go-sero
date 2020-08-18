@@ -3350,11 +3350,11 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
          * @param {Contract} contract
          * @param {Array} abi
          */
-        var addFunctionsToContract = function (contract) {
+        var addFunctionsToContract = function (contract,newAbi) {
             contract.abi.filter(function (json) {
                 return json.type === 'function';
             }).map(function (json) {
-                return new SolidityFunction(contract._sero, json, contract.address);
+                return new SolidityFunction(contract._sero, json, contract.address,newAbi);
             }).forEach(function (f) {
                 f.attachToContract(contract);
             });
@@ -3500,7 +3500,16 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                         return json.type === 'constructor' && json.inputs.length === args.length;
                     })[0] || {};
 
-                    if (!constructorAbi.payable) {
+                    var isPayable = false;
+
+                    if (constructorAbi.stateMutability === "payable") {
+                        isPayable = true;
+                    }
+                    if (constructorAbi.hasOwnProperty("payable") ){
+                        isPayable= json.payable;
+                    }
+
+                    if (!isPayable ) {
                         throw new Error('Cannot send value to non-payable constructor');
                     }
                 }
@@ -3579,6 +3588,16 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 callback(null, contract);
             }
             return contract;
+        };
+
+
+        ContractFactory.prototype.atNewAbi = function (address) {
+            var contract = new Contract(this.sero, this.abi, address);
+
+            // this functions are not part of prototype,
+            // because we dont want to spoil the interface
+            addFunctionsToContract(contract,true);
+            addEventsToContract(contract);
         };
 
         /**
@@ -4801,7 +4820,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         /**
          * This prototype should be used to call/sendTransaction to solidity functions
          */
-        var SolidityFunction = function (sero, json, address) {
+        var SolidityFunction = function (sero, json, address,abiv2) {
             this._sero = sero;
             this._inputTypes = json.inputs.map(function (i) {
                 return i.type;
@@ -4831,6 +4850,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
             this._name = utils.transformToFullName(json);
             this._address = address;
+            this._abiv2 = abiv2;
             this.abi = json;
         };
 
