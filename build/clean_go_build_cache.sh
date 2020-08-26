@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Cleaning the Go cache only makes sense if we actually have Go installed... or
 # if Go is actually callable. This does not hold true during deb packaging, so

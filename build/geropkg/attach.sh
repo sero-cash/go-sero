@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 DATADIR="./data"
 if [ ! -z "$1" ]; then

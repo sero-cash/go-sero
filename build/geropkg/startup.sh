@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 show_usage="args: [-d ,-k, -p, -n,-r,-h]\
                                   [--datadir=,--keystore=, --port=, --net=, --rpc=,--help]"
 export DYLD_LIBRARY_PATH="./czero/lib/"

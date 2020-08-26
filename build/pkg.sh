@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 LOCAL_PATH=$(cd `dirname $0`; pwd)
 SERO_PATH="${LOCAL_PATH%/*}"
