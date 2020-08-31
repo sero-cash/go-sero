@@ -38,18 +38,18 @@ var (
 	cachetestDir, _   = filepath.Abs(filepath.Join("testdata", "keystore"))
 	cachetestAccounts = []accounts.Account{
 		{
-			Address: address.Base58ToAccount("64t1MPxFp4yzxNJ64zp1NmrTXWsrLuw9DMiMZeujbD2HVAKhjR3zpKnuFVjjAXAp86G2PzSVSsdiMdwp5JPoqxtP"),
-			Tk:      address.Base58ToAccount("48rGJTGEeQKiFcCi82rbZdvZeyhoJHnVqeDrV627nT4vKTUtYUKJGYmt4dMnRX94RDAtXJV4SEXKyFPH9TdhFxiB"),
+			Address: address.StringToPk("64t1MPxFp4yzxNJ64zp1NmrTXWsrLuw9DMiMZeujbD2HVAKhjR3zpKnuFVjjAXAp86G2PzSVSsdiMdwp5JPoqxtP"),
+			Tk:      address.Base58ToTk("48rGJTGEeQKiFcCi82rbZdvZeyhoJHnVqeDrV627nT4vKTUtYUKJGYmt4dMnRX94RDAtXJV4SEXKyFPH9TdhFxiB"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "UTC--2018-08-11T10-19-38.165083119Z--64t1MPxFp4yzxNJ64zp1NmrTXWsrLuw9DMiMZeujbD2HVAKhjR3zpKnuFVjjAXAp86G2PzSVSsdiMdwp5JPoqxtP")},
 		},
 		{
-			Address: address.Base58ToAccount("4raP8fYEznZDD9WXc8pvS2tMg992iZiWXssvwhCrXTFEhafcRt8urTeDyANfTrtXpJjnfz65cbYvr7g5WauAJgdc"),
-			Tk:      address.Base58ToAccount("5W5KsFo2di2kzrP2xEjT1iYpx66BoryPJccDRXz4BH5J2MWxKnnWZtmKm7a7BqjheBfi8rKJCqKFPME7hDLuiEJA"),
+			Address: address.StringToPk("4raP8fYEznZDD9WXc8pvS2tMg992iZiWXssvwhCrXTFEhafcRt8urTeDyANfTrtXpJjnfz65cbYvr7g5WauAJgdc"),
+			Tk:      address.Base58ToTk("5W5KsFo2di2kzrP2xEjT1iYpx66BoryPJccDRXz4BH5J2MWxKnnWZtmKm7a7BqjheBfi8rKJCqKFPME7hDLuiEJA"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "aaa")},
 		},
 		{
-			Address: address.Base58ToAccount("3Fov1AdSTVSTEWTEGfbknRrmHxBCoZ6AktyJA4jGFytHu7xDWEYysnR9YkwkKj5Knzttc6tNw4ENY4JZiirrksYw"),
-			Tk:      address.Base58ToAccount("fLFiBSN8JojjcECipDA4yNafv19BvcFEoP91BVsxRsd1qda9QkBXJM3Car9Y6V9VfYpZULx8dcPUnb2iNFnk4JX"),
+			Address: address.StringToPk("3Fov1AdSTVSTEWTEGfbknRrmHxBCoZ6AktyJA4jGFytHu7xDWEYysnR9YkwkKj5Knzttc6tNw4ENY4JZiirrksYw"),
+			Tk:      address.Base58ToTk("fLFiBSN8JojjcECipDA4yNafv19BvcFEoP91BVsxRsd1qda9QkBXJM3Car9Y6V9VfYpZULx8dcPUnb2iNFnk4JX"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "zzz")},
 		},
 	}
@@ -151,31 +151,31 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 
 	accs := []accounts.Account{
 		{
-			Address: address.Base58ToAccount("oJBdJSCpFRyp5wQeJxwE4AUUQWAqh12Jn3Fo8RvUd1XZuZmyyHGhYVCsTGgLmuXKc2hoZWfj5MkNaf8hTvG8Hec"),
+			Address: address.StringToPk("oJBdJSCpFRyp5wQeJxwE4AUUQWAqh12Jn3Fo8RvUd1XZuZmyyHGhYVCsTGgLmuXKc2hoZWfj5MkNaf8hTvG8Hec"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "-309830980"},
 		},
 		{
-			Address: address.Base58ToAccount("29uJ8gWjfgDdF389Y35FDoMbRWXDuTwGEKSEE17MP9xVMCuBMGVgWuofeHqjhGCqxQm3EijZPLdb1vMfSpP8MnNa"),
+			Address: address.StringToPk("29uJ8gWjfgDdF389Y35FDoMbRWXDuTwGEKSEE17MP9xVMCuBMGVgWuofeHqjhGCqxQm3EijZPLdb1vMfSpP8MnNa"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "ggg"},
 		},
 		{
-			Address: address.Base58ToAccount("5BmSf3Cynp2bcw8TFgUTWQBaD3F8bqqJvuCAu83SM1E1nSFUHCdxgSCnBtqv744DFoLsR61PnhSWWarwK3uF6LJv"),
+			Address: address.StringToPk("5BmSf3Cynp2bcw8TFgUTWQBaD3F8bqqJvuCAu83SM1E1nSFUHCdxgSCnBtqv744DFoLsR61PnhSWWarwK3uF6LJv"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "zzzzzz-the-very-last-one.keyXXX"},
 		},
 		{
-			Address: address.Base58ToAccount("5BkUvZ9ifZBhGnJdmSKfs7jn1h3EJzCHVjZWbLQgdTJ1i363CcbShy2SHHKWNqHWjKuX19XmjMg9vJLQ7mLQWWmN"),
+			Address: address.StringToPk("5BkUvZ9ifZBhGnJdmSKfs7jn1h3EJzCHVjZWbLQgdTJ1i363CcbShy2SHHKWNqHWjKuX19XmjMg9vJLQ7mLQWWmN"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "SOMETHING.key"},
 		},
 		{
-			Address: address.Base58ToAccount("64t1MPxFp4yzxNJ64zp1NmrTXWsrLuw9DMiMZeujbD2HVAKhjR3zpKnuFVjjAXAp86G2PzSVSsdiMdwp5JPoqxtP"),
+			Address: address.StringToPk("64t1MPxFp4yzxNJ64zp1NmrTXWsrLuw9DMiMZeujbD2HVAKhjR3zpKnuFVjjAXAp86G2PzSVSsdiMdwp5JPoqxtP"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "UTC--2018-08-11T10-19-38.165083119Z--64t1MPxFp4yzxNJ64zp1NmrTXWsrLuw9DMiMZeujbD2HVAKhjR3zpKnuFVjjAXAp86G2PzSVSsdiMdwp5JPoqxtP"},
 		},
 		{
-			Address: address.Base58ToAccount("4raP8fYEznZDD9WXc8pvS2tMg992iZiWXssvwhCrXTFEhafcRt8urTeDyANfTrtXpJjnfz65cbYvr7g5WauAJgdc"),
+			Address: address.StringToPk("4raP8fYEznZDD9WXc8pvS2tMg992iZiWXssvwhCrXTFEhafcRt8urTeDyANfTrtXpJjnfz65cbYvr7g5WauAJgdc"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "aaa"},
 		},
 		{
-			Address: address.Base58ToAccount("3Fov1AdSTVSTEWTEGfbknRrmHxBCoZ6AktyJA4jGFytHu7xDWEYysnR9YkwkKj5Knzttc6tNw4ENY4JZiirrksYw"),
+			Address: address.StringToPk("3Fov1AdSTVSTEWTEGfbknRrmHxBCoZ6AktyJA4jGFytHu7xDWEYysnR9YkwkKj5Knzttc6tNw4ENY4JZiirrksYw"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: "zzz"},
 		},
 	}
@@ -205,15 +205,15 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 			t.Errorf("expected hasAccount(%x) to return true", a.Address)
 		}
 	}
-	if cache.hasAddress(address.Base58ToAccount("3kawu8SZ6vzMBde3tP2zuS4XkfTeyjQg2yryDopayXPHVhncz3appEeE8BGp3XBYcfByxBnzoTSp5F8MFVhzxeEB")) {
-		t.Errorf("expected hasAccount(%x) to return false", address.Base58ToAccount("fd9bd350f08ee3c0c19b85a8e16114a11a60aa4e"))
+	if cache.hasAddress(address.StringToPk("3kawu8SZ6vzMBde3tP2zuS4XkfTeyjQg2yryDopayXPHVhncz3appEeE8BGp3XBYcfByxBnzoTSp5F8MFVhzxeEB")) {
+		t.Errorf("expected hasAccount(%x) to return false", address.StringToPk("fd9bd350f08ee3c0c19b85a8e16114a11a60aa4e"))
 	}
 
 	// Delete a few keys from the cache.
 	for i := 0; i < len(accs); i += 2 {
 		cache.delete(wantAccounts[i])
 	}
-	cache.delete(accounts.Account{Address: address.Base58ToAccount("3kawu8SZ6vzMBde3tP2zuS4XkfTeyjQg2yryDopayXPHVhncz3appEeE8BGp3XBYcfByxBnzoTSp5F8MFVhzxeEB"), URL: accounts.URL{Scheme: KeyStoreScheme, Path: "something"}})
+	cache.delete(accounts.Account{Address: address.StringToPk("3kawu8SZ6vzMBde3tP2zuS4XkfTeyjQg2yryDopayXPHVhncz3appEeE8BGp3XBYcfByxBnzoTSp5F8MFVhzxeEB"), URL: accounts.URL{Scheme: KeyStoreScheme, Path: "something"}})
 
 	// Check content again after deletion.
 	wantAccountsAfterDelete := []accounts.Account{
@@ -242,19 +242,19 @@ func TestCacheFind(t *testing.T) {
 
 	accs := []accounts.Account{
 		{
-			Address: address.Base58ToAccount("36hSFHR4P242YkF2CDJayM8nxqZyH9iTdQLjMgAytyxLWiatqYwHRtXq5pPJ6XM9i1GCBgPVjhW3AHojoY25B6Ks"),
+			Address: address.StringToPk("36hSFHR4P242YkF2CDJayM8nxqZyH9iTdQLjMgAytyxLWiatqYwHRtXq5pPJ6XM9i1GCBgPVjhW3AHojoY25B6Ks"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "a.key")},
 		},
 		{
-			Address: address.Base58ToAccount("zwyLoRgtaj5XnpwRGqX6jizWf7yqSL7s8Yiaa2w3nThTjALReKn9orwP83xgoBhfwYH2gdapSokUodiJjHbuUsE"),
+			Address: address.StringToPk("zwyLoRgtaj5XnpwRGqX6jizWf7yqSL7s8Yiaa2w3nThTjALReKn9orwP83xgoBhfwYH2gdapSokUodiJjHbuUsE"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "b.key")},
 		},
 		{
-			Address: address.Base58ToAccount("3RG6NiD2ewzo6aAu4sTRTafx92QeoesoS6yEzTsDCShrHvCQ5y4nQJ2zJ5c4kC3HsoJgCG79aJJBLn4EJfVT1yh9"),
+			Address: address.StringToPk("3RG6NiD2ewzo6aAu4sTRTafx92QeoesoS6yEzTsDCShrHvCQ5y4nQJ2zJ5c4kC3HsoJgCG79aJJBLn4EJfVT1yh9"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "c.key")},
 		},
 		{
-			Address: address.Base58ToAccount("5FzgDB5GGc6tKPaif531nD61YJ2JaC7kKzAusDPtJCRWGuH97fPojma16qMr2Dpxn7daDaPnJFCXdB4iUUAFV7Cq"),
+			Address: address.StringToPk("5FzgDB5GGc6tKPaif531nD61YJ2JaC7kKzAusDPtJCRWGuH97fPojma16qMr2Dpxn7daDaPnJFCXdB4iUUAFV7Cq"),
 			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "c2.key")},
 		},
 	}
@@ -263,7 +263,7 @@ func TestCacheFind(t *testing.T) {
 	}
 
 	nomatchAccount := accounts.Account{
-		Address: address.Base58ToAccount("bKHV56EP5eJzxPXHunSumEJM8ebQNXpbGgnX3UWSaVsTVx6MMZkGX7pTUmuQXwb4JYsFnvdbZJZkgT6FdEYR3Xh"),
+		Address: address.StringToPk("bKHV56EP5eJzxPXHunSumEJM8ebQNXpbGgnX3UWSaVsTVx6MMZkGX7pTUmuQXwb4JYsFnvdbZJZkgT6FdEYR3Xh"),
 		URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "something")},
 	}
 	tests := []struct {
@@ -285,7 +285,7 @@ func TestCacheFind(t *testing.T) {
 		{
 			Query: accounts.Account{Address: accs[2].Address},
 			WantError: &AmbiguousAddrError{
-				Addr:    accs[2].Address,
+				Address: accs[2].Address,
 				Matches: []accounts.Account{accs[2], accs[3]},
 			},
 		},

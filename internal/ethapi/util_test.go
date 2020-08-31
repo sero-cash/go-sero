@@ -19,12 +19,12 @@ func TestMain(m *testing.M) {
 }
 
 func Test_getPoolId(t *testing.T) {
-	tk := address.Base58ToAccount("3fCJhSjsGJPPB3tSqbycBbwyTahv1WAz8RJY7fpVBqr3mNTLL7NfejjtEywp7jvN3r4isHrh16hrvV8exqGYW4FM")
-	pk := address.Base58ToAccount("3fCJhSjsGJPPB3tSqbycBbwyTahv1WAz8RJY7fpVBqr44A7foQAZjWssGXHjc7uVofYCx5cNkmV3k2kEJWU97nKY")
+	tk := address.Base58ToTk("3fCJhSjsGJPPB3tSqbycBbwyTahv1WAz8RJY7fpVBqr3mNTLL7NfejjtEywp7jvN3r4isHrh16hrvV8exqGYW4FM")
+	pk := address.StringToPk("3fCJhSjsGJPPB3tSqbycBbwyTahv1WAz8RJY7fpVBqr44A7foQAZjWssGXHjc7uVofYCx5cNkmV3k2kEJWU97nKY")
 	randHash := crypto.Keccak256Hash(tk[:])
 	var rand c_type.Uint256
 	copy(rand[:], randHash[:])
-	pkr := superzk.Pk2PKr(pk.ToUint512(), &rand)
+	pkr := superzk.Pk2PKr(pk.ToUint512().NewRef(), &rand)
 	id := crypto.Keccak256Hash(pkr[:])
 	fmt.Println(hexutil.Encode(id[:]))
 }

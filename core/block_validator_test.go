@@ -17,22 +17,23 @@
 package core
 
 import (
-	"github.com/sero-cash/go-czero-import/cpt"
 	"runtime"
 	"testing"
 	"time"
 
+	"github.com/sero-cash/go-czero-import/cpt"
+
 	"github.com/sero-cash/go-sero/consensus/ethash"
 	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/core/vm"
-	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/params"
+	"github.com/sero-cash/go-sero/serodb"
 )
 
 // Tests that simple header verification works, for both good and bad blocks.
 func TestHeaderVerification(t *testing.T) {
 	// Create a simple chain to verify
-	cpt.ZeroInit(cpt.NET_Alpha)
+	cpt.ZeroInit_NoCircuit()
 	var (
 		testdb    = serodb.NewMemDatabase()
 		gspec     = &Genesis{Config: params.TestChainConfig}

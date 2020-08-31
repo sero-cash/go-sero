@@ -3506,7 +3506,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                         isPayable = true;
                     }
                     if (constructorAbi.hasOwnProperty("payable") ){
-                        isPayable= json.payable;
+                        isPayable= constructorAbi.payable;
                     }
 
                     if (!isPayable ) {
@@ -4955,41 +4955,50 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var self = this;
             var shortAddress=[];
             try{
-                if (this._outputTypes.length >0  && output.length>0){
 
-                    shortAddress = coder.decodeShortAddress(this._outputTypes,output);
-
-                }else {
-
-                    var result = coder.decodeParams(["string"],output,null);
-
-                    throw new Error("output invalid, output=" + output + ", reason = "+ result);
-                }
+                shortAddress = coder.decodeShortAddress(this._outputTypes,output);
 
             }catch(e){
+                if (output.length>=8 &&output.slice(0,8)== "08c379a0") {
+                    var result = coder.decodeParams(["string"],output.slice(8),null);
 
-                throw new Error(e.toString()+",output =" + output);
+                    throw new Error("output invalid, reason = " + result + "\noutput = "+ output);
+                }else {
+                    throw new Error("unpackOutput error = " + e.toString()+ "\noutput = "+ output);
+                }
+
+
 
             }
 
 
 
             if (!callback) {
-                try {
-                    if (this._outputTypes.length >0  && output.length>0){
+                var tys = coder.getSolidityTypes(this._outputTypes);
+                if (tys && tys.length>0){
+                    try {
                         var addrMap = this._sero.getFullAddress(shortAddress);
                         var result = coder.decodeParams(this._outputTypes, output,addrMap);
                         return result.length === 1 ? result[0] : result;
-                    }else {
-                        var result = coder.decodeParams(["string"],output,null);
-                        throw new Error("output invalid, output=" + output + ", reason = "+ result);
-                    }
-                }catch (e) {
-                    var result = coder.decodeParams(["string"],output,null);
-                    throw new Error("output invalid, output=" + output + ", reason = "+ result);
-                }
+                    }catch (e) {
+                        if(output.length>=8 && output.slice(0,8)== "08c379a0"){
+                            var result = coder.decodeParams(["string"],output.slice(8),null);
 
+                            throw new Error("required,reason = " + result + "\noutput = "+ output);
+                        }else {
+                            throw new Error("unpackOutput error = " + e.toString()+ "\noutput = "+ output);
+                        }
+                    }
+
+                }else {
+                    if (output.length>=8 &&output.slice(0,8)== "08c379a0") {
+                        var result = coder.decodeParams(["string"],output.slice(8),null);
+
+                        throw new Error("required,reason = " + result + "\noutput = "+ output);
+                    }
+                }
             }
+
 
             if (shortAddress.length>0) {
                 var cb =  function(err,mapAddr){
@@ -5003,9 +5012,14 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 this._sero.getFullAddress(shortAddress,cb);
 
             }else{
-                var result = coder.decodeParams(this._outputTypes, output,null);
+                var result = coder.decodeParams(this._outputTypes, output.slice(8),null);
                 result =  result.length === 1 ? result[0] : result;
-                callback(null,result);
+                if (callback){
+                    callback(null,result);
+                }else {
+                    return result;
+                }
+
             }
 
         };

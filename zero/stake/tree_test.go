@@ -2,12 +2,13 @@ package stake
 
 import (
 	"fmt"
+	"math/rand"
+	"testing"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/crypto"
 	"github.com/sero-cash/go-sero/log"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"math/rand"
-	"testing"
 )
 
 // func newState() (State, *state.StateDB) {

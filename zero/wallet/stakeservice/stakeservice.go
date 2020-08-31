@@ -1,10 +1,11 @@
 package stakeservice
 
 import (
-	"github.com/sero-cash/go-sero/rlp"
 	"math/big"
 	"sync"
 	"sync/atomic"
+
+	"github.com/sero-cash/go-sero/rlp"
 
 	"github.com/robfig/cron"
 	"github.com/sero-cash/go-sero/common"
@@ -570,19 +571,19 @@ type (
 )
 
 type RunJob struct {
-	runing int32
-	run    RunFunc
+	running int32
+	run     RunFunc
 }
 
 func (r *RunJob) Run() {
-	x := atomic.LoadInt32(&r.runing)
+	x := atomic.LoadInt32(&r.running)
 	if x == 1 {
 		return
 	}
 
-	atomic.StoreInt32(&r.runing, 1)
+	atomic.StoreInt32(&r.running, 1)
 	defer func() {
-		atomic.StoreInt32(&r.runing, 0)
+		atomic.StoreInt32(&r.running, 0)
 	}()
 
 	r.run()

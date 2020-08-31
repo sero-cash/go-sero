@@ -25,97 +25,17 @@ done
 
 mkdir -p "$root/../go-czero-import/czero/lib"
 
+cd "$root/../go-czero-import/czero"
 
-function sysname() {
+cp -rf lib_DARWIN_AMD64/* lib/
 
-    SYSTEM=`uname -s |cut -f1 -d_`
+cp -rf lib_LINUX_AMD64_V3/* lib/
 
-    if [ "Darwin" == "$SYSTEM" ]
-    then
-        echo "Darwin"
+cp -rf lib_WINDOWS_AMD64/* lib/
 
-    elif [ "Linux" == "$SYSTEM" ]
-    then
-        kernal=`uname -v |cut -f 1 -d \ |cut -f 2 -d -`
-        if [ "Ubuntu"  == "$kernal" ]
-        then
-            echo "Linux-V3"
-        else
+export LD_LIBRARY_PATH="../go-czero-import/czero/lib"
 
-            name=`uname  -r |cut -f1 -d.`
-            echo Linux-V"$name"
-        fi
-    else
-        echo "$SYSTEM"
-    fi
-
-
-
-}
-
-SNAME=`sysname`
-
-if [ "Darwin" == "$SNAME" ]
-then
-    rm -rf $root/../go-czero-import/czero/lib/*
-    cd "$root/../go-czero-import/czero"
-    cp -rf lib_DARWIN_AMD64/* lib/
-    DYLD_LIBRARY_PATH="../go-czero-import/czero/lib_DARWIN_AMD64"
-    export DYLD_LIBRARY_PATH
-elif [ "Linux-V3" == "$SNAME" ]
-then
-   rm -rf $root/../go-czero-import/czero/lib/*
-   cd "$root/../go-czero-import/czero"
-   cp -rf lib_LINUX_AMD64_V3/* lib/
-   LD_LIBRARY_PATH="../go-czero-import/czero/lib_LINUX_AMD64_V3"
-   export LD_LIBRARY_PATH
-elif [ "Linux-V4" == "$SNAME" ]
-then
-    rm -rf $root/../go-czero-import/czero/lib/*
-    cd "$root/../go-czero-import/czero"
-    cp -rf lib_LINUX_AMD64_V4/* lib/
-    LD_LIBRARY_PATH="../go-czero-import/czero/lib_LINUX_AMD64_V4"
-    export LD_LIBRARY_PATH
-elif [ "$SNAME" == "Linux-*" ]
-then
-     echo "only support linux kernal v3 or v4"
-     exit
-elif [ "$SNAME" == "MINGW32" ]
-then
-    rm -rf $root/../go-czero-import/czero/lib/*
-    cd "$root/../go-czero-import/czero"
-    cp -rf lib_WINDOWS_AMD64/* lib/
-else
-   echo "only support Mingw"
-   exit
-fi
-
-cd "$root"
-
-if [ $1 == "linux-v3" ]; then
-    cd "$root/../go-czero-import/czero"
-    cp -rf lib_LINUX_AMD64_V3/* lib/
-    cd "$root"
-    unset args[0]
-elif [ $1 == "linux-v4" ];then
-    cd "$root/../go-czero-import/czero"
-    cp -rf lib_LINUX_AMD64_V4/* lib/
-    cd "$root"
-    unset args[0]
-elif [ $1 == "darwin-amd64" ];then
-     cd "$root/../go-czero-import/czero"
-     cp -rf lib_DARWIN_AMD64/* lib/
-     cd "$root"
-     unset args[0]
-elif [ $1 == "windows-amd64" ];then
-    unset args[0]
-    cd "$root/../go-czero-import/czero"
-    cp -rf lib_WINDOWS_AMD64/* lib/
-    cd "$root"
-else
-     echo "local"
-fi
-
+export DYLD_LIBRARY_PATH="../go-czero-import/czero/lib"
 
 
 # Set up the environment to use the workspace.

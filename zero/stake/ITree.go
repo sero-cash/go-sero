@@ -2,6 +2,7 @@ package stake
 
 import (
 	"fmt"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/utils"

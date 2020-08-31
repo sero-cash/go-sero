@@ -20,18 +20,18 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sero-cash/go-czero-import/cpt"
-	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/consensus/ethash"
-	"github.com/sero-cash/go-sero/core"
-	"github.com/sero-cash/go-sero/internal/jsre"
-	"github.com/sero-cash/go-sero/node"
-	"github.com/sero-cash/go-sero/sero"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/sero-cash/go-czero-import/cpt"
+	"github.com/sero-cash/go-sero/consensus/ethash"
+	"github.com/sero-cash/go-sero/core"
+	"github.com/sero-cash/go-sero/internal/jsre"
+	"github.com/sero-cash/go-sero/node"
+	"github.com/sero-cash/go-sero/sero"
 )
 
 const (
@@ -39,8 +39,8 @@ const (
 	testAddress  = "4yn9wDedx4B5k9RYmwavvmJ49UKn6VRoa8vubB5xkzanr74FPtaUM9XrFGCsB3erNyFPV7HY4U7TH8UjaswT6h3P"
 )
 
-func init(){
-	cpt.ZeroInit(cpt.NET_Dev)
+func init() {
+	cpt.ZeroInit_NoCircuit()
 }
 
 // hookedPrompter implements UserPrompter to simulate use input via channels.
@@ -79,7 +79,7 @@ func (p *hookedPrompter) SetWordCompleter(completer WordCompleter) {}
 type tester struct {
 	workspace string
 	stack     *node.Node
-	sero  *sero.Sero
+	sero      *sero.Sero
 	console   *Console
 	input     *hookedPrompter
 	output    *bytes.Buffer
@@ -100,8 +100,8 @@ func newTester(t *testing.T, confOverride func(*sero.Config)) *tester {
 		t.Fatalf("failed to create node: %v", err)
 	}
 	ethConf := &sero.Config{
-		Genesis:   core.DeveloperGenesisBlock(),
-		Serobase: common.Base58ToAddress(testAddress),
+		Genesis: core.DeveloperGenesisBlock(),
+		//Serobase: common.Base58ToAddress(testAddress),
 		Ethash: ethash.Config{
 			PowMode: ethash.ModeTest,
 		},

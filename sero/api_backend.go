@@ -274,7 +274,11 @@ func (b *SeroAPIBackend) CommitTx(tx *txtool.GTx) error {
 	gas := uint64(tx.Gas)
 	signedTx := types.NewTxWithGTx(gas, &gasPrice, &tx.Tx)
 	log.Info("commitTx", "txhash", signedTx.Hash().String())
-	return b.sero.txPool.AddLocal(signedTx)
+	err := b.sero.txPool.AddLocal(signedTx)
+	if err != nil {
+		log.Info("commitTx", "txHash", signedTx.Hash().String(), "err", err)
+	}
+	return err
 }
 
 func (b *SeroAPIBackend) GetPkNumber(pk c_type.Uint512) (number uint64, e error) {

@@ -24,7 +24,7 @@ type Address struct {
 	IsHex    bool
 }
 
-const hextable = "0123456789abcdef"
+//const hextable = "0123456789abcdef"
 
 func (self *Address) calcSum() {
 	c := append([]byte(self.Protocol+self.Version), self.Bytes...)

@@ -20,7 +20,7 @@ func (self *In_Z) ToHash() (ret c_type.Uint256) {
 	d.Write(self.Nil[:])
 	d.Write(self.Trace[:])
 	d.Write(self.AssetCM[:])
-	d.Write(self.Proof.ToHash().NewRef()[:])
+	d.Write(ProofToHash(&self.Proof).NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
@@ -31,7 +31,7 @@ func (self *In_Z) ToHash_for_sign() (ret c_type.Uint256) {
 	d.Write(self.Nil[:])
 	d.Write(self.Trace[:])
 	d.Write(self.AssetCM[:])
-	d.Write(self.Proof.ToHash().NewRef()[:])
+	d.Write(ProofToHash(&self.Proof).NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
@@ -62,7 +62,7 @@ func (self *Out_Z) ToHash() (ret c_type.Uint256) {
 	d.Write(self.OutCM[:])
 	d.Write(self.EInfo[:])
 	d.Write(self.PKr[:])
-	d.Write(self.Proof.ToHash().NewRef()[:])
+	d.Write(ProofToHash(&self.Proof).NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
@@ -80,7 +80,7 @@ func (self *Out_Z) ToHash_for_sign() (ret c_type.Uint256) {
 	d.Write(self.OutCM[:])
 	d.Write(self.EInfo[:])
 	d.Write(self.PKr[:])
-	d.Write(self.Proof.ToHash().NewRef()[:])
+	d.Write(ProofToHash(&self.Proof).NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }
@@ -123,6 +123,13 @@ func (self *Desc_Z) ToHash_for_sign() (ret c_type.Uint256) {
 	for _, out := range self.Outs {
 		d.Write(out.ToHash_for_sign().NewRef()[:])
 	}
+	copy(ret[:], d.Sum(nil))
+	return
+}
+
+func ProofToHash(proof *c_type.Proof) (ret c_type.Uint256) {
+	d := sha3.NewKeccak256()
+	d.Write(proof[:])
 	copy(ret[:], d.Sum(nil))
 	return
 }

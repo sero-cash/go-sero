@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/sero-cash/go-czero-import/c_superzk"
+
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/superzk"
 	"github.com/sero-cash/go-sero/crypto"
@@ -38,7 +40,7 @@ func (self *TreeState) GlobalGetter() serodb.Getter {
 }
 
 var Address = c_type.PKr{}
-var MerkleParam = NewParam(&Address)
+var MerkleParam = NewParam(&Address, c_superzk.Combine)
 
 func TestOutTree(t *testing.T) {
 	// Create an empty state database
@@ -70,7 +72,7 @@ func TestOutTree(t *testing.T) {
 		for j := 1; j <= i; j++ {
 			current := crypto.Keccak256Hash(big.NewInt(int64(j)).Bytes()).HashToUint256()
 			index, getPaths, anchor := outState.GetPaths(*current)
-			ret := CalcRoot(current, index, &getPaths)
+			ret := MerkleParam.CalcRoot(current, index, &getPaths)
 			if anchor != ret {
 				fmt.Println(i, j)
 				t.FailNow()

@@ -25,7 +25,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/crypto"
 )
 
 // The ABI holds information about a contract's context and available
@@ -275,4 +274,4 @@ func (abi *ABI) HasReceive() bool {
 }
 
 // revertSelector is a special function selector for revert reason unpacking.
-var revertSelector = crypto.Keccak256([]byte("Error(string)"))[:4]
+//var revertSelector = crypto.Keccak256([]byte("Error(string)"))[:4]

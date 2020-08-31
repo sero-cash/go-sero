@@ -1434,8 +1434,8 @@ var (
 	rootPrefix      = []byte("ROOT")
 	nilPrefix       = []byte("NIL")
 
-	blockPrefix   = []byte("BLOCK")
-	outUtxoPrefix = []byte("OUTUTXO")
+	blockPrefix = []byte("BLOCK")
+	//outUtxoPrefix = []byte("OUTUTXO")
 	txPrefix      = []byte("TX")
 	nilRootPrefix = []byte("NOILTOROOT")
 )
@@ -1500,19 +1500,19 @@ type (
 )
 
 type RunJob struct {
-	runing int32
-	run    RunFunc
+	running int32
+	run     RunFunc
 }
 
 func (r *RunJob) Run() {
-	x := atomic.LoadInt32(&r.runing)
+	x := atomic.LoadInt32(&r.running)
 	if x == 1 {
 		return
 	}
 
-	atomic.StoreInt32(&r.runing, 1)
+	atomic.StoreInt32(&r.running, 1)
 	defer func() {
-		atomic.StoreInt32(&r.runing, 0)
+		atomic.StoreInt32(&r.running, 0)
 	}()
 
 	r.run()

@@ -826,8 +826,8 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	currentBlockNum := pool.chain.CurrentBlock().NumberU64()
 
 	if true && (!seroparam.Is_Dev()) {
-		if (seroparam.SIP8()-25) < currentBlockNum && currentBlockNum < (seroparam.SIP8()+25) {
-			return false, fmt.Errorf("protect SIP8:%v", seroparam.SIP8())
+		if (seroparam.SIP9()-25) < currentBlockNum && currentBlockNum < (seroparam.SIP9()+25) {
+			return false, fmt.Errorf("protect SIP9:%v", seroparam.SIP9())
 		}
 	}
 
@@ -873,8 +873,13 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 
 	if pool.newQueue.Add(tx, pool.gasPrice) {
 		if pool.all.Get(hash) == nil {
-			pool.priced.Add(tx, pool.gasPrice)
+			flag := pool.priced.Add(tx, pool.gasPrice)
+			if !flag {
+				log.Info("txPool enqueueTx error", "tx.gasPrice", tx.GasPrice().String())
+			}
 		}
+	} else {
+		return false, errors.New("gas price too low")
 	}
 
 	return true, nil

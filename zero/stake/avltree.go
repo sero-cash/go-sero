@@ -3,14 +3,15 @@ package stake
 import (
 	"bytes"
 	"errors"
+
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
 var (
-	errNotExist       = errors.New("index is not existed")
-	errTreeNil        = errors.New("tree is null")
-	errTreeIndexExist = errors.New("tree index is existed")
+//errNotExist       = errors.New("index is not existed")
+//errTreeNil        = errors.New("tree is null")
+//errTreeIndexExist = errors.New("tree index is existed")
 )
 
 var (

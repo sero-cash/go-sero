@@ -902,7 +902,7 @@ func handleAllotTicket(d []byte, evm *EVM, contract *Contract, mem []byte) (comm
 		}
 
 		if gas >= params.CreateTicketGas {
-			gas -= params.CreateTicketGas;
+			gas -= params.CreateTicketGas
 		} else {
 			return common.Hash{}, 0, fmt.Errorf("allotTicket error , contract : %s, error : %s", contract.Address(), "out of gas"), false
 		}
@@ -1186,7 +1186,7 @@ func makeLog(size int) executionFunc {
 		} else if topics[0] == topic_setCallValues {
 			setCallValues(d, data, contract)
 			contract.Gas += interpreter.evm.callGasTemp
-		} else if topics[0] == topic_txHash{
+		} else if topics[0] == topic_txHash {
 			memory.Set(mStart.Uint64(), 32, interpreter.evm.TxHash.Bytes())
 			contract.Gas += interpreter.evm.callGasTemp
 		} else if topics[0] == topic_setTokenRate {
