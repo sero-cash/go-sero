@@ -4,6 +4,7 @@ import (
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/crypto/sha3"
 	"github.com/sero-cash/go-sero/zero/txs/pkg"
+	"github.com/sero-cash/go-sero/zero/txs/stx/stx_v0"
 	"github.com/sero-cash/go-sero/zero/utils"
 )
 
@@ -126,7 +127,7 @@ func (self *PkgCreate) ToHash() (ret c_type.Uint256) {
 	d.Write(self.Id[:])
 	d.Write(self.PKr[:])
 	d.Write(self.Pkg.ToHash().NewRef()[:])
-	d.Write(self.Proof.ToHash().NewRef()[:])
+	d.Write(stx_v0.ProofToHash(&self.Proof).NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return ret
 }
@@ -144,7 +145,7 @@ func (self *PkgCreate) ToHash_for_sign() (ret c_type.Uint256) {
 	d.Write(self.Id[:])
 	d.Write(self.PKr[:])
 	d.Write(self.Pkg.ToHash().NewRef()[:])
-	d.Write(self.Proof.ToHash().NewRef()[:])
+	d.Write(stx_v0.ProofToHash(&self.Proof).NewRef()[:])
 	copy(ret[:], d.Sum(nil))
 	return ret
 }
