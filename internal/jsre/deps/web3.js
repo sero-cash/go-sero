@@ -3506,7 +3506,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                         isPayable = true;
                     }
                     if (constructorAbi.hasOwnProperty("payable") ){
-                        isPayable= json.payable;
+                        isPayable= constructorAbi.payable;
                     }
 
                     if (!isPayable ) {
