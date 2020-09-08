@@ -873,8 +873,13 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 
 	if pool.newQueue.Add(tx, pool.gasPrice) {
 		if pool.all.Get(hash) == nil {
-			pool.priced.Add(tx, pool.gasPrice)
+			flag := pool.priced.Add(tx, pool.gasPrice)
+			if !flag {
+				log.Info("txPool enqueueTx error", "tx.gasPrice", tx.GasPrice().String())
+			}
 		}
+	} else {
+		return false, errors.New("gas price too low")
 	}
 
 	return true, nil
