@@ -5014,7 +5014,12 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }else{
                 var result = coder.decodeParams(this._outputTypes, output.slice(8),null);
                 result =  result.length === 1 ? result[0] : result;
-                callback(null,result);
+                if (callback){
+                    callback(null,result);
+                }else {
+                    return result;
+                }
+
             }
 
         };
