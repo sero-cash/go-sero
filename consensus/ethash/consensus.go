@@ -429,11 +429,7 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 		addr = common.Base58ToAddress("2FrgwB3rm4tiRnACxWeDoEZbe57zaAHPFT7YbYVrUB1VTs8Naoz1j44kLU7ybjXmq14fD81HkTc8gV4tGgikCMr6")
 		stateDB.SetCode(addr, code3)
 	}
-
-	if header.Number.Uint64() == seroparam.SIP9() {
-		addr := common.Base58ToAddress("2krq6zAYHv4f3jhrUKqhz9cutG5JcPYzXPzG7GiMrqn41opXfWTRkzEq2eM2tDXNpcgxj3YeSjF5rJEXRS5XJXwi")
-		stateDB.SetCode(addr, code4)
-	}
+	
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), stateDB, header, gasReward)
 

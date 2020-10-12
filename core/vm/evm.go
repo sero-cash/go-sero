@@ -17,7 +17,6 @@
 package vm
 
 import (
-	"github.com/sero-cash/go-czero-import/seroparam"
 	"math/big"
 	"time"
 
@@ -385,9 +384,6 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, asset *asset
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
 	contract := NewContract(caller, AccountRef(address), asset, gas)
-	if evm.BlockNumber.Uint64() >= seroparam.SIP9() {
-		contract.PutNonceAddress(evm.StateDB, address)
-	}
 	code, err := loadAddress(evm, caller, code, contract, true)
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
