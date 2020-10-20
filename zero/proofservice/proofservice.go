@@ -2,6 +2,11 @@ package proofservice
 
 import (
 	"errors"
+	"math/big"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/log"
@@ -9,10 +14,6 @@ import (
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/txtool/flight"
 	"github.com/sero-cash/go-sero/zero/wallet/light"
-	"math/big"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 type ServiceFee struct {
@@ -32,7 +33,7 @@ type Job struct {
 }
 
 func newJob(tx *stx.T, param *txtool.GTxParam) *Job {
-	return &Job{tx: tx, param: param};
+	return &Job{tx: tx, param: param}
 }
 
 var instance *ProofService
@@ -51,7 +52,7 @@ type ProofService struct {
 	queueChan chan *Job
 	workChan  chan *Job
 	jobs      sync.Map
-	workNum   int32;
+	workNum   int32
 	client    SeroClient
 	// redisClient *RedisClient
 	storage Storage
@@ -86,8 +87,8 @@ func newMapStorage() *MapStorage {
 }
 
 func (storage *MapStorage) Exists(hash common.Hash) bool {
-	_, ok := storage.cache[hash];
-	return ok;
+	_, ok := storage.cache[hash]
+	return ok
 }
 
 func (storage *MapStorage) Save(job *Job) {
@@ -184,7 +185,7 @@ func (proof *ProofService) SubmitWork(tx *stx.T, param *txtool.GTxParam) error {
 
 	job := newJob(tx, param)
 	if TryEnqueue(job, proof.queueChan) {
-		proof.storage.Save(job);
+		proof.storage.Save(job)
 		return nil
 	}
 	return errors.New("server is busy")
@@ -195,18 +196,18 @@ func (proof *ProofService) processJob(job *Job) {
 	if err != nil {
 		log.Error("processJob error", "error", err)
 		job.Error = err
-		proof.storage.Save(job);
+		proof.storage.Save(job)
 		return
 	}
 	if err := proof.client.CommitTx(&gtx); err != nil {
 		log.Error("processJob error", "error", err)
 		job.Error = err
-		proof.storage.Save(job);
+		proof.storage.Save(job)
 		return
 	}
 	txHash := gtx.Tx.ToHash()
 	job.TxHash = common.BytesToHash(txHash[:])
-	proof.storage.Save(job);
+	proof.storage.Save(job)
 }
 
 func (proof *ProofService) loop() {
@@ -221,14 +222,14 @@ func (proof *ProofService) loop() {
 		case job := <-proof.queueChan:
 			atomic.AddInt32(&proof.workNum, 1)
 			go func() {
-				defer atomic.AddInt32(&proof.workNum, -1);
+				defer atomic.AddInt32(&proof.workNum, -1)
 				proof.processJob(job)
 			}()
 		case <-clear.C:
 			proof.jobs.Range(func(key, value interface{}) bool {
 				job := value.(*Job)
 				if job.Timestamp.Add(time.Hour * 2).Before(time.Now()) {
-					proof.jobs.Delete(key);
+					proof.jobs.Delete(key)
 				}
 				return true
 			})

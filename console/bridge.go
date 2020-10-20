@@ -32,6 +32,10 @@ import (
 	"github.com/sero-cash/go-sero/rpc"
 )
 
+const (
+	FN = "Function"
+)
+
 // bridge is a collection of JavaScript utility methods to bride the .js runtime
 // environment and the Go RPC connection backing the remote method calls.
 type bridge struct {
@@ -272,7 +276,7 @@ func (b *bridge) SendTransaction(call otto.FunctionCall) (response otto.Value) {
 	progress.Stop()
 	finish <- struct{}{}
 
-	if fn := call.Argument(1); fn.Class() == "Function" {
+	if fn := call.Argument(1); fn.Class() == FN {
 		fn.Call(otto.NullValue(), otto.NullValue(), val)
 		return otto.UndefinedValue()
 	}
@@ -309,7 +313,7 @@ func (b *bridge) CreatePkg(call otto.FunctionCall) (response otto.Value) {
 	progress.Stop()
 	finish <- struct{}{}
 
-	if fn := call.Argument(1); fn.Class() == "Function" {
+	if fn := call.Argument(1); fn.Class() == FN {
 		fn.Call(otto.NullValue(), otto.NullValue(), val)
 		return otto.UndefinedValue()
 	}
@@ -346,7 +350,7 @@ func (b *bridge) TransferPkg(call otto.FunctionCall) (response otto.Value) {
 	progress.Stop()
 	finish <- struct{}{}
 
-	if fn := call.Argument(1); fn.Class() == "Function" {
+	if fn := call.Argument(1); fn.Class() == FN {
 		fn.Call(otto.NullValue(), otto.NullValue(), val)
 		return otto.UndefinedValue()
 	}
@@ -383,7 +387,7 @@ func (b *bridge) ClosePkg(call otto.FunctionCall) (response otto.Value) {
 	progress.Stop()
 	finish <- struct{}{}
 
-	if fn := call.Argument(1); fn.Class() == "Function" {
+	if fn := call.Argument(1); fn.Class() == FN {
 		fn.Call(otto.NullValue(), otto.NullValue(), val)
 		return otto.UndefinedValue()
 	}
@@ -424,7 +428,7 @@ func (b *bridge) Merge(call otto.FunctionCall) (response otto.Value) {
 	progress.Stop()
 	finish <- struct{}{}
 
-	if fn := call.Argument(1); fn.Class() == "Function" {
+	if fn := call.Argument(1); fn.Class() == FN {
 		fn.Call(otto.NullValue(), otto.NullValue(), val)
 		return otto.UndefinedValue()
 	}
@@ -461,7 +465,7 @@ func (b *bridge) GenTxWithSign(call otto.FunctionCall) (response otto.Value) {
 	progress.Stop()
 	finish <- struct{}{}
 
-	if fn := call.Argument(1); fn.Class() == "Function" {
+	if fn := call.Argument(1); fn.Class() == FN {
 		fn.Call(otto.NullValue(), otto.NullValue(), val)
 		return otto.UndefinedValue()
 	}
@@ -506,7 +510,7 @@ func (b *bridge) GetRecords(call otto.FunctionCall) (response otto.Value) {
 	progress.Stop()
 	finish <- struct{}{}
 
-	if fn := call.Argument(1); fn.Class() == "Function" {
+	if fn := call.Argument(1); fn.Class() == FN {
 		fn.Call(otto.NullValue(), otto.NullValue(), val)
 		return otto.UndefinedValue()
 	}
@@ -642,7 +646,7 @@ func (b *bridge) Send(call otto.FunctionCall) (response otto.Value) {
 	} else {
 		response, _ = resps.Get("0")
 	}
-	if fn := call.Argument(1); fn.Class() == "Function" {
+	if fn := call.Argument(1); fn.Class() == FN {
 		fn.Call(otto.NullValue(), otto.NullValue(), response)
 		return otto.UndefinedValue()
 	}

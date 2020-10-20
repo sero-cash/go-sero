@@ -3,17 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"os"
+	"runtime"
+	"strings"
+	"time"
+
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/internal/ethapi"
 	"github.com/sero-cash/go-sero/rpc"
 	"github.com/sero-cash/go-sero/zero/proofservice"
 	"github.com/sero-cash/go-sero/zero/utils"
-	"log"
-	"os"
-	"runtime"
-	"strings"
-	"time"
 )
 
 func main() {
@@ -26,7 +27,7 @@ func main() {
 	select {}
 }
 
-func startNode(endpoint, rpcAddr string, config *proofservice.Config, timeout rpc.HTTPTimeouts) (error) {
+func startNode(endpoint, rpcAddr string, config *proofservice.Config, timeout rpc.HTTPTimeouts) error {
 	if endpoint == "" {
 		return nil
 	}
@@ -78,19 +79,19 @@ func initConfig() (string, *proofservice.Config, rpc.HTTPTimeouts) {
 
 	zinFeeAmount, err := utils.ParseAmount(*zinFee)
 	if err != nil {
-		panic(err);
+		panic(err)
 	}
 	oinFeeAmount, err := utils.ParseAmount(*oinFee)
 	if err != nil {
-		panic(err);
+		panic(err)
 	}
 	outFeeAmount, err := utils.ParseAmount(*outFee)
 	if err != nil {
-		panic(err);
+		panic(err)
 	}
 	fixedFeeAmount, err := utils.ParseAmount(*fixedFee)
 	if err != nil {
-		panic(err);
+		panic(err)
 	}
 
 	pkr := c_type.NewPKrByBytes(base58.Decode(*pkrString))

@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"log"
+	"net/http"
+	"time"
+
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/zero/txtool"
 	"github.com/sero-cash/go-sero/zero/wallet/light"
-	"log"
-	"net/http"
-	"time"
 )
 
 type LocalClient struct {
@@ -28,7 +29,7 @@ func (self *LocalClient) CheckNils(nils []c_type.Uint256) bool {
 	if nilResps, err := self.backend.CheckNil(nils); err == nil {
 		return len(nilResps) == 0
 	}
-	return false;
+	return false
 }
 
 type RemoteClient struct {
@@ -41,14 +42,14 @@ func NewRemoteClient(host string) *RemoteClient {
 
 func (self *RemoteClient) CommitTx(tx *txtool.GTx) error {
 	if _, err := commitTx(self.host, tx); err != nil {
-		return err;
+		return err
 	}
 	return nil
 }
 
 func (self *RemoteClient) CheckNils(nils []c_type.Uint256) bool {
 
-	return checkNils(self.host, nils);
+	return checkNils(self.host, nils)
 }
 
 func checkNils(host string, nils []c_type.Uint256) bool {

@@ -57,7 +57,7 @@ const (
 
 	chainVoteSize = 30
 
-	delayBlock = 1
+	//delayBlock = 1
 )
 
 // Agent can register themself with the worker
@@ -583,7 +583,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}
 
 		if true && (!seroparam.Is_Dev()) {
-			if env.header.Number.Uint64() == seroparam.SIP8() {
+			if env.header.Number.Uint64() == seroparam.SIP9() {
 				txs.Shift()
 				env.errHandledTxs = append(env.errHandledTxs, tx)
 				continue
@@ -599,7 +599,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			log.Trace("Gas limit exceeded for current block", "sender", tx.From())
 			txs.Pop()
-			break;
+			break
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account

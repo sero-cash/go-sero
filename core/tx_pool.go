@@ -826,8 +826,8 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	currentBlockNum := pool.chain.CurrentBlock().NumberU64()
 
 	if true && (!seroparam.Is_Dev()) {
-		if (seroparam.SIP8()-25) < currentBlockNum && currentBlockNum < (seroparam.SIP8()+25) {
-			return false, fmt.Errorf("protect SIP8:%v", seroparam.SIP8())
+		if (seroparam.SIP9()-25) < currentBlockNum && currentBlockNum < (seroparam.SIP9()+25) {
+			return false, fmt.Errorf("protect SIP9:%v", seroparam.SIP9())
 		}
 	}
 

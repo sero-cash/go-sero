@@ -133,4 +133,3 @@ func ProofToHash(proof *c_type.Proof) (ret c_type.Uint256) {
 	copy(ret[:], d.Sum(nil))
 	return
 }
-

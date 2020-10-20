@@ -42,7 +42,7 @@ const uintBits = 32 << (uint64(^uint(0)) >> 63)
 // Errors
 var (
 	ErrEmptyString   = &decError{"empty hex string"}
-	ErrInvalidBase58   = &decError{"invalid base58 string"}
+	ErrInvalidBase58 = &decError{"invalid base58 string"}
 	ErrSyntax        = &decError{"invalid hex string"}
 	ErrMissingPrefix = &decError{"hex string without 0x prefix"}
 	ErrOddLength     = &decError{"hex string of odd length"}

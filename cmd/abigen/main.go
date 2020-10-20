@@ -47,7 +47,7 @@ OPTIONS:
 var (
 	// Git SHA1 commit hash of the release (set via linker flags)
 	gitCommit = ""
-	gitDate   = ""
+	//gitDate   = ""
 
 	app *cli.App
 

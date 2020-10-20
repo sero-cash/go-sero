@@ -17,11 +17,12 @@
 package vm
 
 import (
+	"math/big"
+
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/common/math"
 	"github.com/sero-cash/go-sero/params"
-	"math/big"
 )
 
 // memoryGasCosts calculates the quadratic gas for memory expansion. It does so
@@ -160,11 +161,11 @@ var (
 
 func inTopics(val string) bool {
 	for _, each := range topics {
-		if (each == val) {
-			return true;
+		if each == val {
+			return true
 		}
 	}
-	return false;
+	return false
 }
 
 func makeGasLog(n uint64) gasFunc {
@@ -194,7 +195,7 @@ func makeGasLog(n uint64) gasFunc {
 			return 0, errGasUintOverflow
 		}
 
-		if (evm.BlockNumber.Uint64() < seroparam.SIP5()) {
+		if evm.BlockNumber.Uint64() < seroparam.SIP5() {
 			evm.callGasTemp, err = callGas(gt, contract.Gas, gas, new(big.Int).SetUint64(math.MaxUint64))
 			if err != nil {
 				return 0, err
@@ -203,9 +204,9 @@ func makeGasLog(n uint64) gasFunc {
 				return 0, errGasUintOverflow
 			}
 		} else {
-			evm.callGasTemp = 0;
-			topic := common.BigToHash(stack.Back(2)).Hex();
-			if (sendTopic == topic || allotTicketTopic == topic) {
+			evm.callGasTemp = 0
+			topic := common.BigToHash(stack.Back(2)).Hex()
+			if sendTopic == topic || allotTicketTopic == topic {
 				if gas, overflow = math.SafeAdd(gas, params.CallValueTransferGas); overflow {
 					return 0, errGasUintOverflow
 				}
@@ -214,7 +215,7 @@ func makeGasLog(n uint64) gasFunc {
 				if err != nil {
 					return 0, err
 				}
-				if (allotTicketTopic == topic) {
+				if allotTicketTopic == topic {
 					evm.callGasTemp += params.CreateTicketGas
 				}
 				if gas, overflow = math.SafeAdd(gas, evm.callGasTemp); overflow {

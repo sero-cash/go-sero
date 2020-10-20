@@ -109,13 +109,13 @@ func DecodeNumber(data []byte) uint64 {
 }
 
 var (
-	sero = 1000000000000000000
-	gta  = big.NewInt(1000000000)
-	ta   = big.NewInt(1)
+//sero = 1000000000000000000
+//gta  = big.NewInt(1000000000)
+//ta   = big.NewInt(1)
 )
 
 func ParseAmount(s string) (*big.Int, error) {
-	s = strings.ToUpper(s);
+	s = strings.ToUpper(s)
 	base := 1.0
 	if strings.HasSuffix(s, "SERO") {
 		s = s[0 : len(s)-4]
@@ -129,7 +129,7 @@ func ParseAmount(s string) (*big.Int, error) {
 	if valFloat, ok := new(big.Float).SetString(s); ok {
 		valFloat = new(big.Float).Mul(valFloat, big.NewFloat(base))
 		ret, _ := valFloat.Int(nil)
-		return ret, nil;
+		return ret, nil
 	}
 
 	return nil, errors.New("illegal args")

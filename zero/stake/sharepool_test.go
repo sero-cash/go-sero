@@ -82,7 +82,7 @@ func TestPosRewad(t *testing.T) {
 	//state.AddPendingShare(share)
 	//fmt.Println("root:", root.String())
 
-	tree := NewTree(state,0)
+	tree := NewTree(state, 0)
 	tree.Insert(&Node{key: common.BytesToHash(share.Id()), num: share.Num, total: share.Num})
 	fmt.Println(state.ShareSize())
 	fmt.Println(maxReware)

@@ -106,8 +106,8 @@ type (
 	}
 
 	ticketNonceChange struct {
-		account  *common.Address
-		prev     uint64
+		account *common.Address
+		prev    uint64
 	}
 
 	storageChange struct {

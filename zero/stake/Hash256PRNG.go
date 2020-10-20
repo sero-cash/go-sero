@@ -3,6 +3,7 @@ package stake
 import (
 	"encoding/binary"
 	"fmt"
+
 	"github.com/sero-cash/go-sero/common"
 )
 

@@ -207,7 +207,7 @@ func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) {
 		return nil, false, &methodNotFoundError{in.Method, ""}
 	}
 
-	serviceName :=elems[0]
+	serviceName := elems[0]
 
 	if elems[0] == "eth" {
 		serviceName = "sero"
@@ -266,7 +266,7 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) 
 			requests[i] = rpcRequest{id: id, params: r.Payload}
 		}
 		if elem := strings.Split(r.Method, serviceMethodSeparator); len(elem) == 2 {
-			serviceName :=elem[0]
+			serviceName := elem[0]
 			if elem[0] == "eth" {
 				serviceName = "sero"
 			}

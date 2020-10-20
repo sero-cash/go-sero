@@ -19,7 +19,7 @@ func TestProgpow(t *testing.T) {
 
 	cDag := make([]uint32, progpowCacheWords)
 
-	d, r := progpowLightWithoutCDag(data_size, cache,cDag, header, 15017396847274520746, 50)
+	d, r := progpowLightWithoutCDag(data_size, cache, cDag, header, 15017396847274520746, 50)
 	fmt.Printf("d: %v,r: %v", hexutil.Encode(d), hexutil.Encode(r))
 }
 

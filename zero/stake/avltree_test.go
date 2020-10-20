@@ -2,17 +2,18 @@ package stake
 
 import (
 	"fmt"
-	"github.com/sero-cash/go-sero/common"
-	"github.com/sero-cash/go-sero/crypto"
-	"github.com/sero-cash/go-sero/zero/utils"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/sero-cash/go-sero/common"
+	"github.com/sero-cash/go-sero/crypto"
+	"github.com/sero-cash/go-sero/zero/utils"
 )
 
-var newprint = func(node *Node) {
-	node.Print()
-}
+//var newprint = func(node *Node) {
+//	node.Print()
+//}
 
 // func newState() (State, *state.StateDB) {
 //	db := serodb.NewMemDatabase()

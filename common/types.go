@@ -49,8 +49,8 @@ const (
 )
 
 var (
-	hashT    = reflect.TypeOf(Hash{})
-	addressT = reflect.TypeOf(Address{})
+	hashT = reflect.TypeOf(Hash{})
+	//addressT = reflect.TypeOf(Address{})
 )
 
 func IsString(input []byte) bool {
@@ -322,7 +322,7 @@ func (a *Address) UnmarshalText(input []byte) error {
 	if address.IsBase58Str(string(input)) {
 		out := base58.Decode(string(input))
 		if len(out) != 64 && len(out) != 96 {
-			return errors.New("address lenght must be 64 or 96 bytes")
+			return errors.New("address length must be 64 or 96 bytes")
 		}
 		if len(out) == 96 {
 			empty := Hash{}

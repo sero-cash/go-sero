@@ -2,9 +2,10 @@ package stake
 
 import (
 	"errors"
-	"github.com/sero-cash/go-sero/zero/utils"
 	"math/big"
 	"strings"
+
+	"github.com/sero-cash/go-sero/zero/utils"
 
 	"github.com/sero-cash/go-sero/common"
 )

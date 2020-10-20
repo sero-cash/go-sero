@@ -213,7 +213,7 @@ const (
 	CREATE2
 	STATICCALL = 0xfa
 
-	REVERT       = 0xfd
+	REVERT = 0xfd
 	//SELFDESTRUCT = 0xff
 )
 

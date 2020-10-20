@@ -37,7 +37,7 @@ func TestKeyStore(t *testing.T) {
 	dir, ks := tmpKeyStore(t)
 	defer os.RemoveAll(dir)
 
-	a, err := ks.NewAccount("foo")
+	a, err := ks.NewAccount("foo", 0, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestTimedUnlock(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	pass := "foo"
-	a1, err := ks.NewAccount(pass)
+	a1, err := ks.NewAccount(pass, 0, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestOverrideUnlock(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	pass := "foo"
-	a1, err := ks.NewAccount(pass)
+	a1, err := ks.NewAccount(pass, 0, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,13 +232,13 @@ func TestWalletNotifications(t *testing.T) {
 
 	// Randomly add and remove accounts.
 	var (
-		live       = make(map[address.AccountAddress]accounts.Account)
+		live       = make(map[address.PKAddress]accounts.Account)
 		wantEvents []walletEvent
 	)
 	for i := 0; i < 1024; i++ {
 		if create := len(live) == 0 || rand.Int()%4 > 0; create {
 			// Add a new account and ensure wallet notifications arrives
-			account, err := ks.NewAccount("")
+			account, err := ks.NewAccount("", 0, 2)
 			if err != nil {
 				t.Fatalf("failed to create test account: %v", err)
 			}
@@ -267,7 +267,7 @@ func TestWalletNotifications(t *testing.T) {
 }
 
 // checkAccounts checks that all known live accounts are present in the wallet list.
-func checkAccounts(t *testing.T, live map[address.AccountAddress]accounts.Account, wallets []accounts.Wallet) {
+func checkAccounts(t *testing.T, live map[address.PKAddress]accounts.Account, wallets []accounts.Wallet) {
 	if len(live) != len(wallets) {
 		t.Errorf("wallet list doesn't match required accounts: have %d, want %d", len(wallets), len(live))
 		return

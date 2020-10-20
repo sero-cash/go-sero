@@ -28,6 +28,8 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/urfave/cli.v1"
+
 	"github.com/sero-cash/go-czero-import/c_type"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -66,7 +68,6 @@ import (
 	"github.com/sero-cash/go-sero/sero/downloader"
 	"github.com/sero-cash/go-sero/sero/gasprice"
 	"github.com/sero-cash/go-sero/serodb"
-	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -1287,8 +1288,6 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 	if ctx.GlobalIsSet(LightNodeFlag.Name) {
 		cfg.StartLight = true
 	}
-
-
 
 	// Override any default configs for hard coded networks.
 	switch {
