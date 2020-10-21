@@ -2,11 +2,11 @@
 #when you start gero with docker please add -v save the data to the chain data
 
 build:
-	docker build -t sero/client-go:v1.0.0-rc6 .
+	docker build -t sero/client-go:v1.0.4 .
 
 rpc:
 	mkdir -p ~/geroData/log
-	docker run --name gero -v ~/geroData:/root/.sero -v ~/geroData/log:/log -d -p 8545:8545 sero/client-go:v1.0.0-rc6
+	docker run --name gero -v ~/geroData:/root/.sero -v ~/geroData/log:/log -d -p 8545:8545 sero/client-go:v1.0.4
 
 kill:
 	docker rm -f gero
