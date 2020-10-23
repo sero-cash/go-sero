@@ -4952,6 +4952,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             }
 
             output = output.length >= 2 ? output.slice(2) : output;
+
+            if (output.length>=8 &&output.slice(0,8)== "08c379a0") {
+                var result = coder.decodeParams(["string"],output.slice(8),null);
+
+                throw new Error("output invalid, reason = " + result + "\noutput = "+ output);
+            }
+
             var self = this;
             var shortAddress=[];
             try{
