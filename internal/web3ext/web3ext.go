@@ -458,6 +458,11 @@ web3._extend({
 			call: 'sero_getRawTransactionByHash',
 			params: 1
 		}),
+        new web3._extend.Method({
+			name: 'sendRawTransaction',
+			call: 'sero_sendRawTransaction',
+			params: 1
+		}),
 		new web3._extend.Method({
 			name: 'getRawTransactionFromBlock',
 			call: function(args) {
