@@ -83,8 +83,10 @@ func (self *SRI) GetBlocksInfoByDelay(start uint64, count uint64, delay uint64) 
 		}
 		for i := uint64(0); i < count; i++ {
 			num := start + i
+			//log.Info("GetBlocksInfoByDelay ", "num", num)
 			chain_block := txtool.Ref_inst.Bc.GetBlockByNumber(num)
 			hash := chain_block.Hash()
+			//log.Info("GetBlocksInfoByDelay ", "hash ", hash.String(), "num", num)
 			local_block := GetBlock(num, &hash)
 			if local_block != nil {
 				block := txtool.Block{}

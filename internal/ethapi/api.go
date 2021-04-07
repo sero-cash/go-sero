@@ -145,8 +145,9 @@ func (s *PublicTxPoolAPI) Content() map[string]map[string]*RPCTransaction {
 	content := map[string]map[string]*RPCTransaction{
 		"pending": make(map[string]*RPCTransaction),
 		"queued":  make(map[string]*RPCTransaction),
+		"all":     make(map[string]*RPCTransaction),
 	}
-	pending, queue := s.b.TxPoolContent()
+	pending, queue, all := s.b.TxPoolContent()
 
 	// Flatten the pending transactions
 
@@ -164,15 +165,23 @@ func (s *PublicTxPoolAPI) Content() map[string]map[string]*RPCTransaction {
 	}
 	content["queued"] = qdump
 
+	adump := make(map[string]*RPCTransaction)
+	for _, tx := range all {
+		adump[tx.Hash().Hex()] = newRPCPendingTransaction(tx)
+	}
+	content["all"] = adump
+
 	return content
 }
 
 // Status returns the number of pending and queued transaction in the pool.
 func (s *PublicTxPoolAPI) Status() map[string]hexutil.Uint {
-	pending, queue := s.b.Stats()
+	pending, queue, all, total := s.b.Stats()
 	return map[string]hexutil.Uint{
 		"pending": hexutil.Uint(pending),
 		"queued":  hexutil.Uint(queue),
+		"all":     hexutil.Uint(all),
+		"total":   hexutil.Uint(total),
 	}
 }
 
@@ -1687,6 +1696,18 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 	return rlp.EncodeToBytes(tx)
 }
 
+func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, rawTx hexutil.Bytes) error {
+	var tx *types.Transaction = &types.Transaction{}
+
+	rlp.DecodeBytes(rawTx[:], tx)
+
+	err := s.b.SendTx(ctx, tx)
+	if err != nil {
+		log.Info("commitTx", "txHash", tx.Hash().String(), "err", err)
+	}
+	return err
+}
+
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
 	tx, blockHash, blockNumber, index := rawdb.ReadTransaction(s.b.ChainDb(), hash)
@@ -2058,24 +2079,12 @@ func (s *PublicTransactionPoolAPI) CommitContractTx(ctx context.Context, args *t
 
 func (s *PublicTransactionPoolAPI) ReSendTransaction(ctx context.Context, txhash common.Hash) (common.Hash, error) {
 
-	pending, err := s.b.GetPoolTransactions()
-	if err != nil {
-		return common.Hash{}, err
-	}
-	var tx *types.Transaction
+	tx := s.b.GetPoolTransaction(txhash)
 
-	for _, ptx := range pending {
-		if ptx.Hash() == txhash {
-			tx = ptx
-			break
-		}
-	}
 	if tx == nil {
 		return common.Hash{}, errors.New("can not find tx " + txhash.Hex() + " in local txpool!")
 	}
-	if err != nil {
-		return common.Hash{}, err
-	}
+
 	return submitTransaction(ctx, s.b, tx, nil)
 }
 

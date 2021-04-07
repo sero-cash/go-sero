@@ -336,7 +336,7 @@ type TxPool struct {
 	pendingState  *state.ManagedState // Pending state tracking virtual nonces
 	currentMaxGas uint64              // Current gas limit for transaction caps
 
-	locals *accountSet // Set of local transaction to exempt from eviction rules
+	//locals *accountSet // Set of local transaction to exempt from eviction rules
 	//journal *txJournal  // Journal of local transaction to back up to disk
 
 	all        *txLookup     // All transactions to allow lookups
@@ -371,7 +371,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
 	}
 	pool.pkrTxOuts = make(map[c_type.PKr]map[c_type.Uint256]*TxOutInfo)
-	pool.locals = newAccountSet()
+	//pool.locals = newAccountSet()
 	pool.priced = newTxPricedList(pool.all)
 	pool.newQueue = newTxPricedList(newTxLookup())
 	pool.newPending = newTxPricedList(newTxLookup())
@@ -434,7 +434,7 @@ func (pool *TxPool) loop() {
 				}
 			}
 			for _, tx := range drop {
-				pool.removeTx(tx.Hash())
+				pool.removeAllTx(tx.Hash())
 				if pool.canAddPkrTx() {
 					pool.pkrTxOuts.delPendintTxOut(*tx)
 				}
@@ -459,7 +459,7 @@ func (pool *TxPool) RemoveTxs(txs types.Transactions) {
 	defer pool.mu.Unlock()
 
 	for _, tx := range txs {
-		pool.removeTx(tx.Hash())
+		pool.removeAllTx(tx.Hash())
 	}
 }
 
@@ -566,7 +566,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	}
 
 	for _, tx := range included {
-		pool.removeTx(tx.Hash())
+		pool.removeAllTx(tx.Hash())
 		log.Debug("confirm removeTx tx", "hash", tx.Hash())
 	}
 	// Inject any transactions discarded due to reorgs
@@ -605,9 +605,9 @@ func (pool *TxPool) SetGasPrice(price *big.Int) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
-	pool.priced.Discard(pool.gasPrice, 0)
-	pool.newQueue.Discard(pool.gasPrice, 0)
-	pool.newPending.Discard(pool.gasPrice, 0)
+	pool.priced.RemoveWithPrice(pool.gasPrice)
+	pool.newQueue.RemoveWithPrice(pool.gasPrice)
+	pool.newPending.RemoveWithPrice(pool.gasPrice)
 
 	log.Info("Transaction pool priced threshold updated", "priced", pool.gasPrice)
 }
@@ -622,16 +622,16 @@ func (pool *TxPool) State() *state.ManagedState {
 
 // Stats retrieves the current pool stats, namely the number of pending and the
 // number of queued (non-executable) transactions.
-func (pool *TxPool) Stats() (int, int) {
+func (pool *TxPool) Stats() (int, int, int, int) {
 	pool.mu.RLock()
 	defer pool.mu.RUnlock()
 
-	return pool.newPending.Len(), pool.newQueue.Len()
+	return pool.newPending.Len(), pool.newQueue.Len(), pool.priced.Len(), pool.all.Count()
 }
 
 // Content retrieves the data content of the transaction pool, returning all the
 // pending as well as queued transactions, grouped by account and sorted by nonce.
-func (pool *TxPool) Content() (types.Transactions, types.Transactions) {
+func (pool *TxPool) Content() (types.Transactions, types.Transactions, types.Transactions) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
@@ -646,7 +646,13 @@ func (pool *TxPool) Content() (types.Transactions, types.Transactions) {
 		queued = append(queued, pool.newQueue.Flatten()...)
 	}
 
-	return pending, queued
+	all := types.Transactions{}
+
+	if pool.priced != nil && pool.priced.items != nil {
+		all = append(all, pool.priced.Flatten()...)
+	}
+
+	return pending, queued, all
 }
 
 func (pool *TxPool) PendingOuts(pkr c_type.PKr) map[c_type.Uint256]*TxOutInfo {
@@ -840,15 +846,15 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// If the transaction pool is full, discard underpriced transactions
 	if uint64(pool.all.Count()) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
 		// If the new transaction is underpriced, don't accept it
-		if !local && pool.newQueue.Underpriced(tx, pool.locals) {
+		if !local && pool.newQueue.Underpriced(tx) {
 			log.Trace("Discarding underpriced transaction", "hash", hash, "priced", tx.GasPrice())
 			underpricedTxCounter.Inc(1)
 			return false, ErrUnderpriced
 		}
 		// New transaction is better than our worse ones, make room for it
-		drop := pool.priced.Discard(pool.gasPrice, pool.all.Count()-int(pool.config.GlobalSlots+pool.config.GlobalQueue-1))
+		drop := pool.priced.Discard(pool.all.Count() - int(pool.config.GlobalSlots+pool.config.GlobalQueue-1))
 		for _, tx := range drop {
-			pool.removeTx(tx.Hash())
+			pool.removeWorkQueue(tx)
 			if pool.canAddPkrTx() {
 				pool.pkrTxOuts.delPendintTxOut(*tx)
 			}
@@ -981,7 +987,7 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 
 // removeTx removes a single transaction from the queue, moving all subsequent
 // transactions back to the future queue.
-func (pool *TxPool) removeTx(hash common.Hash) {
+func (pool *TxPool) removeAllTx(hash common.Hash) {
 	// Fetch the transaction we wish to delete
 	tx := pool.all.Get(hash)
 	if tx == nil {
@@ -997,7 +1003,18 @@ func (pool *TxPool) removeTx(hash common.Hash) {
 	if pool.newPending.Remove(tx) {
 		return
 	}
+}
 
+func (pool *TxPool) removeWorkQueue(tx *types.Transaction) {
+
+	delete(pool.beats, tx.Hash())
+	//Remove it from the list of known transactions
+	if pool.newQueue.Remove(tx) {
+		return
+	}
+	if pool.newPending.Remove(tx) {
+		return
+	}
 }
 
 func (pool *TxPool) promoteTx(hash common.Hash, tx *types.Transaction) bool {
@@ -1029,8 +1046,9 @@ func (pool *TxPool) promoteExecutables() {
 	if uint64(pool.newPending.Len()) > pool.config.GlobalQueue {
 		drop := uint64(pool.newPending.Len()) - pool.config.GlobalQueue
 		if drop > 0 {
-			transactions := pool.newPending.Discard(pool.gasPrice, int(drop))
+			transactions := pool.newPending.Discard(int(drop))
 			for _, tx := range transactions {
+				pool.newQueue.Add(tx, big.NewInt(0))
 				log.Trace("Removed fairness-exceeding pending transaction", "hash", tx.Hash())
 			}
 		}

@@ -76,8 +76,8 @@ type Backend interface {
 	GetPoolTransactions() (types.Transactions, error)
 	GetPoolTransaction(txHash common.Hash) *types.Transaction
 	//GetPoolNonce(ctx context.Context, addr common.Data) (uint64, error)
-	Stats() (pending int, queued int)
-	TxPoolContent() (types.Transactions, types.Transactions)
+	Stats() (pending int, queued int, all int, total int)
+	TxPoolContent() (types.Transactions, types.Transactions, types.Transactions)
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 
 	ChainConfig() *params.ChainConfig
