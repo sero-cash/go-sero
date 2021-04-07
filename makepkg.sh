@@ -37,7 +37,7 @@ do
 done
 
 if [ "$os" = "all" ]; then
-    os_version=("linux-amd64-v3" "linux-amd64-v4" "darwin-amd64" "windows-amd64")
+    os_version=("linux-amd64-v3" "darwin-amd64" "windows-amd64")
 else
     os_version[0]="$os"
 fi
