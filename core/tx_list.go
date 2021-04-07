@@ -141,11 +141,8 @@ func (l *txPricedList) Remove(tx *types.Transaction) bool {
 
 // Underpriced checks whether a transaction is cheaper than (or as cheap as) the
 // lowest priced transaction currently being tracked.
-func (l *txPricedList) Underpriced(tx *types.Transaction, local *accountSet) bool {
-	// Local transactions cannot be underpriced
-	if local.containsTx(tx) {
-		return false
-	}
+func (l *txPricedList) Underpriced(tx *types.Transaction) bool {
+
 	// Discard stale priced points if found at the heap start
 	for len(*l.items) > 0 {
 		head := []*types.Transaction(*l.items)[0]
@@ -167,12 +164,9 @@ func (l *txPricedList) Underpriced(tx *types.Transaction, local *accountSet) boo
 
 // Discard finds a number of most underpriced transactions, removes them from the
 // priced list and returns them for further removal from the entire pool.
-func (l *txPricedList) Discard(threshold *big.Int, count int) types.Transactions {
+func (l *txPricedList) Discard(count int) types.Transactions {
 	drop := make(types.Transactions, 0, count) // Remote underpriced transactions to drop
-	save := make(types.Transactions, 0, 64)    // Local underpriced transactions to keep
-
-	save_count := len(*l.items) - count
-	for len(*l.items) > 0 {
+	for len(*l.items) > 0 && count > 0 {
 		// Discard stale transactions if found during cleanup
 		tx := heap.Pop(l.items).(*types.Transaction)
 		if l.all.Get(tx.Hash()) == nil {
@@ -180,16 +174,24 @@ func (l *txPricedList) Discard(threshold *big.Int, count int) types.Transactions
 			continue
 		}
 		l.all.Remove(tx.Hash())
-		// Non stale transaction found, discard unless local
-		if save_count > 0 && tx.GasPrice().Cmp(threshold) >= 0 {
-			save = append(save, tx)
-			save_count--
-		} else {
-			drop = append(drop, tx)
-		}
-	}
-	for _, tx := range save {
-		l.Add(tx, new(big.Int))
+		drop = append(drop, tx)
+		count--
+
 	}
 	return drop
+}
+func (l *txPricedList) RemoveWithPrice(threshold *big.Int) {
+	for len(*l.items) > 0 {
+		head := []*types.Transaction(*l.items)[0]
+		if head.GasPrice().Cmp(threshold) >= 0 {
+			break
+		} else {
+			heap.Pop(l.items)
+			if l.all.Get(head.Hash()) == nil {
+				l.stales--
+				continue
+			}
+			l.all.Remove(head.Hash())
+		}
+	}
 }

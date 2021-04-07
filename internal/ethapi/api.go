@@ -145,8 +145,9 @@ func (s *PublicTxPoolAPI) Content() map[string]map[string]*RPCTransaction {
 	content := map[string]map[string]*RPCTransaction{
 		"pending": make(map[string]*RPCTransaction),
 		"queued":  make(map[string]*RPCTransaction),
+		"all":     make(map[string]*RPCTransaction),
 	}
-	pending, queue := s.b.TxPoolContent()
+	pending, queue, all := s.b.TxPoolContent()
 
 	// Flatten the pending transactions
 
@@ -164,15 +165,23 @@ func (s *PublicTxPoolAPI) Content() map[string]map[string]*RPCTransaction {
 	}
 	content["queued"] = qdump
 
+	adump := make(map[string]*RPCTransaction)
+	for _, tx := range all {
+		adump[tx.Hash().Hex()] = newRPCPendingTransaction(tx)
+	}
+	content["all"] = adump
+
 	return content
 }
 
 // Status returns the number of pending and queued transaction in the pool.
 func (s *PublicTxPoolAPI) Status() map[string]hexutil.Uint {
-	pending, queue := s.b.Stats()
+	pending, queue, all, total := s.b.Stats()
 	return map[string]hexutil.Uint{
 		"pending": hexutil.Uint(pending),
 		"queued":  hexutil.Uint(queue),
+		"all":     hexutil.Uint(all),
+		"total":   hexutil.Uint(total),
 	}
 }
 

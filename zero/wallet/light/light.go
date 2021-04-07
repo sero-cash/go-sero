@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	"github.com/sero-cash/go-sero/common/hexutil"
+
 	"github.com/robfig/cron"
 	"github.com/sero-cash/go-czero-import/c_type"
 	"github.com/sero-cash/go-czero-import/seroparam"
@@ -129,10 +131,13 @@ func (self *LightNode) fetchBlockInfo() {
 			if teamReward == txHash {
 				continue
 			}
+			if hexutil.Encode(out.Root[:]) == "0x0577fc34724b205de4356f4b967ffe267e26b027634ef9c5bd73233a8c6fb9ad" {
+				continue
+			}
 
 			var txInfo TxInfo
-			if !(powReward == txHash || posReward == txHash || posMiner == txHash) {
-				// fmt.Println("hex hash::", hexutil.Encode(txHash[:]), out.State.Num)
+			if !(teamReward == txHash || powReward == txHash || posReward == txHash || posMiner == txHash) {
+				//fmt.Println("hex hash::", hexutil.Encode(txHash[:]), out.State.Num)
 				txReceipt, _, _, _ := rawdb.ReadReceipt(self.bcDB, txHash)
 				tx, _, _, _ := rawdb.ReadTransaction(self.bcDB, txHash)
 				gasUsed := txReceipt.GasUsed

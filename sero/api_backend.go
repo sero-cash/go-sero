@@ -205,11 +205,11 @@ func (b *SeroAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction
 //	return b.sero.txPool.State().GetNonce(addr), nil
 //}
 
-func (b *SeroAPIBackend) Stats() (pending int, queued int) {
+func (b *SeroAPIBackend) Stats() (pending int, queued int, all int, total int) {
 	return b.sero.txPool.Stats()
 }
 
-func (b *SeroAPIBackend) TxPoolContent() (types.Transactions, types.Transactions) {
+func (b *SeroAPIBackend) TxPoolContent() (types.Transactions, types.Transactions, types.Transactions) {
 	return b.sero.TxPool().Content()
 }
 
