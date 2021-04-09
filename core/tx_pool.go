@@ -22,6 +22,7 @@ import (
 	"math"
 	"math/big"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -712,9 +713,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 
 	num := pool.chain.CurrentBlock().NumberU64()
 	if err := verify.VerifyWithoutState(tx.Ehash().NewRef(), tx.GetZZSTX(), num); err != nil {
-		log.Error("validateTx verify without state error", "hash", tx.Hash().Hex(), "verify stx err", err)
+		log.Trace("validateTx verify without state failed", "hash", tx.Hash().Hex(), "verify stx err", err)
 		pool.faileds[tx.Hash()] = time.Now()
-		return ErrVerifyError
+		//return ErrVerifyError
+		return err
 	}
 
 	copyState := pool.currentState.CopyWithNoZState()
@@ -726,9 +728,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	err := verify.VerifyWithState(tx.GetZZSTX(), state, num)
 	//err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
 	if err != nil {
-		log.Error("validateTx error", "hash", tx.Hash().Hex(), "verify stx err", err)
+		log.Info("validateTx error", "hash", tx.Hash().Hex(), "verify stx err", err)
 		pool.faileds[tx.Hash()] = time.Now()
-		return ErrVerifyError
+		//return ErrVerifyError
+		return err
 	}
 
 	// Drop non-local transactions under our own minimal accepted gas priced
@@ -820,12 +823,12 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
 	if pool.all.Get(hash) != nil && !local {
-		log.Trace("Discarding already known transaction", "hash", hash)
+		log.Trace("Discarding already known transaction", "hash", hash.Hex())
 		return false, fmt.Errorf("known transaction: %x", hash)
 	}
 
 	if _, ok := pool.faileds[hash]; ok {
-		log.Trace("Discarding already known failed transaction", "hash", hash)
+		log.Trace("Discarding already known failed transaction", "hash", hash.Hex())
 		return false, fmt.Errorf("known failed transaction: %x", hash)
 	}
 
@@ -839,7 +842,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 
 	// If the transaction fails basic validation, discard it
 	if err := pool.validateTx(tx, local); err != nil {
-		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
+		log.Info("Discarding invalid transaction", "hash", hash.Hex(), "err", err)
 		invalidTxCounter.Inc(1)
 		return false, err
 	}
@@ -847,7 +850,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	if uint64(pool.all.Count()) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
 		// If the new transaction is underpriced, don't accept it
 		if !local && pool.newQueue.Underpriced(tx) {
-			log.Trace("Discarding underpriced transaction", "hash", hash, "priced", tx.GasPrice())
+			log.Info("Discarding underpriced transaction", "hash", hash.Hex(), "priced", tx.GasPrice())
 			underpricedTxCounter.Inc(1)
 			return false, ErrUnderpriced
 		}
@@ -858,7 +861,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 			if pool.canAddPkrTx() {
 				pool.pkrTxOuts.delPendintTxOut(*tx)
 			}
-			log.Trace("Discarding freshly underpriced transaction", "hash", tx.Hash(), "priced", tx.GasPrice())
+			log.Info("Discarding freshly underpriced transaction", "hash", tx.Hash().Hex(), "priced", tx.GasPrice())
 		}
 	}
 
@@ -869,7 +872,12 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	if pool.canAddPkrTx() {
 		pool.pkrTxOuts.AddPendingTxOut(*tx)
 	}
-	log.Trace("Pooled new future transaction", "hash", hash, "from", tx.From(), "to", tx.To())
+	if flag {
+		log.Info("Pooled new future transaction", "hash", hash.Hex())
+	} else {
+		log.Info("Discard new future transaction", "hash", hash.Hex())
+
+	}
 	return flag, nil
 }
 
@@ -948,12 +956,27 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) []error {
 // whilst assuming the transaction pool lock is already held.
 func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
 	// Add the batch of transaction, tracking the accepted ones
-	errs := make([]error, len(txs))
-
+	errs := []error{}
+	errCount := 0
+	knowErrCount := 0
+	failedErrCount := 0
 	for _, tx := range txs {
 		_, err := pool.add(tx, local)
-		errs = append(errs, err)
+		if err != nil {
+			if strings.Contains(err.Error(), "known transaction") {
+				knowErrCount++
+			} else if strings.Contains(err.Error(), "known failed transaction") {
+				failedErrCount++
+			} else {
+				errCount++
+			}
+
+		}
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
+	log.Trace("txpool", "addTxs", len(txs), "knowErr", knowErrCount, "failedErr", failedErrCount, "validateErr", errCount)
 	pool.promoteExecutables()
 	return errs
 }
@@ -1030,6 +1053,9 @@ func (pool *TxPool) promoteExecutables() {
 	var promoted []*types.Transaction
 
 	for _, tx := range pool.newQueue.Ready() {
+		//if err := pool.validateTx(tx, false); err != nil {
+		//	continue
+		//}
 		hash := tx.Hash()
 		if pool.promoteTx(hash, tx) {
 			log.Trace("Promoting queued transaction", "hash", hash)
@@ -1039,6 +1065,7 @@ func (pool *TxPool) promoteExecutables() {
 
 	// Notify subsystem for new promoted transactions.
 	if len(promoted) > 0 {
+		log.Info("txpool promoted and broadcast txs", "txs", len(promoted))
 		go pool.txFeed.Send(NewTxsEvent{promoted})
 	}
 

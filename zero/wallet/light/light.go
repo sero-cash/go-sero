@@ -140,6 +140,10 @@ func (self *LightNode) fetchBlockInfo() {
 				//fmt.Println("hex hash::", hexutil.Encode(txHash[:]), out.State.Num)
 				txReceipt, _, _, _ := rawdb.ReadReceipt(self.bcDB, txHash)
 				tx, _, _, _ := rawdb.ReadTransaction(self.bcDB, txHash)
+				if txReceipt == nil {
+					log.Info("light fetchBlockInfo receipt is nil", "blockNum", out.State.Num, "txHash", hexutil.Encode(txHash[:]), "root", hexutil.Encode(out.Root[:]))
+					continue
+				}
 				gasUsed := txReceipt.GasUsed
 				txInfo = TxInfo{
 					Num:       blockNum,
