@@ -728,7 +728,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	err := verify.VerifyWithState(tx.GetZZSTX(), state, num)
 	//err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
 	if err != nil {
-		log.Info("validateTx error", "hash", tx.Hash().Hex(), "verify stx err", err)
+		log.Trace("validateTx error", "hash", tx.Hash().Hex(), "verify stx err", err)
 		pool.faileds[tx.Hash()] = time.Now()
 		//return ErrVerifyError
 		return err
