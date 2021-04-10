@@ -399,6 +399,14 @@ func (s *PublicExchangeAPI) CommitTx(ctx context.Context, args *txtool.GTx) erro
 	return s.b.CommitTx(args)
 }
 
+func (s *PublicExchangeAPI) GetCommittedTx(ctx context.Context, txHash c_type.Uint256) (*txtool.GTx, error) {
+	return s.b.GetCommittedTx(txHash)
+}
+
+func (s *PublicExchangeAPI) ResendCommittedTx(ctx context.Context, txHash c_type.Uint256) error {
+	return s.b.ReSendCommittedTx(txHash)
+}
+
 func (s *PublicExchangeAPI) ClearUsedFlag(ctx context.Context, pk address.PKAddress) (count int, e error) {
 	exchangeInstance := exchange.CurrentExchange()
 	if exchangeInstance == nil {

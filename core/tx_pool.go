@@ -1066,6 +1066,10 @@ func (pool *TxPool) promoteExecutables() {
 	// Notify subsystem for new promoted transactions.
 	if len(promoted) > 0 {
 		log.Info("txpool promoted and broadcast txs", "txs", len(promoted))
+		//subLen := 100
+		//if len(promoted) > subLen {
+		//	promoted = promoted[:subLen]
+		//}
 		go pool.txFeed.Send(NewTxsEvent{promoted})
 	}
 
