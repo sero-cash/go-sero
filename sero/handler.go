@@ -644,7 +644,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		currentBlock := pm.blockchain.CurrentBlock()
 		difference := time.Now().Unix() - currentBlock.Time().Int64()
 		if difference < 10*60 {
-			pm.txpool.AddRemotes(txs)
+			errs := pm.txpool.AddRemotes(txs)
+			addedTxs := len(txs) - len(errs)
+			if addedTxs > 0 {
+				log.Trace("received from", "remote peer", p.RemoteAddr().String(), "txs", len(txs), "added", addedTxs)
+			}
+		} else {
+			log.Trace("to behind,dont receive remote txs")
 		}
 
 	case msg.Code == NewVoteMsg:
@@ -720,6 +726,7 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	}
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for peer, txs := range txset {
+
 		peer.AsyncSendTransactions(txs)
 	}
 }

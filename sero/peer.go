@@ -129,9 +129,10 @@ func (p *peer) broadcast() {
 		select {
 		case txs := <-p.queuedTxs:
 			if err := p.SendTransactions(txs); err != nil {
+				p.Log().Error("Broadcast SendTransations failed", "err", err)
 				return
 			}
-			p.Log().Trace("Broadcast transactions", "count", len(txs))
+			p.Log().Trace("Broadcast transactions", "receiver", p.RemoteAddr().String(), "count", len(txs))
 
 		case prop := <-p.queuedProps:
 			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
@@ -239,7 +240,28 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 	for _, tx := range txs {
 		p.knownTxs.Add(tx.Hash())
 	}
-	return p2p.Send(p.rw, TxMsg, txs)
+	if len(txs) > 0 {
+		subLen := 400
+		start := 0
+		for {
+			if start >= len(txs) {
+				break
+			}
+			end := start + subLen
+			if end > len(txs) {
+				end = len(txs)
+			}
+			subTxs := txs[start:end]
+			err := p2p.Send(p.rw, TxMsg, subTxs)
+			if err != nil {
+				return err
+			}
+			start += subLen
+		}
+
+	}
+	return nil
+	//return p2p.Send(p.rw, TxMsg, txs)
 }
 
 // AsyncSendTransactions queues list of transactions propagation to a remote

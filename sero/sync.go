@@ -52,6 +52,7 @@ func (pm *ProtocolManager) syncTransactions(p *peer) {
 	if len(txs) == 0 {
 		return
 	}
+	log.Info("send to ", "remote peer", p.RemoteAddr().String(), "pending txs", len(txs))
 	select {
 	case pm.txsyncCh <- &txsync{p, txs}:
 	case <-pm.quitSync:
