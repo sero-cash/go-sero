@@ -2068,6 +2068,14 @@ func (s *PublicTransactionPoolAPI) CommitTx(ctx context.Context, args *txtool.GT
 	return s.b.CommitTx(args)
 }
 
+func (s *PublicTransactionPoolAPI) GetCommittedTx(ctx context.Context, txHash c_type.Uint256) (*txtool.GTx, error) {
+	return s.b.GetCommittedTx(txHash)
+}
+
+func (s *PublicTransactionPoolAPI) ResendCommittedTx(ctx context.Context, txHash c_type.Uint256) error {
+	return s.b.ReSendCommittedTx(txHash)
+}
+
 func (s *PublicTransactionPoolAPI) CommitContractTx(ctx context.Context, args *txtool.GTx) (hash common.Hash, err error) {
 	err = s.b.CommitTx(args)
 	if err != nil {

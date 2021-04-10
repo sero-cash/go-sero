@@ -87,6 +87,7 @@ type Sero struct {
 	blockchain      *core.BlockChain
 	exchange        *exchange.Exchange
 	lightNode       *light.LightNode
+	backup          *Backup
 	protocolManager *ProtocolManager
 	lesServer       LesServer
 
@@ -201,6 +202,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 	sero.APIBackend.gpo = gasprice.NewOracle(sero.APIBackend, gpoParams)
 
 	ethapi.Backend_Instance = sero.APIBackend
+
+	sero.backup = NewBackup(zconfig.Backup_dir())
 
 	// init exchange
 	if config.StartExchange {

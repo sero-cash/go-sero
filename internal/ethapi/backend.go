@@ -88,6 +88,8 @@ type Backend interface {
 	GetBlocksInfo(start uint64, count uint64) ([]txtool.Block, error)
 	GetAnchor(roots []c_type.Uint256) ([]txtool.Witness, error)
 	CommitTx(tx *txtool.GTx) error
+	GetCommittedTx(txHash c_type.Uint256) (*txtool.GTx, error)
+	ReSendCommittedTx(txHash c_type.Uint256) error
 
 	GetPkNumber(pk c_type.Uint512) (number uint64, e error)
 	GetPkr(pk *c_type.Uint512, index *c_type.Uint256) (c_type.PKr, error)

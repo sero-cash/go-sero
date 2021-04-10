@@ -463,6 +463,16 @@ web3._extend({
 			call: 'sero_sendRawTransaction',
 			params: 1
 		}),
+        new web3._extend.Method({
+			name: 'getCommittedTx',
+			call: 'sero_getCommittedTx',
+            params: 1
+		}),
+        new web3._extend.Method({
+			name: 'resendCommittedTx',
+			call: 'sero_resendCommittedTx',
+            params: 1
+		}),
 		new web3._extend.Method({
 			name: 'getRawTransactionFromBlock',
 			call: function(args) {
@@ -803,6 +813,16 @@ web3._extend({
         new web3._extend.Method({
 			name: 'getBlockByNumber',
 			call: 'exchange_getBlockByNumber',
+            params: 1
+		}),
+        new web3._extend.Method({
+			name: 'getCommittedTx',
+			call: 'exchange_getCommittedTx',
+            params: 1
+		}),
+        new web3._extend.Method({
+			name: 'resendCommittedTx',
+			call: 'exchange_resendCommittedTx',
             params: 1
 		}),
         new web3._extend.Method({

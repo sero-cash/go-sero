@@ -266,6 +266,10 @@ func (b *SeroAPIBackend) GetAnchor(roots []c_type.Uint256) ([]txtool.Witness, er
 }
 func (b *SeroAPIBackend) CommitTx(tx *txtool.GTx) error {
 
+	err := b.sero.backup.PutCommittedTx(tx)
+	if err != nil {
+		return err
+	}
 	difference := time.Now().Unix() - b.CurrentBlock().Time().Int64()
 	if difference > 10*60 {
 		return errors.New("The current chain is too behind")
@@ -274,11 +278,23 @@ func (b *SeroAPIBackend) CommitTx(tx *txtool.GTx) error {
 	gas := uint64(tx.Gas)
 	signedTx := types.NewTxWithGTx(gas, &gasPrice, &tx.Tx)
 	log.Info("commitTx", "txhash", signedTx.Hash().String())
-	err := b.sero.txPool.AddLocal(signedTx)
+	err = b.sero.txPool.AddLocal(signedTx)
 	if err != nil {
 		log.Info("commitTx", "txHash", signedTx.Hash().String(), "err", err)
 	}
 	return err
+}
+
+func (b *SeroAPIBackend) GetCommittedTx(txHash c_type.Uint256) (*txtool.GTx, error) {
+	return b.sero.backup.GetCommittedTx(txHash)
+
+}
+func (b *SeroAPIBackend) ReSendCommittedTx(txHash c_type.Uint256) error {
+	gtx, err := b.sero.backup.GetCommittedTx(txHash)
+	if err != nil {
+		return err
+	}
+	return b.CommitTx(gtx)
 }
 
 func (b *SeroAPIBackend) GetPkNumber(pk c_type.Uint512) (number uint64, e error) {
