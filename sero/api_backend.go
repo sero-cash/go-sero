@@ -284,6 +284,7 @@ func (b *SeroAPIBackend) CommitTx(tx *txtool.GTx) error {
 
 	err := b.sero.backup.PutCommittedTx(tx)
 	if err != nil {
+		log.Info("commitTx save to db err", "err", err)
 		return err
 	}
 	return b.commitTx(tx)

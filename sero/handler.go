@@ -304,7 +304,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	// main loop. handle incoming messages.
 	for {
 		if err := pm.handleMsg(p); err != nil {
-			p.Log().Debug("Sero message handling failed", "err", err)
+			p.Log().Info("Sero message handling failed", "err", err)
 			return err
 		}
 	}
