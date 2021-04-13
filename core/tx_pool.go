@@ -434,6 +434,16 @@ func (pool *TxPool) loop() {
 					drop = append(drop, tx)
 				}
 			}
+			count := 0
+			for _, tx := range pool.newQueue.all.all {
+				if count == 100 {
+					break
+				}
+				if err := pool.validateTx(tx, false); err != nil {
+					drop = append(drop, tx)
+				}
+				count++
+			}
 			for _, tx := range drop {
 				pool.removeAllTx(tx.Hash())
 				if pool.canAddPkrTx() {
@@ -1051,24 +1061,24 @@ func (pool *TxPool) promoteTx(hash common.Hash, tx *types.Transaction) bool {
 func (pool *TxPool) promoteExecutables() {
 	// Track the promoted transactions to broadcast them at once
 	var promoted []*types.Transaction
-	var invalidTx []common.Hash
+	//var invalidTx []common.Hash
 	for _, tx := range pool.newQueue.Ready() {
-		if err := pool.validateTx(tx, false); err != nil {
-			invalidTx = append(invalidTx, tx.Hash())
-			continue
-		}
+		//if err := pool.validateTx(tx, false); err != nil {
+		//	invalidTx = append(invalidTx, tx.Hash())
+		//	continue
+		//}
 		hash := tx.Hash()
 		if pool.promoteTx(hash, tx) {
 			log.Trace("Promoting queued transaction", "hash", hash)
 			promoted = append(promoted, tx)
 		}
 	}
-	if len(invalidTx) > 0 {
-		for _, tx := range invalidTx {
-			pool.removeAllTx(tx)
-		}
-
-	}
+	//if len(invalidTx) > 0 {
+	//	for _, tx := range invalidTx {
+	//		pool.removeAllTx(tx)
+	//	}
+	//
+	//}
 
 	// Notify subsystem for new promoted transactions.
 	if len(promoted) > 0 {
