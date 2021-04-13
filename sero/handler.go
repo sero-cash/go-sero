@@ -304,7 +304,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	// main loop. handle incoming messages.
 	for {
 		if err := pm.handleMsg(p); err != nil {
-			p.Log().Info("Sero message handling failed", "err", err)
+			p.Log().Debug("Sero message handling failed", "err", err)
 			return err
 		}
 	}
@@ -316,10 +316,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	// Read the next message from the remote peer, and ensure it's fully consumed
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
+		log.Debug("handleMsg", "peer", p.RemoteAddr().String(), "err", err)
 		return err
 	}
 	if msg.Size > ProtocolMaxMsgSize {
-		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+		err = errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+		log.Info("handleMsg", "err", err)
+		return err
 	}
 	defer msg.Discard()
 
@@ -647,7 +650,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			errs := pm.txpool.AddRemotes(txs)
 			addedTxs := len(txs) - len(errs)
 			if addedTxs > 0 {
-				log.Trace("received from", "remote peer", p.RemoteAddr().String(), "txs", len(txs), "added", addedTxs)
+				log.Debug("received from", "remote peer", p.RemoteAddr().String(), "txs", len(txs), "added", addedTxs)
 			}
 		} else {
 			log.Trace("to behind,dont receive remote txs")
