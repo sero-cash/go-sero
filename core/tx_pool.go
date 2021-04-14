@@ -429,20 +429,21 @@ func (pool *TxPool) loop() {
 		case <-evict.C:
 			pool.mu.Lock()
 			drop := types.Transactions{}
+
 			for _, tx := range pool.newPending.all.all {
-				if t, ok := pool.beats[tx.Hash()]; ok && time.Since(t) > pool.config.Lifetime {
+				if err := pool.validateTx(tx, false); err != nil {
 					drop = append(drop, tx)
+				} else {
+					if t, ok := pool.beats[tx.Hash()]; ok && time.Since(t) > pool.config.Lifetime {
+						drop = append(drop, tx)
+					}
 				}
+
 			}
-			count := 0
 			for _, tx := range pool.newQueue.all.all {
-				if count == 100 {
-					break
-				}
 				if err := pool.validateTx(tx, false); err != nil {
 					drop = append(drop, tx)
 				}
-				count++
 			}
 			for _, tx := range drop {
 				pool.removeAllTx(tx.Hash())
@@ -970,6 +971,7 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
 	errCount := 0
 	knowErrCount := 0
 	failedErrCount := 0
+	added := 0
 	for _, tx := range txs {
 		_, err := pool.add(tx, local)
 		if err != nil {
@@ -981,13 +983,17 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
 				errCount++
 			}
 
+		} else {
+			added++
 		}
 		if err != nil {
 			errs = append(errs, err)
 		}
 	}
 	log.Trace("txpool", "addTxs", len(txs), "knowErr", knowErrCount, "failedErr", failedErrCount, "validateErr", errCount)
-	pool.promoteExecutables()
+	if added > 0 {
+		pool.promoteExecutables()
+	}
 	return errs
 }
 
