@@ -81,7 +81,7 @@ var (
 )
 
 var (
-	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
+	evictionInterval    = 5 * time.Minute // Time interval to check for evictable transactions
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
 )
 
@@ -200,9 +200,9 @@ type PKrTxOuts map[c_type.PKr]map[c_type.Uint256]*TxOutInfo
 func (p PKrTxOuts) AddPendingTxOut(tx types.Transaction) {
 
 	txOuts, _ := TxToOut(tx)
-	time := uint64(time.Now().Unix())
+	nowUnix := uint64(time.Now().Unix())
 	for index := range txOuts {
-		p.AddOut(tx.From(), tx.Gas(), tx.Gas(), tx.GasPrice(), 0, common.Hash{}, time, txOuts[index])
+		p.AddOut(tx.From(), tx.Gas(), tx.Gas(), tx.GasPrice(), 0, common.Hash{}, nowUnix, txOuts[index])
 	}
 
 }
@@ -344,8 +344,8 @@ type TxPool struct {
 	priced     *txPricedList // All transactions sorted by priced
 	newQueue   *txPricedList
 	newPending *txPricedList
-	beats      map[common.Hash]time.Time
-	faileds    map[common.Hash]time.Time
+	beats      hashTime
+	faileds    hashTime
 
 	wg sync.WaitGroup // for shutdown sync
 
@@ -426,42 +426,52 @@ func (pool *TxPool) loop() {
 			// Handle stats reporting ticks
 		case <-report.C:
 			log.Debug("Transaction pool status report", "queued", pool.all.Count())
-		case <-evict.C:
-			pool.mu.Lock()
-			drop := types.Transactions{}
 
-			for _, tx := range pool.newPending.all.all {
+		case <-evict.C:
+			drop := types.Transactions{}
+			pool.mu.RLock()
+			pendingTxs := pool.newPending.Flatten()
+			queuedTxs := pool.newQueue.Flatten()
+			beats := pool.beats.Flatten()
+			faileds := pool.faileds.Flatten()
+			pool.mu.RUnlock()
+
+			dropFaileds := []common.Hash{}
+			for k, v := range faileds {
+				if time.Since(v) > pool.config.Lifetime {
+					dropFaileds = append(dropFaileds, k)
+				}
+			}
+
+			for _, tx := range pendingTxs {
 				if err := pool.validateTx(tx, false); err != nil {
 					drop = append(drop, tx)
 				} else {
-					if t, ok := pool.beats[tx.Hash()]; ok && time.Since(t) > pool.config.Lifetime {
+					if t, ok := beats[tx.Hash()]; ok && time.Since(t) > pool.config.Lifetime {
 						drop = append(drop, tx)
 					}
 				}
-
 			}
-			for _, tx := range pool.newQueue.all.all {
+
+			for _, tx := range queuedTxs {
 				if err := pool.validateTx(tx, false); err != nil {
 					drop = append(drop, tx)
 				}
 			}
+
+			pool.mu.Lock()
+
 			for _, tx := range drop {
 				pool.removeAllTx(tx.Hash())
 				if pool.canAddPkrTx() {
 					pool.pkrTxOuts.delPendintTxOut(*tx)
 				}
 			}
-
-			dropFaileds := []common.Hash{}
-			for k, v := range pool.faileds {
-				if time.Since(v) > pool.config.Lifetime {
-					dropFaileds = append(dropFaileds, k)
-				}
-			}
 			for _, h := range dropFaileds {
 				delete(pool.faileds, h)
 			}
 			pool.mu.Unlock()
+
 		}
 	}
 }
@@ -472,6 +482,7 @@ func (pool *TxPool) RemoveTxs(txs types.Transactions) {
 
 	for _, tx := range txs {
 		pool.removeAllTx(tx.Hash())
+
 	}
 }
 
@@ -616,7 +627,7 @@ func (pool *TxPool) SubscribeNewTxsEvent(ch chan<- NewTxsEvent) event.Subscripti
 func (pool *TxPool) SetGasPrice(price *big.Int) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
-
+	pool.gasPrice = price
 	pool.priced.RemoveWithPrice(pool.gasPrice)
 	pool.newQueue.RemoveWithPrice(pool.gasPrice)
 	pool.newPending.RemoveWithPrice(pool.gasPrice)
@@ -1056,7 +1067,7 @@ func (pool *TxPool) removeWorkQueue(tx *types.Transaction) {
 	}
 }
 
-func (pool *TxPool) promoteTx(hash common.Hash, tx *types.Transaction) bool {
+func (pool *TxPool) promoteTx(tx *types.Transaction) bool {
 	// Try to insert the transaction into the pending queue
 	if pool.newPending.Add(tx, new(big.Int).Set(pool.gasPrice)) {
 		pool.beats[tx.Hash()] = time.Now()
@@ -1073,9 +1084,8 @@ func (pool *TxPool) promoteExecutables() {
 		//	invalidTx = append(invalidTx, tx.Hash())
 		//	continue
 		//}
-		hash := tx.Hash()
-		if pool.promoteTx(hash, tx) {
-			log.Trace("Promoting queued transaction", "hash", hash)
+		if pool.promoteTx(tx) {
+			log.Trace("Promoting queued transaction", "hash", tx.Hash())
 			promoted = append(promoted, tx)
 		}
 	}
@@ -1107,39 +1117,6 @@ func (pool *TxPool) promoteExecutables() {
 			}
 		}
 	}
-}
-
-// accountSet is simply a set of addresses to check for existence, and a abi
-// capable of deriving addresses from transactions.
-type accountSet struct {
-	accounts map[common.Address]struct{}
-	//abi   types.Signer
-}
-
-// newAccountSet creates a new address set with an associated abi for sender
-// derivations.
-func newAccountSet() *accountSet {
-	return &accountSet{
-		accounts: make(map[common.Address]struct{}),
-		//abi:   abi,
-	}
-}
-
-// contains checks if a given address is contained within the set.
-func (as *accountSet) contains(addr common.Address) bool {
-	_, exist := as.accounts[addr]
-	return exist
-}
-
-// containsTx checks if the sender of a given tx is within the set. If the sender
-// cannot be derived, this method returns false.
-func (as *accountSet) containsTx(tx *types.Transaction) bool {
-	return as.contains(tx.From())
-}
-
-// add inserts a new address into the set to track.
-func (as *accountSet) add(addr common.Address) {
-	as.accounts[addr] = struct{}{}
 }
 
 // txLookup is used internally by TxPool to track transactions while allowing lookup without
