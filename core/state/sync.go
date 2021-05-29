@@ -18,22 +18,24 @@ package state
 
 import (
 	"bytes"
-
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/rlp"
 	"github.com/sero-cash/go-sero/trie"
 )
 
+
 // NewStateSync create a new state trie download scheduler.
 func NewStateSync(root common.Hash, database trie.DatabaseReader) *trie.Sync {
 	var syncer *trie.Sync
 	callback := func(leaf []byte, parent common.Hash) error {
-		var obj Account
-		if err := rlp.Decode(bytes.NewReader(leaf), &obj); err != nil {
-			return err
+		if len(leaf)>=70 {
+			var obj Account
+			if err := rlp.Decode(bytes.NewReader(leaf), &obj); err != nil {
+				return nil
+			}
+			syncer.AddSubTrie(obj.Root, 64, parent, nil)
+			syncer.AddRawEntry(common.BytesToHash(obj.CodeHash), 64, parent)
 		}
-		syncer.AddSubTrie(obj.Root, 64, parent, nil)
-		syncer.AddRawEntry(common.BytesToHash(obj.CodeHash), 64, parent)
 		return nil
 	}
 	syncer = trie.NewSync(root, database, callback)
