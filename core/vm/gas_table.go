@@ -141,32 +141,9 @@ func gasSStore(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, m
 }
 
 var (
-	topics = []string{
-		"0x3be6bf24d822bcd6f6348f6f5a5c2d3108f04991ee63e80cde49a8c4746a0ef3",
-		"0x868bd6629e7c2e3d2ccf7b9968fad79b448e7a2bfb3ee20ed1acbc695c3c8b23",
-		"0xcf19eb4256453a4e30b6a06d651f1970c223fb6bd1826a28ed861f0e602db9b8",
-		"0xa6a366f1a72e1aef5d8d52ee240a476f619d15be7bc62d3df37496025b83459f",
-		"0x7c98e64bd943448b4e24ef8c2cdec7b8b1275970cfe10daf2a9bfa4b04dce905",
-		"0xf1964f6690a0536daa42e5c575091297d2479edcc96f721ad85b95358644d276",
-		"0x9ab0d7c07029f006485cf3468ce7811aa8743b5a108599f6bec9367c50ac6aad",
-		"0xa6cafc6282f61eff9032603a017e652f68410d3d3c69f0a3eeca8f181aec1d17",
-		"0x6800e94e36131c049eaeb631e4530829b0d3d20d5b637c8015a8dc9cedd70aed",
-		"0xbbf1aa2159b035802d0a4d44611849d5d4ada0329c81580477d5ec3e82f4f0a6",
-		"0xa8b83585a613dcf6c905ad7e0ce34cd07d1283cc72906d1fe78037d49adae455",
-	}
-
 	sendTopic        = "0x868bd6629e7c2e3d2ccf7b9968fad79b448e7a2bfb3ee20ed1acbc695c3c8b23"
 	allotTicketTopic = "0xa6a366f1a72e1aef5d8d52ee240a476f619d15be7bc62d3df37496025b83459f"
 )
-
-func inTopics(val string) bool {
-	for _, each := range topics {
-		if each == val {
-			return true
-		}
-	}
-	return false
-}
 
 func makeGasLog(n uint64) gasFunc {
 	return func(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
