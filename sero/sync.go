@@ -52,9 +52,23 @@ func (pm *ProtocolManager) syncTransactions(p *peer) {
 	if len(txs) == 0 {
 		return
 	}
-	log.Debug("send to ", "remote peer", p.RemoteAddr().String(), "pending txs", len(txs))
+	sendTxs := types.Transactions{}
+	for _, tx := range txs {
+		if !pm.peers.ContainsTx(p.id, tx.Hash()) {
+			sendTxs = append(sendTxs, tx)
+			pm.peers.AddKnowTx(p.id, tx.Hash())
+		}
+	}
+	if sendTxs.Len() == 0 {
+		return
+	}
+	if sendTxs.Len() > 1 {
+		log.Info("send to ", "remote peer", p.RemoteAddr().String(), "pending txs", len(txs), "send Txs", len(sendTxs))
+
+	}
+
 	select {
-	case pm.txsyncCh <- &txsync{p, txs}:
+	case pm.txsyncCh <- &txsync{p, sendTxs}:
 	case <-pm.quitSync:
 	}
 }

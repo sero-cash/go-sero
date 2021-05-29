@@ -122,6 +122,8 @@ func (self *ClosePoolArgs) toCmd() *stx.ClosePoolCmd {
 type ContractArgs struct {
 	Currency Smbol
 	Value    *Big
+	Category Smbol
+	Tkt      *common.Hash
 	To       *ContractAddress
 	Data     hexutil.Bytes
 }
@@ -135,6 +137,12 @@ func (self *ContractArgs) toCmd() *stx.ContractCmd {
 		asset.Tkn = &assets.Token{
 			utils.CurrencyToUint256(string(self.Currency)),
 			utils.U256(*self.Value.ToInt()),
+		}
+	}
+	if !self.Category.IsEmpty() && self.Tkt != nil {
+		asset.Tkt = &assets.Ticket{
+			utils.CurrencyToUint256(string(self.Category)),
+			*self.Tkt.HashToUint256(),
 		}
 	}
 	var pkr *c_type.PKr
@@ -213,11 +221,11 @@ func (args GenTxArgs) check() error {
 		if err != nil {
 			return err
 		}
-		if rec.Currency.IsEmpty() {
-			return errors.Errorf("%v reception currency is nil", hexutil.Encode(rec.Addr[:]))
+		if rec.Currency.IsEmpty() && rec.Category.IsEmpty() {
+			return errors.Errorf("%v reception currency and categroy is nil", hexutil.Encode(rec.Addr[:]))
 		}
-		if rec.Value == nil {
-			return errors.Errorf("%v reception value is nil", hexutil.Encode(rec.Addr[:]))
+		if rec.Value == nil && rec.TKt == nil {
+			return errors.Errorf("%v reception value  or ticket is nil", hexutil.Encode(rec.Addr[:]))
 		}
 	}
 	return nil
@@ -233,15 +241,32 @@ func (args GenTxArgs) toTxParam() prepare.PreTxParam {
 	receptions := []prepare.Reception{}
 	for _, rec := range args.Receptions {
 		pkr := MixAdrressToPkr(rec.Addr)
-		var currency c_type.Uint256
-		bytes := common.LeftPadBytes([]byte(string(rec.Currency)), 32)
-		copy(currency[:], bytes)
+		var tkn *assets.Token
+		var tkt *assets.Ticket
+		if rec.Currency != "" && rec.Value != nil {
+			var currency c_type.Uint256
+			bytes := common.LeftPadBytes([]byte(string(rec.Currency)), 32)
+			copy(currency[:], bytes)
+			tkn = &assets.Token{
+				Currency: currency,
+				Value:    utils.U256(*rec.Value.ToInt()),
+			}
+		}
+		if rec.Category != "" && rec.TKt != nil {
+			var category c_type.Uint256
+			var ticketValue c_type.Uint256
+			bytes := common.LeftPadBytes([]byte(string(rec.Category)), 32)
+			copy(category[:], bytes)
+			copy(ticketValue[:], rec.TKt[:])
+			tkt = &assets.Ticket{
+				Category: category,
+				Value:    ticketValue,
+			}
+		}
+		assets := assets.Asset{tkn, tkt}
 		receptions = append(receptions, prepare.Reception{
 			pkr,
-			assets.Asset{Tkn: &assets.Token{
-				Currency: currency,
-				Value:    utils.U256(*rec.Value.ToInt())},
-			},
+			assets,
 		})
 	}
 	var refundPkr *c_type.PKr

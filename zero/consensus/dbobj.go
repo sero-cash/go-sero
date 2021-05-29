@@ -20,7 +20,7 @@ func makeBlockName(pre string, num uint64, hash *common.Hash) (ret []byte) {
 	return
 }
 
-func (self DBObj) setBlockRecords(batch serodb.Putter, num uint64, hash *common.Hash, records []*Record) {
+func (self DBObj) setBlockRecords(batch serodb.Putter, num uint64, hash *common.Hash, records []*Record) (key []byte) {
 	if b, err := rlp.EncodeToBytes(&records); err != nil {
 		panic(err)
 	} else {
@@ -28,6 +28,7 @@ func (self DBObj) setBlockRecords(batch serodb.Putter, num uint64, hash *common.
 		if err := batch.Put(name, b); err != nil {
 			panic(err)
 		} else {
+			key=name
 			return
 		}
 	}

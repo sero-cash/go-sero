@@ -642,7 +642,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			if tx == nil {
 				return errResp(ErrDecode, "transaction %d is nil", i)
 			}
-			p.MarkTransaction(tx.Hash())
+			pm.peers.AddKnowTx(p.id, tx.Hash())
+			//p.MarkTransaction(tx.Hash())
 		}
 		currentBlock := pm.blockchain.CurrentBlock()
 		difference := time.Now().Unix() - currentBlock.Time().Int64()
@@ -724,7 +725,7 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 		peers := pm.peers.PeersWithoutTx(tx.Hash())
 		for _, peer := range peers {
 			txset[peer] = append(txset[peer], tx)
-			peer.knownTxs.Add(tx.Hash())
+			pm.peers.AddKnowTx(peer.id, tx.Hash())
 		}
 		log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 	}

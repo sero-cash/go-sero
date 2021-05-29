@@ -492,6 +492,12 @@ func toContractTxArgs(msg sero.CallMsg) interface{} {
 		contractArgs["Currency"] = "SERO"
 	}
 	contractArgs["Value"] = msg.Value
+
+	if msg.Category != "" {
+		contractArgs["Category"] = msg.Category
+	}
+	contractArgs["Tkt"] = msg.Tkt
+
 	if msg.To != nil {
 		contractArgs["To"] = hexutil.Bytes(msg.To[:])
 	}
@@ -526,5 +532,18 @@ func toCallArg(msg sero.CallMsg) interface{} {
 	if msg.GasPrice != nil {
 		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
 	}
+	if msg.Currency != "" {
+		arg["cy"] = msg.Currency
+	} else {
+		arg["cy"] = "SERO"
+	}
+
+	if msg.Category != "" {
+		arg["catg"] = msg.Category
+	}
+	if msg.Tkt != nil {
+		arg["tkt"] = msg.Tkt
+	}
+
 	return arg
 }

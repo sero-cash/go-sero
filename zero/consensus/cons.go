@@ -2,6 +2,8 @@ package consensus
 
 import (
 	"fmt"
+	"github.com/sero-cash/go-sero/common"
+	"math/big"
 	"sort"
 
 	"github.com/sero-cash/go-sero/core/types"
@@ -431,13 +433,46 @@ type DPutter interface {
 	serodb.Deleter
 }
 
+func ConsKeysKey(num uint64,bhash common.Hash) []byte {
+	key := []byte("$CONS$KEYS")
+	key = append(key, big.NewInt(int64(num)).Bytes()...)
+	key = append(key,bhash[:]...)
+	return key
+}
+
+func PutConsKeys(putter serodb.Putter,num uint64,bhash common.Hash,keys [][]byte) {
+	if v,err:=rlp.EncodeToBytes(keys);err!=nil {
+		panic(err)
+	} else {
+		if err:=putter.Put(ConsKeysKey(num,bhash),v);err!=nil {
+			panic(err)
+		}
+	}
+}
+
+func GetConsKeys(getter serodb.Getter,num uint64,bhash common.Hash) [][]byte {
+	if v,err:=getter.Get(ConsKeysKey(num,bhash));err!=nil {
+		return [][]byte{}
+	} else {
+		var ret [][]byte
+		if err:=rlp.DecodeBytes(v,&ret);err!=nil {
+			panic(err)
+		} else {
+			return ret
+		}
+	}
+}
+
 func (self *Cons) Record(header *types.Header, batch DPutter) {
 	recordlist := self.fetchBlockRecords()
 	self.ReportRecords(recordlist, header.Number.Uint64())
 
+	keys:=[][]byte{}
+
 	if len(recordlist) > 0 {
 		hash := header.Hash()
-		DBObj{self.pre}.setBlockRecords(batch, header.Number.Uint64(), &hash, recordlist)
+		key:=DBObj{self.pre}.setBlockRecords(batch, header.Number.Uint64(), &hash, recordlist)
+		keys=append(keys,key)
 	}
 
 	dblist := self.fetchDBPairs()
@@ -451,10 +486,13 @@ func (self *Cons) Record(header *types.Header, batch DPutter) {
 			if b, err := rlp.EncodeToBytes(v.item); err != nil {
 				panic(err)
 			} else {
-				if err := batch.Put([]byte(v.key.k()), b); err != nil {
+				k:=[]byte(v.key.k())
+				if err := batch.Put(k, b); err != nil {
 					panic(err)
 				}
+				keys=append(keys,k)
 			}
 		}
 	}
+	PutConsKeys(batch,header.Number.Uint64(),header.Hash(),keys)
 }

@@ -90,9 +90,9 @@ type peer struct {
 	td   *big.Int
 	lock sync.RWMutex
 
-	knownLotterys  mapset.Set
-	knownVotes     mapset.Set
-	knownTxs       mapset.Set                // Set of transaction hashes known to be known by this peer
+	knownLotterys mapset.Set
+	knownVotes    mapset.Set
+	//knownTxs       mapset.Set                // Set of transaction hashes known to be known by this peer
 	knownBlocks    mapset.Set                // Set of block hashes known to be known by this peer
 	queuedTxs      chan []*types.Transaction // Queue of transactions to broadcast to the peer
 	queuedProps    chan *propEvent           // Queue of blocks to broadcast to the peer
@@ -104,13 +104,13 @@ type peer struct {
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 	return &peer{
-		Peer:           p,
-		rw:             rw,
-		version:        version,
-		id:             fmt.Sprintf("%x", p.ID().Bytes()[:8]),
-		knownLotterys:  mapset.NewSet(),
-		knownVotes:     mapset.NewSet(),
-		knownTxs:       mapset.NewSet(),
+		Peer:          p,
+		rw:            rw,
+		version:       version,
+		id:            fmt.Sprintf("%x", p.ID().Bytes()[:8]),
+		knownLotterys: mapset.NewSet(),
+		knownVotes:    mapset.NewSet(),
+		//knownTxs:       mapset.NewSet(),
 		knownBlocks:    mapset.NewSet(),
 		queuedTxs:      make(chan []*types.Transaction, maxQueuedTxs),
 		queuedProps:    make(chan *propEvent, maxQueuedProps),
@@ -132,7 +132,9 @@ func (p *peer) broadcast() {
 				p.Log().Error("Broadcast SendTransations failed", "err", err)
 				return
 			}
-			p.Log().Debug("Broadcast transactions", "receiver", p.RemoteAddr().String(), "count", len(txs))
+			if len(txs) > 1 {
+				p.Log().Info("Broadcast transactions", "receiver", p.RemoteAddr().String(), "count", len(txs))
+			}
 
 		case prop := <-p.queuedProps:
 			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
@@ -210,13 +212,13 @@ func (p *peer) MarkBlock(hash common.Hash) {
 
 // MarkTransaction marks a transaction as known for the peer, ensuring that it
 // will never be propagated to this particular peer.
-func (p *peer) MarkTransaction(hash common.Hash) {
-	// If we reached the memory allowance, drop a previously known transaction hash
-	for p.knownTxs.Cardinality() >= maxKnownTxs {
-		p.knownTxs.Pop()
-	}
-	p.knownTxs.Add(hash)
-}
+//func (p *peer) MarkTransaction(hash common.Hash) {
+//	// If we reached the memory allowance, drop a previously known transaction hash
+//	for p.knownTxs.Cardinality() >= maxKnownTxs {
+//		p.knownTxs.Pop()
+//	}
+//	p.knownTxs.Add(hash)
+//}
 
 func (p *peer) MarkVote(hash common.Hash) {
 	// If we reached the memory allowance, drop a previously known transaction hash
@@ -237,9 +239,9 @@ func (p *peer) MarkLottery(hash common.Hash) {
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
 func (p *peer) SendTransactions(txs types.Transactions) error {
-	for _, tx := range txs {
-		p.knownTxs.Add(tx.Hash())
-	}
+	//for _, tx := range txs {
+	//	p.knownTxs.Add(tx.Hash())
+	//}
 	if len(txs) > 0 {
 		subLen := 400
 		start := 0
@@ -270,9 +272,9 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 func (p *peer) AsyncSendTransactions(txs []*types.Transaction) {
 	select {
 	case p.queuedTxs <- txs:
-		for _, tx := range txs {
-			p.knownTxs.Add(tx.Hash())
-		}
+		//for _, tx := range txs {
+		//	p.knownTxs.Add(tx.Hash())
+		//}
 	default:
 		p.Log().Debug("Dropping transaction propagation", "count", len(txs))
 	}
@@ -490,15 +492,19 @@ func (p *peer) String() string {
 // peerSet represents the collection of active peers currently participating in
 // the Sero sub-protocol.
 type peerSet struct {
-	peers  map[string]*peer
-	lock   sync.RWMutex
+	peers   map[string]*peer
+	knowTxs map[string]mapset.Set
+	lock    sync.RWMutex
+	txLock  sync.RWMutex
+
 	closed bool
 }
 
 // newPeerSet creates a new peer set to track the active participants.
 func newPeerSet() *peerSet {
 	return &peerSet{
-		peers: make(map[string]*peer),
+		peers:   make(map[string]*peer),
+		knowTxs: make(map[string]mapset.Set),
 	}
 }
 
@@ -568,18 +574,44 @@ func (ps *peerSet) PeersWithoutBlock(hash common.Hash) []*peer {
 	return list
 }
 
+func (ps *peerSet) AddKnowTx(id string, hash common.Hash) {
+	ps.txLock.Lock()
+	defer ps.txLock.Unlock()
+	if ps.knowTxs[id] == nil {
+		ps.knowTxs[id] = mapset.NewSet()
+	}
+	if ps.knowTxs[id].Cardinality() >= maxKnownTxs {
+		ps.knowTxs[id].Pop()
+	}
+	ps.knowTxs[id].Add(hash)
+}
+
+func (ps *peerSet) ContainsTx(id string, hash common.Hash) bool {
+	ps.txLock.RLock()
+	defer ps.txLock.RUnlock()
+	return ps.containsTx(id, hash)
+}
+
+func (ps *peerSet) containsTx(id string, hash common.Hash) bool {
+	return ps.knowTxs[id] != nil && ps.knowTxs[id].Contains(hash)
+
+}
+
 // PeersWithoutTx retrieves a list of peers that do not have a given transaction
 // in their set of known hashes.
 func (ps *peerSet) PeersWithoutTx(hash common.Hash) []*peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
+	ps.txLock.RLock()
+	defer ps.txLock.RUnlock()
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if !p.knownTxs.Contains(hash) {
+		if !ps.containsTx(p.id, hash) {
 			list = append(list, p)
 		}
 	}
+
 	return list
 }
 

@@ -19,6 +19,7 @@ package core
 import (
 	"container/heap"
 	"math/big"
+	"time"
 
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/types"
@@ -194,4 +195,15 @@ func (l *txPricedList) RemoveWithPrice(threshold *big.Int) {
 			l.all.Remove(head.Hash())
 		}
 	}
+}
+
+type hashTime map[common.Hash]time.Time
+
+func (l hashTime) Flatten() hashTime {
+	result := make(map[common.Hash]time.Time)
+
+	for k, v := range l {
+		result[k] = v
+	}
+	return result
 }

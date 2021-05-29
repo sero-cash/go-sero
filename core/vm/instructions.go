@@ -65,6 +65,7 @@ var (
 	topic_closePkg      = common.HexToHash("0xbbf1aa2159b035802d0a4d44611849d5d4ada0329c81580477d5ec3e82f4f0a6")
 	topic_transferPkg   = common.HexToHash("0xa8b83585a613dcf6c905ad7e0ce34cd07d1283cc72906d1fe78037d49adae455")
 	topic_txHash        = common.HexToHash("0xa6cb2bbe89e8b5f0c4e2d557b612ed99f5573b419fd9b304b87129514ccc35b2")
+	topic_update        = common.HexToHash("0xa6cb2bbe89e8b5f0c4e2d557b612ed99f5573b419fd9b304b87129514ccc35b3")
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -1110,169 +1111,183 @@ func makeLog(size int) executionFunc {
 		for i := 0; i < size; i++ {
 			topics[i] = common.BigToHash(stack.pop())
 		}
-		data := memory.Get(0, int64(memory.Len()))
+		//data := memory.Get(0, int64(memory.Len()))
+		data:=memory.GetPtr(0,int64(memory.Len()))
 
 		d := memory.Get(mStart.Int64(), mSize.Int64())
-		length := mSize.Uint64()
-		if l, ok := memLens[topics[0]]; ok {
-			if l != len(d) {
-				return d, ErrCodeInvalid
-			}
-		}
-		if topics[0] == topic_allotTicket {
-			hash, returnGas, err, alarm := handleAllotTicket(d, interpreter.evm, contract, data)
-			contract.Gas += returnGas
-			if alarm {
-				contract.UseGas(contract.Gas)
-			}
-			if err != nil {
-				log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
-			}
-			// hash := common.Hash{}
-			memory.Set(mStart.Uint64()+length-32, 32, hash[:])
-		} else if topics[0] == topic_issueToken {
-			if ok, err := handleIssueToken(d, interpreter.evm, contract, data); ok {
-				memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
-			} else {
-				log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
-				memory.Set(mStart.Uint64()+length-32, 32, hashFalse)
-			}
-			contract.Gas += interpreter.evm.callGasTemp
-		} else if topics[0] == topic_balanceOf {
-			offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-			len := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
-			balance := new(big.Int)
-			if len != 0 {
-				coinName := string(data[offset+32 : offset+32+len])
-				balance = interpreter.evm.StateDB.GetBalance(contract.Address(), coinName)
-			}
-			memory.Set(mStart.Uint64(), 32, common.LeftPadBytes(balance.Bytes(), 32))
-			contract.Gas += interpreter.evm.callGasTemp
-		} else if topics[0] == topic_send {
-			_, returnGas, err, alarm := handleSend(d, interpreter.evm, contract, data)
-			contract.Gas += returnGas
-			if alarm {
-				contract.UseGas(contract.Gas)
-			}
-			if err != nil {
-				log.Trace("send error ", "contract", contract.Address(), "error", err)
-				memory.Set(mStart.Uint64()+length-32, 32, hashFalse)
-			} else {
-				memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
-			}
-		} else if topics[0] == topic_currency {
-			if contract.asset != nil && contract.asset.Tkn != nil {
-				currency := strings.Trim(string(contract.asset.Tkn.Currency[:]), string([]byte{0}))
-				memory.Set(mStart.Uint64(), 32, []byte(currency))
-			} else {
-				memory.Set(mStart.Uint64(), 32, []byte{})
-			}
-			contract.Gas += interpreter.evm.callGasTemp
-		} else if topics[0] == topic_category {
-			if contract.asset != nil && contract.asset.Tkt != nil {
-				category := strings.Trim(string(contract.asset.Tkt.Category[:]), string([]byte{0}))
-				memory.Set(mStart.Uint64(), 32, []byte(category))
-			} else {
-				memory.Set(mStart.Uint64(), 32, []byte{})
-			}
-			contract.Gas += interpreter.evm.callGasTemp
-		} else if topics[0] == topic_ticket {
-			if contract.asset != nil && contract.asset.Tkt != nil {
-				memory.Set(mStart.Uint64(), 32, contract.asset.Tkt.Value[:])
-			} else {
-				memory.Set(mStart.Uint64(), 32, []byte{})
-			}
-			contract.Gas += interpreter.evm.callGasTemp
-		} else if topics[0] == topic_setCallValues {
-			setCallValues(d, data, contract)
-			contract.Gas += interpreter.evm.callGasTemp
-		} else if topics[0] == topic_txHash {
-			memory.Set(mStart.Uint64(), 32, interpreter.evm.TxHash.Bytes())
-			contract.Gas += interpreter.evm.callGasTemp
-		} else if topics[0] == topic_setTokenRate {
-			offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-			len := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
-			if len == 0 {
-				return nil, fmt.Errorf("setTokenRate error , contract : %s, error : %s", contract.Address(), "coinName len=0")
-			}
 
-			coinName := string(data[offset+32 : offset+32+len])
-			match, err := regexp.Match("^[A-Z][A-Z0-9_]{0,31}$", []byte(coinName))
-			if err != nil || !match {
-				return nil, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "illegal coinName")
+		if (topics[0] == topic_update)&&(interpreter.evm.BlockNumber.Uint64()>=seroparam.SIP10()) {
+			if len(d)<=32 {
+				return nil, fmt.Errorf("contract update error: size(%d) < 32", len(d))
 			}
-
-			if interpreter.evm.StateDB.SetTokenRate(contract.Address(), coinName, new(big.Int).SetBytes(d[32:64]), new(big.Int).SetBytes(d[64:96])) {
-				memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
-			} else {
-				memory.Set(mStart.Uint64()+length-32, 32, hashFalse)
+			size := new(big.Int).SetBytes(d[0:32]).Int64();
+			if size+32!=int64(len(d)) {
+				return nil, fmt.Errorf("contract update error: param-lenght(%d) size(%d)", len(d),size)
 			}
-			contract.Gas += interpreter.evm.callGasTemp
-		} else if topics[0] == topic_closePkg {
-			id := c_type.Uint256{}
-			copy(id[:], d[0:32])
-
-			key := c_type.Uint256{}
-			copy(key[:], d[32:64])
-			pkg, err := interpreter.evm.StateDB.NextZState().Pkgs.Close(&id, contract.Address().ToPKr(), &key)
-			if err != nil {
-				memory.Set(mStart.Uint64(), 256, make([]byte, 256))
-			} else {
-				if pkg.O.Asset.Tkn != nil {
-					currency := common.BytesToString(pkg.O.Asset.Tkn.Currency[:])
-					amount := pkg.O.Asset.Tkn.Value.ToIntRef()
-					if len(currency) != 0 && amount.Sign() > 0 {
-						interpreter.evm.StateDB.AddBalance(contract.Address(), currency, amount)
-					}
-					memory.Set(mStart.Uint64(), 32, pkg.O.Asset.Tkn.Currency[:])
-					hash := common.BigToHash(pkg.O.Asset.Tkn.Value.ToIntRef())
-					memory.Set(mStart.Uint64()+32, 32, hash[:])
-				}
-
-				if pkg.O.Asset.Tkt != nil {
-					category := common.BytesToString(pkg.O.Asset.Tkt.Category[:])
-					ticket := common.BytesToHash(pkg.O.Asset.Tkt.Value[:])
-					if len(category) != 0 && ticket != (common.Hash{}) {
-						interpreter.evm.StateDB.AddTicket(contract.Address(), category, ticket)
-					}
-					memory.Set(mStart.Uint64()+64, 32, pkg.O.Asset.Tkt.Category[:])
-					memory.Set(mStart.Uint64()+96, 32, pkg.O.Asset.Tkt.Value[:])
-				}
-				from := common.BytesToAddress(pkg.Z.From[:]).ToCaddr()
-				memory.Set(mStart.Uint64()+128, 32, common.LeftPadBytes(from[:], 32))
-				memory.Set(mStart.Uint64()+160, 32, common.LeftPadBytes(big.NewInt(0).SetUint64(pkg.Z.High).Bytes(), 32))
-				if len(pkg.O.Memo) > 0 {
-					memory.Set(mStart.Uint64()+192, 32, pkg.O.Memo[0:32])
-					memory.Set(mStart.Uint64()+224, 32, pkg.O.Memo[32:64])
-				}
-			}
-			contract.Gas += interpreter.evm.callGasTemp
-		} else if topics[0] == topic_transferPkg {
-			id := c_type.Uint256{}
-			copy(id[:], d[0:32])
-
-			toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BytesToContractAddress(d[32:64]))
-			if toAddr == (common.Address{}) {
-				return nil, ErrToAddressError
-			}
-			if err := interpreter.evm.StateDB.NextZState().Pkgs.Transfer(&id, contract.Address().ToPKr(), toAddr.ToPKr()); err != nil {
-				memory.Set(mStart.Uint64()+length-32, 32, hashFalse)
-			} else {
-				memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
-			}
+			code:=d[32:]
+			interpreter.evm.StateDB.SetCode(*contract.CodeAddr,code)
 			contract.Gas += interpreter.evm.callGasTemp
 		} else {
-			interpreter.evm.StateDB.AddLog(&types.Log{
-				Address: contract.Address(),
-				Topics:  topics,
-				Data:    d,
-				// This is a non-consensus field, but assigned here because
-				// core/state doesn't know the current block number.
-				BlockNumber: interpreter.evm.BlockNumber.Uint64(),
-			})
-			contract.Gas += interpreter.evm.callGasTemp
-		}
+			length := mSize.Uint64()
+			if l, ok := memLens[topics[0]]; ok {
+				if l != len(d) {
+					return d, ErrCodeInvalid
+				}
+			}
+			if topics[0] == topic_allotTicket {
+				hash, returnGas, err, alarm := handleAllotTicket(d, interpreter.evm, contract, data)
+				contract.Gas += returnGas
+				if alarm {
+					contract.UseGas(contract.Gas)
+				}
+				if err != nil {
+					log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
+				}
+				// hash := common.Hash{}
+				memory.Set(mStart.Uint64()+length-32, 32, hash[:])
+			} else if topics[0] == topic_issueToken {
+				if ok, err := handleIssueToken(d, interpreter.evm, contract, data); ok {
+					memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
+				} else {
+					log.Trace("IssueToken error ", "contract", contract.Address(), "error", err)
+					memory.Set(mStart.Uint64()+length-32, 32, hashFalse)
+				}
+				contract.Gas += interpreter.evm.callGasTemp
+			} else if topics[0] == topic_balanceOf {
+				offset := new(big.Int).SetBytes(d[0:32]).Uint64()
+				len := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
+				balance := new(big.Int)
+				if len != 0 {
+					coinName := string(data[offset+32 : offset+32+len])
+					balance = interpreter.evm.StateDB.GetBalance(contract.Address(), coinName)
+				}
+				memory.Set(mStart.Uint64(), 32, common.LeftPadBytes(balance.Bytes(), 32))
+				contract.Gas += interpreter.evm.callGasTemp
+			} else if topics[0] == topic_send {
+				_, returnGas, err, alarm := handleSend(d, interpreter.evm, contract, data)
+				contract.Gas += returnGas
+				if alarm {
+					contract.UseGas(contract.Gas)
+				}
+				if err != nil {
+					log.Trace("send error ", "contract", contract.Address(), "error", err)
+					memory.Set(mStart.Uint64()+length-32, 32, hashFalse)
+				} else {
+					memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
+				}
+			} else if topics[0] == topic_currency {
+				if contract.asset != nil && contract.asset.Tkn != nil {
+					currency := strings.Trim(string(contract.asset.Tkn.Currency[:]), string([]byte{0}))
+					memory.Set(mStart.Uint64(), 32, []byte(currency))
+				} else {
+					memory.Set(mStart.Uint64(), 32, []byte{})
+				}
+				contract.Gas += interpreter.evm.callGasTemp
+			} else if topics[0] == topic_category {
+				if contract.asset != nil && contract.asset.Tkt != nil {
+					category := strings.Trim(string(contract.asset.Tkt.Category[:]), string([]byte{0}))
+					memory.Set(mStart.Uint64(), 32, []byte(category))
+				} else {
+					memory.Set(mStart.Uint64(), 32, []byte{})
+				}
+				contract.Gas += interpreter.evm.callGasTemp
+			} else if topics[0] == topic_ticket {
+				if contract.asset != nil && contract.asset.Tkt != nil {
+					memory.Set(mStart.Uint64(), 32, contract.asset.Tkt.Value[:])
+				} else {
+					memory.Set(mStart.Uint64(), 32, []byte{})
+				}
+				contract.Gas += interpreter.evm.callGasTemp
+			} else if topics[0] == topic_setCallValues {
+				setCallValues(d, data, contract)
+				contract.Gas += interpreter.evm.callGasTemp
+			} else if topics[0] == topic_txHash {
+				memory.Set(mStart.Uint64(), 32, interpreter.evm.TxHash.Bytes())
+				contract.Gas += interpreter.evm.callGasTemp
+			} else if topics[0] == topic_setTokenRate {
+				offset := new(big.Int).SetBytes(d[0:32]).Uint64()
+				len := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
+				if len == 0 {
+					return nil, fmt.Errorf("setTokenRate error , contract : %s, error : %s", contract.Address(), "coinName len=0")
+				}
 
+				coinName := string(data[offset+32 : offset+32+len])
+				match, err := regexp.Match("^[A-Z][A-Z0-9_]{0,31}$", []byte(coinName))
+				if err != nil || !match {
+					return nil, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "illegal coinName")
+				}
+
+				if interpreter.evm.StateDB.SetTokenRate(contract.Address(), coinName, new(big.Int).SetBytes(d[32:64]), new(big.Int).SetBytes(d[64:96])) {
+					memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
+				} else {
+					memory.Set(mStart.Uint64()+length-32, 32, hashFalse)
+				}
+				contract.Gas += interpreter.evm.callGasTemp
+			} else if topics[0] == topic_closePkg {
+				id := c_type.Uint256{}
+				copy(id[:], d[0:32])
+
+				key := c_type.Uint256{}
+				copy(key[:], d[32:64])
+				pkg, err := interpreter.evm.StateDB.NextZState().Pkgs.Close(&id, contract.Address().ToPKr(), &key)
+				if err != nil {
+					memory.Set(mStart.Uint64(), 256, make([]byte, 256))
+				} else {
+					if pkg.O.Asset.Tkn != nil {
+						currency := common.BytesToString(pkg.O.Asset.Tkn.Currency[:])
+						amount := pkg.O.Asset.Tkn.Value.ToIntRef()
+						if len(currency) != 0 && amount.Sign() > 0 {
+							interpreter.evm.StateDB.AddBalance(contract.Address(), currency, amount)
+						}
+						memory.Set(mStart.Uint64(), 32, pkg.O.Asset.Tkn.Currency[:])
+						hash := common.BigToHash(pkg.O.Asset.Tkn.Value.ToIntRef())
+						memory.Set(mStart.Uint64()+32, 32, hash[:])
+					}
+
+					if pkg.O.Asset.Tkt != nil {
+						category := common.BytesToString(pkg.O.Asset.Tkt.Category[:])
+						ticket := common.BytesToHash(pkg.O.Asset.Tkt.Value[:])
+						if len(category) != 0 && ticket != (common.Hash{}) {
+							interpreter.evm.StateDB.AddTicket(contract.Address(), category, ticket)
+						}
+						memory.Set(mStart.Uint64()+64, 32, pkg.O.Asset.Tkt.Category[:])
+						memory.Set(mStart.Uint64()+96, 32, pkg.O.Asset.Tkt.Value[:])
+					}
+					from := common.BytesToAddress(pkg.Z.From[:]).ToCaddr()
+					memory.Set(mStart.Uint64()+128, 32, common.LeftPadBytes(from[:], 32))
+					memory.Set(mStart.Uint64()+160, 32, common.LeftPadBytes(big.NewInt(0).SetUint64(pkg.Z.High).Bytes(), 32))
+					if len(pkg.O.Memo) > 0 {
+						memory.Set(mStart.Uint64()+192, 32, pkg.O.Memo[0:32])
+						memory.Set(mStart.Uint64()+224, 32, pkg.O.Memo[32:64])
+					}
+				}
+				contract.Gas += interpreter.evm.callGasTemp
+			} else if topics[0] == topic_transferPkg {
+				id := c_type.Uint256{}
+				copy(id[:], d[0:32])
+
+				toAddr := contract.GetNonceAddress(interpreter.evm.StateDB, common.BytesToContractAddress(d[32:64]))
+				if toAddr == (common.Address{}) {
+					return nil, ErrToAddressError
+				}
+				if err := interpreter.evm.StateDB.NextZState().Pkgs.Transfer(&id, contract.Address().ToPKr(), toAddr.ToPKr()); err != nil {
+					memory.Set(mStart.Uint64()+length-32, 32, hashFalse)
+				} else {
+					memory.Set(mStart.Uint64()+length-32, 32, hashTrue)
+				}
+				contract.Gas += interpreter.evm.callGasTemp
+			} else {
+				interpreter.evm.StateDB.AddLog(&types.Log{
+					Address: contract.Address(),
+					Topics:  topics,
+					Data:    d,
+					// This is a non-consensus field, but assigned here because
+					// core/state doesn't know the current block number.
+					BlockNumber: interpreter.evm.BlockNumber.Uint64(),
+				})
+				contract.Gas += interpreter.evm.callGasTemp
+			}
+		}
 		interpreter.intPool.put(mStart, mSize)
 		return nil, nil
 	}
