@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/core/state"
@@ -24,7 +25,7 @@ type SnapshotGen struct {
 
 func NewSnapshotGen(src string,target string) (ret *SnapshotGen,err error) {
 	sg:=SnapshotGen{}
-	if sg.src_db,err=serodb.NewLDBDatabase(src,1024,1024);err!=nil {
+	if sg.src_db,err=serodb.NewLDBDatabase(src,768,1024);err!=nil {
 		return nil,err
 	}
 	sg.src_head_block_hash = rawdb.ReadHeadBlockHash(sg.src_db)
@@ -68,6 +69,14 @@ func (self *SnapshotGen) Process(step int) (bool) {
 		hblock:=self.target_head_block_hash
 		rawdb.WriteCanonicalHash(batch, hblock, num)
 
+		if self.target_head_num==0 {
+			config:=rawdb.ReadChainConfig(self.src_db,hblock)
+			rawdb.WriteChainConfig(batch,hblock,config)
+			ver:=rawdb.ReadDatabaseVersion(self.src_db)
+			rawdb.WriteDatabaseVersion(batch,ver)
+		}
+
+
 		header:=rawdb.ReadHeader(self.src_db,hblock,num)
 		rawdb.WriteHeader(batch,header)
 
@@ -88,7 +97,13 @@ func (self *SnapshotGen) Process(step int) (bool) {
 		}
 		for _,root:=range lcBlock.Roots {
 			r:=localdb.GetRoot(self.src_db,&root)
-			localdb.PutRoot(batch,&root,r)
+			if r==nil {
+				if num>=seroparam.SIP2() {
+					panic("root state err")
+				}
+			} else {
+				localdb.PutRoot(batch,&root,r)
+			}
 		}
 
 		consKeys:=consensus.GetConsKeys(self.src_db,num,hblock)
@@ -113,7 +128,7 @@ func (self *SnapshotGen) Process(step int) (bool) {
 		}
 
 
-		self.ProcessState(header.Root,batch);
+		self.ProcessState(num,header.Root,batch);
 
 
 	}
@@ -124,7 +139,7 @@ func (self *SnapshotGen) Process(step int) (bool) {
 	return false
 }
 
-func (self *SnapshotGen) ProcessState(root common.Hash,batch serodb.Batch) {
+func (self *SnapshotGen) ProcessState(num uint64,root common.Hash,batch serodb.Batch) {
 	sched := state.NewStateSync(root,self.target_db)
 	queue := append([]common.Hash{}, sched.Missing(1024)...)
 	for len(queue) > 0 {
@@ -148,5 +163,6 @@ func (self *SnapshotGen) ProcessState(root common.Hash,batch serodb.Batch) {
 	if _, err := sched.Commit(batch); err != nil {
 		panic("sched commit error")
 	}
+	println("------STATE:",num)
 
 }
