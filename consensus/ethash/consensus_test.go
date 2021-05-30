@@ -316,3 +316,11 @@ func TestCalcDifficultyV4(t *testing.T) {
 	print(3057601+8294400*2, 140000000000001)
 	print(3057601+8294400*2, 150000000000001)
 }
+
+
+func TestSIPEncode(t *testing.T) {
+}
+
+func TestSIPSetting(t *testing.T) {
+	GetSipSetting();
+}
