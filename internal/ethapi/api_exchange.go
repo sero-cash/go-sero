@@ -109,6 +109,8 @@ type ReceptionArgs struct {
 	Addr     MixAdrress
 	Currency Smbol
 	Value    *Big
+	Category Smbol
+	TKt      *common.Hash
 }
 
 func MixAdrressToPkr(addr MixAdrress) c_type.PKr {
