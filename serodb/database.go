@@ -58,7 +58,7 @@ type LDBDatabase struct {
 }
 
 // NewLDBDatabase returns a LevelDB wrapped object.
-func NewLDBDatabase(file string, cache int, handles int) (*LDBDatabase, error) {
+func NewLDBDatabaseEx(file string, cache int, handles int,readOnly bool) (*LDBDatabase, error) {
 	logger := log.New("database", file)
 
 	// Ensure we have some minimal caching and file guarantees
@@ -76,6 +76,7 @@ func NewLDBDatabase(file string, cache int, handles int) (*LDBDatabase, error) {
 		BlockCacheCapacity:     cache / 2 * opt.MiB,
 		WriteBuffer:            cache / 4 * opt.MiB, // Two of these are used internally
 		Filter:                 filter.NewBloomFilter(10),
+		ReadOnly: readOnly,
 	})
 	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
 		db, err = leveldb.RecoverFile(file, nil)
@@ -89,6 +90,9 @@ func NewLDBDatabase(file string, cache int, handles int) (*LDBDatabase, error) {
 		db:  db,
 		log: logger,
 	}, nil
+}
+func NewLDBDatabase(file string, cache int, handles int) (*LDBDatabase, error) {
+	return NewLDBDatabaseEx(file,cache,handles,false)
 }
 
 // Path returns the path to the database directory.

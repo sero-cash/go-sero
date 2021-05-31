@@ -416,6 +416,7 @@ func (evm *EVM) create(caller ContractRef, code []byte, gas uint64, asset *asset
 	if err == nil && !maxCodeSizeExceeded {
 		createDataGas := uint64(len(ret)) * params.CreateDataGas
 		if contract.UseGas(createDataGas) {
+			//println(common.Bytes2Hex(ret))
 			evm.StateDB.SetCode(address, ret)
 		} else {
 			err = ErrCodeStoreOutOfGas

@@ -5,6 +5,7 @@ import (
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/rawdb"
 	"github.com/sero-cash/go-sero/core/state"
+	"github.com/sero-cash/go-sero/core/types"
 	"github.com/sero-cash/go-sero/serodb"
 	"github.com/sero-cash/go-sero/trie"
 	"github.com/sero-cash/go-sero/zero/consensus"
@@ -19,21 +20,27 @@ type SnapshotGen struct {
 	src_head_block_hash common.Hash
 	src_head_num int64
 	target_db *serodb.LDBDatabase
+
 	target_head_block_hash common.Hash
 	target_head_num int64
+
+	blockStop chan bool
+	stateStop chan bool
 }
 
 func NewSnapshotGen(src string,target string) (ret *SnapshotGen,err error) {
 	sg:=SnapshotGen{}
-	if sg.src_db,err=serodb.NewLDBDatabase(src,768,1024);err!=nil {
+	if sg.src_db,err=serodb.NewLDBDatabaseEx(src,1024*8,1024,true);err!=nil {
 		return nil,err
 	}
 	sg.src_head_block_hash = rawdb.ReadHeadBlockHash(sg.src_db)
 	sg.src_head_num=int64(*rawdb.ReadHeaderNumber(sg.src_db,sg.src_head_block_hash))
 	sg.src_state_db=state.NewDatabase(sg.src_db)
 
-	os.MkdirAll(target,os.ModePerm)
-	if sg.target_db,err=serodb.NewLDBDatabase(target,1024,1024);err!=nil {
+	if err=os.MkdirAll(target,os.ModePerm);err!=nil {
+		return nil,err
+	}
+	if sg.target_db,err=serodb.NewLDBDatabase(target,1024*8,1024);err!=nil {
 		return nil,err
 	}
 	sg.target_head_block_hash=rawdb.ReadHeadBlockHash(sg.target_db)
@@ -42,7 +49,10 @@ func NewSnapshotGen(src string,target string) (ret *SnapshotGen,err error) {
 	} else {
 		sg.target_head_num=-1
 	}
-	return &sg,err
+
+	sg.blockStop=make(chan bool)
+	sg.stateStop=make(chan bool)
+	return &sg,nil
 }
 
 func (self *SnapshotGen) Close() {
@@ -50,7 +60,36 @@ func (self *SnapshotGen) Close() {
 	self.target_db.Close();
 }
 
-func (self *SnapshotGen) Process(step int) (bool) {
+func (self *SnapshotGen) RunBlock() {
+	for {
+		if self.ProcessBlock(10000)==true {
+			break
+		}
+		println("Process Block:",self.target_head_num)
+	}
+	self.blockStop<-true
+}
+
+func (self *SnapshotGen) RunState() {
+	num:=uint64(self.src_head_num)
+	hblock := rawdb.ReadCanonicalHash(self.src_db, num)
+	header := rawdb.ReadHeader(self.src_db, hblock, num)
+	if ok,count:=self.ProcessState(header.Root);ok {
+		println("End Process State:", num,"count=",count)
+	}
+	self.stateStop<-true
+}
+
+func (self *SnapshotGen) Run() {
+	self.target_head_num=-1;
+	go self.RunBlock()
+	go self.RunState()
+
+	<-self.blockStop
+	<-self.stateStop
+}
+
+func (self *SnapshotGen) ProcessBlock(step int) (bool) {
 	if step==0 {
 		return true
 	}
@@ -76,18 +115,21 @@ func (self *SnapshotGen) Process(step int) (bool) {
 			rawdb.WriteDatabaseVersion(batch,ver)
 		}
 
-
 		header:=rawdb.ReadHeader(self.src_db,hblock,num)
 		rawdb.WriteHeader(batch,header)
 
 		body:=rawdb.ReadBody(self.src_db,hblock,num)
 		rawdb.WriteBody(batch,hblock,num,body)
 
+		block:=types.NewBlockWithHeader(header).WithBody(body.Transactions)
+		rawdb.WriteTxLookupEntries(batch,block)
+
 		receipts:=rawdb.ReadReceipts(self.src_db,hblock,num)
 		rawdb.WriteReceipts(batch,hblock,num,receipts)
 
 		td:=rawdb.ReadTd(self.src_db,hblock,num)
 		rawdb.WriteTd(batch,hblock,num,td)
+
 
 		lcBlock:=localdb.GetBlock(self.src_db,num,hblock.HashToUint256())
 		localdb.PutBlock(batch,num,hblock.HashToUint256(),lcBlock)
@@ -107,11 +149,14 @@ func (self *SnapshotGen) Process(step int) (bool) {
 		}
 
 		consKeys:=consensus.GetConsKeys(self.src_db,num,hblock)
-		for _,key:=range consKeys {
-			if v,err:=self.src_db.Get(key);err!=nil {
-				panic(err)
-			} else {
-				batch.Put(key,v)
+		if len(consKeys)>0 {
+			consensus.PutConsKeys(batch,num,hblock,consKeys)
+			for _,key:=range consKeys {
+				if v,err:=self.src_db.Get(key);err!=nil {
+					panic(err)
+				} else {
+					batch.Put(key,v)
+				}
 			}
 		}
 
@@ -127,10 +172,6 @@ func (self *SnapshotGen) Process(step int) (bool) {
 			batch.Put(bvkey,v)
 		}
 
-
-		self.ProcessState(num,header.Root,batch);
-
-
 	}
 	rawdb.WriteHeadBlockHash(batch,self.target_head_block_hash)
 	rawdb.WriteHeadHeaderHash(batch,self.target_head_block_hash)
@@ -139,30 +180,55 @@ func (self *SnapshotGen) Process(step int) (bool) {
 	return false
 }
 
-func (self *SnapshotGen) ProcessState(num uint64,root common.Hash,batch serodb.Batch) {
+func (self *SnapshotGen) ProcessState(root common.Hash) (bool,int) {
+	const batch_num int=1024*10;
 	sched := state.NewStateSync(root,self.target_db)
-	queue := append([]common.Hash{}, sched.Missing(1024)...)
+	queue := append([]common.Hash{}, sched.Missing(batch_num)...)
+	count:=0
 	for len(queue) > 0 {
 		results := make([]trie.SyncResult, len(queue))
-		for i, hash := range queue {
-			data, err := self.src_state_db.TrieDB().Node(hash)
-			if err != nil {
-				if len(queue)==1 {
-					return
-				} else {
-					panic(err)
+		const c int=1024
+		input:=make(chan int)
+		end:=make(chan bool)
+		output:=make(chan bool)
+		for i:=0;i<c;i++ {
+			go func() {
+				DONE:
+				for {
+					select {
+					case index := <-input:
+						hash := queue[index]
+						data, err := self.src_state_db.TrieDB().Node(hash)
+						if err != nil {
+							panic("tri get node error")
+						}
+						results[index] = trie.SyncResult{Hash: hash, Data: data}
+					case <-end:
+						break DONE
+					}
 				}
-			}
-			results[i] = trie.SyncResult{Hash: hash, Data: data}
+				output <- true
+			}()
+		}
+		for i:=0;i<len(queue);i++ {
+			input<-i
+		}
+		for i:=0;i<c;i++ {
+			end<-true
+		}
+		for i:=0;i<c;i++ {
+			<-output
 		}
 		if _, _, err := sched.Process(results); err != nil {
 			panic("sched process error")
 		}
-		queue = append(queue[:0], sched.Missing(1024)...)
+		if ct, err := sched.Commit(self.target_db); err != nil {
+			panic("sched commit error")
+		} else {
+			println("cmt:",ct)
+			count+=ct
+		}
+		queue = append(queue[:0], sched.Missing(batch_num)...)
 	}
-	if _, err := sched.Commit(batch); err != nil {
-		panic("sched commit error")
-	}
-	println("------STATE:",num)
-
+	return true,count
 }
