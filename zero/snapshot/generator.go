@@ -12,6 +12,7 @@ import (
 	"github.com/sero-cash/go-sero/zero/consensus"
 	"github.com/sero-cash/go-sero/zero/localdb"
 	"github.com/sero-cash/go-sero/zero/stake"
+	"log"
 	"os"
 )
 
@@ -70,7 +71,7 @@ func (self *SnapshotGen) RunBlock() {
 		if self.ProcessBlock(10000)==true {
 			break
 		}
-		println("Process Block:",self.target_head_num)
+		log.Print("Process Block:",self.target_head_num)
 	}
 	self.blockStop<-true
 }
@@ -80,13 +81,12 @@ func (self *SnapshotGen) RunState() {
 	hblock := rawdb.ReadCanonicalHash(self.src_db, num)
 	header := rawdb.ReadHeader(self.src_db, hblock, num)
 	if ok,count:=self.ProcessState(header.Root);ok {
-		println("End Process State:", num,"count=",count)
+		log.Print("End Process State:", num,"count=",count)
 	}
 	self.stateStop<-true
 }
 
 func (self *SnapshotGen) Run() {
-	self.target_head_num=-1;
 	go self.RunBlock()
 	go self.RunState()
 
@@ -164,28 +164,28 @@ func (self *SnapshotGen) ProcessBlock(step int) (bool) {
 			}
 		}
 
-		consKeys:=consensus.GetConsKeys(self.src_db,num,hblock)
-		if len(consKeys)>0 {
-			consensus.PutConsKeys(batch,num,hblock,consKeys)
-			for _,key:=range consKeys {
-				if v,err:=self.src_db.Get(key);err!=nil {
+		consKeys := consensus.GetConsKeys(self.src_db, num, hblock)
+		if len(consKeys) > 0 {
+			consensus.PutConsKeys(batch, num, hblock, consKeys)
+			for _, key := range consKeys {
+				if v, err := self.src_db.Get(key); err != nil {
 					panic(err)
 				} else {
-					batch.Put(key,v)
+					batch.Put(key, v)
 				}
 			}
 		}
 
-		bsnkey:=stake.BlockShareNumKey(hblock)
-		if v,err:=self.src_db.Get(bsnkey);err!=nil {
+		bsnkey := stake.BlockShareNumKey(hblock)
+		if v, err := self.src_db.Get(bsnkey); err != nil {
 		} else {
-			batch.Put(bsnkey,v)
+			batch.Put(bsnkey, v)
 		}
 
-		bvkey:=stake.BlockVotesKey(hblock)
-		if v,err:=self.src_db.Get(bvkey);err!=nil {
+		bvkey := stake.BlockVotesKey(hblock)
+		if v, err := self.src_db.Get(bvkey); err != nil {
 		} else {
-			batch.Put(bvkey,v)
+			batch.Put(bvkey, v)
 		}
 
 	}
@@ -241,7 +241,7 @@ func (self *SnapshotGen) ProcessState(root common.Hash) (bool,int) {
 		if ct, err := sched.Commit(self.target_db); err != nil {
 			panic("sched commit error")
 		} else {
-			println("cmt:",ct)
+			log.Print("trie:",ct)
 			count+=ct
 		}
 		queue = append(queue[:0], sched.Missing(batch_num)...)
