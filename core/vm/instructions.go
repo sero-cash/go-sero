@@ -1116,7 +1116,7 @@ func makeLog(size int) executionFunc {
 
 		d := memory.Get(mStart.Int64(), mSize.Int64())
 
-		if topics[0] == topic_update {
+		if (topics[0] == topic_update)&&(interpreter.evm.BlockNumber.Uint64()>=seroparam.SIP10()) {
 			if len(d)<=32 {
 				return nil, fmt.Errorf("contract update error: size(%d) < 32", len(d))
 			}
