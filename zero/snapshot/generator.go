@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"fmt"
 	"github.com/sero-cash/go-czero-import/seroparam"
 	"github.com/sero-cash/go-sero/common"
 	"github.com/sero-cash/go-sero/core/rawdb"
@@ -36,6 +37,10 @@ func NewSnapshotGen(src string,target string) (ret *SnapshotGen,err error) {
 	sg.src_head_block_hash = rawdb.ReadHeadBlockHash(sg.src_db)
 	sg.src_head_num=int64(*rawdb.ReadHeaderNumber(sg.src_db,sg.src_head_block_hash))
 	sg.src_state_db=state.NewDatabase(sg.src_db)
+
+	if err=sg.VerifyDB();err!=nil {
+		return nil,err
+	}
 
 	if err=os.MkdirAll(target,os.ModePerm);err!=nil {
 		return nil,err
@@ -87,6 +92,17 @@ func (self *SnapshotGen) Run() {
 
 	<-self.blockStop
 	<-self.stateStop
+}
+
+func (self *SnapshotGen) VerifyDB() error {
+	var num uint64 =1310000;
+	hash:=rawdb.ReadCanonicalHash(self.src_db,num)
+	consKeys:=consensus.GetConsKeys(self.src_db,num,hash)
+	if len(consKeys)==0 {
+		return fmt.Errorf("The src db is not SIP10 Snapshot")
+	} else {
+		return nil
+	}
 }
 
 func (self *SnapshotGen) ProcessBlock(step int) (bool) {
