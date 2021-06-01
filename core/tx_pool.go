@@ -462,6 +462,7 @@ func (pool *TxPool) loop() {
 			pool.mu.Lock()
 
 			for _, tx := range drop {
+				pool.faileds[tx.Hash()] = time.Now()
 				pool.removeAllTx(tx.Hash())
 				if pool.canAddPkrTx() {
 					pool.pkrTxOuts.delPendintTxOut(*tx)
@@ -736,7 +737,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	num := pool.chain.CurrentBlock().NumberU64()
 	if err := verify.VerifyWithoutState(tx.Ehash().NewRef(), tx.GetZZSTX(), num); err != nil {
 		log.Trace("validateTx verify without state failed", "hash", tx.Hash().Hex(), "verify stx err", err)
-		pool.faileds[tx.Hash()] = time.Now()
 		//return ErrVerifyError
 		return err
 	}
@@ -751,7 +751,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) (e error) {
 	//err := verify.Verify(tx.GetZZSTX(), pool.currentState.Copy().GetZState())
 	if err != nil {
 		log.Trace("validateTx error", "hash", tx.Hash().Hex(), "verify stx err", err)
-		pool.faileds[tx.Hash()] = time.Now()
+		//pool.faileds[tx.Hash()] = time.Now()
 		//return ErrVerifyError
 		return err
 	}
@@ -865,6 +865,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// If the transaction fails basic validation, discard it
 	if err := pool.validateTx(tx, local); err != nil {
 		log.Info("Discarding invalid transaction", "hash", hash.Hex(), "err", err)
+		pool.faileds[tx.Hash()] = time.Now()
 		invalidTxCounter.Inc(1)
 		return false, err
 	}
