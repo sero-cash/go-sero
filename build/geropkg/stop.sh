@@ -1,6 +1,6 @@
 #!/bin/sh
 
 if [ -f "pid" ];then
-    kill -9 `cat pid`
+    kill -INT `cat pid`
     rm -rf pid
 fi
