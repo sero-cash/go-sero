@@ -35,9 +35,22 @@ func NewSnapshotGen(src string,target string) (ret *SnapshotGen,err error) {
 	if sg.src_db,err=serodb.NewLDBDatabaseEx(src,1024*8,1024,true);err!=nil {
 		return nil,err
 	}
-	sg.src_head_block_hash = rawdb.ReadHeadBlockHash(sg.src_db)
-	sg.src_head_num=int64(*rawdb.ReadHeaderNumber(sg.src_db,sg.src_head_block_hash))
 	sg.src_state_db=state.NewDatabase(sg.src_db)
+
+	{
+		hash := rawdb.ReadHeadBlockHash(sg.src_db)
+		num := *rawdb.ReadHeaderNumber(sg.src_db, hash)
+		header := rawdb.ReadHeader(sg.src_db, hash, num)
+		for {
+			if _, err := state.New(sg.src_state_db, header); err == nil {
+				sg.src_head_num = header.Number.Int64()
+				sg.src_head_block_hash = header.Hash()
+				break
+			}
+			header = rawdb.ReadHeader(sg.src_db, header.ParentHash, header.Number.Uint64()-1)
+		}
+	}
+
 
 	if err=sg.VerifyDB();err!=nil {
 		return nil,err
