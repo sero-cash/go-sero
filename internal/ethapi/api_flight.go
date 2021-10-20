@@ -33,6 +33,14 @@ func (s *PublicFlightAPI) GetBlocksInfo(ctx context.Context, start uint64, count
 	return block, err
 }
 
+func (s *PublicFlightAPI) GetBlocksInfoWithDelay(ctx context.Context, start uint64, count, delay uint64) ([]txtool.Block, error) {
+	block, err := flight.SRI_Inst.GetBlocksInfoByDelay(start, count, delay)
+	if err != nil {
+		return nil, err
+	}
+	return block, err
+}
+
 func (s *PublicFlightAPI) GetBlockByNumber(ctx context.Context, blockNum *int64) (map[string]interface{}, error) {
 	return s.exchange.GetBlockByNumber(ctx, blockNum)
 }

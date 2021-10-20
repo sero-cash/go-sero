@@ -396,6 +396,21 @@ func (t Type) getAllAddress(v reflect.Value) (pkrs []c_type.PKr, err error) {
 		}
 		return
 	}
+	if t.T == TupleTy {
+		fieldmap, e := mapArgNamesToStructFields(t.TupleRawNames, v)
+		if e != nil {
+			return nil, e
+		}
+		for i, elem := range t.TupleElems {
+			field := v.FieldByName(fieldmap[t.TupleRawNames[i]])
+			val, err := elem.getAllAddress(field)
+			if err != nil {
+				return nil, err
+			}
+			pkrs = append(pkrs, val...)
+		}
+		return
+	}
 	if t.T == AddressTy {
 		if v.Kind() == reflect.Array {
 			v = mustArrayToByteSlice(v)

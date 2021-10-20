@@ -16,12 +16,15 @@ func (self *LightNode) CurrentLight() *LightNode {
 	return Current_light
 }
 
+const maxOut_num = 150
+
 func (self *LightNode) GetOutsByPKr(pkrs []c_type.PKr, start, end uint64) (br BlockOutResp, e error) {
 	br.CurrentNum = self.getLastNumber()
 	blockOuts := []BlockOut{}
 	if end == 0 {
 		end = br.CurrentNum
 	}
+	resetEnd := false
 	for _, pkr := range pkrs {
 		//uPKr := pkr.ToUint512()
 		prefix := append(pkrPrefix, pkr[:]...)
@@ -37,12 +40,22 @@ func (self *LightNode) GetOutsByPKr(pkrs []c_type.PKr, start, end uint64) (br Bl
 			var bds []BlockData
 			if err := rlp.Decode(bytes.NewReader(iterator.Value()), &bds); err != nil {
 				log.Error("Light Invalid block RLP", "Num:", num, "err:", err)
+				iterator.Release()
 				return br, err
 			} else {
 				blockOut := BlockOut{Num: num, Data: bds}
 				blockOuts = append(blockOuts, blockOut)
 			}
+			if len(blockOuts) > maxOut_num {
+				if !resetEnd {
+					end = num
+					resetEnd = true
+					break
+				}
+			}
+
 		}
+		iterator.Release()
 	}
 	br.BlockOuts = blockOuts
 	return br, nil

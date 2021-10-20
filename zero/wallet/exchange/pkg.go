@@ -56,6 +56,7 @@ func (self *Exchange) FindPkgs(pk *c_type.Uint512, from bool) (pkgs []Pkg) {
 			log.Error("pkg id error", "pkg", id)
 		}
 	}
+	iterator.Release()
 	return
 }
 

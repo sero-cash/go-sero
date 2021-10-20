@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"reflect"
 	"strings"
+	"sync"
 )
 
 var (
@@ -48,6 +49,10 @@ var (
 	errUintOverflow  = errors.New("rlp: uint overflow")
 	errNoPointer     = errors.New("rlp: interface given to Decode must be a pointer")
 	errDecodeIntoNil = errors.New("rlp: pointer given to Decode must not be nil")
+
+	streamPool = sync.Pool{
+		New: func() interface{} { return new(Stream) },
+	}
 )
 
 // Decoder is implemented by types that require custom RLP
@@ -125,18 +130,42 @@ type Decoder interface {
 // you need an input limit, use
 //
 //     NewStream(r, limit).Decode(val)
+//func Decode(r io.Reader, val interface{}) error {
+//	// TODO: this could use a Stream from a pool.
+//	return NewStream(r, 0).Decode(val)
+//}
+
 func Decode(r io.Reader, val interface{}) error {
-	// TODO: this could use a Stream from a pool.
-	return NewStream(r, 0).Decode(val)
+	stream := streamPool.Get().(*Stream)
+	defer streamPool.Put(stream)
+
+	stream.Reset(r, 0)
+	return stream.Decode(val)
 }
 
 // DecodeBytes parses RLP data from b into val.
 // Please see the documentation of Decode for the decoding rules.
 // The input must contain exactly one value and no trailing data.
+//func DecodeBytes(b []byte, val interface{}) error {
+//	// TODO: this could use a Stream from a pool.
+//	r := bytes.NewReader(b)
+//	if err := NewStream(r, uint64(len(b))).Decode(val); err != nil {
+//		return err
+//	}
+//	if r.Len() > 0 {
+//		return ErrMoreThanOneValue
+//	}
+//	return nil
+//}
+
 func DecodeBytes(b []byte, val interface{}) error {
-	// TODO: this could use a Stream from a pool.
 	r := bytes.NewReader(b)
-	if err := NewStream(r, uint64(len(b))).Decode(val); err != nil {
+
+	stream := streamPool.Get().(*Stream)
+	defer streamPool.Put(stream)
+
+	stream.Reset(r, uint64(len(b)))
+	if err := stream.Decode(val); err != nil {
 		return err
 	}
 	if r.Len() > 0 {

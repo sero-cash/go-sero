@@ -87,6 +87,7 @@ func (self *StakeService) StakePools() (pools []*stake.StakePool) {
 		pool := stake.StakePoolDB.GetObject(self.bc.GetDB(), value, &stake.StakePool{})
 		pools = append(pools, pool.(*stake.StakePool))
 	}
+	iterator.Release()
 	return
 }
 
@@ -97,6 +98,7 @@ func (self *StakeService) Shares() (shares []*stake.Share) {
 		share := stake.ShareDB.GetObject(self.bc.GetDB(), value, &stake.Share{})
 		shares = append(shares, share.(*stake.Share))
 	}
+	iterator.Release()
 	return
 }
 
@@ -147,6 +149,7 @@ func (self *StakeService) SharesByPk(pk c_type.Uint512) (shares []*stake.Share) 
 		share := stake.ShareDB.GetObject(self.bc.GetDB(), value, &stake.Share{})
 		shares = append(shares, share.(*stake.Share))
 	}
+	iterator.Release()
 	return
 }
 
@@ -183,6 +186,7 @@ func (self *StakeService) SharesByPkr(pkr c_type.PKr) (shares []*stake.Share) {
 		share := stake.ShareDB.GetObject(self.bc.GetDB(), value, &stake.Share{})
 		shares = append(shares, share.(*stake.Share))
 	}
+	iterator.Release()
 	return
 }
 

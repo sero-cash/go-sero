@@ -334,6 +334,7 @@ func (self *Exchange) ClearUsedFlagForPK(pk *c_type.Uint512) (count int) {
 				count++
 			}
 		}
+		iterator.Release()
 	}
 	return
 }
@@ -375,6 +376,7 @@ func (self *Exchange) GetLockedBalances(pk c_type.Uint512) (balances map[string]
 				}
 			}
 		}
+		iterator.Release()
 		return balances
 	}
 	return
@@ -410,6 +412,7 @@ func (self *Exchange) GetMaxAvailable(pk c_type.Uint512, currency string) (amoun
 			}
 		}
 	}
+	iterator.Release()
 	return
 }
 
@@ -433,9 +436,11 @@ func (self *Exchange) IgnorePkrUtxos(pkr c_type.PKr, ignore bool) (utxos []Utxo,
 			}
 		} else {
 			e = err
+			iterator.Release()
 			return
 		}
 	}
+	iterator.Release()
 
 	if len(utxos) > 0 {
 		batch := self.db.NewBatch()
@@ -498,6 +503,7 @@ func (self *Exchange) GetBalances(pk c_type.Uint512) (balances map[string]*big.I
 					}
 				}
 			}
+			iterator.Release()
 			account.balances = balances
 			account.tickets = tickets
 			account.utxoNums = utxoNums
@@ -529,10 +535,12 @@ func (self *Exchange) GetBlocksInfo(start, end uint64) (blocks []BlockInfo, err 
 		var block BlockInfo
 		if err = rlp.Decode(bytes.NewReader(iterator.Value()), &block); err != nil {
 			log.Error("Exchange Invalid block RLP", "Num", num, "err", err)
+			iterator.Release()
 			return
 		}
 		blocks = append(blocks, block)
 	}
+	iterator.Release()
 	return
 }
 
@@ -702,6 +710,7 @@ func (self *Exchange) iteratorUtxo(Pk *c_type.Uint512, begin, end uint64, handle
 		if err := rlp.Decode(bytes.NewReader(value), &roots); err != nil {
 			log.Error("Invalid roots RLP", "accoutKey", common.Bytes2Hex(pk[:]), "blockNumber", num, "err", err)
 			e = err
+			iterator.Release()
 			return
 		}
 		for _, root := range roots {
@@ -712,6 +721,7 @@ func (self *Exchange) iteratorUtxo(Pk *c_type.Uint512, begin, end uint64, handle
 			}
 		}
 	}
+	iterator.Release()
 
 	return
 }
@@ -762,6 +772,7 @@ func (self *Exchange) findUtxosByTicket(pk *c_type.Uint512, tickets []assets.Tic
 				}
 			}
 		}
+		iterator.Release()
 	}
 	return
 }
@@ -793,6 +804,7 @@ func (self *Exchange) findUtxos(pk *c_type.Uint512, currency string, amount *big
 			}
 		}
 	}
+	iterator.Release()
 	return
 }
 
@@ -1213,6 +1225,7 @@ func (self *Exchange) getMergeUtxos(from *c_type.Uint512, currency string, zcoun
 			break
 		}
 	}
+	iterator.Release()
 	if outxos.Len() >= icount {
 		zutxos = UtxoList{}
 	}
