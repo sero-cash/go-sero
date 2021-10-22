@@ -111,6 +111,10 @@ type txPool interface {
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 }
 
+type sero_miner interface {
+	Mining() bool
+}
+
 type shareVoter interface {
 	SubscribeNewVoteEvent(chan<- core.NewVoteEvent) event.Subscription
 	SubscribeNewLotteryEvent(chan<- core.NewLotteryEvent) event.Subscription

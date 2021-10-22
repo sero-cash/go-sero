@@ -44,6 +44,9 @@ type txsync struct {
 
 // syncTransactions starts sending all currently pending transactions to the given peer.
 func (pm *ProtocolManager) syncTransactions(p *peer) {
+	if pm.miner.Mining() {
+		return
+	}
 	//var txs types.Transactions
 	txs, _ := pm.txpool.Pending()
 	//for _, batch := range pending {

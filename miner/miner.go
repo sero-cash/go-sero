@@ -121,7 +121,7 @@ func (self *Miner) Start(coinbase accounts.Account) {
 		return
 	}
 	atomic.StoreInt32(&self.mining, 1)
-
+	self.sero.TxPool().SetMining(1)
 	log.Info("Starting mining operation")
 	self.worker.start()
 	self.worker.commitNewWork()
@@ -130,6 +130,7 @@ func (self *Miner) Start(coinbase accounts.Account) {
 func (self *Miner) Stop() {
 	self.worker.stop()
 	atomic.StoreInt32(&self.mining, 0)
+	self.sero.TxPool().SetMining(0)
 	atomic.StoreInt32(&self.shouldStart, 0)
 }
 

@@ -69,6 +69,7 @@ type ProtocolManager struct {
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
 	txpool      txPool
+	miner       sero_miner
 	voter       shareVoter
 	blockchain  *core.BlockChain
 	chainconfig *params.ChainConfig
@@ -102,12 +103,13 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new Sero sub protocol manager. The Sero sub protocol manages peers capable
 // with the Sero network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, voter shareVoter, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb serodb.Database) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, voter shareVoter, txpool txPool, miner sero_miner, engine consensus.Engine, blockchain *core.BlockChain, chaindb serodb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:   networkID,
 		eventMux:    mux,
 		txpool:      txpool,
+		miner:       miner,
 		voter:       voter,
 		blockchain:  blockchain,
 		chainconfig: config,

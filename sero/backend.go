@@ -188,10 +188,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 
 	sero.voter = voter.NewVoter(sero.chainConfig, sero.blockchain, sero)
 
-	if sero.protocolManager, err = NewProtocolManager(sero.chainConfig, config.SyncMode, config.NetworkId, sero.eventMux, sero.voter, sero.txPool, sero.engine, sero.blockchain, chainDb); err != nil {
+	sero.miner = miner.New(sero, sero.chainConfig, sero.EventMux(), sero.voter, sero.engine)
+
+	if sero.protocolManager, err = NewProtocolManager(sero.chainConfig, config.SyncMode, config.NetworkId, sero.eventMux, sero.voter, sero.txPool, sero.miner, sero.engine, sero.blockchain, chainDb); err != nil {
 		return nil, err
 	}
-	sero.miner = miner.New(sero, sero.chainConfig, sero.EventMux(), sero.voter, sero.engine)
 	sero.miner.SetExtra(makeExtraData(config.ExtraData))
 
 	sero.APIBackend = &SeroAPIBackend{sero, nil}

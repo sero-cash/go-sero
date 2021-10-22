@@ -24,6 +24,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
@@ -352,6 +353,7 @@ type TxPool struct {
 	pkrTxOuts PKrTxOuts
 
 	homestead bool
+	mining    int32
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -386,6 +388,14 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	go pool.loop()
 
 	return pool
+}
+
+func (pool *TxPool) SetMining(m int32) {
+	atomic.StoreInt32(&pool.mining, m)
+}
+
+func (pool *TxPool) Mining() bool {
+	return atomic.LoadInt32(&pool.mining) > 0
 }
 
 // loop is the transaction pool's main event loop, waiting for and reacting to
@@ -596,13 +606,13 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// Inject any transactions discarded due to reorgs
 	log.Debug("Reinjecting stale transactions", "count", len(reinject))
 	if len(reinject) > 0 {
-		pool.addTxsLocked(reinject, false)
+		pool.addTxsLocked(reinject, false, false)
 		for _, tx := range reinject {
 			log.Info("reinject tx", "hash", tx.Hash())
 		}
 	}
 
-	pool.promoteExecutables()
+	pool.promoteExecutables(true)
 }
 
 // Stop terminates the transaction pool.
@@ -940,7 +950,7 @@ func (pool *TxPool) AddRemote(tx *types.Transaction) error {
 // marking the senders as a local ones in the mean time, ensuring they go around
 // the local pricing constraints.
 func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
-	return pool.addTxs(txs, !pool.config.NoLocals)
+	return pool.addTxs(txs, !pool.config.NoLocals, true)
 }
 
 // AddRemotes enqueues a batch of transactions into the pool if they are valid.
@@ -950,7 +960,7 @@ func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 	for _, tx := range txs {
 		log.Debug("AddRemotes tx", "hash", tx.Hash().Hex())
 	}
-	return pool.addTxs(txs, false)
+	return pool.addTxs(txs, false, false)
 }
 
 // addTx enqueues a single transaction into the pool if it is valid.
@@ -963,21 +973,27 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 	if err != nil {
 		return err
 	}
-	pool.promoteExecutables()
+	if local {
+		if !pool.config.StartLight && pool.Mining() {
+			pool.broadCastLocalTx(tx)
+		}
+	}
+	pool.promoteExecutables(local)
+
 	return nil
 }
 
 // addTxs attempts to queue a batch of transactions if they are valid.
-func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) []error {
+func (pool *TxPool) addTxs(txs []*types.Transaction, local bool, broadcast bool) []error {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
-	return pool.addTxsLocked(txs, local)
+	return pool.addTxsLocked(txs, local, broadcast)
 }
 
 // addTxsLocked attempts to queue a batch of transactions if they are valid,
 // whilst assuming the transaction pool lock is already held.
-func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
+func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool, broadcast bool) []error {
 	// Add the batch of transaction, tracking the accepted ones
 	errs := []error{}
 	errCount := 0
@@ -1004,7 +1020,7 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
 	}
 	log.Trace("txpool", "addTxs", len(txs), "knowErr", knowErrCount, "failedErr", failedErrCount, "validateErr", errCount)
 	if added > 0 {
-		pool.promoteExecutables()
+		pool.promoteExecutables(broadcast)
 	}
 	return errs
 }
@@ -1076,7 +1092,11 @@ func (pool *TxPool) promoteTx(tx *types.Transaction) bool {
 	return true
 }
 
-func (pool *TxPool) promoteExecutables() {
+func (pool *TxPool) broadCastLocalTx(tx *types.Transaction) {
+	go pool.txFeed.Send(NewTxsEvent{[]*types.Transaction{tx}})
+}
+
+func (pool *TxPool) promoteExecutables(broadcast bool) {
 	// Track the promoted transactions to broadcast them at once
 	var promoted []*types.Transaction
 	//var invalidTx []common.Hash
@@ -1087,7 +1107,9 @@ func (pool *TxPool) promoteExecutables() {
 		//}
 		if pool.promoteTx(tx) {
 			log.Trace("Promoting queued transaction", "hash", tx.Hash())
-			promoted = append(promoted, tx)
+			if (pool.config.StartLight || !pool.Mining()) && broadcast {
+				promoted = append(promoted, tx)
+			}
 		}
 	}
 	//if len(invalidTx) > 0 {
