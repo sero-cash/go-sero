@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -1335,8 +1336,13 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 	return hexutil.Uint64(hi), nil
 }
 
-func (s *PublicBlockChainAPI) GetDecimal(ctx context.Context, tokenName string) (*hexutil.Uint, error) {
+var decimal_map sync.Map
 
+func (s *PublicBlockChainAPI) GetDecimal(ctx context.Context, tokenName string) (*hexutil.Uint, error) {
+	value, ok := decimal_map.Load(tokenName)
+	if ok {
+		return value.(*hexutil.Uint), nil
+	}
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, -1)
 	if err != nil {
 		return nil, err
@@ -1379,6 +1385,7 @@ func (s *PublicBlockChainAPI) GetDecimal(ctx context.Context, tokenName string) 
 		}
 		result := hexutil.Uint(*decimal)
 		log.Info("GetDecimal", "contract", base58.Encode(contractAddress[:]), "method", d.method, "decimal", *decimal)
+		decimal_map.Store(tokenName, &result)
 		return &result, nil
 
 	}
