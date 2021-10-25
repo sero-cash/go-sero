@@ -64,6 +64,7 @@ type Miner struct {
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
+
 }
 
 func New(sero Backend, config *params.ChainConfig, mux *event.TypeMux, voter voter, engine consensus.Engine) *Miner {
@@ -76,7 +77,6 @@ func New(sero Backend, config *params.ChainConfig, mux *event.TypeMux, voter vot
 	}
 	miner.Register(NewCpuAgent(sero.BlockChain(), engine))
 	go miner.update()
-
 	return miner
 }
 
@@ -132,6 +132,9 @@ func (self *Miner) Stop() {
 	atomic.StoreInt32(&self.mining, 0)
 	self.sero.TxPool().SetMining(0)
 	atomic.StoreInt32(&self.shouldStart, 0)
+}
+func (self *Miner) Close() {
+	self.worker.Close()
 }
 
 func (self *Miner) Register(agent Agent) {

@@ -153,6 +153,11 @@ type worker struct {
 
 	pendingVote pendingVote
 
+	stopVote  chan struct{}
+	stopPow   chan struct{}
+	stopWrite chan struct{}
+	loopwg    sync.WaitGroup
+	stopMu    sync.Mutex
 	//pendingVoteMu sync.RWMutex
 	//pendingVote   map[voteKey]voteSet
 	//pendingVoteTime sync.Map
@@ -183,6 +188,9 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, account acco
 		unconfirmed: newUnconfirmedBlocks(sero.BlockChain(), miningLogAtDepth),
 		voter:       voter,
 		pendingVote: newPendingVote(),
+		stopVote:    make(chan struct{}),
+		stopPow:     make(chan struct{}),
+		stopWrite:   make(chan struct{}),
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = sero.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -327,6 +335,8 @@ func (self *worker) update() {
 }
 
 func (self *worker) powResultLoop() {
+	self.loopwg.Add(1)
+	defer self.loopwg.Done()
 	for {
 		select {
 		case result := <-self.powRecv:
@@ -348,11 +358,16 @@ func (self *worker) powResultLoop() {
 					}
 				}()
 			}
+		case <-self.stopPow:
+			log.Info("stop worker pow")
+			return
 		}
 	}
 }
 
 func (self *worker) voteLoop() {
+	self.loopwg.Add(1)
+	defer self.loopwg.Done()
 	defer self.voteSub.Unsubscribe()
 	for {
 		select {
@@ -376,18 +391,26 @@ func (self *worker) voteLoop() {
 
 		case <-self.voteSub.Err():
 			return
-
+		case <-self.stopVote:
+			log.Info("stop worker vote loop...")
+			return
 		}
+
 	}
 }
 
 func (self *worker) resultLoop() {
+	self.loopwg.Add(1)
+	defer self.loopwg.Done()
 	for {
 		select {
 		case result := <-self.recv:
+
+			self.stopMu.Lock()
 			atomic.AddInt32(&self.atWork, -1)
 
 			if result == nil {
+				self.stopMu.Unlock()
 				continue
 			}
 			block := result.Block
@@ -404,10 +427,11 @@ func (self *worker) resultLoop() {
 				log.BlockHash = block.Hash()
 			}
 			self.currentMu.Lock()
-			stat, err := self.chain.WriteBlockWithStateWithStopLock(block, work.receipts, work.state)
+			stat, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
 			self.currentMu.Unlock()
 			if err != nil {
 				log.Error("Failed writing block to chain", "err", err)
+				self.stopMu.Unlock()
 				continue
 			}
 			// Broadcast the block and announce chain insertion event
@@ -426,7 +450,12 @@ func (self *worker) resultLoop() {
 			// Insert the block into the set of pending ones to resultLoop for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 			log.Info(fmt.Sprintf("mined new block done in %v, number = %v, txs = %v", time.Since(work.createdAt), block.NumberU64(), len(block.Body().Transactions)))
-
+			self.stopMu.Unlock()
+		case <-self.stopWrite:
+			self.stopMu.Lock()
+			self.stopMu.Unlock()
+			log.Info("stop worker result....")
+			return
 		}
 	}
 }
@@ -561,6 +590,13 @@ func (self *worker) updateSnapshot() {
 		self.current.receipts,
 	)
 	self.snapshotState = self.current.state.Copy()
+}
+func (self *worker) Close() {
+	close(self.stopPow)
+	close(self.stopVote)
+	close(self.stopWrite)
+	self.loopwg.Wait()
+
 }
 
 func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPrice, bc *core.BlockChain, coinbase common.Address) {

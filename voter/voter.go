@@ -58,12 +58,17 @@ type Voter struct {
 	lotteryFeed  event.Feed
 	scope        event.SubscriptionScope
 	//abi       types.Signer
-	voteMu    sync.RWMutex
-	lotteryMu sync.RWMutex
+	voteMu         sync.RWMutex
+	lotteryMu      sync.RWMutex
+	wg             sync.WaitGroup
+	lotteryCloseMu sync.Mutex
+	voteCloseMu    sync.Mutex
 
 	votes    map[common.Hash]time.Time
 	lotterys map[common.Hash]time.Time
 
+	stopLottery  chan struct{}
+	stopVote     chan struct{}
 	lotteryQueue *PriorityQueue
 }
 
@@ -78,6 +83,8 @@ func NewVoter(chainconfig *params.ChainConfig, chain blockChain, sero Backend) *
 		votes:        make(map[common.Hash]time.Time),
 		lotterys:     make(map[common.Hash]time.Time),
 		lotteryQueue: &PriorityQueue{},
+		stopLottery:  make(chan struct{}),
+		stopVote:     make(chan struct{}),
 	}
 	voter.lotteryQueue.Init(lotteryQueueSize)
 
@@ -137,11 +144,15 @@ func (self *Voter) IsLotteryValid(lottery *types.Lottery) bool {
 }
 
 func (self *Voter) lotteryTaskLoop() {
+	self.wg.Add(1)
+	defer self.wg.Done()
 	for {
 		select {
 		case lottery := <-self.lotteryCh:
 			//current := self.chain.CurrentBlock().NumberU64()
+			self.lotteryCloseMu.Lock()
 			if !self.IsLotteryValid(lottery) {
+				self.lotteryCloseMu.Unlock()
 				continue
 			}
 			//log.Info(">>>>>>>lotteryTaskLoop new lottery", "poshash", lottery.PosHash, "block", lottery.ParentNum+1, "localBlock", current)
@@ -159,16 +170,25 @@ func (self *Voter) lotteryTaskLoop() {
 					}
 				}
 			}
+			self.lotteryCloseMu.Unlock()
+		case <-self.stopLottery:
+			self.lotteryCloseMu.Lock()
+			self.lotteryCloseMu.Unlock()
+			log.Info("strop voter lottery loop ....")
+			return
 		}
 	}
 }
 
 func (self *Voter) voteLoop() {
+	self.wg.Add(1)
+	defer self.wg.Done()
 	evict := time.NewTicker(time.Second)
 	defer evict.Stop()
 	for {
 		select {
 		case <-evict.C:
+			self.voteCloseMu.Lock()
 			current := self.chain.CurrentBlock().NumberU64()
 			for item := self.lotteryQueue.Pop(); item != nil; item = self.lotteryQueue.Pop() {
 				lItem := item.Value.(*lotteryItem)
@@ -193,6 +213,12 @@ func (self *Voter) voteLoop() {
 				}
 
 			}
+			self.voteCloseMu.Unlock()
+		case <-self.stopVote:
+			self.voteCloseMu.Lock()
+			self.voteCloseMu.Unlock()
+			log.Info("strop voter vote loop ....")
+			return
 		}
 	}
 }
@@ -414,4 +440,10 @@ func (self *Voter) AddVote(vote *types.Vote) {
 		self.SendVoteEvent(vote)
 		self.votes[vote.Hash()] = time.Now()
 	}
+}
+
+func (self *Voter) Close() {
+	close(self.stopLottery)
+	close(self.stopVote)
+	self.wg.Wait()
 }

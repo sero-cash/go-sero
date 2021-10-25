@@ -111,6 +111,7 @@ type Sero struct {
 	netRPCService *ethapi.PublicNetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (s.g. gas price and serobase)
+	wg   sync.WaitGroup
 }
 
 func (s *Sero) AddLesServer(ls LesServer) {
@@ -166,6 +167,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
 		cacheConfig = &core.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
 	)
+
 	sero.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, sero.chainConfig, sero.engine, vmConfig, sero.accountManager)
 
 	txtool.Ref_inst.SetBC(&core.State1BlockChain{sero.blockchain})
@@ -472,6 +474,8 @@ func (s *Sero) Start(srvr *p2p.Server) error {
 // Sero protocol.
 func (s *Sero) Stop() error {
 	s.bloomIndexer.Close()
+	s.voter.Close()
+	s.miner.Close()
 	s.blockchain.Stop()
 	s.protocolManager.Stop()
 	if s.lesServer != nil {
