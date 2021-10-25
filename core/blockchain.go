@@ -146,6 +146,7 @@ type BlockChain struct {
 	// procInterrupt must be atomically called
 	procInterrupt int32          // interrupt signaler for block processing
 	wg            sync.WaitGroup // chain processing wait group for shutting down
+	stopLock      sync.Mutex
 
 	engine    consensus.Engine
 	processor Processor // block processor interface
@@ -759,13 +760,17 @@ func (bc *BlockChain) TrieNode(hash common.Hash) ([]byte, error) {
 // Stop stops the blockchain service. If any imports are currently in progress
 // it will abort them using the procInterrupt.
 func (bc *BlockChain) Stop() {
+
 	if !atomic.CompareAndSwapInt32(&bc.running, 0, 1) {
 		return
 	}
 	// Unsubscribe all subscriptions registered from blockchain
 	bc.scope.Close()
 	close(bc.quit)
+
+	bc.stopLock.Lock()
 	atomic.StoreInt32(&bc.procInterrupt, 1)
+	bc.stopLock.Unlock()
 
 	bc.wg.Wait()
 
@@ -980,6 +985,16 @@ func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) (e
 	rawdb.WriteBlock(bc.db, block)
 
 	return nil
+}
+
+func (bc *BlockChain) WriteBlockWithStateWithStopLock(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
+	bc.stopLock.Lock()
+	defer bc.stopLock.Unlock()
+	if atomic.LoadInt32(&bc.procInterrupt) == 1 {
+		return NonStatTy, errors.New("bc already stoped")
+	} else {
+		return bc.WriteBlockWithState(block, receipts, state)
+	}
 }
 
 // WriteBlockWithState writes the block and all associated state to the database.
