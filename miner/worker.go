@@ -157,7 +157,8 @@ type worker struct {
 	stopPow   chan struct{}
 	stopWrite chan struct{}
 	loopwg    sync.WaitGroup
-	stopMu    sync.Mutex
+	running   int32
+
 	//pendingVoteMu sync.RWMutex
 	//pendingVote   map[voteKey]voteSet
 	//pendingVoteTime sync.Map
@@ -406,11 +407,9 @@ func (self *worker) resultLoop() {
 		select {
 		case result := <-self.recv:
 
-			self.stopMu.Lock()
 			atomic.AddInt32(&self.atWork, -1)
 
 			if result == nil {
-				self.stopMu.Unlock()
 				continue
 			}
 			block := result.Block
@@ -431,7 +430,6 @@ func (self *worker) resultLoop() {
 			self.currentMu.Unlock()
 			if err != nil {
 				log.Error("Failed writing block to chain", "err", err)
-				self.stopMu.Unlock()
 				continue
 			}
 			// Broadcast the block and announce chain insertion event
@@ -450,10 +448,7 @@ func (self *worker) resultLoop() {
 			// Insert the block into the set of pending ones to resultLoop for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 			log.Info(fmt.Sprintf("mined new block done in %v, number = %v, txs = %v", time.Since(work.createdAt), block.NumberU64(), len(block.Body().Transactions)))
-			self.stopMu.Unlock()
 		case <-self.stopWrite:
-			self.stopMu.Lock()
-			self.stopMu.Unlock()
 			log.Info("stop worker result....")
 			return
 		}
@@ -592,6 +587,9 @@ func (self *worker) updateSnapshot() {
 	self.snapshotState = self.current.state.Copy()
 }
 func (self *worker) Close() {
+	if !atomic.CompareAndSwapInt32(&self.running, 0, 1) {
+		return
+	}
 	close(self.stopPow)
 	close(self.stopVote)
 	close(self.stopWrite)

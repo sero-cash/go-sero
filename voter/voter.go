@@ -3,6 +3,7 @@ package voter
 import (
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sero-cash/go-czero-import/c_superzk"
@@ -58,11 +59,9 @@ type Voter struct {
 	lotteryFeed  event.Feed
 	scope        event.SubscriptionScope
 	//abi       types.Signer
-	voteMu         sync.RWMutex
-	lotteryMu      sync.RWMutex
-	wg             sync.WaitGroup
-	lotteryCloseMu sync.Mutex
-	voteCloseMu    sync.Mutex
+	voteMu    sync.RWMutex
+	lotteryMu sync.RWMutex
+	wg        sync.WaitGroup
 
 	votes    map[common.Hash]time.Time
 	lotterys map[common.Hash]time.Time
@@ -70,6 +69,7 @@ type Voter struct {
 	stopLottery  chan struct{}
 	stopVote     chan struct{}
 	lotteryQueue *PriorityQueue
+	running      int32
 }
 
 func NewVoter(chainconfig *params.ChainConfig, chain blockChain, sero Backend) *Voter {
@@ -150,9 +150,7 @@ func (self *Voter) lotteryTaskLoop() {
 		select {
 		case lottery := <-self.lotteryCh:
 			//current := self.chain.CurrentBlock().NumberU64()
-			self.lotteryCloseMu.Lock()
 			if !self.IsLotteryValid(lottery) {
-				self.lotteryCloseMu.Unlock()
 				continue
 			}
 			//log.Info(">>>>>>>lotteryTaskLoop new lottery", "poshash", lottery.PosHash, "block", lottery.ParentNum+1, "localBlock", current)
@@ -170,10 +168,7 @@ func (self *Voter) lotteryTaskLoop() {
 					}
 				}
 			}
-			self.lotteryCloseMu.Unlock()
 		case <-self.stopLottery:
-			self.lotteryCloseMu.Lock()
-			self.lotteryCloseMu.Unlock()
 			log.Info("strop voter lottery loop ....")
 			return
 		}
@@ -188,7 +183,6 @@ func (self *Voter) voteLoop() {
 	for {
 		select {
 		case <-evict.C:
-			self.voteCloseMu.Lock()
 			current := self.chain.CurrentBlock().NumberU64()
 			for item := self.lotteryQueue.Pop(); item != nil; item = self.lotteryQueue.Pop() {
 				lItem := item.Value.(*lotteryItem)
@@ -213,10 +207,7 @@ func (self *Voter) voteLoop() {
 				}
 
 			}
-			self.voteCloseMu.Unlock()
 		case <-self.stopVote:
-			self.voteCloseMu.Lock()
-			self.voteCloseMu.Unlock()
 			log.Info("strop voter vote loop ....")
 			return
 		}
@@ -443,6 +434,9 @@ func (self *Voter) AddVote(vote *types.Vote) {
 }
 
 func (self *Voter) Close() {
+	if !atomic.CompareAndSwapInt32(&self.running, 0, 1) {
+		return
+	}
 	close(self.stopLottery)
 	close(self.stopVote)
 	self.wg.Wait()
