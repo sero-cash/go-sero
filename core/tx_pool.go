@@ -133,9 +133,9 @@ var DefaultTxPoolConfig = TxPoolConfig{
 
 	PriceLimit:   params.Gta,
 	AccountSlots: 16,
-	GlobalSlots:  4096,
+	GlobalSlots:  2048,
 	AccountQueue: 64,
-	GlobalQueue:  50,
+	GlobalQueue:  32,
 
 	Lifetime: 3 * time.Hour,
 }
