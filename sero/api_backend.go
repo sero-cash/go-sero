@@ -372,7 +372,7 @@ func (b *SeroAPIBackend) GetRecordsByTxHash(txHash c_type.Uint256) (records []ex
 	return b.sero.exchange.GetRecordsByTxHash(txHash)
 }
 
-func (b *SeroAPIBackend) GetOutByPKr(pkrs []c_type.PKr, start, end uint64) (br light.BlockOutResp, e error) {
+func (b *SeroAPIBackend) GetOutByPKr(pkrs []c_type.PKr, start uint64, end *uint64) (br light.BlockOutResp, e error) {
 	if b.sero.lightNode == nil {
 		e = errors.New("not start light")
 		return

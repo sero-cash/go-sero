@@ -102,7 +102,7 @@ type Backend interface {
 	GetRecordsByTxHash(txHash c_type.Uint256) (records []exchange.Utxo, err error)
 
 	//Light node api
-	GetOutByPKr(pkrs []c_type.PKr, start, end uint64) (br light.BlockOutResp, e error)
+	GetOutByPKr(pkrs []c_type.PKr, start uint64, end *uint64) (br light.BlockOutResp, e error)
 	CheckNil(Nils []c_type.Uint256) (nilResps []light.NilValue, e error)
 }
 

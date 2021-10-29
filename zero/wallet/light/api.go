@@ -16,15 +16,20 @@ func (self *LightNode) CurrentLight() *LightNode {
 	return Current_light
 }
 
-const maxOut_num = 150
+const pageSize = uint64(100000)
 
-func (self *LightNode) GetOutsByPKr(pkrs []c_type.PKr, start, end uint64) (br BlockOutResp, e error) {
+func (self *LightNode) GetOutsByPKr(pkrs []c_type.PKr, start uint64, end *uint64) (br BlockOutResp, e error) {
 	br.CurrentNum = self.getLastNumber()
+	br.PageSize = pageSize
 	blockOuts := []BlockOut{}
-	if end == 0 {
-		end = br.CurrentNum
+	if end == nil {
+		end = &br.CurrentNum
+	} else {
+		if *end == 0 {
+			*end = start + pageSize
+		}
 	}
-	resetEnd := false
+
 	for _, pkr := range pkrs {
 		//uPKr := pkr.ToUint512()
 		prefix := append(pkrPrefix, pkr[:]...)
@@ -34,7 +39,7 @@ func (self *LightNode) GetOutsByPKr(pkrs []c_type.PKr, start, end uint64) (br Bl
 
 			key := iterator.Key()
 			num := bytesToUint64(key[99:107])
-			if num > end {
+			if num > *end {
 				break
 			}
 			var bds []BlockData
@@ -45,13 +50,6 @@ func (self *LightNode) GetOutsByPKr(pkrs []c_type.PKr, start, end uint64) (br Bl
 			} else {
 				blockOut := BlockOut{Num: num, Data: bds}
 				blockOuts = append(blockOuts, blockOut)
-			}
-			if len(blockOuts) > maxOut_num {
-				if !resetEnd {
-					end = num
-					resetEnd = true
-					break
-				}
 			}
 
 		}
@@ -111,6 +109,7 @@ func (self *LightNode) CheckNil(Nils []c_type.Uint256) (nilResps []NilValue, e e
 type BlockOutResp struct {
 	CurrentNum uint64
 	BlockOuts  []BlockOut
+	PageSize   uint64
 }
 
 type BlockOut struct {

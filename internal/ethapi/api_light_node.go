@@ -12,7 +12,7 @@ type PublicLightNodeApi struct {
 	b Backend
 }
 
-func (plna PublicLightNodeApi) GetOutsByPKr(ctx context.Context, addresses []*MixAdrress, start, end uint64) (outBlockResp light.BlockOutResp, e error) {
+func (plna PublicLightNodeApi) GetOutsByPKr(ctx context.Context, addresses []*MixAdrress, start uint64, end *uint64) (outBlockResp light.BlockOutResp, e error) {
 
 	pkrs := []c_type.PKr{}
 	for _, address := range addresses {
