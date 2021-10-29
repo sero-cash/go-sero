@@ -153,11 +153,12 @@ type worker struct {
 
 	pendingVote pendingVote
 
-	stopVote  chan struct{}
-	stopPow   chan struct{}
-	stopWrite chan struct{}
-	loopwg    sync.WaitGroup
-	running   int32
+	stopVote   chan struct{}
+	stopPow    chan struct{}
+	stopWrite  chan struct{}
+	stopUpdate chan struct{}
+	loopwg     sync.WaitGroup
+	running    int32
 
 	//pendingVoteMu sync.RWMutex
 	//pendingVote   map[voteKey]voteSet
@@ -192,6 +193,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, account acco
 		stopVote:    make(chan struct{}),
 		stopPow:     make(chan struct{}),
 		stopWrite:   make(chan struct{}),
+		stopUpdate:  make(chan struct{}),
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = sero.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -287,7 +289,8 @@ func (self *worker) unregister(agent Agent) {
 }
 
 func (self *worker) update() {
-
+	self.loopwg.Add(1)
+	defer self.loopwg.Done()
 	defer self.txsSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
 	defer self.chainSideSub.Unsubscribe()
@@ -330,6 +333,8 @@ func (self *worker) update() {
 		case <-self.chainHeadSub.Err():
 			return
 		case <-self.chainSideSub.Err():
+			return
+		case <-self.stopUpdate:
 			return
 		}
 	}
@@ -590,6 +595,7 @@ func (self *worker) Close() {
 	if !atomic.CompareAndSwapInt32(&self.running, 0, 1) {
 		return
 	}
+	close(self.stopUpdate)
 	close(self.stopPow)
 	close(self.stopVote)
 	close(self.stopWrite)
