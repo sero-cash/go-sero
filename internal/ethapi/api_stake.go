@@ -687,17 +687,26 @@ func newRPCStatisticsShare(mg *accounts.Manager, shares []*stake.Share, api *Pub
 			result[keystr] = s
 		}
 
-		if share.LastPayTime > share.BlockNumber+198720 {
-			continue
-		}
+		//if share.Status == stake.STATUS_FINISHED {
+		//	log.Info("v1 share", "filter share", hexutil.Encode(share.Id()), "status", share.Status)
+		//	continue
+		//}
 		remain := share.InitNum
 		if share.LastPayTime != 0 {
 			header, _ := api.b.HeaderByNumber(ctx, rpc.BlockNumber(share.LastPayTime))
 			snapshot := stake.GetShareByBlockNumber(api.b.ChainDb(), common.BytesToHash(share.Id()), header.Hash(), header.Number.Uint64())
 			if snapshot != nil {
-				remain = snapshot.Num + snapshot.WillVoteNum
+				if snapshot.Status == 0 {
+					remain = snapshot.Num + snapshot.WillVoteNum
+				} else if snapshot.Status == 1 {
+					remain = snapshot.WillVoteNum
+				} else {
+					remain = 0
+				}
+
 			}
 		}
+
 		if s.TotalAmount == nil {
 			s.TotalAmount = new(big.Int)
 		}
