@@ -973,12 +973,15 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 	if err != nil {
 		return err
 	}
+	broadCast := false
 	if local {
-		if !pool.config.StartLight && pool.Mining() {
+		if pool.Mining() || pool.config.StartLight {
 			pool.broadCastLocalTx(tx)
+		} else {
+			broadCast = true
 		}
 	}
-	pool.promoteExecutables(local)
+	pool.promoteExecutables(broadCast)
 
 	return nil
 }
