@@ -609,7 +609,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 
 	var coalescedLogs []*types.Log
-
+LOOP:
 	for {
 		// If we don't have enough gas for any further transactions then we're done
 		if env.gasPool.Gas() < params.TxGas {
@@ -636,11 +636,11 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		err, logs := env.commitTransaction(tx, bc, coinbase, env.gasPool)
 		switch err {
 		case core.ErrGasLimitReached:
-			log.Info("Gas limit exceeded for current block", "block", bc.CurrentBlock().Header().Number.Uint64())
+			log.Info("Gas limit exceeded for current block", "block", bc.CurrentBlock().Header().Number.Uint64(), "txHash", tx.Hash().Hex())
 			// Pop the current out-of-gas transaction without shifting in the next from the account
-			log.Trace("Gas limit exceeded for current block", "sender", tx.From())
+			//log.Trace("Gas limit exceeded for current block", "sender", tx.From())
 			txs.Pop()
-			break
+			break LOOP
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account

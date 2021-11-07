@@ -143,7 +143,7 @@ func (state *ZState) AddTxOutWithCheck(addr common.Address, asset assets.Asset, 
 	if state.Num() >= seroparam.VP0() {
 		count := state.State.AddTxOut_Log(addr.ToPKr())
 		if count > seroparam.MAX_CONTRACT_OUT_COUNT_LENGTH {
-			log.Error("[ALARM] ZState AddTxOut Overflow", "MAX_CONTRACT_OUT_COUNT_LENGTH", seroparam.MAX_CONTRACT_OUT_COUNT_LENGTH)
+			log.Error("[ALARM] ZState AddTxOut Overflow", "MAX_CONTRACT_OUT_COUNT_LENGTH", seroparam.MAX_CONTRACT_OUT_COUNT_LENGTH, "txHash", txhash.Hex())
 			alarm = true
 		}
 	}
