@@ -119,6 +119,7 @@ var (
 		utils.ConfirmedBlockFlag,
 		utils.RecordBlockShareNumber,
 		utils.LightNodeFlag,
+		utils.CloseAcceptTx,
 		utils.ResetBlockNumber,
 
 		utils.DeveloperFlag,

@@ -192,7 +192,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Sero, error) {
 
 	sero.miner = miner.New(sero, sero.chainConfig, sero.EventMux(), sero.voter, sero.engine)
 
-	if sero.protocolManager, err = NewProtocolManager(sero.chainConfig, config.SyncMode, config.NetworkId, sero.eventMux, sero.voter, sero.txPool, sero.miner, sero.engine, sero.blockchain, chainDb); err != nil {
+	if sero.protocolManager, err = NewProtocolManager(sero.chainConfig, config.CloseAcceptTx, config.SyncMode, config.NetworkId, sero.eventMux, sero.voter, sero.txPool, sero.miner, sero.engine, sero.blockchain, chainDb); err != nil {
 		return nil, err
 	}
 	sero.miner.SetExtra(makeExtraData(config.ExtraData))

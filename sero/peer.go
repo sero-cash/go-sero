@@ -243,7 +243,7 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 	//	p.knownTxs.Add(tx.Hash())
 	//}
 	if len(txs) > 0 {
-		subLen := 400
+		subLen := 200
 		start := 0
 		for {
 			if start >= len(txs) {

@@ -636,7 +636,7 @@ LOOP:
 		err, logs := env.commitTransaction(tx, bc, coinbase, env.gasPool)
 		switch err {
 		case core.ErrGasLimitReached:
-			log.Info("Gas limit exceeded for current block", "block", bc.CurrentBlock().Header().Number.Uint64(), "txHash", tx.Hash().Hex())
+			log.Info("Gas limit exceeded for current block", "block", bc.CurrentBlock().Header().Number.Uint64())
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			//log.Trace("Gas limit exceeded for current block", "sender", tx.From())
 			txs.Pop()

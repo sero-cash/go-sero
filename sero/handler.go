@@ -65,15 +65,15 @@ func errResp(code errCode, format string, v ...interface{}) error {
 type ProtocolManager struct {
 	networkID uint64
 
-	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
-	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
-
-	txpool      txPool
-	miner       sero_miner
-	voter       shareVoter
-	blockchain  *core.BlockChain
-	chainconfig *params.ChainConfig
-	maxPeers    int
+	fastSync      uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
+	acceptTxs     uint32 // Flag whether we're considered synchronised (enables transaction processing)
+	closeAcceptTx bool
+	txpool        txPool
+	miner         sero_miner
+	voter         shareVoter
+	blockchain    *core.BlockChain
+	chainconfig   *params.ChainConfig
+	maxPeers      int
 
 	downloader *downloader.Downloader
 	fetcher    *fetcher.Fetcher
@@ -103,21 +103,22 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new Sero sub protocol manager. The Sero sub protocol manages peers capable
 // with the Sero network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, voter shareVoter, txpool txPool, miner sero_miner, engine consensus.Engine, blockchain *core.BlockChain, chaindb serodb.Database) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, closeAcceptTx bool, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, voter shareVoter, txpool txPool, miner sero_miner, engine consensus.Engine, blockchain *core.BlockChain, chaindb serodb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
-		networkID:   networkID,
-		eventMux:    mux,
-		txpool:      txpool,
-		miner:       miner,
-		voter:       voter,
-		blockchain:  blockchain,
-		chainconfig: config,
-		peers:       newPeerSet(),
-		newPeerCh:   make(chan *peer),
-		noMorePeers: make(chan struct{}),
-		txsyncCh:    make(chan *txsync),
-		quitSync:    make(chan struct{}),
+		networkID:     networkID,
+		eventMux:      mux,
+		closeAcceptTx: closeAcceptTx,
+		txpool:        txpool,
+		miner:         miner,
+		voter:         voter,
+		blockchain:    blockchain,
+		chainconfig:   config,
+		peers:         newPeerSet(),
+		newPeerCh:     make(chan *peer),
+		noMorePeers:   make(chan struct{}),
+		txsyncCh:      make(chan *txsync),
+		quitSync:      make(chan struct{}),
 	}
 	// Figure out whether to allow fast sync or not
 	if mode == downloader.FastSync && blockchain.CurrentBlock().NumberU64() > 0 {
@@ -630,10 +631,20 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == TxMsg:
+		if pm.closeAcceptTx {
+			break
+		}
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break
 		}
+		currentBlock := pm.blockchain.CurrentBlock()
+		difference := time.Now().Unix() - currentBlock.Time().Int64()
+		if difference > 2*60 {
+			log.Info("to behind,dont receive remote txs")
+			break
+		}
+
 		// Transactions can be processed, parse all of them and deliver to the pool
 		var txs []*types.Transaction
 		if err := msg.Decode(&txs); err != nil {
@@ -647,16 +658,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			pm.peers.AddKnowTx(p.id, tx.Hash())
 			//p.MarkTransaction(tx.Hash())
 		}
-		currentBlock := pm.blockchain.CurrentBlock()
-		difference := time.Now().Unix() - currentBlock.Time().Int64()
-		if difference < 10*60 {
-			errs := pm.txpool.AddRemotes(txs)
-			addedTxs := len(txs) - len(errs)
-			if addedTxs > 0 {
-				log.Debug("received from", "remote peer", p.RemoteAddr().String(), "txs", len(txs), "added", addedTxs)
-			}
-		} else {
-			log.Trace("to behind,dont receive remote txs")
+
+		errs := pm.txpool.AddRemotes(txs)
+		addedTxs := len(txs) - len(errs)
+		if addedTxs > 0 {
+			log.Debug("received from", "remote peer", p.RemoteAddr().String(), "txs", len(txs), "added", addedTxs)
 		}
 
 	case msg.Code == NewVoteMsg:
@@ -731,6 +737,13 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 		}
 		log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 	}
+
+	currentBlock := pm.blockchain.CurrentBlock()
+	difference := time.Now().Unix() - currentBlock.Time().Int64()
+	if difference > 2*60 {
+		return
+	}
+
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for peer, txs := range txset {
 

@@ -340,6 +340,11 @@ var (
 		Usage: "start light node",
 	}
 
+	CloseAcceptTx = cli.BoolFlag{
+		Name:  "closeAcceptTx",
+		Usage: "Close Accept from remote Tx",
+	}
+
 	ConfirmedBlockFlag = cli.Uint64Flag{
 		Name:  "confirmedBlock",
 		Usage: "The balance will be confirmed after the current block of number,default is 12",
@@ -1287,6 +1292,10 @@ func SetSeroConfig(ctx *cli.Context, stack *node.Node, cfg *sero.Config) {
 
 	if ctx.GlobalIsSet(LightNodeFlag.Name) {
 		cfg.StartLight = true
+	}
+
+	if ctx.GlobalIsSet(CloseAcceptTx.Name) {
+		cfg.CloseAcceptTx = true
 	}
 
 	// Override any default configs for hard coded networks.
