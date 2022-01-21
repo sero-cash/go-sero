@@ -1044,9 +1044,6 @@ func handleSend(d []byte, evm *EVM, contract *Contract, mem []byte) ([]byte, uin
 	length := new(big.Int).SetBytes(mem[currency_offset : currency_offset+32]).Uint64()
 	var currency string
 	if length != 0 {
-		if uint64(len(mem))<currency_offset+32+length {
-			return nil,0,ErrInsufficientBalance,false
-		}
 		currency = string(mem[currency_offset+32 : currency_offset+32+length])
 	}
 
@@ -1054,9 +1051,6 @@ func handleSend(d []byte, evm *EVM, contract *Contract, mem []byte) ([]byte, uin
 	category_offset := new(big.Int).SetBytes(d[96:128]).Uint64()
 	length = new(big.Int).SetBytes(mem[category_offset : category_offset+32]).Uint64()
 	if length != 0 {
-		if uint64(len(mem))<category_offset+32+length {
-			return nil,0,ErrInsufficientBalance,false
-		}
 		category = string(mem[category_offset+32 : category_offset+32+length])
 	}
 
@@ -1161,13 +1155,10 @@ func makeLog(size int) executionFunc {
 				contract.Gas += interpreter.evm.callGasTemp
 			} else if topics[0] == topic_balanceOf {
 				offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-				l := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
+				len := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
 				balance := new(big.Int)
-				if l != 0 {
-					if uint64(len(data))<offset+32+l {
-						return nil,ErrInsufficientBalance
-					}
-					coinName := string(data[offset+32 : offset+32+l])
+				if len != 0 {
+					coinName := string(data[offset+32 : offset+32+len])
 					balance = interpreter.evm.StateDB.GetBalance(contract.Address(), coinName)
 				}
 				memory.Set(mStart.Uint64(), 32, common.LeftPadBytes(balance.Bytes(), 32))
@@ -1215,17 +1206,12 @@ func makeLog(size int) executionFunc {
 				contract.Gas += interpreter.evm.callGasTemp
 			} else if topics[0] == topic_setTokenRate {
 				offset := new(big.Int).SetBytes(d[0:32]).Uint64()
-
-				l := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
-				if l == 0 {
-					return nil, fmt.Errorf("setTokenRate error , contract : %s, error : %s", contract.Address(), "coinName l=0")
+				len := new(big.Int).SetBytes(data[offset : offset+32]).Uint64()
+				if len == 0 {
+					return nil, fmt.Errorf("setTokenRate error , contract : %s, error : %s", contract.Address(), "coinName len=0")
 				}
 
-				if uint64(len(data))<offset+32+l {
-					return nil,ErrInsufficientBalance
-				}
-
-				coinName := string(data[offset+32 : offset+32+l])
+				coinName := string(data[offset+32 : offset+32+len])
 				match, err := regexp.Match("^[A-Z][A-Z0-9_]{0,31}$", []byte(coinName))
 				if err != nil || !match {
 					return nil, fmt.Errorf("issueToken error , contract : %s, error : %s", contract.Address(), "illegal coinName")

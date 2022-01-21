@@ -18,7 +18,6 @@ package core
 
 import (
 	"container/heap"
-	"github.com/sero-cash/go-czero-import/c_type"
 	"math/big"
 	"time"
 
@@ -39,20 +38,9 @@ func (h priceHeap) Swap(i, j int) {
 	h[i], h[j] = h[j], h[i]
 }
 
-var reduces=map[c_type.PKr]bool{};
-
-func RedGasPrice(tx *types.Transaction) *big.Int {
-	if addr:=tx.Stxt().ContractAddress();addr!=nil {
-		if _,has:=reduces[*addr];has {
-			return new(big.Int).Div(tx.GasPrice(),big.NewInt(100))
-		}
-	}
-	return tx.GasPrice()
-}
-
 func (h priceHeap) Less(i, j int) bool {
 	// Sort primarily by priced, returning the cheaper one
-	switch RedGasPrice(h[i]).Cmp(RedGasPrice(h[j])) {
+	switch h[i].GasPrice().Cmp(h[j].GasPrice()) {
 	case -1:
 		return true
 	case 1:
@@ -98,7 +86,7 @@ func (l *txPricedList) Get(hash common.Hash) *types.Transaction {
 }
 
 func (l *txPricedList) Add(tx *types.Transaction, threshold *big.Int) bool {
-	if RedGasPrice(tx).Cmp(threshold) < 0 {
+	if tx.GasPrice().Cmp(threshold) < 0 {
 		return false
 	}
 	if t := l.all.Get(tx.Hash()); t == nil {
@@ -172,7 +160,7 @@ func (l *txPricedList) Underpriced(tx *types.Transaction) bool {
 		return false
 	}
 	cheapest := []*types.Transaction(*l.items)[0]
-	return RedGasPrice(cheapest).Cmp(RedGasPrice(tx)) >= 0
+	return cheapest.GasPrice().Cmp(tx.GasPrice()) >= 0
 }
 
 // Discard finds a number of most underpriced transactions, removes them from the
@@ -196,7 +184,7 @@ func (l *txPricedList) Discard(count int) types.Transactions {
 func (l *txPricedList) RemoveWithPrice(threshold *big.Int) {
 	for len(*l.items) > 0 {
 		head := []*types.Transaction(*l.items)[0]
-		if RedGasPrice(head).Cmp(threshold) >= 0 {
+		if head.GasPrice().Cmp(threshold) >= 0 {
 			break
 		} else {
 			heap.Pop(l.items)
